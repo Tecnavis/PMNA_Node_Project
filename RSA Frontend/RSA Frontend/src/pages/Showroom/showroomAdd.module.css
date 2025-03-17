@@ -1,0 +1,36 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Space between the label and the input/link container */
+}
+
+.inputContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Space between the input and the link */
+}
+
+.input {
+    flex: 1; /* Input takes up the remaining space */
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.link {
+    display: inline-block;
+    padding: 8px 12px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+    cursor: pointer;
+    white-space: nowrap; /* Prevents text from wrapping */
+}
+
+.link:hover {
+    background-color: #0056b3;
+}
