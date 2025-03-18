@@ -91,11 +91,11 @@ const Status: React.FC = () => {
     }
     const handleChangeAmount = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value.trim();
-    
-        if (/^\d*$/.test(value)) { 
+
+        if (/^\d*$/.test(value)) {
             const numericValue = Number(value);
             const maxAllowed = (selectedBooking?.totalAmount ?? 0) - (selectedBooking?.receivedAmount ?? 0);
-    
+
             if (numericValue <= maxAllowed) {
                 setPaymentAmount(numericValue);
             }
@@ -324,14 +324,16 @@ const Status: React.FC = () => {
                         </span>
                         </label>
                     </div>
-                    {
-                        selectedBooking?.receivedAmount && selectedBooking?.receivedAmount > 0 && <div>
-                            <label className="block">Received Amount : <span className='text-blue-700'>
-                                &#8377;{(selectedBooking?.receivedAmount ?? 0)}
-                            </span>
+                    {(selectedBooking?.receivedAmount ?? 0)  > 0 && (
+                        <div>
+                            <label className="block">
+                                Received Amount:
+                                <span className="text-blue-700">
+                                    &#8377;{(selectedBooking?.receivedAmount || 0)}
+                                </span>
                             </label>
                         </div>
-                    }
+                    )}
                     <div className="mt-4">
                         <label className="block">Amount</label>
                         <input

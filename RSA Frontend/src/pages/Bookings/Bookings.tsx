@@ -46,7 +46,7 @@ interface Company {
 }
 
 export interface Booking {
-    receivedAmount?: number,
+    receivedAmount: number,
     phoneNumber: any;
     pickupTime: string;
     dropoffTime: string;
