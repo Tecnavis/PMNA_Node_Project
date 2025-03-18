@@ -1,0 +1,62 @@
+/* AddOrUpdateItemForm.module.css */
+.error {
+    color: red;
+    font-size: 12px; /* Adjust the size if necessary */
+    margin-top: 5px; /* Add some space above the error message */
+}
+/* For Chrome, Safari, Edge, Opera */
+.formInput[type="number"]::-webkit-outer-spin-button,
+.formInput[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For Firefox */
+.formInput[type="number"] {
+  -moz-appearance: textfield;
+}
+.tableContainer {
+    overflow-x: auto; /* Enable horizontal scrolling */
+    -webkit-overflow-scrolling: touch; /* Enable smooth scrolling on touch devices */
+}
+
+.table {
+    width: 100%; /* Ensure table takes full width of container */
+    border-collapse: collapse; /* Collapse borders for better appearance */
+}
+
+/* Default styles */
+.tableCell {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.formInput {
+  min-width: 200px;
+}
+
+/* Responsive styles for mobile screens */
+@media only screen and (max-width: 600px) {
+    .tableCell {
+        padding: 4px;
+        font-size: 12px;
+    }
+
+    .formInput {
+        font-size: 12px;
+        padding: 6px;
+    }
+
+    .tableCell .inputWrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .tableCell span {
+        right: 10px; /* Adjust position for mobile */
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+    }
+}
