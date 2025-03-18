@@ -126,6 +126,7 @@ const StaffReport = lazy(()=> import('../pages/Reports/StaffReport'))
 const DriverReport = lazy(()=> import('../pages/Reports/DriverReport/DriverReport'))
 
 const ServiceCenterReport = lazy(()=> import('../pages/Reports/DriverReport/ServiceCenterReport'))
+const StaffCashReport = lazy(() => import('../pages/Reports/DriverReport/StaffCashReport'));
 
 const routes = [
     // dashboard
@@ -164,6 +165,10 @@ const routes = [
     {
         path: '/staffreport',
         element: <StaffReport />,
+    },
+    {
+        path: '/staffcashreport/:id',
+        element: <StaffCashReport />,
     },
     {
         path: '/driverreport/:id',

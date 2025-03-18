@@ -143,7 +143,7 @@ const StaffReport = () => {
                     <button
                       type="button"
                       className="btn btn-success px-2 py-1 text-xs"
-                      onClick={() => navigate(`/staffreport/${staff._id}`)}
+                      onClick={() => navigate(`/staffcashreport/${staff._id}`)}
                     >
                       View Report
                     </button>

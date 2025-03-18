@@ -1,3 +1,4 @@
+
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../../../store';
@@ -19,113 +20,128 @@ import IconCreditCard from '../../../components/Icon/IconCreditCard';
 import IconClock from '../../../components/Icon/IconClock';
 import IconHorizontalDots from '../../../components/Icon/IconHorizontalDots';
 import axios from 'axios';
+import IconLogin from '../../../components/Icon/IconLogin';
+import IconUser from '../../../components/Icon/IconUser';
 
-interface Showroom {
+interface Staff {
     _id: string;
     name: string;
-    showroomId: string;
-    description?: string;
-    location: string;
-    latitudeAndLongitude: string;
+    email: string;
+    address: string;
+    phone: string;
+    userName: string;
+    password: string;
     image?: string;
     cashInHand?: number;
-
-    services: {
-        serviceCenter: {
-            selected: boolean;
-            amount: number | null;
-        };
-        bodyShop: {
-            selected: boolean;
-            amount: number | null;
-        };
-        showroom: {
-            selected: boolean;
-        };
-    };
-    // Add other fields if needed (for example, a cashInHand-like property if applicable)
-}
+    role?: string; // Add role as a top-level property
+  }
 
 const Profile = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-    const [showroom, setShowroom] = useState<Showroom | null>(null);
+  const [staff, setStaff] = useState<Staff | null>(null);
 
-    const dispatch = useDispatch();
-    useEffect(() => {
-        dispatch(setPageTitle('Showroom Profile'));
-    }, [dispatch]);
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(setPageTitle('Staff Profile'));
+  }, [dispatch]);
 
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
+  const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
 
-    // Check for token and set axios header
-    const gettingToken = () => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        } else {
-            navigate('/auth/boxed-signin');
-            console.log('Token not found');
-        }
-    };
+  // Check for token and set axios header
+  const gettingToken = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      navigate('/auth/boxed-signin');
+      console.log('Token not found');
+    }
+  };
 
-    // Fetch showroom profile details from backend
-    const getShowroom = async () => {
-        try {
-            const response = await axios.get(`${backendUrl}/showroom/${id}`);
-            const data = response.data;
-            setShowroom(data);
-        } catch (error) {
-            console.error('Error fetching showroom:', error);
-        }
-    };
+  // Fetch staff profile details from backend
+  const getStaff = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/staff/${id}`);
+      const data = response.data;
+      setStaff(data);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+    }
+  };
 
-    useEffect(() => {
-        gettingToken();
-        getShowroom();
-    }, [id]);
+  useEffect(() => {
+    gettingToken();
+    getStaff();
+  }, [id]);
 
-    return (
-        <div>
-            <div className="pt-5">
-                {/* Top Section: Profile Image, Name, and Basic Details */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 w-full">
-                {/* Profile Section */}
-                    <div className="panel w-full">
-                    <div className="flex items-center justify-between mb-5">
-                    <h5 className="font-semibold text-lg dark:text-white-light">Showroom Details</h5>
-                        </div>
-                       
-                                {/* --------------------- */}
-                                <div className="mb-5">
+  return (
+    <div>
+      <div className="pt-5">
+        {/* Top Section: Profile Image, Name, and Basic Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 w-full">
+          {/* Profile Section */}
+          <div className="panel w-full">
+            <div className="flex items-center justify-between mb-5">
+              <h5 className="font-semibold text-lg dark:text-white-light">Staff Details</h5>
+            </div>
+            {/* <div className="mb-5">
+              <div className="flex flex-col justify-center items-center">
+                <img
+                  src={`${backendUrl}/images/${staff?.image}`}
+                  alt="Staff"
+                  className="w-24 h-24 rounded-full object-cover mb-5"
+                />
+                <p className="font-semibold text-primary text-xl">{staff?.name}</p>
+                <span className="whitespace-nowrap" dir="ltr">
+                 
+                </span>
+                <span className="whitespace-nowrap mt-1" dir="ltr">
+                  <IconUser className="inline mr-1" />
+                  {staff?.userName}
+                </span>
+              </div>
+            </div> */}
+             <div className="mb-5">
             <div className="flex flex-col justify-center items-center">
-            <img src={`${backendUrl}/images/${showroom?.image}`} alt="Showroom" className="w-24 h-24 rounded-full object-cover mb-5" />
-            <p className="font-semibold text-primary text-xl">{showroom?.name}</p>
-            <span className="whitespace-nowrap" dir="ltr">
-                {showroom?.showroomId}
-                                    </span>
+            <img
+                  src={`${backendUrl}/images/${staff?.image}`}
+                  alt="Staff"
+                  className="w-24 h-24 rounded-full object-cover mb-5"
+                />
+                <p className="font-semibold text-primary text-xl">{staff?.name}</p>
+              
             </div>
             <ul className="mt-5 flex flex-col max-w-[160px] m-auto space-y-4 font-semibold text-white-dark">
                 <li className="flex items-center gap-2">
-                <IconMapPin className="inline mr-1" />
+                    <IconPhone />
+                    <span className="whitespace-nowrap" dir="ltr">
+                        {staff?.phone}
+                    </span>
+                </li>
+            </ul>
+            <ul className="mt-5 flex flex-col max-w-[160px] m-auto space-y-4 font-semibold text-white-dark">
+                <li className="flex items-center gap-2">
+                <IconUser className="inline mr-1" />
                 <span className="whitespace-nowrap" dir="ltr">
-                {showroom?.location}
-                </span>
+                {staff?.userName}
+                                </span>
                 </li>
             </ul>
                               
                             </div>
                         </div>
-                        {/* Cash in Hand Section */}
-                        <div className="panel w-full flex flex-col items-center justify-center">
-                            <h5 className="font-semibold text-lg dark:text-white-light mb-3">Net Total Amount in Hand</h5>
-                            <p className="text-2xl font-bold text-primary">₹{showroom?.cashInHand || 0}</p>
-                        </div>
-                    </div>
+ {/* Cash in Hand Section */}
+ <div className="panel w-full flex flex-col items-center justify-center">
+        <h5 className="font-semibold text-lg dark:text-white-light mb-3">Net Total Amount in Hand</h5>
+        <p className="text-2xl font-bold text-primary">₹{staff?.cashInHand || 0}</p>
+    </div>
+</div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="panel">
                         <div className="mb-5">
                             <h5 className="font-semibold text-lg dark:text-white-light">Summary</h5>
