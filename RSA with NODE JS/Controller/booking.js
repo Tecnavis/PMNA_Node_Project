@@ -112,7 +112,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10, status = '' } = req.query;
+        let { search, startDate, endDate, page = 1, limit = 10, status = '', driverId } = req.query;
 
         // Convert page and limit to integers
         page = parseInt(page, 10);
@@ -121,6 +121,11 @@ exports.getAllBookings = async (req, res) => {
         const query = {
             status: { $nin: [status] }
         };
+
+        // If driverId as query then fetch drivers bookings
+        if (driverId) {
+            query.driver = driverId;
+        }
 
 
         // Handle search
@@ -176,87 +181,9 @@ exports.getAllBookings = async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
 
-        res.status(200).json({
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-            bookings,
-        });
-    } catch (error) {
-        console.error('Error fetching bookings:', error);
-        res.status(500).json({ message: 'Server error while fetching bookings' });
-    }
-};
+        console.log("API Query is : ", query)
 
-// Controller to get Booking Completed by search query
-exports.getAllBookings = async (req, res) => {
-    try {
-        let { search, startDate, endDate, page = 1, limit = 10, status = '' } = req.query;
-
-        // Convert page and limit to integers
-        page = parseInt(page, 10);
-        limit = parseInt(limit, 10);
-
-        const query = {
-            status: { $nin: [status] }
-        };
-
-
-        // Handle search
-        if (search) {
-            search = search.trim();
-            const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-            if (dateRegex.test(search)) {
-                const [day, month, year] = search.split('/');
-                const startOfDay = new Date(`${year}-${month}-${day}T00:00:00Z`);
-                const endOfDay = new Date(`${year}-${month}-${day}T23:59:59Z`);
-
-                query.createdAt = {
-                    $gte: startOfDay,
-                    $lte: endOfDay,
-                };
-            } else {
-                const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
-                const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
-                const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
-
-                query.$or = [
-                    { fileNumber: searchRegex },
-                    { mob1: searchRegex },
-                    { customerVehicleNumber: searchRegex },
-                    { bookedBy: searchRegex },
-                    { driver: { $in: matchingDrivers.map(d => d._id) } },
-                    { provider: { $in: matchingProviders.map(p => p._id) } },
-                ];
-            }
-        }
-
-        // Handle date range filter
-        if (startDate || endDate) {
-            query.createdAt = query.createdAt || {};
-            if (startDate) {
-                query.createdAt.$gte = new Date(startDate);
-            }
-            if (endDate) {
-                query.createdAt.$lte = new Date(endDate);
-            }
-        }
-
-        // Pagination and sorting by createdAt in descending order
-        const total = await Booking.countDocuments(query);
-        const bookings = await Booking.find(query)
-            .populate('baselocation')
-            .populate('showroom')
-            .populate('serviceType')
-            .populate('company')
-            .populate('driver')
-            .populate('provider')
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
-
-        res.status(200).json({
+        return res.status(200).json({
             total,
             page,
             limit,
@@ -980,7 +907,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 //Controller to settle booking amount 
 exports.settleAmount = async (req, res) => {
     try {
-        const { id } = req.params; 
+        const { id } = req.params;
         const { receivedAmount } = req.body;
 
         const booking = await Booking.findById(id);
@@ -1008,3 +935,4 @@ exports.settleAmount = async (req, res) => {
         res.status(500).json({ message: 'Server error while settling booking amount.' });
     }
 };
+

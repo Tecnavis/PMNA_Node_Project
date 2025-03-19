@@ -77,12 +77,13 @@ interface Provider {
     image: string;
 }
 
-interface Driver {
+export interface Driver {
     _id: string;
     name: string;
     idNumber: string;
     cashInHand: number;
     driverSalary: number;
+    advance: number;
     phone: string;
     personalPhoneNumber: string;
     password: string;

@@ -267,7 +267,7 @@ const Index = () => {
 
                             return (
                                 <div key={index} className="w-full gap-5">
-                                    <div className={`w-full h-16 ${bgColor} rounded-xl flex items-center justify-between px-4 border-l-4 border-blue-500`}>
+                                    <div className={`w-full h-16 ${bgColor} rounded-xl flex items-center justify-between px-4 border-l-4 border-blue-500  shadow`}>
                                         <span>🔔 {record.type} for vehicle {record.vehicleNumber} is expired! Expiry Date: {dateFormate(record.expiryDate)}</span>
                                         <button
                                             className="bg-pink-500 text-white rounded-md py-2 px-3"
