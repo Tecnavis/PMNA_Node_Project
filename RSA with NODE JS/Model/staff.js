@@ -39,6 +39,9 @@ const staffSchema = new mongoose.Schema({
     ref: 'Role',
     required: true,
   },
+  cashInHand: {
+    type: Number, 
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Staff', staffSchema);
