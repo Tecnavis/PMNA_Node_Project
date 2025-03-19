@@ -97,7 +97,29 @@ exports.getShowroomById = async (req, res) => {
   }
 };
 
-
+// Filtered get showrooms endpoint
+exports.filterGetShowrooms = async (req, res) => {
+  try {
+    const { search } = req.query;
+    let filter = {};
+    
+    if (search) {
+      // Case-insensitive search on name, showroomId, or location
+      filter = {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { showroomId: { $regex: search, $options: 'i' } },
+          { location: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+    
+    const showrooms = await Showroom.find(filter);
+    res.json(showrooms);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 // Update a showroom
 exports.updateShowroom = async (req, res) => {
   try {

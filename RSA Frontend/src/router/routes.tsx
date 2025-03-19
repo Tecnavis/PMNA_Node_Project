@@ -123,6 +123,13 @@ const DCPReprort = lazy(()=> import('../pages/Reports/DCPReport'))
 const DriverReport = lazy(()=> import('../pages/Reports/DriverReport/DriverReport'))
 const VehicleDetails = lazy(()=> import('../pages/VehicleDetails/VehicleDetails'))
 const Status = lazy(()=> import('../pages/Status/Status'))
+const ShowroomReport = lazy(()=> import('../pages/Reports/ShowroomReport'))
+
+const StaffReport = lazy(()=> import('../pages/Reports/StaffReport'))
+
+
+const ServiceCenterReport = lazy(()=> import('../pages/Reports/DriverReport/ServiceCenterReport'))
+const StaffCashReport = lazy(() => import('../pages/Reports/DriverReport/StaffCashReport'));
 
 
 const routes = [
@@ -158,6 +165,23 @@ const routes = [
     {
         path: '/driverreport/:id',
         element: <DriverReport />,
+    },
+    {
+        path: '/showroomreport',
+        element: <ShowroomReport />,
+    },
+    {
+        path: '/staffreport',
+        element: <StaffReport />,
+    },
+    {
+        path: '/staffcashreport/:id',
+        element: <StaffCashReport />,
+    },
+   
+    {
+        path: '/servicecenterreport/:id',
+        element: <ServiceCenterReport />,
     },
     {
         path: '/completedbookings',

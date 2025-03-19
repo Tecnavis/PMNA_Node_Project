@@ -45,7 +45,28 @@ exports.getStaffById = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
+// Filtered get staffs endpoint
+exports.filterGetStaffs = async (req, res) => {
+  try {
+    const { search } = req.query;
+    let filter = {};
+    
+    if (search) {
+      // Case-insensitive search on name, showroomId, or location
+      filter = {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { role: { $regex: search, $options: 'i' } },
+        ]
+      };
+    }
+    
+    const staffs = await Staff.find(filter);
+    res.json(staffs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 // Update Staff
 exports.updateStaff = async (req, res) => {
   try {
