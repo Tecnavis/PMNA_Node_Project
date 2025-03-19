@@ -22,7 +22,10 @@ const Index = () => {
 
     const navigate = useNavigate();
     const dispatch = useDispatch();
+
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const today = new Date()
+
     useEffect(() => {
         dispatch(setPageTitle('Sales Admin'));
     });
@@ -57,7 +60,7 @@ const Index = () => {
 
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            
+
             if (storedRole !== 'admin') {
                 fetchRole();
             }
@@ -75,14 +78,13 @@ const Index = () => {
     });
 
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
 
     const fetchBookings = async () => {
 
         const response = await axios.get(`${backendUrl}/dashboard`);
         const data = response.data.bookingData[0]
         setExpiredRecords(response.data.records)
-        
+
         setBlink(data.newBookingsShowRoom.length > 0);
 
         setSalesByCategory({
@@ -221,6 +223,11 @@ const Index = () => {
         }
     }
 
+    const compareDates = (dateString: string, currentDate: Date): boolean => {
+        const dateObj = new Date(dateString);
+        return dateObj > currentDate;
+    };
+
     return (
         <div className="container mx-auto p-6 bg-cover bg-center bg-no-repeat">
             <ul className="flex space-x-2 rtl:space-x-reverse">
@@ -268,7 +275,26 @@ const Index = () => {
                             return (
                                 <div key={index} className="w-full gap-5">
                                     <div className={`w-full h-16 ${bgColor} rounded-xl flex items-center justify-between px-4 border-l-4 border-blue-500  shadow`}>
-                                        <span>🔔 {record.type} for vehicle {record.vehicleNumber} is expired! Expiry Date: {dateFormate(record.expiryDate)}</span>
+                                        {
+                                            compareDates(record.expiryDate, today) ? (
+                                                <span>
+                                                    🔔 {record.type} for vehicle {record.vehicleNumber} will expire soon! Expiry Date: {dateFormate(record.expiryDate)}
+                                                </span>
+                                            ) : (
+                                                new Date(record.expiryDate).getFullYear() === today.getFullYear() &&
+                                                new Date(record.expiryDate).getMonth() === today.getMonth() &&
+                                                new Date(record.expiryDate).getDate() === today.getDate()
+                                            ) ? (
+                                                <span>
+                                                    🔔 {record.type} for vehicle {record.vehicleNumber} expires today! Expiry Date: {dateFormate(record.expiryDate)}
+                                                </span>
+                                            ) : (
+                                                <span>
+                                                    🔔 {record.type} for vehicle {record.vehicleNumber} is expired! Expiry Date: {dateFormate(record.expiryDate)}
+                                                </span>
+                                            )
+                                        }
+
                                         <button
                                             className="bg-pink-500 text-white rounded-md py-2 px-3"
                                             onClick={() => handleDismissRecord(record)}

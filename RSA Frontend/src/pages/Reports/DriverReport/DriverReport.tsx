@@ -14,17 +14,39 @@ import { Driver } from '../DCPReport';
 import { Booking } from '../../Bookings/Bookings';
 import IconPhone from '../../../components/Icon/IconPhone';
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+const PAGE_SIZES = [10, 20, 30, 50, 100];
+
+type BookingOrTotal = Booking & {
+    id?: string;
+    receivedAmount: string | number;
+    balance?: number;
+    createdAt?: string;
+    fileNumber?: string;
+    customerVehicleNumber?: string;
+    totalAmount?: number;
+    approve?: boolean;
+    viewmore?: boolean;
+};
+
 const DriverCashCollectionsReport = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
     const [driver, serDriver] = useState<Driver | null>(null);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [selectedMonth, setSelectedMonth] = useState<string>('');
     const [selectedYear, setSelectedYear] = useState<string>('')
+    const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
+    const [initialRecords, setInitialRecords] = useState(bookings);
+    const [recordsData, setRecordsData] = useState(initialRecords);
+    const [inputValues, setInputValues] = useState<Record<string, string>>({});
+    const [search, setSearch] = useState('');
 
+    const { id } = useParams();
+    const navigate = useNavigate();
     const dispatch = useDispatch();
+    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
 
     // checking the token
     const gettingToken = () => {
@@ -70,23 +92,18 @@ const DriverCashCollectionsReport = () => {
     useEffect(() => {
         dispatch(setPageTitle('Column Chooser Table'));
     });
-    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
 
-    const [page, setPage] = useState(1);
-    const PAGE_SIZES = [10, 20, 30, 50, 100];
-    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-    const [initialRecords, setInitialRecords] = useState(bookings);
-    const [recordsData, setRecordsData] = useState(initialRecords);
-    const [inputValues, setInputValues] = useState<Record<string, string>>({});
-    const [search, setSearch] = useState('');
-    const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({
-        columnAccessor: 'id',
-        direction: 'asc',
-    });
+    const handleInputChange = (bookingId: string, value: string) => {
+        setInputValues((prev) => ({
+            ...prev,
+            [bookingId]: value,
+        }));
+    };
 
-    const handleOkClick = (id:string) => {
+    const handleOkClick = (id: string) => {
 
     }
+
 
     const cols = [
         {
@@ -168,7 +185,7 @@ const DriverCashCollectionsReport = () => {
                 const effectiveReceivedAmount = inputValues[booking._id] || booking.receivedAmount || 0;
                 return (
                     <td
-                        
+
                         style={{
                             backgroundColor:
                                 Number(calculateBalance(
@@ -228,13 +245,6 @@ const DriverCashCollectionsReport = () => {
         setInitialRecords(recordsData);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search]);
-
-    useEffect(() => {
-        const data = sortBy(initialRecords, sortStatus.columnAccessor);
-        setInitialRecords(sortStatus.direction === 'desc' ? data.reverse() : data);
-        setPage(1);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sortStatus]);
 
     return (
         <div>
@@ -394,7 +404,9 @@ const DriverCashCollectionsReport = () => {
                     <div className="datatables">
                         <DataTable
                             className="whitespace-nowrap table-hover"
-                            records={[...bookings, { id: 'total', receivedAmount: 'Total', balance: 100 }]}
+                            records={[
+                                ...bookings.map(item => ({ ...item, id: item._id })) 
+                            ]}
                             columns={cols}
                             highlightOnHover
                             totalRecords={bookings?.length}
