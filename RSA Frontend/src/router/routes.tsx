@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import VehicleFinanceCompliance from '../pages/VehicleDetails/VehicleCompliance';
+import RewardsItem from '../pages/Rewards/RewardsItems';
 const Index = lazy(() => import('../pages/Index'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Finance = lazy(() => import('../pages/Finance'));
@@ -266,6 +267,14 @@ const routes = [
     {
         path: '/taxandinsurance',
         element: <VehicleFinanceCompliance />,
+    },
+    {
+        path: '/reward-item',
+        element: <RewardsItem />,
+    },
+    {
+        path: '/reward',
+        // element: <VehicleFinanceCompliance />,
     },
     {
         path: '/Status',
