@@ -46,8 +46,9 @@ interface Company {
 }
 
 export interface Booking {
-    receivedUser: string,
-    // new prop
+    receivedUser: string,// new prop
+    companyBooking: boolean,// new prop
+    approve: boolean,// new prop
     receivedAmount: number,
     phoneNumber: any;
     pickupTime: string;
@@ -92,6 +93,7 @@ export interface Booking {
         personalPhoneNumber: string;
         phone: string;
         _id: string;
+        companyName: string; // New Props
         vehicle: [
             {
                 basicAmount: number;
