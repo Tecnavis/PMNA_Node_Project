@@ -7,20 +7,20 @@ exports.createDriver = async (req, res) => {
   try {
     const { name, idNumber, phone, personalPhoneNumber, password, vehicle } = req.body;
 
-const parsedVehicleDetails = typeof vehicle === 'string' ? JSON.parse(vehicle) : vehicle
+    const parsedVehicleDetails = typeof vehicle === 'string' ? JSON.parse(vehicle) : vehicle
 
-  
+
 
 
     const vehicleData = Array.isArray(parsedVehicleDetails)
-    ? parsedVehicleDetails.map(v => ({
-          serviceType: v.id, // Map 'id' to 'serviceType'
-          basicAmount: v.basicAmount,
-          kmForBasicAmount: v.kmForBasicAmount,
-          overRideCharge: v.overRideCharge,
-          vehicleNumber: v.vehicleNumber,
+      ? parsedVehicleDetails.map(v => ({
+        serviceType: v.id, // Map 'id' to 'serviceType'
+        basicAmount: v.basicAmount,
+        kmForBasicAmount: v.kmForBasicAmount,
+        overRideCharge: v.overRideCharge,
+        vehicleNumber: v.vehicleNumber,
       }))
-    : [];
+      : [];
 
     const driver = new Driver({
       name,
@@ -73,7 +73,9 @@ exports.filtergetDrivers = async (req, res) => {
 
 exports.getDriverById = async (req, res) => {
   try {
-    const driver = await Driver.findById(req.params.id).populate('vehicle.serviceType');
+    const driver = await Driver.findById(req.params.id)
+      .populate('vehicle.serviceType')
+      .populate('')
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
     res.json(driver);
   } catch (error) {
@@ -93,12 +95,12 @@ exports.updateDriver = async (req, res) => {
 
     const vehicleData = Array.isArray(parsedVehicle)
       ? parsedVehicle.map(v => ({
-          serviceType: v.id || v.serviceType, // Handle both creation and update cases
-          basicAmount: v.basicAmount,
-          kmForBasicAmount: v.kmForBasicAmount,
-          overRideCharge: v.overRideCharge,
-          vehicleNumber: v.vehicleNumber,
-        }))
+        serviceType: v.id || v.serviceType, // Handle both creation and update cases
+        basicAmount: v.basicAmount,
+        kmForBasicAmount: v.kmForBasicAmount,
+        overRideCharge: v.overRideCharge,
+        vehicleNumber: v.vehicleNumber,
+      }))
       : driver.vehicle; // Retain the existing vehicle data if none provided
 
     // Update driver fields

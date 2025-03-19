@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Booking } from '../Bookings/Bookings';
 import { axiosInstance as axios } from '../../config/axiosConfig';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
@@ -10,6 +10,7 @@ import BookingSkeleton from '../../components/Skeleton/BookingSkeleton';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import { GrNext, GrPrevious } from 'react-icons/gr';
 import ReactModal from 'react-modal'
+import { debounce } from 'lodash';
 
 enum Tabs {
     OngoingBookings = "OngoingBookings",
@@ -38,31 +39,34 @@ const Status: React.FC = () => {
 
     const navigate = useNavigate();
 
+    
     const handlePageChange = (page: number) => {
         if (page === currentPage || page < 1 || page > totalPages) return;
         fetchBookings("", page);
     };
-
+    
     const fetchBookings = async (search: string = '', page: number = 1, limit: number = 10) => {
         setLoader(true);
-
+        
         let status: string = tab === Tabs.CompletedBookings ? 'Order Completed' : tab === Tabs.CashPendingBookings ? Tabs.CashPendingBookings : Tabs.OngoingBookings;
-
+        
         try {
             const response = await axios.get(`/booking/status-based`, {
                 params: { page, limit, search, status }
             });
-
+            
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
             setCurrentPage(response.data.page);
-
+            
         } catch (error) {
             console.error("Error fetching bookings", error);
         } finally {
             setLoader(false);
         }
     };
+
+    const debouncedFetchBookings = useCallback(debounce(fetchBookings, 1000), []);
 
     const handleChangeTabs = (tabName: Tabs) => setTab(tabName);
 
@@ -117,7 +121,7 @@ const Status: React.FC = () => {
                     <div className="flex-grow sm:w-auto w-full ml-3">
                         <input
                             type="text"
-                            onChange={(e) => fetchBookings(e.target.value)}
+                            onChange={(e) => debouncedFetchBookings(e.target.value)}
                             placeholder="Search..."
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
                         />
@@ -324,7 +328,7 @@ const Status: React.FC = () => {
                         </span>
                         </label>
                     </div>
-                    {(selectedBooking?.receivedAmount ?? 0)  > 0 && (
+                    {(selectedBooking?.receivedAmount ?? 0) > 0 && (
                         <div>
                             <label className="block">
                                 Received Amount:

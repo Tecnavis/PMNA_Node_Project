@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import IconTrashLines from '../../components/Icon/IconTrashLines';
-import IconPencil from '../../components/Icon/IconPencil';
-import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import styles from './vehicledetails.module.css';
 import { MdShareLocation } from 'react-icons/md';
 import { GrNext, GrPrevious } from 'react-icons/gr';
+import { debounce } from 'lodash';
+import IconTrashLines from '../../components/Icon/IconTrashLines';
+import IconPencil from '../../components/Icon/IconPencil';
+import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
+import styles from './vehicledetails.module.css';
 import AddVehicleCompliance from './addVehicleCompliance';
 import { dateFormate } from '../../utils/dateUtils'
 import IconMenuDocumentation from '../../components/Icon/Menu/IconMenuDocumentation';
@@ -84,6 +85,8 @@ const VehicleCompliance: React.FC = () => {
         }
     }
 
+    const debouncedFfetchComplianceDetails = useCallback(debounce(fetchComplianceDetails, 500), []);
+
     const handlePageChange = (page: any) => {
         setCurrentPage(page);
         fetchComplianceDetails('', page);
@@ -149,7 +152,7 @@ const VehicleCompliance: React.FC = () => {
                             <input
                                 type="text"
                                 placeholder="Search records..."
-                                onChange={(e) => fetchComplianceDetails(e.target.value)}
+                                onChange={(e) => debouncedFfetchComplianceDetails(e.target.value)}
                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
                             />
                         </div>

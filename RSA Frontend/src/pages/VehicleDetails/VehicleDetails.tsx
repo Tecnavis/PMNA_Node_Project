@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import IconTrashLines from '../../components/Icon/IconTrashLines';
-import IconPencil from '../../components/Icon/IconPencil';
+import React, { useCallback, useEffect, useState } from 'react';
+import { debounce } from "lodash";
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import { Button } from '@mui/material';
-import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
-import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import styles from './vehicledetails.module.css';
+import { useNavigate } from 'react-router-dom';
 import { GrNext, GrPrevious } from 'react-icons/gr';
+import IconTrashLines from '../../components/Icon/IconTrashLines';
+import IconPencil from '../../components/Icon/IconPencil';
+import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
+import styles from './vehicledetails.module.css';
 import IconMenuDocumentation from '../../components/Icon/Menu/IconMenuDocumentation';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -80,6 +81,8 @@ const VehicleDetails: React.FC = () => {
             console.error('Error fetching service types:', error);
         }
     };
+
+    const debouncedfetchVehicleDetails = useCallback(debounce(fetchVehicleDetails, 500), []);
 
     const handlePageChange = (page: any) => {
         setCurrentPage(page);
@@ -244,7 +247,7 @@ const VehicleDetails: React.FC = () => {
                                 type="text"
                                 placeholder="Search vehicles..."
                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
-                                onChange={(e) => fetchVehicleDetails(e.target.value)}
+                                onChange={(e) => debouncedfetchVehicleDetails(e.target.value)}
                             />
                         </div>
                         {/* Add Vehicle */}
