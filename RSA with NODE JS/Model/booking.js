@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
-    workType: { type: String, required: true },
+    workType: { type: String, required: true }, 
     fileNumber: { type: String, required: true },
     location: { type: String, required: true },
     latitudeAndLongitude: { type: String, required: true },
@@ -59,7 +59,8 @@ const bookingSchema = new mongoose.Schema({
     verified: { type: Boolean },
     feedbackCheck: { type: Boolean },
     accountantVerified: { type: Boolean },
-    cashPending: { type: Boolean, default: false }
+    cashPending: { type: Boolean, default: false },// New props
+    receivedUser: { type: String } // New props
 
 }, { timestamps: true });
 
