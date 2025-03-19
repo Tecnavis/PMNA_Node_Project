@@ -17,10 +17,10 @@ router.get('/compliance-record/:id', Jwt,controller.getRecordById);
 //Route for delete record by Id
 router.delete('/compliance-record/:id', Jwt,controller.deleteRecord);
 
+
 //Route for creating a new record for 
 router.post('/compliance-record', Jwt, upload.array('images', 2), controller.addRecord);
 
-router.put('/compliance-record/:id', Jwt, upload.array('images', 2), controller.updateRecord);
 
 // Route for creating a new vehicle
 router.post('/', Jwt, controller.createVehicle);
@@ -37,6 +37,7 @@ router.put('/:id', Jwt, controller.updateVehicle);
 // Route for deleting a vehicle by ID
 router.delete('/:id', Jwt, controller.deleteVehicle);
 
+router.put('/compliance-record/:id', Jwt, upload.array('images', 2), controller.updateRecord);
 
 
 module.exports = router;
