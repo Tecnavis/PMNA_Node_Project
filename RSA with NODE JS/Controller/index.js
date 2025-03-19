@@ -66,36 +66,44 @@ exports.dashboard = async (req, res) => {
         const newBookings = await Bookings.aggregate(pipeline);
 
         const today = new Date();
+        const sevenDaysLater = new Date();
+        sevenDaysLater.setDate(today.getDate() + 7);
 
         //Fetching the data from database in javascript json formate
         const expiredRecords = await TaxInsurance.find({}).lean();
 
         //Create individual array item for expired records
         const filteredRecords = expiredRecords.flatMap((record) => {
+
             const expiredFields = [];
-            
-            if (!record.emiDue && record.emiExpiryDate < today) {
+
+            const isWithinNext7Days = (expiryDate) => {
+                const date = new Date(expiryDate);
+                return date >= today || date <= sevenDaysLater;
+            };
+
+            if (!record.emiDue && isWithinNext7Days(record.emiExpiryDate)) {
                 expiredFields.push({
                     type: "EMI",
                     vehicleNumber: record.vehicleNumber,
                     expiryDate: record.emiExpiryDate,
                 });
             }
-            if (!record.insuranceDue && record.insuranceExpiryDate < today) {
+            if (!record.insuranceDue && isWithinNext7Days(record.insuranceExpiryDate)) {
                 expiredFields.push({
                     type: "Insurance",
                     vehicleNumber: record.vehicleNumber,
                     expiryDate: record.insuranceExpiryDate,
                 });
             }
-            if (!record.pollutionDue && record.pollutionExpiryDate < today) {
+            if (!record.pollutionDue && isWithinNext7Days(record.pollutionExpiryDate)) {
                 expiredFields.push({
                     type: "Pollution",
                     vehicleNumber: record.vehicleNumber,
                     expiryDate: record.pollutionExpiryDate,
                 });
             }
-            if (!record.taxDue && record.taxExpiryDate < today) {
+            if (!record.taxDue && isWithinNext7Days(record.taxExpiryDate)) {
                 expiredFields.push({
                     type: "Tax",
                     vehicleNumber: record.vehicleNumber,
@@ -106,7 +114,10 @@ exports.dashboard = async (req, res) => {
             return expiredFields;
         });
 
-        res.status(201).json({ bookingData: newBookings, records: filteredRecords })
+        res.status(201).json({
+            bookingData: newBookings,
+            records: filteredRecords
+        })
     } catch (error) {
         console.error(error)
         res.status(500).json({ message: 'Error fetching dashboard data', error });
