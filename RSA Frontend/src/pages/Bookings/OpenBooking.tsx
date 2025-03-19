@@ -10,7 +10,7 @@ import Button from '@mui/material/Button';
 import { FaCloudUploadAlt } from 'react-icons/fa';
 import { styled } from '@mui/material/styles';
 
-interface Booking {
+export interface Booking {
     _id: string;
     workType: string;
     customerVehicleNumber: string;

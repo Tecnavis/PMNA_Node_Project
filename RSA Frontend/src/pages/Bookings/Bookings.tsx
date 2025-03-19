@@ -46,6 +46,8 @@ interface Company {
 }
 
 export interface Booking {
+    receivedUser: string,
+    // new prop
     receivedAmount: number,
     phoneNumber: any;
     pickupTime: string;
