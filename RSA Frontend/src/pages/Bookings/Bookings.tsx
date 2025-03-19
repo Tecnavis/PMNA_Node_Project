@@ -412,7 +412,7 @@ const Bookings: React.FC = () => {
                             >
                                 <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-5xl my-8 text-black dark:text-white-dark">
                                     <div className="flex bg-[#fbfbfb] dark:bg-[#121c2c] items-center justify-between px-5 py-3">
-                                        <h5 className="font-bold text-lg">{company && company.name ? company.name.charAt(0).toLocaleUpperCase() + company.name.slice(1) : 'Loading...'}</h5>
+                                        <h5 className="font-bold text-lg">{company && company?.name ? company?.name.charAt(0).toLocaleUpperCase() + company?.name.slice(1) : 'Loading...'}</h5>
                                         <button onClick={() => setModal5(false)} type="button" className="text-white-dark hover:text-dark">
                                             <IoIosCloseCircleOutline size={22} />
                                         </button>

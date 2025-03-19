@@ -104,6 +104,7 @@ export interface Driver {
         }
     ];
     image: string;
+    companyName: string; //New Props
 }
 
 const rowData = [

@@ -118,9 +118,12 @@ exports.getAllBookings = async (req, res) => {
         page = parseInt(page, 10);
         limit = parseInt(limit, 10);
 
-        const query = {
-            status: { $nin: [status] }
-        };
+
+        const query = {};
+
+        if (status) {
+            query.status = { $nin: [status] }
+        }
 
         // If driverId as query then fetch drivers bookings
         if (driverId) {
@@ -134,13 +137,10 @@ exports.getAllBookings = async (req, res) => {
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (dateRegex.test(search)) {
                 const [day, month, year] = search.split('/');
-                const startOfDay = new Date(`${year}-${month}-${day}T00:00:00Z`);
-                const endOfDay = new Date(`${year}-${month}-${day}T23:59:59Z`);
+                const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+                const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
 
-                query.createdAt = {
-                    $gte: startOfDay,
-                    $lte: endOfDay,
-                };
+                query.createdAt = { $gte: startOfDay, $lte: endOfDay };
             } else {
                 const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
                 const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
@@ -159,12 +159,12 @@ exports.getAllBookings = async (req, res) => {
 
         // Handle date range filter
         if (startDate || endDate) {
-            query.createdAt = query.createdAt || {};
+            query.createdAt = {};
             if (startDate) {
-                query.createdAt.$gte = new Date(startDate);
+                query.createdAt.$gte = new Date(`${startDate}T00:00:00.000Z`);
             }
             if (endDate) {
-                query.createdAt.$lte = new Date(endDate);
+                query.createdAt.$lte = new Date(`${endDate}T23:59:59.999Z`);
             }
         }
 
@@ -181,14 +181,36 @@ exports.getAllBookings = async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
 
-        console.log("API Query is : ", query)
+        // Aggregate data for total amounts
+        const aggregationResult = await Booking.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalCollected: { $sum: "$receivedAmount" },
+                    totalOverall: { $sum: "$totalAmount" }
+                }
+            }
+        ]);
 
+        const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
+        const overallAmount = aggregationResult[0]?.totalOverall || 0;
+        const balanceAmountToCollect = overallAmount - totalCollectedAmount;
+
+        console.log(aggregationResult)
         return res.status(200).json({
             total,
             page,
             limit,
             totalPages: Math.ceil(total / limit),
             bookings,
+            ...(driverId && {
+                financials: {
+                    totalCollectedAmount,
+                    totalBalanceAmount,
+                    overallAmount
+                }
+            })
         });
     } catch (error) {
         console.error('Error fetching bookings:', error);
@@ -868,7 +890,8 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
                         "Vehicle Confirmed",
                         "To DropOff Location",
                         "On the way to dropoff location",
-                        "Vehicle Dropped"
+                        "Vehicle Dropped",
+                        "Booking Added"
                     ]
                 };
                 query.cashPending = false;
