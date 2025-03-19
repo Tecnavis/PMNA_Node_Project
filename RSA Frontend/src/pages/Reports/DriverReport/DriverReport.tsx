@@ -1,51 +1,38 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
-import { sortBy } from 'lodash';
-import { DataTable, DataTableSortStatus } from 'mantine-datatable';
+import { DataTable } from 'mantine-datatable';
 import { IRootState } from '../../../store';
 import Dropdown from '../../../components/Dropdown';
-import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconShoppingBag from '../../../components/Icon/IconShoppingBag';
 import IconTag from '../../../components/Icon/IconTag';
 import IconCreditCard from '../../../components/Icon/IconCreditCard';
 import { Driver } from '../DCPReport';
 import { Booking } from '../../Bookings/Bookings';
 import IconPhone from '../../../components/Icon/IconPhone';
+import IconEye from '../../../components/Icon/IconEye';
+import { MONTHS, YEARS_FOR_FILTER } from '../constant'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
-const PAGE_SIZES = [10, 20, 30, 50, 100];
-
-type BookingOrTotal = Booking & {
-    id?: string;
-    receivedAmount: string | number;
-    balance?: number;
-    createdAt?: string;
-    fileNumber?: string;
-    customerVehicleNumber?: string;
-    totalAmount?: number;
-    approve?: boolean;
-    viewmore?: boolean;
-};
 
 const DriverCashCollectionsReport = () => {
 
     const [driver, serDriver] = useState<Driver | null>(null);
     const [bookings, setBookings] = useState<Booking[]>([]);
-    const [selectedMonth, setSelectedMonth] = useState<string>('');
-    const [selectedYear, setSelectedYear] = useState<string>('')
+    const [selectedMonth, setSelectedMonth] = useState<string>('March');
+    const [selectedYear, setSelectedYear] = useState<number>(2025)
+
+    const [startDate, setStartDate] = useState<string>('2025-03-01')
+    const [endingDate, setEndingDate] = useState<string>('2025-03-31')
+
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
     const [initialRecords, setInitialRecords] = useState(bookings);
-    const [recordsData, setRecordsData] = useState(initialRecords);
-    const [inputValues, setInputValues] = useState<Record<string, string>>({});
+    const [inputValues, setInputValues] = useState<Record<string, number>>({});
     const [search, setSearch] = useState('');
 
     const { id } = useParams();
     const navigate = useNavigate();
-    const dispatch = useDispatch();
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
 
     // checking the token
@@ -72,7 +59,7 @@ const DriverCashCollectionsReport = () => {
     const fetchBookings = async () => {
         try {
             const response = await axios.get(`${backendUrl}/booking`, {
-                params: { driverId: driver?._id }
+                params: { driverId: driver?._id, startDate, endingDate }
             });
 
             const data = response.data
@@ -87,28 +74,25 @@ const DriverCashCollectionsReport = () => {
         gettingToken();
         fetchBookings();
         getDriver();
-    }, [])
+    }, [search, endingDate, startDate])
 
-    useEffect(() => {
-        dispatch(setPageTitle('Column Chooser Table'));
-    });
-
-    const handleInputChange = (bookingId: string, value: string) => {
+    const updateInputValues = (bookingId: string, value: number) => {
         setInputValues((prev) => ({
             ...prev,
             [bookingId]: value,
         }));
     };
 
-    const handleOkClick = (id: string) => {
+    const handleApproveClick = (record: Booking) => {
 
     }
-
 
     const cols = [
         {
             accessor: '_id',
             title: '#',
+            className: 'text-center',
+            headerClassName: 'text-center',
             render: (_: Booking, index: number) => index + 1
         },
         {
@@ -122,24 +106,43 @@ const DriverCashCollectionsReport = () => {
             render: (record: Booking) =>
                 record._id !== 'total' ? <input type="checkbox" /> : null
         },
-        { accessor: 'createdAt', title: 'Date', render: (record: Booking) => new Date(record.createdAt || '').toLocaleDateString() },
-        { accessor: 'fileNumber', title: 'File Number' },
-        { accessor: 'customerVehicleNumber', title: 'Customer Vehicle Number' },
-        { accessor: 'totalAmount', title: 'Payable Amount By Customer' },
+        {
+            accessor: 'createdAt',
+            title: 'Date',
+            render: (record: Booking) => new Date(record.createdAt || '').toLocaleDateString()
+        },
+        {
+            accessor: 'fileNumber',
+            title: 'File Number',
+            className: 'text-center',
+            headerClassName: 'text-center',
+        },
+        {
+            accessor: 'customerVehicleNumber',
+            title: 'Customer Vehicle Number',
+            className: 'text-center',
+            headerClassName: 'text-center',
+            render: (record: Booking) => <div className='flex justify-center'>{record.customerVehicleNumber}</div>
+        },
+        {
+            accessor: 'totalAmount',
+            title: 'Payable Amount By Customer',
+            render: (record: Booking) => <div className='flex justify-center'>{record.workType === 'PaymentWork' ? record.totalAmount : "0.00"}</div>
+        },
         {
             accessor: 'receivedAmount',
             title: 'Amount Received From The Customer',
-            render: (booking: Booking, index: number) => (
-                <td key={booking._id} >
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                        {booking.companyBooking && booking.driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                            <span style={{ color: 'red', fontWeight: 'bold' }}>Not Need</span>
+            render: (booking: Booking) => {
+                return (<td key={booking._id}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className='text-center'>
+                        {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
+                            <span className={`text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
                         ) : (
                             <>
                                 <input
                                     type="text"
-                                    value={inputValues[booking._id] || booking.receivedAmount || ''}
-                                    onChange={(e) => handleInputChange(booking._id, e.target.value)}
+                                    value={inputValues[booking._id] || ""}
+                                    onChange={(e) => updateInputValues(booking._id, +e.target.value)}
                                     style={{
                                         border: '1px solid #d1d5db',
                                         borderRadius: '0.25rem',
@@ -150,7 +153,7 @@ const DriverCashCollectionsReport = () => {
                                     min="0"
                                 />
                                 <button
-                                    onClick={() => handleOkClick(booking._id)}
+                                    // onClick={() => handleOkClick(booking._id)}
                                     disabled={booking.approve || loadingStates[booking._id]}
                                     style={{
                                         backgroundColor:
@@ -175,76 +178,113 @@ const DriverCashCollectionsReport = () => {
                             </>
                         )}
                     </div>
-                </td>
-            )
+                </td>)
+            }
         },
         {
             accessor: 'balance',
             title: 'Balance',
             render: (booking: Booking) => {
-                const effectiveReceivedAmount = inputValues[booking._id] || booking.receivedAmount || 0;
+                const effectiveReceivedAmount = booking.receivedAmount || 0;
                 return (
-                    <td
-
-                        style={{
-                            backgroundColor:
-                                Number(calculateBalance(
+                    <span
+                        className={`
+                        ${booking.workType === 'RSAWork'
+                                ? 'text-green-500' // Light green for zero balance
+                                : 'text-red-500' // Light red for non-zero balance
+                            }
+                        `}
+                    >
+                        {
+                            booking.workType === 'RSAWork' ?
+                                '0.00'
+                                : calculateBalance(
                                     parseFloat(booking.totalAmount?.toString() || '0'),
                                     effectiveReceivedAmount || 0,
                                     booking.receivedUser
-                                )) === 0
-                                    ? '#e6ffe6' // Light green for zero balance
-                                    : '#ffe6e6', // Light red for non-zero balance
-                        }}
-                    >
-                        {calculateBalance(
-                            parseFloat(booking.totalAmount?.toString() || '0'),
-                            effectiveReceivedAmount || 0,
-                            booking.receivedUser
-                        )}
-                    </td>
+                                )
+                        }
+                    </span>
                 );
             }
         },
         {
             accessor: 'approve',
             title: 'Approve',
+            className: 'text-center',
+            headerClassName: 'text-center',
             render: (record: Booking) =>
-                record._id !== 'total' ? <button className="px-2 py-1 bg-green-500 text-white rounded">Approve</button> : null
+                record._id !== 'total' && record.workType !== 'RSAWork' ? (
+                    <button
+                        onClick={() => handleApproveClick(record)}
+                        className={`${record.approve ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.approve ? 'bg-green-300' : 'bg-red-300'
+                            } ${record.approve ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
+                        disabled={record.approve}
+                    >
+                        {record.approve ? 'Approved' : 'Approve'}
+                    </button>
+                ) : <div className='text-green-500'>Company Work</div>
         },
         {
             accessor: 'viewmore',
             title: 'View More',
             render: (record: Booking) =>
-                record._id !== 'total' ? <button className="px-2 py-1 bg-blue-500 text-white rounded">View</button> : null
+                record._id !== 'total' ?
+                    <div className='flex justify-center' onClick={() => navigate(`/openbooking/${record._id}`)}> <IconEye /></div>
+                    :
+                    null
         }
     ];
 
+    const handleMonth = (month: string) => {
+        setSelectedMonth(month);
+        updateDateRange(month, selectedYear);
+    };
+
+    const handleYear = (year: number) => {
+        setSelectedYear(year);
+        updateDateRange(selectedMonth, year);
+    };
+
+    const updateDateRange = (month: string, year: number) => {
+        const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
+    
+        // Start date: First day of the selected month
+        const firstDay = new Date(year, monthIndex, 1);
+        
+        // End date: Last day of the selected month
+        const lastDay = new Date(year, monthIndex + 1, 0);
+    
+        // Ensure proper formatting to "YYYY-MM-DD"
+        setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
+        setEndingDate(lastDay.toISOString().slice(0, 10));
+    };
+    
+    
+
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {
-            return '0.00';
+            return 0;
         }
         const parsedAmount = Number(amount) || 0; // Convert to number safely
         const parsedReceivedAmount = Number(receivedAmount) || 0;
         const balance = parsedAmount - parsedReceivedAmount;
 
-        return balance.toFixed(2); // Always return a string
+        return balance; // Always return a string
     };
 
     useEffect(() => {
-        setPage(1);
-    }, [pageSize]);
+        const updatedValues: Record<string, number> = {};
+        bookings.forEach((booking) => {
+            updatedValues[booking._id] = calculateBalance(
+                parseFloat(booking.totalAmount?.toString() || "0"),
+                booking.receivedAmount,
+                booking.receivedUser
+            );
+        });
+        setInputValues(updatedValues);
+    }, [bookings]);
 
-    useEffect(() => {
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize;
-        setRecordsData([...initialRecords.slice(from, to)]);
-    }, [page, pageSize, initialRecords]);
-
-    useEffect(() => {
-        setInitialRecords(recordsData);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search]);
 
     return (
         <div>
@@ -294,7 +334,7 @@ const DriverCashCollectionsReport = () => {
                             <h5 className="font-semibold text-lg dark:text-white-light">Filter Monthly Report</h5>
                             <div className='flex justify-end'>
                                 <div className="inline-flex mb-5 mr-2">
-                                    <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">All Months</button>
+                                    <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedMonth}</button>
                                     <div className="dropdown">
                                         <Dropdown
                                             placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
@@ -302,46 +342,47 @@ const DriverCashCollectionsReport = () => {
                                             button={<span className="sr-only">Filter by Month:</span>}
                                         >
                                             <ul className="!min-w-[170px]">
-                                                <li><button type="button">All Months</button></li>
-                                                <li><button type="button">January</button></li>
-                                                <li><button type="button">February</button></li>
-                                                <li><button type="button">March</button></li>
-                                                <li><button type="button">April</button></li>
-                                                <li><button type="button">May</button></li>
-                                                <li><button type="button">June</button></li>
-                                                <li><button type="button">July</button></li>
-                                                <li><button type="button">August</button></li>
-                                                <li><button type="button">September</button></li>
-                                                <li><button type="button">October</button></li>
-                                                <li><button type="button">November</button></li>
-                                                <li><button type="button">December</button></li>
+                                                {
+                                                    MONTHS.map((month: string, index: number) => (
+                                                        <li
+                                                            key={index}
+                                                        >
+                                                            <button
+                                                                onClick={() => handleMonth(month)}
+                                                                type="button"
+                                                            >
+                                                                {month}
+                                                            </button>
+                                                        </li>
+                                                    ))
+                                                }
                                             </ul>
                                         </Dropdown>
                                     </div>
                                 </div>
                                 <div className="inline-flex mb-5">
-                                    <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">All Years</button>
-                                    <div className="dropdown">
-                                        <Dropdown
-                                            placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
-                                            btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
-                                            button={<span className="sr-only">All Years</span>}
-                                        >
-                                            <ul className="!min-w-[170px]">
-                                                <li><button type="button">All Years</button></li>
-                                                <li><button type="button">2020</button></li>
-                                                <li><button type="button">2021</button></li>
-                                                <li><button type="button">2022</button></li>
-                                                <li><button type="button">2023</button></li>
-                                                <li><button type="button">2024</button></li>
-                                                <li><button type="button">2025</button></li>
-                                                <li><button type="button">2026</button></li>
-                                                <li><button type="button">2027</button></li>
-                                                <li><button type="button">2028</button></li>
-                                                <li><button type="button">2029</button></li>
-                                            </ul>
-                                        </Dropdown>
-                                    </div>
+                                    <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedYear}</button>
+                                    <Dropdown
+                                        placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                                        btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
+                                        button={<span className="sr-only">All Years</span>}
+                                    >
+                                        <ul className="!min-w-[170px]">
+                                            <li><button type="button">All Years</button></li>
+                                            {
+                                                YEARS_FOR_FILTER.map((year: number, index: number) => (
+                                                    <li key={index}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleYear(year)}
+                                                        >
+                                                            {year}
+                                                        </button>
+                                                    </li>
+                                                ))
+                                            }
+                                        </ul>
+                                    </Dropdown>
                                 </div>
                             </div>
                         </div>
@@ -403,19 +444,21 @@ const DriverCashCollectionsReport = () => {
                     </div>
                     <div className="datatables">
                         <DataTable
-                            className="whitespace-nowrap table-hover"
-                            records={[
-                                ...bookings.map(item => ({ ...item, id: item._id })) 
-                            ]}
-                            columns={cols}
+                            withColumnBorders
+                            verticalAlignment={"center"}
                             highlightOnHover
-                            totalRecords={bookings?.length}
-                            recordsPerPage={10}
-                            page={1}
-                            onPageChange={() => { }}
-                            recordsPerPageOptions={[10, 20, 50]}
-                            onRecordsPerPageChange={() => { }}
-                            minHeight={400}
+                            striped
+                            // totalRecords={bookings?.length}
+                            // recordsPerPage={10}
+                            // page={1}
+                            // onPageChange={() => { }}
+                            // recordsPerPageOptions={[10, 20, 50]}
+                            // onRecordsPerPageChange={() => { }}
+                            minHeight={300}
+                            columns={cols}
+                            records={[
+                                ...bookings.map(item => ({ ...item, id: item._id }))
+                            ]}
                         />
                     </div>
                 </div>

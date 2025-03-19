@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
 
+const RewardFor = {
+  Staff: "Staff",
+  Showroom: "Showroom",
+  ShowroomStaff: "ShowroomStaff",
+  Driver: "Driver"
+};
+
 const rewardSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -22,11 +29,17 @@ const rewardSchema = new mongoose.Schema({
   },
   rewardFor: {
     type: String,
+    enum: Object.values(RewardFor),
     required: true,
   },
   image: {
-    type: String, // URL or path to the uploaded image
+    type: String,
   },
 }, { timestamps: true });
 
-module.exports = mongoose.model('Reward', rewardSchema);
+const Reward = mongoose.model('Reward', rewardSchema);
+
+module.exports = {
+  Reward,
+  RewardFor
+};

@@ -1,10 +1,6 @@
 const express = require('express');
-const controller = require('../Controller/reward');
-
 const router = express.Router();
-
-
-
+const controller = require('../Controller/reward');
 const upload = require('../config/multer');
 const jwt = require('../Middileware/jwt')
 
