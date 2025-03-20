@@ -197,7 +197,7 @@ exports.getAllBookings = async (req, res) => {
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
         const balanceAmountToCollect = overallAmount - totalCollectedAmount;
 
-        console.log(aggregationResult)
+        
         return res.status(200).json({
             total,
             page,
@@ -259,6 +259,11 @@ exports.updateBooking = async (req, res) => {
         if (booking.status === "Order Completed") {
             console.log('The booking is order completed.');
         }
+
+        if (booking.status === "Rejected") {
+            booking.status = 'Booking Added'
+        }
+
         // Handle the case where 'company' is an empty string in update
         if (!updatedData.company || updatedData.company === "") {
             updatedData.company = null; // Or you can delete the field entirely if required

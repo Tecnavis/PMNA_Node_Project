@@ -37,6 +37,7 @@ interface Driver {
         }
     ];
     image: string;
+    rewardPoints: number;
 }
 
 const Driver: React.FC = () => {

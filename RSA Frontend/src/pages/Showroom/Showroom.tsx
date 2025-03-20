@@ -16,8 +16,10 @@ import IconPrinter from '../../components/Icon/IconPrinter';
 import IconFile from '../../components/Icon/IconFile';
 import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 
-interface Showroom {
+export interface Showroom {
     _id: string;
+    bookingPoints: string
+    rewardPoints: string
     name: string;
     showroomId: string;
     description: string;
@@ -254,7 +256,7 @@ const Showroom: React.FC = () => {
 
 
     // Handle search input change
-    const handleSearchChange = (e:any) => {
+    const handleSearchChange = (e: any) => {
         const value = e.target.value;
         setSearch(value);
 
@@ -272,16 +274,16 @@ const Showroom: React.FC = () => {
         setFilteredShowrooms(filtered);
     };
 
-       // opening modal for delete confirmation 
+    // opening modal for delete confirmation 
 
-       const openDeleteModal = (item: string) => {
+    const openDeleteModal = (item: string) => {
         setItemToDelete(item);
         setModalVisible(true);
     };
 
-     // closing modal for delete confirmation 
+    // closing modal for delete confirmation 
 
-     const closeModal = () => {
+    const closeModal = () => {
         setModalVisible(false);
         setItemToDelete(null);
     };
@@ -311,7 +313,7 @@ const Showroom: React.FC = () => {
                         </button>
                     </div>
 
-                    <input type="text" className="form-input w-auto" placeholder="Search..." value={search}  onChange={handleSearchChange}/>
+                    <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={handleSearchChange} />
                 </div>
                 <div className="table-responsive mb-5">
                     <table>

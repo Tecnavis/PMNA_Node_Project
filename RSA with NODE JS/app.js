@@ -18,7 +18,9 @@ var showroomRouter = require('./routes/showroom');
 var rewardRouter = require('./routes/reward');
 var bookingRouter = require('./routes/booking');
 var feedbackRouter = require('./routes/feedback')
-var VehicleRouter = require('./routes/vehicle')
+var vehicleRouter = require('./routes/vehicle')
+var pointRouter = require('./routes/point')
+
 const cors = require('cors')
 var app = express();
 
@@ -52,7 +54,8 @@ app.use('/showroom', showroomRouter);
 app.use('/reward', rewardRouter);
 app.use('/booking', bookingRouter);
 app.use('/feedback', feedbackRouter);
-app.use('/vehicle', VehicleRouter);
+app.use('/vehicle', vehicleRouter);
+app.use('/point', pointRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -169,7 +169,7 @@ const DriverCashCollectionsReport = () => {
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '0.25rem',
-                                        padding: '0.5rem',
+                                        padding: '0.3rem',
                                         cursor: 'pointer',
                                     }}
                                 >
@@ -248,19 +248,17 @@ const DriverCashCollectionsReport = () => {
 
     const updateDateRange = (month: string, year: number) => {
         const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
-    
+
         // Start date: First day of the selected month
         const firstDay = new Date(year, monthIndex, 1);
-        
+
         // End date: Last day of the selected month
         const lastDay = new Date(year, monthIndex + 1, 0);
-    
+
         // Ensure proper formatting to "YYYY-MM-DD"
         setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
         setEndingDate(lastDay.toISOString().slice(0, 10));
     };
-    
-    
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {
@@ -298,7 +296,7 @@ const DriverCashCollectionsReport = () => {
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src={`₹{backendUrl}/images/₹{driver?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
+                                <img src={`${backendUrl}/images/${driver?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
                                 <p className="font-semibold text-primary text-xl">{driver?.name}</p>
                                 <span className="whitespace-nowrap" dir="ltr">
                                     {driver?.idNumber}
@@ -394,7 +392,7 @@ const DriverCashCollectionsReport = () => {
                                     </div>
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base  dark:text-white-dark">
-                                            Total Collected Amount in April
+                                            Total Collected Amount in {selectedMonth}
                                             <span className="block text-base text-[#515365] dark:text-white-light">₹92,600</span>
                                         </h6>
                                         {/* <p className="ltr:ml-auto rtl:mr-auto text-secondary">₹92,600</p> */}
@@ -408,27 +406,29 @@ const DriverCashCollectionsReport = () => {
                                     </div>
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base dark:text-white-dark">
-                                            Balance Amount To Collect in April
+                                            Balance Amount To Collect in {selectedMonth}
                                             <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
                                         </h6>
                                         {/* <p className="ltr:ml-auto rtl:mr-auto text-info">65%</p> */}
                                     </div>
                                 </div>
                             </div>
-                            <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                <div className="flex items-center justify-between p-4 py-4">
-                                    <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
-                                        <IconCreditCard />
-                                    </div>
-                                    <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                        <h6 className="text-white-dark text-base dark:text-white-dark">
-                                            Overall Amount in April
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
-                                        </h6>
-                                        {/* <p className="ltr:ml-auto rtl:mr-auto text-info">65%</p> */}
+                            {
+                                (selectedMonth && selectedMonth !== 'All Months') && <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                                    <div className="flex items-center justify-between p-4 py-4">
+                                        <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
+                                            <IconCreditCard />
+                                        </div>
+                                        <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                                            <h6 className="text-white-dark text-base dark:text-white-dark">
+                                                Overall Amount in {selectedMonth}
+                                                <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
+                                            </h6>
+                                            {/* <p className="ltr:ml-auto rtl:mr-auto text-info">65%</p> */}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            }
                         </div>
                     </div>
                 </div>
