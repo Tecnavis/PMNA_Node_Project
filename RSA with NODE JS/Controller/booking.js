@@ -6,6 +6,46 @@ const multer = require('multer')
 const mongoose = require('mongoose');
 
 
+// ------------------------------
+// exports.createBooking = async (req, res) => {
+//     try {
+//         const { provider } = req.body;
+
+//         // Ensure provider ID is provided
+//         if (!provider) {
+//             return res.status(400).json({ message: 'Provider ID is required' });
+//         }
+
+//         // Fetch provider details from database
+//         const providerData = await Provider.findById(provider);
+
+//         if (!providerData) {
+//             return res.status(404).json({ message: 'Provider not found' });
+//         }
+
+//         // Check if cashInHand is less than creditAmountLimit
+//         if (providerData.cashInHand < providerData.creditAmountLimit) {
+//             return res.status(400).json({
+//                 message: 'Booking not allowed. Provider cash in hand is below the credit amount limit.',
+//             });
+//         }
+
+//         // Handle the case where 'company' is an empty string
+//         const bookingData = { ...req.body };
+//         if (!bookingData.company || bookingData.company === "") {
+//             bookingData.company = null;
+//         }
+
+//         // Create and save booking
+//         const newBooking = new Booking(bookingData);
+//         await newBooking.save();
+
+//         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
+//     } catch (error) {
+//         console.error('Error creating booking:', error);
+//         res.status(500).json({ message: 'Error creating booking', error: error.message });
+//     }
+// };
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
@@ -861,6 +901,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
             } else if (status === "OngoingBookings") {
                 query.status = {
                     $in: [
+                        "Booking Added",
                         "called to customer",
                         "Order Received",
                         "On the way to pickup location",

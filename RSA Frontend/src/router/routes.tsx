@@ -124,6 +124,7 @@ const DriverReport = lazy(()=> import('../pages/Reports/DriverReport/DriverRepor
 const VehicleDetails = lazy(()=> import('../pages/VehicleDetails/VehicleDetails'))
 const Status = lazy(()=> import('../pages/Status/Status'))
 const ShowroomReport = lazy(()=> import('../pages/Reports/ShowroomReport'))
+const Leaves = lazy(()=> import('../pages/Leaves/Leaves'))
 
 const StaffReport = lazy(()=> import('../pages/Reports/StaffReport'))
 
@@ -266,6 +267,10 @@ const routes = [
     {
         path: '/taxandinsurance',
         element: <VehicleFinanceCompliance />,
+    },
+    {
+        path: '/leaves',
+        element: <Leaves />,
     },
     {
         path: '/Status',
