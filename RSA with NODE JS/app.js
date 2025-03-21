@@ -14,11 +14,14 @@ var staffRouter = require('./routes/staff');
 var providerRouter = require('./routes/provider');
 var driverRouter = require('./routes/driver');
 var companyRouter = require('./routes/company');
+
 var showroomRouter = require('./routes/showroom');
 var rewardRouter = require('./routes/reward');
 var bookingRouter = require('./routes/booking');
 var feedbackRouter = require('./routes/feedback')
-var VehicleRouter = require('./routes/vehicle')
+var VehicleRouter = require('./routes/vehicle');
+var leavesRouter = require('./routes/leaves');
+
 const cors = require('cors')
 var app = express();
 
@@ -51,6 +54,8 @@ app.use('/company', companyRouter);
 app.use('/showroom', showroomRouter);
 app.use('/reward', rewardRouter);
 app.use('/booking', bookingRouter);
+app.use('/leaves', leavesRouter);
+
 app.use('/feedback', feedbackRouter);
 app.use('/vehicle', VehicleRouter);
 

@@ -34,7 +34,7 @@ interface Errors {
     yesPoint?: string;
     noPoint?: string;
 }
-const ServiceType: React.FC = () => {
+const Feedbacks: React.FC = () => {
     const [feedbacks, setFeedbacks] = useState<Feedbacks[]>([]);
     const [uid, setUid] = useState<string>('');
     const [question, setQuestion] = useState<string>('');
@@ -345,4 +345,4 @@ const ServiceType: React.FC = () => {
     );
 };
 
-export default ServiceType;
+export default Feedbacks;
