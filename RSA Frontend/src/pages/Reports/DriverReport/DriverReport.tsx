@@ -13,6 +13,8 @@ import { Booking } from '../../Bookings/Bookings';
 import IconPhone from '../../../components/Icon/IconPhone';
 import IconEye from '../../../components/Icon/IconEye';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
+import Swal from 'sweetalert2'
+import { BASE_URL } from '../../../config/axiosConfig';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -83,9 +85,26 @@ const DriverCashCollectionsReport = () => {
         }));
     };
 
-    const handleApproveClick = (record: Booking) => {
-
+    const handleApproveClick = async (record: Booking) => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you want to approve this booking!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, approve it!',
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const res = await axios.patch(`${BASE_URL}/booking/update-approve/${record._id}`
+                )
+                fetchBookings()
+                Swal.fire('Deleted!', 'The driver has been deleted.', 'success');
+            }
+        });
     }
+
+
 
     const cols = [
         {
@@ -217,11 +236,11 @@ const DriverCashCollectionsReport = () => {
                 record._id !== 'total' && record.workType !== 'RSAWork' ? (
                     <button
                         onClick={() => handleApproveClick(record)}
-                        className={`${record.approve ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.approve ? 'bg-green-300' : 'bg-red-300'
-                            } ${record.approve ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
-                        disabled={record.approve}
+                        className={`${record.accountantVerified ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.accountantVerified ? 'bg-green-300' : 'bg-red-300'
+                            } ${record.accountantVerified ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
+                        disabled={record.accountantVerified}
                     >
-                        {record.approve ? 'Approved' : 'Approve'}
+                        {record.accountantVerified ? 'Approved' : 'Approve'}
                     </button>
                 ) : <div className='text-green-500'>Company Work</div>
         },
@@ -395,7 +414,6 @@ const DriverCashCollectionsReport = () => {
                                             Total Collected Amount in {selectedMonth}
                                             <span className="block text-base text-[#515365] dark:text-white-light">₹92,600</span>
                                         </h6>
-                                        {/* <p className="ltr:ml-auto rtl:mr-auto text-secondary">₹92,600</p> */}
                                     </div>
                                 </div>
                             </div>
@@ -409,7 +427,6 @@ const DriverCashCollectionsReport = () => {
                                             Balance Amount To Collect in {selectedMonth}
                                             <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
                                         </h6>
-                                        {/* <p className="ltr:ml-auto rtl:mr-auto text-info">65%</p> */}
                                     </div>
                                 </div>
                             </div>
@@ -424,7 +441,6 @@ const DriverCashCollectionsReport = () => {
                                                 Overall Amount in {selectedMonth}
                                                 <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
                                             </h6>
-                                            {/* <p className="ltr:ml-auto rtl:mr-auto text-info">65%</p> */}
                                         </div>
                                     </div>
                                 </div>

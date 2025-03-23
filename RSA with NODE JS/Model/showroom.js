@@ -16,6 +16,8 @@ const showroomSchema = new mongoose.Schema({
   image: { type: String },
   rewardPoints: { type: Number, default: 0 },
   bookingPoints: { type: Number, default: 0 },
+  bookingPointsForStaff: { type: Number, default: 0 },
+  showroomLink: { type: String },
   cashInHand: { type: Number },
   services: {
     serviceCenter: {

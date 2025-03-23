@@ -49,6 +49,7 @@ export interface Booking {
     receivedUser: string,// new prop
     companyBooking: boolean,// new prop
     approve: boolean,// new prop
+    accountantVerified: boolean,// new prop
     receivedAmount: number,
     phoneNumber: any;
     pickupTime: string;
@@ -226,7 +227,6 @@ const Bookings: React.FC = () => {
         fetchBookings();
     }, []);
 
-    console.log('bookings', bookings);
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
             <div className="panel">
