@@ -28,6 +28,13 @@ router.post('/', Jwt, controller.createVehicle);
 // Route for getting all vehicle
 router.get('/', Jwt, controller.getAllVehicle);
 
+// Route for getting all exceeded service vehicle
+router.get("/exceeded-service", controller.getVehiclesExceedingServiceKM);
+
+//Route for dissmiss serviceKm vehicle
+router.put("/:vehicleId/update-status", controller.updateVehicleServiceStatus);
+
+
 // Route for getting a single vehicle by ID
 router.get('/:id', Jwt, controller.getVehicleById);
 

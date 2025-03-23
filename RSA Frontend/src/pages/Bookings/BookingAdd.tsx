@@ -142,16 +142,16 @@ interface SelectedEntity {
 const BookingAdd: React.FC = () => {
     // Checking message from openBooking 
 
-        const locationFromOpen = useLocation();
-        const params = new URLSearchParams(locationFromOpen.search);
-        const message = params.get('message');
-        const isMessageTrue = message === 'true';
-        if(isMessageTrue){
-            console.log('this is true')
-        } else {
-            console.log('this is false')
-        }
-    
+    const locationFromOpen = useLocation();
+    const params = new URLSearchParams(locationFromOpen.search);
+    const message = params.get('message');
+    const isMessageTrue = message === 'true';
+    if (isMessageTrue) {
+        console.log('this is true')
+    } else {
+        console.log('this is false')
+    }
+
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const navigate = useNavigate();
@@ -224,8 +224,8 @@ const BookingAdd: React.FC = () => {
     const fileNumberRef = useRef<HTMLInputElement>(null);
     const locationRef = useRef<HTMLInputElement>(null);
     const latitudeAndLongitudeRef = useRef<HTMLInputElement>(null);
-    const baselocationRef = useRef<any>(null);  
-    const selectedShowroomRef = useRef<any>(null);   
+    const baselocationRef = useRef<any>(null);
+    const selectedShowroomRef = useRef<any>(null);
 
     // check the page for token and redirect
 
@@ -548,10 +548,10 @@ const BookingAdd: React.FC = () => {
     };
 
     // calculating total amount
-console.log("selected endity", selectedEntity)
+    console.log("selected endity", selectedEntity)
     useEffect(() => {
         // Calculate the payable amount with insurance
-        if(!adjustmentValue){
+        if (!adjustmentValue) {
             if (selectedEntity?.payableAmount) {
                 const payableWithInsurance = selectedEntity.payableAmount - parseFloat(insuranceAmount || '0');
                 setTotalAmount(payableWithInsurance);
@@ -559,8 +559,8 @@ console.log("selected endity", selectedEntity)
                 setTotalAmount(0); // Set to 0 if no payableAmount is available
             }
         }
-        
-       
+
+
     }, [selectedEntity, insuranceAmount]);
 
     // handling the selected vehicle type
@@ -606,9 +606,8 @@ console.log("selected endity", selectedEntity)
 
     const options = sortedBaseLocations.map((location) => ({
         value: location._id,
-        label: `${location.baseLocation.charAt(0).toUpperCase() + location.baseLocation.slice(1)} - ${
-            location.distance !== Number.MAX_SAFE_INTEGER ? `${location.distance.toFixed(2)} km` : 'Distance Unavailable'
-        }`,
+        label: `${location.baseLocation.charAt(0).toUpperCase() + location.baseLocation.slice(1)} - ${location.distance !== Number.MAX_SAFE_INTEGER ? `${location.distance.toFixed(2)} km` : 'Distance Unavailable'
+            }`,
         latitudeAndLongitude: location.latitudeAndLongitude,
     }));
 
@@ -654,10 +653,10 @@ console.log("selected endity", selectedEntity)
             return;
         }
 
-        const matchingService = Array.isArray(selectedEntity.details) 
-        ? selectedEntity.details.find((detail: any) => detail.serviceType._id === selectedServiceType._id)
-        : null; // Or handle the case where it's not an array (e.g., provide a fallback)
-    
+        const matchingService = Array.isArray(selectedEntity.details)
+            ? selectedEntity.details.find((detail: any) => detail.serviceType._id === selectedServiceType._id)
+            : null; // Or handle the case where it's not an array (e.g., provide a fallback)
+
         if (!matchingService) {
             console.error('No matching service type found');
             return;
@@ -675,8 +674,8 @@ console.log("selected endity", selectedEntity)
     const handleDistanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value ? parseFloat(e.target.value) : null;
         setTotalDriverDistence(value);
-        calculateDriverSalary(); 
-      };
+        calculateDriverSalary();
+    };
 
     useEffect(() => {
         if (totalDriverDistence !== null && selectedServiceType) {
@@ -747,18 +746,40 @@ console.log("selected endity", selectedEntity)
                         'Content-Type': 'application/json',
                     },
                 });
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Booking added successfully',
-                    toast: true,
-                    position: 'top',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    padding: '10px 20px',
-                });
+                if (response.status === 400 || response.status === 401) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: response.data.message,
+                        toast: true,
+                        position: 'top',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        padding: '10px 20px',
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Booking added successfully',
+                        toast: true,
+                        position: 'top',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        padding: '10px 20px',
+                    });
+                }
                 navigate('/bookings');
-            } catch (error: unknown) {
+            } catch (error: any) {
+                if (axios.isAxiosError(error) && error.response) {
+                    Swal.fire({
+                        icon: error.response.status === 400 || error.response.status === 401 ? "warning" : "error",
+                        title: error.response.data.message || "An error occurred",
+                        toast: true,
+                        position: "top",
+                        showConfirmButton: false,
+                        timer: 3000,
+                        padding: "10px 20px",
+                    });
+                }
                 if (error instanceof AxiosError) {
                     console.error('Error creating booking:', error.response?.data?.message || error.message);
                     setErrors(error.response?.data || {});
@@ -798,10 +819,10 @@ console.log("selected endity", selectedEntity)
                 setFileNumber(data.fileNumber || '');
                 setLocation(data.location || '');
                 setLatitudeAndLongitude(data.latitudeAndLongitude || '');
-                setSelectedBaseLocation((prev)=>{
+                setSelectedBaseLocation((prev) => {
                     const baseLocationData = {
                         id: data.baselocation._id,
-                        latitudeAndLongitude:data.baselocation.latitudeAndLongitude
+                        latitudeAndLongitude: data.baselocation.latitudeAndLongitude
                     }
                     return prev ? { ...prev, ...baseLocationData } : baseLocationData;
                 })
@@ -814,21 +835,21 @@ console.log("selected endity", selectedEntity)
                         name: data.dropoffLocation || prev?.name || '', // Retain existing name if not provided
                         insurenceAmount: data.showroom?.services?.bodyShop?.amount, // Ensure the property name matches the expected type
                     };
-                    
+
 
                     return prev ? { ...prev, ...showroomData } : showroomData;
                 });
                 setTrappedLocation(data.trapedLocation || '');
                 setUpdatedAmout(data.updatedAmount || '');
                 setSelectedServiceType(data.serviceType || '');
-               
+
                 if (data.driver) {
-                    setSelectedEntity({ id: data.driver._id, payableAmount: data.payableAmountForDriver, name: data.driver?.name});
+                    setSelectedEntity({ id: data.driver._id, payableAmount: data.payableAmountForDriver, name: data.driver?.name });
                 } else if (data.provider) {
-                    setSelectedEntity({ id: data.provider._id,  payableAmount: data.payableAmountForProvider, name : data.provider?.name  });
+                    setSelectedEntity({ id: data.provider._id, payableAmount: data.payableAmountForProvider, name: data.provider?.name });
                 } else {
-                    setSelectedEntity(null); 
-                } 
+                    setSelectedEntity(null);
+                }
                 setServiceCategory(data.serviceCategory || '');
                 setAccidentOption(data.accidentOption || '');
                 setInsuranceAmount(data.insuranceAmount || '');
@@ -837,9 +858,9 @@ console.log("selected endity", selectedEntity)
                 setUpdatedAmout(data.updatedAmount || '');
                 setServiceCategory(data.serviceCategory || '');
                 setAdjustmentValue(data.adjustmentValue || '');
-                if(data.adjustmentValue){
+                if (data.adjustmentValue) {
                     setTotalAmount(data.adjustmentValue || '');
-                }else{
+                } else {
                     setTotalAmount(data.totalAmount || '');
                 }
                 setTotalDriverDistence(data.totalDriverDistence || '');
@@ -852,7 +873,7 @@ console.log("selected endity", selectedEntity)
                 setBrandName(data.brandName || '');
                 setComments(data.comments || '');
                 setComments(data.comments || '');
-                
+
 
             } catch (error) {
                 console.error('Error fetching booking data:', error);
@@ -926,11 +947,11 @@ console.log("selected endity", selectedEntity)
                     timer: 3000,
                     padding: '10px 20px',
                 });
-               if(isMessageTrue){
-                navigate('/completedbookings');
-               } else {
-                navigate('/bookings');
-               }
+                if (isMessageTrue) {
+                    navigate('/completedbookings');
+                } else {
+                    navigate('/bookings');
+                }
             } catch (error: unknown) {
                 if (error instanceof AxiosError) {
                     console.error('Error creating booking:', error.response?.data?.message || error.message);
@@ -1070,14 +1091,14 @@ console.log("selected endity", selectedEntity)
 
         // Set errors in the state
         setErrors(formErrors);
-   
-    
+
+
         return Object.keys(formErrors).length === 0;
     };
     // ref to scrolling 
 
-   
-    
+
+
 
     useEffect(() => {
         fetchCompanies();
@@ -1132,7 +1153,7 @@ console.log("selected endity", selectedEntity)
                             <label>Work Type</label>
                             <div className="flex items-center space-x-4">
                                 <label htmlFor="rsa-work">
-                                    <input id="rsa-work" type="radio" name="workType"  ref={workTypeRef} value="RSAWork" className="form-radio" checked={workType === 'RSAWork'} onChange={handleWorkTypeChange} />
+                                    <input id="rsa-work" type="radio" name="workType" ref={workTypeRef} value="RSAWork" className="form-radio" checked={workType === 'RSAWork'} onChange={handleWorkTypeChange} />
                                     RSA Work
                                 </label>
                                 <label htmlFor="payment-work">
@@ -1352,7 +1373,7 @@ console.log("selected endity", selectedEntity)
                                 On Road
                             </label>
                             <label>
-                                <input type="radio" ref={trapedLocationRef}  name="trappedLocation" value="inHouse" className="form-radio" checked={trappedLocation === 'inHouse'} onChange={handleTrappedLocationChange} />
+                                <input type="radio" ref={trapedLocationRef} name="trappedLocation" value="inHouse" className="form-radio" checked={trappedLocation === 'inHouse'} onChange={handleTrappedLocationChange} />
                                 In House
                             </label>
                             <label>

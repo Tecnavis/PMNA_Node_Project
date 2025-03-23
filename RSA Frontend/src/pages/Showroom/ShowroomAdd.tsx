@@ -451,7 +451,7 @@ const ShowroomAdd: React.FC = () => {
                                         placeholder="Enter amount"
                                         value={services.serviceCenter.amount || ''}
                                         className="form-input mb-2"
-                                         autoComplete='off'
+                                        autoComplete='off'
                                         onChange={(e) =>
                                             setServices((prev) => ({
                                                 ...prev,
@@ -481,7 +481,7 @@ const ShowroomAdd: React.FC = () => {
                                         type="number"
                                         placeholder="Enter amount"
                                         className="form-input mb-2"
-                                         autoComplete='off'
+                                        autoComplete='off'
                                         value={services.bodyShop.amount || ''}
                                         onChange={(e) =>
                                             setServices((prev) => ({
@@ -513,13 +513,13 @@ const ShowroomAdd: React.FC = () => {
 
                         <div>
                             <label htmlFor="name">Name</label>
-                            <input id="name" type="text"  autoComplete='off' placeholder="Enter Name" className="form-input" value={name} onChange={(e) => setName(e.target.value)} />
+                            <input id="name" type="text" autoComplete='off' placeholder="Enter Name" className="form-input" value={name} onChange={(e) => setName(e.target.value)} />
                             {errors.name && <p className="text-red-500">{errors.name}</p>}
                         </div>
 
                         <div>
                             <label htmlFor="phone">Phone</label>
-                            <input id="phone" type="tel"  autoComplete='off' placeholder="Enter Phone Number" className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                            <input id="phone" type="tel" autoComplete='off' placeholder="Enter Phone Number" className="form-input" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value)} />
                             {errors.phone_number && <p className="text-red-500">{errors.phone_number}</p>}
                         </div>
                         <div className={styles.container}>
@@ -528,7 +528,7 @@ const ShowroomAdd: React.FC = () => {
                                 <input
                                     id="serviceName"
                                     type="text"
-                                     autoComplete='off'
+                                    autoComplete='off'
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
                                     className={styles.input}
@@ -559,23 +559,23 @@ const ShowroomAdd: React.FC = () => {
                         </div>
                         <div>
                             <label htmlFor="showroomId">Showroom ID</label>
-                            <input id="showroomId"  autoComplete='off' type="text" placeholder="Enter Showroom ID" className="form-input" value={showroomId} onChange={(e) => setShowroomId(e.target.value)} />
+                            <input id="showroomId" autoComplete='off' type="text" placeholder="Enter Showroom ID" className="form-input" value={showroomId} onChange={(e) => setShowroomId(e.target.value)} />
                             {errors.showroomId && <p className="text-red-500">{errors.showroomId}</p>}
                         </div>
 
                         <div>
                             <label htmlFor="username">Username</label>
-                            <input id="username" type="text"  autoComplete='off' placeholder="Enter Username" className="form-input" value={username} onChange={(e) => setUsername(e.target.value)} />
+                            <input id="username" type="text" autoComplete='off' placeholder="Enter Username" className="form-input" value={username} onChange={(e) => setUsername(e.target.value)} />
                             {errors.username && <p className="text-red-500">{errors.username}</p>}
                         </div>
                         <div>
                             <label htmlFor="helpline">Helpline</label>
-                            <input id="helpline" type="text"  placeholder="Enter Helpline" className="form-input" value={helpline} onChange={(e) => setHelpline(e.target.value)} />
+                            <input id="helpline" type="text" placeholder="Enter Helpline" className="form-input" value={helpline} onChange={(e) => setHelpline(e.target.value)} />
                             {/* {errors.phone_number && <p className="text-red-500">{errors.phone_number}</p>} */}
                         </div>
                         <div>
                             <label htmlFor="mobile">Mobile number</label>
-                            <input id="helpline" type="text" placeholder="Enter Mobile number" className="form-input" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+                            <input maxLength={10}  id="helpline" type="text" placeholder="Enter Mobile number" className="form-input" value={mobile} onChange={(e) => setMobile(e.target.value)} />
                             {/* {errors.phone_number && <p className="text-red-500">{errors.phone_number}</p>} */}
                         </div>
                         <div>
