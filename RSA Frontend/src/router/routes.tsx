@@ -127,6 +127,7 @@ const ShowroomReport = lazy(()=> import('../pages/Reports/ShowroomReport'))
 const Leaves = lazy(()=> import('../pages/Leaves/Leaves'))
 
 const StaffReport = lazy(()=> import('../pages/Reports/StaffReport'))
+const AppBokk = lazy(()=> import('../pages/AppClose/AppBokk'))
 
 
 const ServiceCenterReport = lazy(()=> import('../pages/Reports/DriverReport/ServiceCenterReport'))
@@ -280,6 +281,12 @@ const routes = [
     //     path: '/index',
     //     element: <Index />,
     // },
+
+    {
+        path: '/appBooking',
+        element: <AppBokk />,
+    },
+  
     // analytics page
     {
         path: '/analytics',
