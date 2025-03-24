@@ -27,7 +27,7 @@ var app = express();
 connectDB()
 
 app.use(cors({
-  origin:'*'
+  origin:process.env.BACKEND_URL
 }))
 
 // view engine setup
