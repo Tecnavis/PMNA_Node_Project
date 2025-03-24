@@ -296,6 +296,14 @@ const Sidebar = () => {
                                 </AnimateHeight>
                             </li>
                             <li className="nav-item">
+                                <NavLink to="/leaves" className="group">
+                                    <div className="flex items-center">
+                                        <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('leaves')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            <li className="nav-item">
                                 <NavLink to="/status" className="group">
                                     <div className="flex items-center">
                                         <IconAt className="group-hover:!text-primary shrink-0" />
