@@ -151,7 +151,7 @@
 //         } else {
 //             console.log('this is false')
 //         }
-    
+
 
 //     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 //     const navigate = useNavigate();
@@ -559,8 +559,8 @@
 //                 setTotalAmount(0); // Set to 0 if no payableAmount is available
 //             }
 //         }
-        
-       
+
+
 //     }, [selectedEntity, insuranceAmount]);
 
 //     // handling the selected vehicle type
@@ -657,7 +657,7 @@
 //         const matchingService = Array.isArray(selectedEntity.details) 
 //         ? selectedEntity.details.find((detail: any) => detail.serviceType._id === selectedServiceType._id)
 //         : null; // Or handle the case where it's not an array (e.g., provide a fallback)
-    
+
 //         if (!matchingService) {
 //             console.error('No matching service type found');
 //             return;
@@ -815,14 +815,14 @@
 //                         name: data.dropoffLocation || prev?.name || '', // Retain existing name if not provided
 //                         insurenceAmount: data.showroom?.services?.bodyShop?.amount, // Ensure the property name matches the expected type
 //                     };
-                    
+
 
 //                     return prev ? { ...prev, ...showroomData } : showroomData;
 //                 });
 //                 setTrappedLocation(data.trapedLocation || '');
 //                 setUpdatedAmout(data.updatedAmount || '');
 //                 setSelectedServiceType(data.serviceType || '');
-               
+
 //                 if (data.driver) {
 //                     setSelectedEntity({ id: data.driver._id, payableAmount: data.payableAmountForDriver, name: data.driver?.name});
 //                 } else if (data.provider) {
@@ -853,7 +853,7 @@
 //                 setBrandName(data.brandName || '');
 //                 setComments(data.comments || '');
 //                 setComments(data.comments || '');
-                
+
 
 //             } catch (error) {
 //                 console.error('Error fetching booking data:', error);
@@ -1071,14 +1071,14 @@
 
 //         // Set errors in the state
 //         setErrors(formErrors);
-   
-    
+
+
 //         return Object.keys(formErrors).length === 0;
 //     };
 //     // ref to scrolling 
 
-   
-    
+
+
 
 //     useEffect(() => {
 //         fetchCompanies();
@@ -1979,8 +1979,8 @@ const BookingAdd: React.FC = () => {
         payableAmount: PayableAmount,
         afterExpence: afterExpence,
         details: {}, // Provide any default details you need
-      });
-          const [selectedBaseLocation, setSelectedBaseLocation] = useState<{ id: string; latitudeAndLongitude: string } | null>(null);
+    });
+    const [selectedBaseLocation, setSelectedBaseLocation] = useState<{ id: string; latitudeAndLongitude: string } | null>(null);
     const [selectedShowroom, setSelectedShowroom] = useState<{ id: string; latitudeAndLongitude: string; name: string; insurenceAmount: number | null } | null>(null);
     const [totalDistance, setTotalDistance] = useState<string>('');
     const [name, setName] = useState<string>('');
@@ -2483,14 +2483,14 @@ const BookingAdd: React.FC = () => {
     }, [trappedLocation, updatedAmount]);
     useEffect(() => {
         setSelectedEntity({
-          name: 'Dummy Driver',
-          id: 'dummy',
-          payableAmount: PayableAmount,
-          afterExpence: afterExpence,
-          details: {}, // Provide any default details you need
+            name: 'Dummy Driver',
+            id: 'dummy',
+            payableAmount: PayableAmount,
+            afterExpence: afterExpence,
+            details: {}, // Provide any default details you need
         });
-      }, []);
-      
+    }, []);
+
     // handle create booking
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -2569,25 +2569,11 @@ const BookingAdd: React.FC = () => {
                     });
                 }
                 navigate('/bookings');
-            } catch (error: any) {
-                if (axios.isAxiosError(error) && error.response) {
-                    Swal.fire({
-                        icon: error.response.status === 400 || error.response.status === 401 ? "warning" : "error",
-                        title: error.response.data.message || "An error occurred",
-                        toast: true,
-                        position: "top",
-                        showConfirmButton: false,
-                        timer: 3000,
-                        padding: "10px 20px",
-                    });
-                }
-                if (error instanceof AxiosError) {
-                    console.error('Error creating booking:', error.response?.data?.message || error.message);
             } catch (error: unknown) {
                 if (axios.isAxiosError(error)) {
                     const errorMessage = error.response?.data?.message || 'An error occurred';
                     console.error('Error creating booking:', errorMessage);
-    
+
                     Swal.fire({
                         icon: 'error',
                         title: 'Booking Failed',
@@ -2598,7 +2584,7 @@ const BookingAdd: React.FC = () => {
                         timer: 3000,
                         padding: '10px 20px',
                     });
-   
+
                     setErrors(error.response?.data || {});
                 } else {
                     console.error('Unexpected error:', error);
@@ -3239,17 +3225,17 @@ const BookingAdd: React.FC = () => {
                                 {errors.selectedServiceType && <p className="text-red-500">{errors.selectedServiceType}</p>}
 
                                 <div style={{ flex: '1' }}>
-                                <button 
-    type="button" 
-    className={`btn w-full mt-2 ${selectedEntity ? 'btn-success' : 'btn-primary'}`} 
-    onClick={openDriverModal}
->
-    {selectedEntity && selectedEntity.name ? (
-        <p ref={selectedEndityRef}>{selectedEntity.name}</p>
-    ) : (
-        <p>Select Driver</p>
-    )}
-</button>
+                                    <button
+                                        type="button"
+                                        className={`btn w-full mt-2 ${selectedEntity ? 'btn-success' : 'btn-primary'}`}
+                                        onClick={openDriverModal}
+                                    >
+                                        {selectedEntity && selectedEntity.name ? (
+                                            <p ref={selectedEndityRef}>{selectedEntity.name}</p>
+                                        ) : (
+                                            <p>Select Driver</p>
+                                        )}
+                                    </button>
 
                                 </div>
                                 {errors.selectedEntity && <p className="text-red-500">{errors.selectedEntity}</p>}
@@ -3558,29 +3544,29 @@ const BookingAdd: React.FC = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                         {/* Dummy Driver Row */}
-  <tr>
-    <td>
-      <div className="whitespace-nowrap font-bold text-red-500">Dummy Driver</div>
-    </td>
-    <td>Location</td>
-    <td style={{ color: 'green' }}>{PayableAmount}</td>
-    <td style={{ color: 'blue' }}>{afterExpence}</td>
-    <td className="text-center">
-      <button
-        className="btn btn-danger"
-        onClick={() =>
-          handleSelect({
-            name: 'Dummy Driver',
-            _id: 'dummy',
-            vehicle: {}, // Mark this as a driver by providing an empty vehicle object or desired details
-          })
-        }
-      >
-        <IconPlus />
-      </button>
-    </td>
-  </tr>
+                                                        {/* Dummy Driver Row */}
+                                                        <tr>
+                                                            <td>
+                                                                <div className="whitespace-nowrap font-bold text-red-500">Dummy Driver</div>
+                                                            </td>
+                                                            <td>Location</td>
+                                                            <td style={{ color: 'green' }}>{PayableAmount}</td>
+                                                            <td style={{ color: 'blue' }}>{afterExpence}</td>
+                                                            <td className="text-center">
+                                                                <button
+                                                                    className="btn btn-danger"
+                                                                    onClick={() =>
+                                                                        handleSelect({
+                                                                            name: 'Dummy Driver',
+                                                                            _id: 'dummy',
+                                                                            vehicle: {}, // Mark this as a driver by providing an empty vehicle object or desired details
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    <IconPlus />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
                                                         {drivers.map((data) => (
                                                             <tr key={data._id}>
                                                                 <td>
