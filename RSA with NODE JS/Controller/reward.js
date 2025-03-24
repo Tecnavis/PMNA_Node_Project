@@ -1,28 +1,32 @@
-const Reward = require('../Model/reward');
+const { Reward } = require('../Model/reward');
 
 // Create a new reward
 exports.createReward = async (req, res) => {
+  const { name, price, description, pointsRequired, stock, rewardFor } = req.body;
+
   try {
-    const { name, price, description, pointsRequired, stock, rewardFor } = req.body;
     const image = req.file ? req.file.filename : null;
 
-    if (!name || !price || !pointsRequired || !stock || !rewardFor) {
+    if (!name || !price || !pointsRequired || !stock || !rewardFor || !description) {
       return res.status(400).json({ message: 'Required fields are missing.' });
     }
 
     const reward = new Reward({
       name,
-      price,
+      price: +price,
       description,
-      pointsRequired,
-      stock,
+      pointsRequired: +pointsRequired,
+      stock: +stock,
       rewardFor,
       image,
     });
 
     await reward.save();
     res.status(201).json(reward);
+
   } catch (error) {
+    console.log(error)
+    console.log(error.message)
     res.status(500).json({ error: error.message });
   }
 };
@@ -30,7 +34,18 @@ exports.createReward = async (req, res) => {
 // Get all rewards
 exports.getAllRewards = async (req, res) => {
   try {
-    const rewards = await Reward.find();
+    const { rewardFor } = req.query;
+
+    // Define the filter object
+    const filter = {};
+
+    // Add rewardFor to the filter if it exists in the query
+    if (rewardFor) {
+      filter.rewardFor = rewardFor;
+    }
+
+    // Fetch rewards based on the filter
+    const rewards = await Reward.find(filter);
     res.status(200).json(rewards);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -57,12 +72,13 @@ exports.getRewardById = async (req, res) => {
 exports.updateReward = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, description, pointsRequired, stock, rewardFor } = req.body;
-    const image = req.file ? req.file.filename : null;
+    const { name, price, description, pointsRequired, stock, rewardFor, image } = req.body;
+
+    const img = req.file ? req.file.filename : image;
 
     const updatedReward = await Reward.findByIdAndUpdate(
       id,
-      { name, price, description, pointsRequired, stock, rewardFor, ...(image && { image }) },
+      { name, price, description, pointsRequired, stock, rewardFor, image: img },
       { new: true }
     );
 

@@ -1,5 +1,5 @@
 export const MONTHS = [
-    'All MONTHS',
+    'All Months',
     'January',
     'February',
     'March',

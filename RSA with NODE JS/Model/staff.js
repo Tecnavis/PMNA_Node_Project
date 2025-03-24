@@ -42,6 +42,14 @@ const staffSchema = new mongoose.Schema({
   cashInHand: {
     type: Number, 
   },
+  bookingPoint: {
+    type: Number, 
+    default: 0, 
+  },
+  rewardPoints: {
+    type: Number, 
+    default: 0, 
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Staff', staffSchema);

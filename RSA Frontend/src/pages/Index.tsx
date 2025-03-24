@@ -7,6 +7,8 @@ import { setPageTitle } from '../store/themeConfigSlice';
 import axios from 'axios';
 import { dateFormate } from '../utils/dateUtils';
 import Swal from "sweetalert2";
+import { VehicleRecord } from './VehicleDetails/VehicleCompliance';
+import { BASE_URL } from '../config/axiosConfig';
 
 interface Record {
     type: string,
@@ -19,6 +21,7 @@ const Index = () => {
     const [blink, setBlink] = useState<boolean>(false);
     const [role, setRole] = useState<string>('');
     const [expiredRecords, setExpiredRecords] = useState<Record[]>([]);
+    const [exceededRecords, setExceededRecords] = useState<VehicleRecord[]>([]);
 
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -69,6 +72,7 @@ const Index = () => {
             navigateToLogin();
         }
         fetchBookings()
+        fetchServiceKmExceededVehicle()
     }, [navigate]);
 
     const [loading, setLoading] = useState(true);
@@ -173,6 +177,11 @@ const Index = () => {
 
     };
 
+    const fetchServiceKmExceededVehicle = async () => {
+        const res = await axios.get(`${BASE_URL}/vehicle/exceeded-service`)
+        setExceededRecords(res.data.vehicles)
+    }
+
     const handleDismissRecord = async (record: Record) => {
         try {
             const result = await Swal.fire({
@@ -222,6 +231,55 @@ const Index = () => {
             });
         }
     }
+
+    const handleDismissVehicleServiceKm = async (vehicle: VehicleRecord) => {
+        try {
+            const result = await Swal.fire({
+                title: `Dismiss Service KM Exceeded?`,
+                text: `Are you sure you want to dismiss the service KM exceeded status for vehicle ${vehicle.vehicleNumber}?`,
+                color: '#ffff',
+                showCancelButton: true,
+                confirmButtonColor: "#ef4444",
+                cancelButtonColor: "#e5e7eb",
+                confirmButtonText: "Yes, Dismiss it!"
+            });
+
+            if (!result.isConfirmed) return;
+
+            const response = await axios.put(`${backendUrl}/vehicle/${vehicle._id}/update-status`, {
+                role
+            });
+
+            // Handle API response
+            if (response.data) {
+                fetchServiceKmExceededVehicle(); // Refresh bookings or vehicle data
+                Swal.fire({
+                    icon: 'success',
+                    title: `Service KM exceeded status for vehicle ${vehicle.vehicleNumber} dismissed successfully.`,
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+            } else {
+                throw new Error(response.data.message || "Something went wrong");
+            }
+
+        } catch (error: any) {
+            Swal.fire({
+                title: "Error",
+                text: error.message || "Failed to dismiss the service KM exceeded status.",
+                toast: true,
+                icon: "error",
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+        }
+    };
+
 
     const compareDates = (dateString: string, currentDate: Date): boolean => {
         const dateObj = new Date(dateString);
@@ -306,7 +364,24 @@ const Index = () => {
                             );
                         })
                     }
+                    {
+                        exceededRecords.map((vehicle, index) => (
+                            <div key={index} className="w-full gap-5">
+                                <div className={`w-full h-16  rounded-xl flex items-center justify-between px-4 border-l-4 border-blue-500  shadow`}>
 
+                                    <span>
+                                        🔔 Vehicle {vehicle.serviceVehicle} has exceeded the service limit ({vehicle.serviceKM} KM). Please service it soon!
+                                    </span>
+                                    <button
+                                        className="bg-pink-500 text-white rounded-md py-2 px-3"
+                                        onClick={() => handleDismissVehicleServiceKm(vehicle)}
+                                    >
+                                        Dismiss
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    }
                     <div className="panel h-full bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg shadow-lg p-6">
                         <div className="flex items-center justify-between mb-5">
                             <h5 className="font-semibold text-lg">Bookings By Category</h5>

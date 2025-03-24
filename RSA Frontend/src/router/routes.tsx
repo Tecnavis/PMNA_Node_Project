@@ -1,6 +1,8 @@
 import { lazy } from 'react';
 import VehicleFinanceCompliance from '../pages/VehicleDetails/VehicleCompliance';
 import RewardsItem from '../pages/Rewards/RewardsItems';
+import Rewards from '../pages/Rewards/Rewards';
+import ShowRoomDetails from '../pages/Showroom/ShowroomDetails';
 const Index = lazy(() => import('../pages/Index'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Finance = lazy(() => import('../pages/Finance'));
@@ -158,6 +160,11 @@ const routes = [
         element: <Showroom />,
     },
     {
+        path: '/showroom/showroom-details',
+        element: <ShowRoomDetails />,
+        layout : 'blank'
+    },
+    {
         path: '/bookings',
         element: <Bookings />,
     },
@@ -276,7 +283,7 @@ const routes = [
     },
     {
         path: '/reward',
-        // element: <VehicleFinanceCompliance />,
+        element: <Rewards />,
     },
     {
         path: '/Status',
