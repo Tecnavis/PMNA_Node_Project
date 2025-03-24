@@ -13,6 +13,8 @@ import { Booking } from '../../Bookings/Bookings';
 import IconPhone from '../../../components/Icon/IconPhone';
 import IconEye from '../../../components/Icon/IconEye';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
+import Swal from 'sweetalert2'
+import { BASE_URL } from '../../../config/axiosConfig';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -83,9 +85,26 @@ const DriverCashCollectionsReport = () => {
         }));
     };
 
-    const handleApproveClick = (record: Booking) => {
-
+    const handleApproveClick = async (record: Booking) => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you want to approve this booking!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, approve it!',
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const res = await axios.patch(`${BASE_URL}/booking/update-approve/${record._id}`
+                )
+                fetchBookings()
+                Swal.fire('Deleted!', 'The driver has been deleted.', 'success');
+            }
+        });
     }
+
+
 
     const cols = [
         {
@@ -169,7 +188,7 @@ const DriverCashCollectionsReport = () => {
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '0.25rem',
-                                        padding: '0.5rem',
+                                        padding: '0.3rem',
                                         cursor: 'pointer',
                                     }}
                                 >
@@ -217,11 +236,11 @@ const DriverCashCollectionsReport = () => {
                 record._id !== 'total' && record.workType !== 'RSAWork' ? (
                     <button
                         onClick={() => handleApproveClick(record)}
-                        className={`${record.approve ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.approve ? 'bg-green-300' : 'bg-red-300'
-                            } ${record.approve ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
-                        disabled={record.approve}
+                        className={`${record.accountantVerified ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.accountantVerified ? 'bg-green-300' : 'bg-red-300'
+                            } ${record.accountantVerified ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
+                        disabled={record.accountantVerified}
                     >
-                        {record.approve ? 'Approved' : 'Approve'}
+                        {record.accountantVerified ? 'Approved' : 'Approve'}
                     </button>
                 ) : <div className='text-green-500'>Company Work</div>
         },
@@ -248,19 +267,17 @@ const DriverCashCollectionsReport = () => {
 
     const updateDateRange = (month: string, year: number) => {
         const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
-    
+
         // Start date: First day of the selected month
         const firstDay = new Date(year, monthIndex, 1);
-        
+
         // End date: Last day of the selected month
         const lastDay = new Date(year, monthIndex + 1, 0);
-    
+
         // Ensure proper formatting to "YYYY-MM-DD"
         setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
         setEndingDate(lastDay.toISOString().slice(0, 10));
     };
-    
-    
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {
@@ -298,7 +315,7 @@ const DriverCashCollectionsReport = () => {
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src={`₹{backendUrl}/images/₹{driver?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
+                                <img src={`${backendUrl}/images/${driver?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
                                 <p className="font-semibold text-primary text-xl">{driver?.name}</p>
                                 <span className="whitespace-nowrap" dir="ltr">
                                     {driver?.idNumber}
@@ -394,10 +411,9 @@ const DriverCashCollectionsReport = () => {
                                     </div>
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base  dark:text-white-dark">
-                                            Total Collected Amount in April
+                                            Total Collected Amount in {selectedMonth}
                                             <span className="block text-base text-[#515365] dark:text-white-light">₹92,600</span>
                                         </h6>
-                                        {/* <p className="ltr:ml-auto rtl:mr-auto text-secondary">₹92,600</p> */}
                                     </div>
                                 </div>
                             </div>
@@ -408,27 +424,27 @@ const DriverCashCollectionsReport = () => {
                                     </div>
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base dark:text-white-dark">
-                                            Balance Amount To Collect in April
+                                            Balance Amount To Collect in {selectedMonth}
                                             <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
                                         </h6>
-                                        {/* <p className="ltr:ml-auto rtl:mr-auto text-info">65%</p> */}
                                     </div>
                                 </div>
                             </div>
-                            <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                <div className="flex items-center justify-between p-4 py-4">
-                                    <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
-                                        <IconCreditCard />
-                                    </div>
-                                    <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                        <h6 className="text-white-dark text-base dark:text-white-dark">
-                                            Overall Amount in April
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
-                                        </h6>
-                                        {/* <p className="ltr:ml-auto rtl:mr-auto text-info">65%</p> */}
+                            {
+                                (selectedMonth && selectedMonth !== 'All Months') && <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                                    <div className="flex items-center justify-between p-4 py-4">
+                                        <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
+                                            <IconCreditCard />
+                                        </div>
+                                        <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                                            <h6 className="text-white-dark text-base dark:text-white-dark">
+                                                Overall Amount in {selectedMonth}
+                                                <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
+                                            </h6>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            }
                         </div>
                     </div>
                 </div>

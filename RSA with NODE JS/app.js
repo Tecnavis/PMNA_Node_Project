@@ -19,6 +19,8 @@ var showroomRouter = require('./routes/showroom');
 var rewardRouter = require('./routes/reward');
 var bookingRouter = require('./routes/booking');
 var feedbackRouter = require('./routes/feedback')
+var vehicleRouter = require('./routes/vehicle')
+var pointRouter = require('./routes/point')
 var VehicleRouter = require('./routes/vehicle');
 var leavesRouter = require('./routes/leaves');
 
@@ -28,7 +30,7 @@ var app = express();
 connectDB()
 
 app.use(cors({
-  origin:'*'
+  origin:process.env.BACKEND_URL
 }))
 
 // view engine setup
@@ -57,7 +59,8 @@ app.use('/booking', bookingRouter);
 app.use('/leaves', leavesRouter);
 
 app.use('/feedback', feedbackRouter);
-app.use('/vehicle', VehicleRouter);
+app.use('/vehicle', vehicleRouter);
+app.use('/point', pointRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

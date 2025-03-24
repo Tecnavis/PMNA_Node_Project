@@ -2,8 +2,8 @@ const Booking = require('../Model/booking');
 const Driver = require('../Model/driver'); // Import your Driver model
 const Provider = require('../Model/provider'); // Import your Provider model
 const Company = require('../Model/company'); // Import your Provider model
-const multer = require('multer')
 const mongoose = require('mongoose');
+const Vehicle = require('../Model/vehicle');
 
 
 // ------------------------------
@@ -57,15 +57,103 @@ exports.createBooking = async (req, res) => {
             bookingData.company = null; // Or you can delete the field entirely if required
         }
 
-        // Create the booking document
+        // Fetch driver details
+        const driver = await Driver.findById(bookingData.driver);
+        if (!driver) {
+            return res.status(404).json({ message: "Driver not found" });
+        }
+
+        // Find the selected vehicle for the driver
+        const selectedVehicle = driver.vehicle.find(
+            (item) => item.serviceType.toString() === bookingData.serviceType.toString()
+        );
+
+        if (!selectedVehicle) {
+            return res.status(404).json({ message: "Vehicle not found for the selected service type" });
+        }
+
+        const vehicle = await Vehicle.findOne({ serviceVehicle: selectedVehicle.vehicleNumber })
+
+        if (!vehicle.valid) {
+            return res.status(400).json({
+                success: false,
+                message: "Please select another driver, this vehicle has exceeded its service KM limit.",
+            })
+        }
+
         const newBooking = new Booking(bookingData);
 
         await newBooking.save();
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
     } catch (error) {
-        console.error('Error creating booking:', error);
-        res.status(500).json({ message: 'Error creating booking', error: error.message });
+        if (error.name === "ValidationError") {
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                errors: error.errors,
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "An internal server error occurred",
+            error: error.message,
+        });
+    }
+};
+
+//Helper function for check and udpate the vehicle serviceKM 
+const checkVehicleServiceStatus = async (booking) => {
+    try {
+        // Step 1: Find the vehicle associated with the booking
+        const driver = await Driver.findById(booking.driver);
+        if (!driver) {
+            throw new Error("Driver not found");
+        }
+
+        // Find the selected vehicle for the driver
+        const selectedVehicle = driver.vehicle.find(
+            (item) => item.serviceType.toString() === booking.serviceType.toString()
+        );
+
+        if (!selectedVehicle) {
+            throw new Error("Vehicle not found for the selected service type");
+        }
+
+        const vehicle = await Vehicle.findOne({ serviceVehicle: selectedVehicle.vehicleNumber });
+        if (!vehicle) {
+            throw new Error("Vehicle details not found");
+        }
+
+        // Step 2: Update the vehicle's odometer with the new booking's distance
+        const newOdometerValue = vehicle.totalOdometer + booking.totalDistence;
+        const update = {}
+
+        // Step 3: Check if the vehicle has reached its service KM limit then set default value
+        if ((newOdometerValue - vehicle.totalOdometer) >= vehicle.serviceKM) {
+            update.vehicleServiceDismissed = false
+            update.DismissedBy = null
+            update.vehicleServiceDue = false
+            update.valid = false
+        }
+
+        // Step 4: Update the vehicle's odometer
+        await Vehicle.findByIdAndUpdate(vehicle._id, {
+            totalOdometer: newOdometerValue,
+            previousOdometer: vehicle.totalOdometer,
+            ...update
+        });
+
+        return {
+            success: true,
+            message: "Vehicle odometer updated successfully.",
+            vehicleId: vehicle._id,
+            newOdometerValue,
+        };
+    } catch (error) {
+        console.error("Error checking vehicle service status:", error);
+        return { success: false, message: "Error processing request", error: error.message };
     }
 };
 
@@ -237,7 +325,7 @@ exports.getAllBookings = async (req, res) => {
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
         const balanceAmountToCollect = overallAmount - totalCollectedAmount;
 
-        console.log(aggregationResult)
+
         return res.status(200).json({
             total,
             page,
@@ -286,8 +374,7 @@ exports.getBookingById = async (req, res) => {
 exports.updateBooking = async (req, res) => {
     const { id } = req.params;
     const updatedData = req.body;
-
-
+    
     try {
         // Fetch the existing booking
         const booking = await Booking.findById(id);
@@ -295,10 +382,10 @@ exports.updateBooking = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        // Check if the status is "Order Completed" and log the message
-        if (booking.status === "Order Completed") {
-            console.log('The booking is order completed.');
+        if (booking.status === "Rejected") {
+            booking.status = 'Booking Added'
         }
+
         // Handle the case where 'company' is an empty string in update
         if (!updatedData.company || updatedData.company === "") {
             updatedData.company = null; // Or you can delete the field entirely if required
@@ -377,9 +464,6 @@ exports.updatePickupByAdmin = async (req, res) => {
             remark,
         } = req.body;
 
-        console.log(req.body);
-        console.log(id);
-
         // Update the booking details
         const updatedBooking = await Booking.findByIdAndUpdate(
             id,
@@ -396,6 +480,8 @@ exports.updatePickupByAdmin = async (req, res) => {
             },
             { new: true } // Return the updated document
         );
+
+        await checkVehicleServiceStatus(updatedBooking)
 
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found.' });
@@ -786,7 +872,7 @@ exports.postFeedback = async (req, res) => {
 // accountant verifying 
 exports.accountVerifying = async (req, res) => {
     const { id } = req.params
-    console.log('Received ID:', id);
+
     try {
         const updatedBooking = await Booking.findByIdAndUpdate(
             id,
@@ -1000,3 +1086,26 @@ exports.settleAmount = async (req, res) => {
     }
 };
 
+//Controller for update booking as approved 
+exports.updateBookingApproved = async (req, res) => {
+    try {
+        const { id } = req.query
+
+        const booking = await Booking.findById(id)
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found.' });
+        }
+
+        booking.accountantVerified = true
+        await booking.save()
+
+        return res.status(200).json({
+            message: "Booking updated successfully, approved"
+        })
+    } catch (error) {
+        console.log(error.message)
+        return res.status(500).json({
+            message: error.message
+        })
+    }
+}
