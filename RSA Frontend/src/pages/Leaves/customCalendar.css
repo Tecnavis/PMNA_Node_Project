@@ -1,0 +1,52 @@
+/* customCalendar.css */
+
+/* Basic react-calendar overrides */
+.react-calendar {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  
+  .react-calendar__tile {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+  }
+  
+  /* Highlight leave days in red */
+  .leave-day {
+    background-color: #ee3f3f !important; /* Tailwind Red-400 */
+    color: #ffffff;
+    border-radius: 100%;
+    position: relative;
+  }
+  
+  /* Example tooltip style */
+  .tooltip {
+    position: relative;
+    cursor: pointer;
+  }
+  
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 80px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 4px 6px;
+    position: absolute;
+    z-index: 10;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  /* Show tooltip on hover */
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+  }
+ 
+  
