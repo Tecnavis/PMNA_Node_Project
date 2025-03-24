@@ -210,14 +210,13 @@ exports.getAllBookings = async (req, res) => {
         const query = {};
 
         if (status) {
-            query.status = { $nin: [status] }
+            query.status = { $ne: status }
         }
 
         // If driverId as query then fetch drivers bookings
         if (driverId) {
             query.driver = driverId;
         }
-
 
         // Handle search
         if (search) {
@@ -229,7 +228,7 @@ exports.getAllBookings = async (req, res) => {
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
 
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
-            } else {
+
                 const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
                 const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
@@ -245,14 +244,21 @@ exports.getAllBookings = async (req, res) => {
             }
         }
 
-        // Handle date range filter
         if (startDate || endDate) {
             query.createdAt = {};
+
             if (startDate) {
-                query.createdAt.$gte = new Date(`${startDate}T00:00:00.000Z`);
+                query.createdAt.$gte = new Date(startDate);
             }
             if (endDate) {
-                query.createdAt.$lte = new Date(`${endDate}T23:59:59.999Z`);
+                const endDateObj = new Date(endDate);
+                endDateObj.setHours(23, 59, 59, 999); // Set to end of the day
+                query.createdAt.$lte = endDateObj;
+            }
+
+            // Remove createdAt if it's empty
+            if (Object.keys(query.createdAt).length === 0) {
+                delete query.createdAt;
             }
         }
 
@@ -280,10 +286,11 @@ exports.getAllBookings = async (req, res) => {
                 }
             }
         ]);
-
-        const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
-        const overallAmount = aggregationResult[0]?.totalOverall || 0;
-        const balanceAmountToCollect = overallAmount - totalCollectedAmount;
+        console.log('aggregation result ', aggregationResult)
+        // Extract financial data from aggregation result
+        const totalAmount = aggregationResult[0]?.totalAmount || 0;
+        const receivedAmount = aggregationResult[0]?.receivedAmount || 0;
+        const balanceAmountToCollect = totalAmount - receivedAmount;
 
 
         return res.status(200).json({
@@ -292,13 +299,11 @@ exports.getAllBookings = async (req, res) => {
             limit,
             totalPages: Math.ceil(total / limit),
             bookings,
-            ...(driverId && {
-                financials: {
-                    totalCollectedAmount,
-                    totalBalanceAmount,
-                    overallAmount
-                }
-            })
+            financials: {
+                totalCollectedAmount: totalAmount,
+                overallAmount: receivedAmount,
+                balanceAmountToCollect: balanceAmountToCollect
+            }
         });
     } catch (error) {
         console.error('Error fetching bookings:', error);
@@ -334,7 +339,7 @@ exports.getBookingById = async (req, res) => {
 exports.updateBooking = async (req, res) => {
     const { id } = req.params;
     const updatedData = req.body;
-    
+
     try {
         // Fetch the existing booking
         const booking = await Booking.findById(id);
@@ -1048,9 +1053,10 @@ exports.settleAmount = async (req, res) => {
 //Controller for update booking as approved 
 exports.updateBookingApproved = async (req, res) => {
     try {
-        const { id } = req.query
+        const { id } = req.params
 
         const booking = await Booking.findById(id)
+        
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }

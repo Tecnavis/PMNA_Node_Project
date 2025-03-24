@@ -60,7 +60,7 @@ router.patch('/accountantverify/:id', jwt, controller.accountVerifying);
 router.patch('/sattle-amount/:id', jwt, controller.settleAmount);
 
 //Route to approve booking
-// router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
+router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
 
 
 module.exports = router;
