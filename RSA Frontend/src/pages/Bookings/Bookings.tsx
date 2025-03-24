@@ -17,6 +17,7 @@ import IconEye from '../../components/Icon/IconEye';
 import IconMapPin from '../../components/Icon/IconMapPin';
 import { GrPrevious } from 'react-icons/gr';
 import { GrNext } from 'react-icons/gr';
+import TrackModal from "../Bookings/TrackModal"; // Adjust the path as needed
 
 interface Company {
     _id: string;
@@ -144,6 +145,8 @@ const Bookings: React.FC = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
+    const [trackModalOpen, setTrackModalOpen] = useState(false);
+    const [selectedItemId, setSelectedItemId] = useState<string | undefined>(undefined);
 
     const handlePageChange = (page: any) => {
         setCurrentPage(page);
@@ -193,22 +196,10 @@ const Bookings: React.FC = () => {
 
     // deleting company
 
-    const handleDelete = (itemId: any) => {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: 'This action cannot be undone!',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                axios.delete(`${backendUrl}/company/${itemId}`);
-                setCompanies((prev) => prev.filter((item) => item._id !== itemId));
-                Swal.fire('Deleted!', 'The company has been deleted.', 'success');
-            }
-        });
+    const handleTrack = (itemId: string) => {
+        console.log("Tracking itemId:", itemId);
+        setSelectedItemId(itemId);  // Store itemId in state
+        setTrackModalOpen(true);
     };
 
     // getting company by id in modal
@@ -340,11 +331,17 @@ const Bookings: React.FC = () => {
                                                 </li>
                                                 <li>
                                                     <Tippy content="Track">
-                                                        <button type="button" onClick={() => handleDelete(items._id)}>
+                                                        <button type="button" onClick={() => handleTrack(items._id)}>
                                                             <LuRadar size={24} className="text-info" /> {/* Track icon */}
                                                         </button>
                                                     </Tippy>
                                                 </li>
+                                                <TrackModal
+  open={trackModalOpen}
+  onClose={() => setTrackModalOpen(false)}
+  itemId={selectedItemId} // Pass the selected item ID
+/>
+
                                                 <li>
                                                     <Tippy content="Change Location">
                                                         <button type="button">
@@ -616,6 +613,7 @@ const Bookings: React.FC = () => {
                     </div>
                 </Dialog>
             </Transition>
+            
         </div>
     );
 };

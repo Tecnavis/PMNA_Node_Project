@@ -270,7 +270,11 @@ const CompletedBookings: React.FC = () => {
                                             </td>
                                         )}
                                         <td>{items.mob1}</td>
-                                        <td>{items.serviceType.serviceName.toUpperCase()}</td>
+                                        <td>
+  {items.serviceType?.serviceName
+    ? items.serviceType.serviceName.toUpperCase()
+    : 'N/A'}
+</td>
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
                                         <td className="text-center">
                                             <ul className="flex items-center justify-center gap-2">
