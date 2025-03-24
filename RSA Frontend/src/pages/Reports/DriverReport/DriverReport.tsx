@@ -15,8 +15,15 @@ import IconEye from '../../../components/Icon/IconEye';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
 import Swal from 'sweetalert2'
 import { BASE_URL } from '../../../config/axiosConfig';
+import { number } from 'yup';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+interface FilterData {
+    totalCollectedAmount: number,
+    overallAmount: number,
+    balanceAmountToCollect: number
+}
 
 const DriverCashCollectionsReport = () => {
 
@@ -24,10 +31,13 @@ const DriverCashCollectionsReport = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [selectedMonth, setSelectedMonth] = useState<string>('March');
     const [selectedYear, setSelectedYear] = useState<number>(2025)
-
+    const [filterData, setFilterData] = useState<FilterData>({
+        totalCollectedAmount: 0,
+        overallAmount: 0,
+        balanceAmountToCollect: 0
+    })
     const [startDate, setStartDate] = useState<string>('2025-03-01')
     const [endingDate, setEndingDate] = useState<string>('2025-03-31')
-
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [initialRecords, setInitialRecords] = useState(bookings);
     const [inputValues, setInputValues] = useState<Record<string, number>>({});
@@ -65,8 +75,12 @@ const DriverCashCollectionsReport = () => {
             });
 
             const data = response.data
-
             setBookings(data.bookings);
+            setFilterData({
+                balanceAmountToCollect: data.financials.balanceAmountToCollect,
+                overallAmount: data.financials.overallAmount,
+                totalCollectedAmount: data.financials.totalCollectedAmount
+            })
         } catch (error) {
             console.error("Error fetching api booking in report section : ", error)
         }
@@ -86,9 +100,26 @@ const DriverCashCollectionsReport = () => {
     };
 
     const handleApproveClick = async (record: Booking) => {
+        // Check if receivedAmount is not zero
+        if (calculateBalance(
+            parseFloat(record.totalAmount?.toString() || '0'),
+            record.receivedAmount || 0,
+            record.receivedUser
+        ) !== 0) {
+            Swal.fire({
+                title: 'Balance Amount Not Zero',
+                text: 'The balance amount needs to be zero before approving this booking.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK',
+            });
+            return; // Stop further execution
+        }
+
+        // Proceed with approval if receivedAmount is zero
         Swal.fire({
             title: 'Are you sure?',
-            text: 'Do you want to approve this booking!',
+            text: 'Do you want to approve this booking?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
@@ -96,15 +127,17 @@ const DriverCashCollectionsReport = () => {
             confirmButtonText: 'Yes, approve it!',
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await axios.patch(`${BASE_URL}/booking/update-approve/${record._id}`
-                )
-                fetchBookings()
-                Swal.fire('Deleted!', 'The driver has been deleted.', 'success');
+                try {
+                    const res = await axios.patch(`${BASE_URL}/booking/update-approve/${record._id}`);
+                    fetchBookings(); // Refresh the bookings list
+                    Swal.fire('Approved!', 'The booking has been approved.', 'success');
+                } catch (error) {
+                    console.error('Error approving booking:', error);
+                    Swal.fire('Error!', 'Failed to approve the booking.', 'error');
+                }
             }
         });
-    }
-
-
+    };
 
     const cols = [
         {
@@ -123,7 +156,7 @@ const DriverCashCollectionsReport = () => {
                 </label>
             ),
             render: (record: Booking) =>
-                record._id !== 'total' ? <input type="checkbox" /> : null
+                record._id !== 'total' ? <input type="checkbox" disabled={record.approve} /> : null
         },
         {
             accessor: 'createdAt',
@@ -172,7 +205,7 @@ const DriverCashCollectionsReport = () => {
                                     min="0"
                                 />
                                 <button
-                                    // onClick={() => handleOkClick(booking._id)}
+                                    onClick={() => handleUpdateAmount(booking._id)}
                                     disabled={booking.approve || loadingStates[booking._id]}
                                     style={{
                                         backgroundColor:
@@ -290,6 +323,19 @@ const DriverCashCollectionsReport = () => {
         return balance; // Always return a string
     };
 
+    const handleUpdateAmount = async (id: string) => {
+        const receivedAmount = inputValues[id]
+        if (!receivedAmount) return;
+        try {
+            const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { receivedAmount });
+            fetchBookings();
+            Swal.fire('Balance!', 'The booking balance amount udated.', 'success');
+        } catch (error) {
+            console.error('Error updatebalnce amount:', error);
+            Swal.fire('Error!', 'Failed to update balance amount in booking.', 'error');
+        }
+    }
+
     useEffect(() => {
         const updatedValues: Record<string, number> = {};
         bookings.forEach((booking) => {
@@ -305,7 +351,6 @@ const DriverCashCollectionsReport = () => {
 
     return (
         <div>
-
             <div className="pt-5">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 w-full">
                     {/* DriverCashCollectionsReport Section */}
@@ -412,7 +457,7 @@ const DriverCashCollectionsReport = () => {
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base  dark:text-white-dark">
                                             Total Collected Amount in {selectedMonth}
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹92,600</span>
+                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.totalCollectedAmount}</span>
                                         </h6>
                                     </div>
                                 </div>
@@ -425,7 +470,7 @@ const DriverCashCollectionsReport = () => {
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base dark:text-white-dark">
                                             Balance Amount To Collect in {selectedMonth}
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
+                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
                                         </h6>
                                     </div>
                                 </div>
@@ -439,7 +484,7 @@ const DriverCashCollectionsReport = () => {
                                         <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                             <h6 className="text-white-dark text-base dark:text-white-dark">
                                                 Overall Amount in {selectedMonth}
-                                                <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
+                                                <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.overallAmount}</span>
                                             </h6>
                                         </div>
                                     </div>

@@ -250,9 +250,9 @@ const Index = () => {
                 role
             });
 
+            fetchServiceKmExceededVehicle(); // Refresh bookings or vehicle data
             // Handle API response
             if (response.data) {
-                fetchServiceKmExceededVehicle(); // Refresh bookings or vehicle data
                 Swal.fire({
                     icon: 'success',
                     title: `Service KM exceeded status for vehicle ${vehicle.vehicleNumber} dismissed successfully.`,
