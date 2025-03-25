@@ -2569,9 +2569,9 @@ const BookingAdd: React.FC = () => {
                     });
                 }
                 navigate('/bookings');
-            } catch (error: unknown) {
+            } catch (error: any) {
                 if (axios.isAxiosError(error)) {
-                    const errorMessage = error.response?.data?.message || 'An error occurred';
+                    const errorMessage = error?.response?.data?.message || 'An error occurred';
                     console.error('Error creating booking:', errorMessage);
 
                     Swal.fire({
@@ -2585,7 +2585,7 @@ const BookingAdd: React.FC = () => {
                         padding: '10px 20px',
                     });
 
-                    setErrors(error.response?.data || {});
+                    setErrors(error?.response?.data || {});
                 } else {
                     console.error('Unexpected error:', error);
                     setErrors({ message: 'An unexpected error occurred' });
