@@ -30,11 +30,7 @@ var app = express();
 connectDB()
 
 app.use(cors({
-  origin: [
-    "https://pmna-node-project-81gupqd3v-hadhi-hassan-s-projects.vercel.app",
-    "https://pmna-node-project-git-hadhihassa-c15d1f-hadhi-hassan-s-projects.vercel.app?_vercel_share=05SqezQcwkVkiIoEMa3MnWMkXLTYylhU",
-    "https://pmna-node-project-git-hadhihassa-c15d1f-hadhi-hassan-s-projects.vercel.app"
-  ]
+  origin: "*"
 }))
 
 // view engine setup

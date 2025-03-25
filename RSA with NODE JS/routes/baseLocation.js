@@ -7,7 +7,7 @@ const jwt = require('../Middileware/jwt')
 router.post('/',jwt,controller.createBaseLocation);
 
 // Route to get all baselocation
-router.get('/',jwt,controller.getBaseLocations)
+router.get('/',controller.getBaseLocations)
 
 //Route to get by id baselocation
 router.get('/:id',jwt,controller.getBaseLocationById)

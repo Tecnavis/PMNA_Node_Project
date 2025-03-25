@@ -240,7 +240,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10, status = '', driverId } = req.query;
+        let { search, startDate, endDate, endingDate, page = 1, limit = 10, status = '', driverId } = req.query;
 
         // Convert page and limit to integers
         page = parseInt(page, 10);
@@ -255,15 +255,16 @@ exports.getAllBookings = async (req, res) => {
 
         // If driverId as query then fetch drivers bookings
         if (driverId) {
-            query.driver = driverId;
+            query.driver = new mongoose.Types.ObjectId(driverId);
         }
 
         // Handle search
         if (search) {
             search = search.trim();
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-            if (dateRegex.test(search)) {
-                const [day, month, year] = search.split('/');
+
+            if (dateRegex.test(search) || search) {
+                const [year, month, day] = search.split('-');
                 const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
 
@@ -284,22 +285,14 @@ exports.getAllBookings = async (req, res) => {
             }
         }
 
-        if (startDate || endDate) {
-            query.createdAt = {};
+        if (startDate && endingDate) {
+            const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
+            const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
 
-            if (startDate) {
-                query.createdAt.$gte = new Date(startDate);
-            }
-            if (endDate) {
-                const endDateObj = new Date(endDate);
-                endDateObj.setHours(23, 59, 59, 999); // Set to end of the day
-                query.createdAt.$lte = endDateObj;
-            }
-
-            // Remove createdAt if it's empty
-            if (Object.keys(query.createdAt).length === 0) {
-                delete query.createdAt;
-            }
+            query.createdAt = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
         }
 
         // Pagination and sorting by createdAt in descending order
@@ -315,6 +308,10 @@ exports.getAllBookings = async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
 
+            const balanceAmount = bookings.reduce((total, booking) => {
+                return total + booking.receivedAmount;
+            }, 0);
+            
         // Aggregate data for total amounts
         const aggregationResult = await Booking.aggregate([
             { $match: query },
@@ -326,11 +323,11 @@ exports.getAllBookings = async (req, res) => {
                 }
             }
         ]);
-        console.log('aggregation result ', aggregationResult)
+
         // Extract financial data from aggregation result
-        const totalAmount = aggregationResult[0]?.totalAmount || 0;
-        const receivedAmount = aggregationResult[0]?.receivedAmount || 0;
-        const balanceAmountToCollect = totalAmount - receivedAmount;
+        const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
+        const overallAmount = aggregationResult[0]?.totalOverall || 0;
+        const balanceAmountToCollect = overallAmount - totalCollectedAmount;
 
 
         return res.status(200).json({
@@ -339,9 +336,10 @@ exports.getAllBookings = async (req, res) => {
             limit,
             totalPages: Math.ceil(total / limit),
             bookings,
+            balanceAmount,
             financials: {
-                totalCollectedAmount: totalAmount,
-                overallAmount: receivedAmount,
+                totalCollectedAmount,
+                overallAmount,
                 balanceAmountToCollect: balanceAmountToCollect
             }
         });
@@ -1097,7 +1095,7 @@ exports.updateBookingApproved = async (req, res) => {
         const { id } = req.params
 
         const booking = await Booking.findById(id)
-        
+
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }

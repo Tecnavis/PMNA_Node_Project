@@ -60,6 +60,7 @@ const bookingSchema = new mongoose.Schema({
     feedbackCheck: { type: Boolean },
     accountantVerified: { type: Boolean },
     cashPending: { type: Boolean, default: false },// New props
+    approve: { type: Boolean, default: false },// New props
     receivedUser: { type: String } // New props
 
 }, { timestamps: true });
