@@ -623,7 +623,6 @@ const AddBookingWithoutAuth: React.FC = () => {
                         padding: '10px 20px',
                     });
                 }
-                navigate('/bookings');
             } catch (error: unknown) {
                 if (axios.isAxiosError(error)) {
                     const errorMessage = error.response?.data?.message || 'An error occurred';
