@@ -299,10 +299,10 @@ const routes = [
         path: '/Status',
         element: <Status />,
     },
-    // {
-    //     path: '/index',
-    //     element: <Index />,
-    // },
+    {
+        path: '/leaves',
+        element: <Leaves />,
+    },
 
     {
         path: '/appBooking',

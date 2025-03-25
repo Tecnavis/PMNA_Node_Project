@@ -1852,6 +1852,7 @@ export interface Driver {
     phone: string;
     personalPhoneNumber: string;
     password: string;
+    isLeave?: boolean,
     vehicle: [
         {
             serviceType: {
@@ -3511,6 +3512,12 @@ const BookingAdd: React.FC = () => {
                                                                 <p style={{ fontWeight: 'bold' }}>Profit</p>
                                                             </th>
                                                             <th>
+                                                                <p style={{ fontWeight: 'bold' }}>Leave Status</p>
+                                                            </th>
+                                                            <th>
+                                                                <p style={{ fontWeight: 'bold' }}>Current Status</p>
+                                                            </th>
+                                                            <th>
                                                                 <p style={{ fontWeight: 'bold' }}>Select</p>
                                                             </th>
                                                         </tr>
@@ -3524,6 +3531,10 @@ const BookingAdd: React.FC = () => {
                                                             <td>Location</td>
                                                             <td style={{ color: 'green' }}>{PayableAmount}</td>
                                                             <td style={{ color: 'blue' }}>{afterExpence}</td>
+
+                                                            <td style={{ color: 'blue' }}>Available</td>
+                                                            <td className='text-green-500'>Order Addedd</td>
+
                                                             <td className="text-center">
                                                                 <button
                                                                     className="btn btn-danger"
@@ -3547,6 +3558,8 @@ const BookingAdd: React.FC = () => {
                                                                 <td>location</td>
                                                                 <td style={{ color: 'green' }}>{PayableAmount}</td>
                                                                 <td style={{ color: 'blue' }}>{afterExpence}</td>
+                                                                <td style={{ color: 'blue' }}>{data?.isLeave ? "Unavailable" : 'Available'}</td>
+                                                                <td className='text-green-500'>On The Way Of PickUp</td>
                                                                 <td className="text-center">
                                                                     <button className="btn btn-success" onClick={() => handleSelect(data)}>
                                                                         <IconPlus />
@@ -3564,6 +3577,11 @@ const BookingAdd: React.FC = () => {
                                                                 <td>location</td>
                                                                 <td style={{ color: 'green' }}>{PayableAmount}</td>
                                                                 <td style={{ color: 'blue' }}>{afterExpence}</td>{' '}
+
+                                                                <td style={{ color: 'blue' }}>Available</td>{' '}
+                                                                <td className='text-green-500'>Order Addedd</td>
+
+
                                                                 <td className="text-right">
                                                                     <button className="btn btn-success" onClick={() => handleSelect(data)}>
                                                                         <IconPlus />
