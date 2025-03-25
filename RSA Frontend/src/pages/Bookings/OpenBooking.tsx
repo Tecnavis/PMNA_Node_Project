@@ -3,7 +3,6 @@ import React, { ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
 import { Dialog, DialogPanel, Transition, TransitionChild, Tab } from '@headlessui/react';
-
 import { IoIosCloseCircleOutline } from 'react-icons/io';
 import Swal from 'sweetalert2';
 import Button from '@mui/material/Button';
@@ -152,7 +151,7 @@ const Preview = () => {
     const [fileNumber, setFileNumber] = useState<string>('');
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [selectedResponses, setSelectedResponses] = useState<{ [key: string]: string }>({});
-
+    const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
     const dropoffAndPickup = useRef<any>(null);
 
     // checking the token
@@ -252,8 +251,6 @@ const Preview = () => {
         setCompanyAmountIsChecked((prev) => !prev);
     };
 
-    console.log('pickup image urls ', pickupImageUrls);
-    console.log('dropoff image urls ', dropoffImageUrls);
 
     // handling pickup and dropoff images
 
@@ -436,7 +433,6 @@ const Preview = () => {
         setModal6(false);
     };
 
-    console.log('the feedback', feedbacks);
 
     // Verifying booking
 
@@ -521,6 +517,24 @@ const Preview = () => {
         }
     };
 
+    const handleDownloadImage = () => {
+        if (!enlargedImage) return;
+
+        fetch(enlargedImage)
+            .then(response => response.blob())
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "downloaded-image.jpg";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            })
+            .catch(error => console.error("Error downloading the image:", error));
+    }
+
     useEffect(() => {
         gettingToken();
         fetchBookingById();
@@ -549,15 +563,14 @@ const Preview = () => {
                 <hr className="border-white-light dark:border-[#1b2e4b] my-6" />
 
                 <div className="table-responsive mt-6">
-                    <Tab.Group>
+                    <Tab.Group onChange={() => setEnlargedImage(null)}>
                         <Tab.List className="flex flex-wrap mt-3 border-b border-white-light dark:border-[#191e3a]">
                             <Tab as={Fragment}>
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${
-                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Pickup Details
                                     </button>
@@ -567,9 +580,8 @@ const Preview = () => {
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${
-                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Dropoff Details
                                     </button>
@@ -584,7 +596,13 @@ const Preview = () => {
                                             {pickupImageUrls.map((url, index) => (
                                                 <div key={index}>
                                                     <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
-                                                    <img src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }} className="w-16 h-16" />
+                                                    <img
+                                                        src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
+                                                        className="w-16 h-16 hover:cursor-pointer"
+                                                        onClick={() => {
+                                                            setEnlargedImage(url)
+                                                        }}
+                                                    />
                                                 </div>
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
@@ -602,16 +620,21 @@ const Preview = () => {
                             <Tab.Panel>
                                 <div>
                                     <div className="flex items-start pt-5">
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
+                                        <div className="flex items-center justify-center gap-6">
                                             {dropoffImageUrls.map((url, index) => (
                                                 <div key={index}>
                                                     <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} />
-                                                    <img src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }} className="w-16 h-16" />
+                                                    <img
+                                                        src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
+                                                        className="w-16 h-16 hover:cursor-pointer"
+                                                        onClick={() => {
+                                                            setEnlargedImage(url);
+                                                        }}
+                                                    />
                                                 </div>
                                             ))}
-                                            {dropoffImageUrls.length >= 6 ? (
-                                                <div></div>
-                                            ) : (
+
+                                            {dropoffImageUrls.length < 6 && (
                                                 <Button component="label" role={undefined} variant="contained" tabIndex={-1} startIcon={<FaCloudUploadAlt />}>
                                                     Upload files
                                                     <VisuallyHiddenInput type="file" accept="image/png, image/jpeg, image/jpg" onChange={(e) => handleImageChange(e, 'dropoff')} multiple />
@@ -619,8 +642,25 @@ const Preview = () => {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Modal for Enlarged Image */}
                                 </div>
                             </Tab.Panel>
+                            {enlargedImage && (
+                                <div
+                                    className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000]"
+                                    onClick={() => setEnlargedImage(null)}
+                                >
+                                    <div className="relative">
+                                        <IoIosCloseCircleOutline
+                                            className="absolute -top-2 -right-2 text-white text-4xl cursor-pointer "
+                                            onClick={() => setEnlargedImage(null)}
+                                        />
+                                        <img src={enlargedImage} alt="Enlarged" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg" />
+                                        <button className='text-white w-full py-2 rounded-md mt-1  bg-primary' onClick={handleDownloadImage}>Download</button>
+                                    </div>
+                                </div>
+                            )}
                         </Tab.Panels>
                     </Tab.Group>
 
