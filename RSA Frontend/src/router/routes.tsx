@@ -3,6 +3,7 @@ import VehicleFinanceCompliance from '../pages/VehicleDetails/VehicleCompliance'
 import RewardsItem from '../pages/Rewards/RewardsItems';
 import Rewards from '../pages/Rewards/Rewards';
 import ShowRoomDetails from '../pages/Showroom/ShowroomDetails';
+import SelectiveShowroomInvoice from '../pages/Reports/DriverReport/SelectiveInvoice';
 const Index = lazy(() => import('../pages/Index'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Finance = lazy(() => import('../pages/Finance'));
@@ -106,34 +107,35 @@ const Clipboard = lazy(() => import('../pages/Forms/Clipboard'));
 // For Rsa 
 const Staff = lazy(() => import('../pages/Staff/Staff'));
 const StaffAdd = lazy(() => import('../pages/Staff/StaffAdd'));
-const ServiceType = lazy(() => import('../pages/ServiceType/ServiceType')); 
-const Baselocation = lazy(() => import('../pages/Baselocation/Baselocaion')); 
-const Provider = lazy(() => import('../pages/Provider/Provider')); 
-const ProviderAdd = lazy(() => import('../pages/Provider/ProviderAdd')); 
-const Driver = lazy(() => import('../pages/Driver/Driver')); 
-const DriverAdd = lazy(() => import('../pages/Driver/DriverAdd')); 
-const Company = lazy(() => import('../pages/Company/Company')); 
-const CompanyAdd = lazy(() => import('../pages/Company/CompnayAdd')); 
-const Showroom = lazy(() => import('../pages/Showroom/Showroom')); 
-const ShowroomAdd = lazy(() => import('../pages/Showroom/ShowroomAdd')); 
-const Bookings = lazy(() => import('../pages/Bookings/Bookings')); 
-const BookingAdd = lazy(() => import('../pages/Bookings/BookingAdd')); 
-const OpenBooking = lazy(() => import('../pages/Bookings/OpenBooking')); 
-const CompletedBookings = lazy(() => import('../pages/Bookings/CompletedBookings')); 
-const ApprovedBookings = lazy(() => import('../pages/Bookings/ApprovedBookings')); 
-const Feedback = lazy(() => import('../pages/Feedback/Feedback')); 
-const DCPReprort = lazy(()=> import('../pages/Reports/DCPReport'))
-const DriverReport = lazy(()=> import('../pages/Reports/DriverReport/DriverReport'))
-const VehicleDetails = lazy(()=> import('../pages/VehicleDetails/VehicleDetails'))
-const Status = lazy(()=> import('../pages/Status/Status'))
-const ShowroomReport = lazy(()=> import('../pages/Reports/ShowroomReport'))
-const Leaves = lazy(()=> import('../pages/Leaves/Leaves'))
+const ServiceType = lazy(() => import('../pages/ServiceType/ServiceType'));
+const Baselocation = lazy(() => import('../pages/Baselocation/Baselocaion'));
+const Provider = lazy(() => import('../pages/Provider/Provider'));
+const ProviderAdd = lazy(() => import('../pages/Provider/ProviderAdd'));
+const Driver = lazy(() => import('../pages/Driver/Driver'));
+const DriverAdd = lazy(() => import('../pages/Driver/DriverAdd'));
+const Company = lazy(() => import('../pages/Company/Company'));
+const CompanyAdd = lazy(() => import('../pages/Company/CompnayAdd'));
+const Showroom = lazy(() => import('../pages/Showroom/Showroom'));
+const ShowroomAdd = lazy(() => import('../pages/Showroom/ShowroomAdd'));
+const Bookings = lazy(() => import('../pages/Bookings/Bookings'));
+const BookingAdd = lazy(() => import('../pages/Bookings/BookingAdd'));
+const AddBookingWithoutAuth = lazy(() => import('../pages/Bookings/AddBookingWithoutAuth'));
+const OpenBooking = lazy(() => import('../pages/Bookings/OpenBooking'));
+const CompletedBookings = lazy(() => import('../pages/Bookings/CompletedBookings'));
+const ApprovedBookings = lazy(() => import('../pages/Bookings/ApprovedBookings'));
+const Feedback = lazy(() => import('../pages/Feedback/Feedback'));
+const DCPReprort = lazy(() => import('../pages/Reports/DCPReport'))
+const DriverReport = lazy(() => import('../pages/Reports/DriverReport/DriverReport'))
+const VehicleDetails = lazy(() => import('../pages/VehicleDetails/VehicleDetails'))
+const Status = lazy(() => import('../pages/Status/Status'))
+const ShowroomReport = lazy(() => import('../pages/Reports/ShowroomReport'))
+const Leaves = lazy(() => import('../pages/Leaves/Leaves'))
 
-const StaffReport = lazy(()=> import('../pages/Reports/StaffReport'))
-const AppBokk = lazy(()=> import('../pages/AppClose/AppBokk'))
+const StaffReport = lazy(() => import('../pages/Reports/StaffReport'))
+const AppBokk = lazy(() => import('../pages/AppClose/AppBokk'))
 
 
-const ServiceCenterReport = lazy(()=> import('../pages/Reports/DriverReport/ServiceCenterReport'))
+const ServiceCenterReport = lazy(() => import('../pages/Reports/DriverReport/ServiceCenterReport'))
 const StaffCashReport = lazy(() => import('../pages/Reports/DriverReport/StaffCashReport'));
 
 
@@ -162,7 +164,11 @@ const routes = [
     {
         path: '/showroom/showroom-details',
         element: <ShowRoomDetails />,
-        layout : 'blank'
+        layout: 'blank'
+    },
+    {
+        path: '/showroom-cashcollection/selectiveInvoice',
+        element: <SelectiveShowroomInvoice />,
     },
     {
         path: '/bookings',
@@ -188,7 +194,6 @@ const routes = [
         path: '/staffcashreport/:id',
         element: <StaffCashReport />,
     },
-   
     {
         path: '/servicecenterreport/:id',
         element: <ServiceCenterReport />,
@@ -204,6 +209,11 @@ const routes = [
     {
         path: '/add-booking',
         element: <BookingAdd />,
+    },
+    {
+        path: '/addbooking',
+        element: <AddBookingWithoutAuth />,
+        layout: 'blank'
     },
     {
         path: '/add-booking/:id',
@@ -298,7 +308,7 @@ const routes = [
         path: '/appBooking',
         element: <AppBokk />,
     },
-  
+
     // analytics page
     {
         path: '/analytics',

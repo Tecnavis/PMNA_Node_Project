@@ -1796,7 +1796,7 @@ import { GiPathDistance } from 'react-icons/gi';
 import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import IconPlus from '../../components/Icon/IconPlus';
 
-interface Company {
+export interface Company {
     _id: string;
     name: string;
     idNumber: string;
@@ -1823,17 +1823,17 @@ interface Company {
     image: string;
 }
 
-interface Baselocation {
+export interface Baselocation {
     _id: string;
     baseLocation: string;
     latitudeAndLongitude: string;
 }
 
-interface ExtendedBaselocation extends Baselocation {
+export interface ExtendedBaselocation extends Baselocation {
     distance: number;
 }
 
-interface Showroom {
+export interface Showroom {
     _id: string;
     name: string;
     latitudeAndLongitude: string;
@@ -1845,7 +1845,7 @@ interface Showroom {
     };
 }
 
-interface Driver {
+export interface Driver {
     _id: string;
     name: string;
     idNumber: string;
@@ -1871,7 +1871,7 @@ interface Driver {
     image: string;
 }
 
-interface Provider {
+export interface Provider {
     _id: string;
     name: string;
     companyName: string;
@@ -1904,7 +1904,7 @@ interface Provider {
     image: string;
 }
 
-interface ServiceType {
+export interface ServiceType {
     _id: string;
     serviceName: string;
     expensePerKm: number;
@@ -1913,7 +1913,7 @@ interface ServiceType {
     firstKilometer: number;
 }
 
-interface SelectedEntity {
+export interface SelectedEntity {
     name?: string;
     id: string;
     payableAmount?: number;
@@ -2909,34 +2909,6 @@ const BookingAdd: React.FC = () => {
             fetchAndFilterProviders(selectedServiceType);
         }
     }, [selectedServiceType]); // Add selectedServiceType to dependencies
-
-    // console.log('selected work type:', workType);
-    // console.log('pick up date(optional):', pickupDate);
-    // console.log('file number:', fileNumber);
-    // console.log('location:', location);
-    // console.log('latitude and longitude:', latitudeAndLongitude);
-    // console.log('selected Base location:', selectedBaseLocation?.id);
-    // console.log('selected showrooom:', selectedShowroom?.id);
-    // console.log('total distence:', totalDistance);
-    // console.log('drop of location:', selectedShowroom?.name);
-    // console.log('drop of latitude and longitude:', selectedShowroom?.latitudeAndLongitude);
-    // console.log('traped location:', trappedLocation);
-    // console.log('updated amount:', updatedAmount);
-    // console.log('selected service type:', selectedServiceType);
-    // console.log('driver:', selectedEntity);
-    // console.log('service category:', serviceCategory);
-    // console.log('accident option:', accidentOption);
-    // console.log('insurence amount:', insuranceAmount);
-    // console.log('adjestment value:', adjustmentValue);
-    // console.log('total amount:', totalAmount);
-    // console.log('total driver distence:', totalDriverDistence);
-    // console.log('mobile 1:', mob1);
-    // console.log('mobile 2:', mob2);
-    // console.log('customer vehicle number:', customerVehicleNumber);
-    // console.log('selected vehicle type:', selectedVehicleType);
-    // console.log('brand name:', brandName);
-    // console.log('comments:', comments);
-    // console.log('selectedEndity details', selectedEntity);
 
     return (
         <div>
