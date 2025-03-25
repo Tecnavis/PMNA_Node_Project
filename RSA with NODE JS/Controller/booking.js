@@ -102,6 +102,44 @@ exports.createBooking = async (req, res) => {
         });
     }
 };
+// Controller to create a booking
+exports.createBookingNoAuth = async (req, res) => {
+    try {
+        const bookingData = req.body;
+
+        // Handle the case where 'company' is an empty string
+        if (!bookingData.company || bookingData.company === "") {
+            bookingData.company = null; // Or you can delete the field entirely if required
+        }
+
+        // Fetch driver details
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(bookingData.baselocation)) bookingData.baselocation = null;
+        if (!mongoose.Types.ObjectId.isValid(bookingData.showroom)) bookingData.showroom = null;
+        if (!mongoose.Types.ObjectId.isValid(bookingData.serviceType)) bookingData.serviceType = null;
+
+        const newBooking = new Booking(bookingData);
+
+        await newBooking.save();
+
+        res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
+    } catch (error) {
+        console.log(error)
+        if (error.name === "ValidationError") {
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                errors: error.errors,
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "An internal server error occurred",
+            error: error.message,
+        });
+    }
+};
 
 //Helper function for check and udpate the vehicle serviceKM 
 const checkVehicleServiceStatus = async (booking) => {
@@ -308,10 +346,10 @@ exports.getAllBookings = async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
 
-            const balanceAmount = bookings.reduce((total, booking) => {
-                return total + booking.receivedAmount;
-            }, 0);
-            
+        const balanceAmount = bookings.reduce((total, booking) => {
+            return total + booking.receivedAmount;
+        }, 0);
+
         // Aggregate data for total amounts
         const aggregationResult = await Booking.aggregate([
             { $match: query },

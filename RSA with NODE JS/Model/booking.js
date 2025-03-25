@@ -1,23 +1,23 @@
 const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
-    workType: { type: String, required: true }, 
-    fileNumber: { type: String, required: true },
-    location: { type: String, required: true },
-    latitudeAndLongitude: { type: String, required: true },
-    baselocation: { type: mongoose.Schema.Types.ObjectId, ref: 'BaseLocation', required: true },
-    showroom: { type: mongoose.Schema.Types.ObjectId, ref: 'Showroom', required: true },
-    company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: false },
-    totalDistence: { type: Number, required: true },
-    dropoffLocation: { type: String, required: true },
-    dropoffLatitudeAndLongitude: { type: String, required: true },
-    trapedLocation: { type: String, required: true },
-    serviceType: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceType', required: true },
-    customerName: { type: String, required: true },
+    workType: { type: String }, 
+    fileNumber: { type: String },
+    location: { type: String },
+    latitudeAndLongitude: { type: String },
+    baselocation: { type: mongoose.Schema.Types.ObjectId, ref: 'BaseLocation' },
+    showroom: { type: mongoose.Schema.Types.ObjectId, ref: 'Showroom' },
+    company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
+    totalDistence: { type: Number },
+    dropoffLocation: { type: String },
+    dropoffLatitudeAndLongitude: { type: String },
+    trapedLocation: { type: String },
+    serviceType: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceType' },
+    customerName: { type: String },
     serviceCategory: { type: String },
-    mob1: { type: String, required: true },
+    mob1: { type: String },
     mob2: { type: String },
-    vehicleType: { type: String, required: true },
+    vehicleType: { type: String },
     brandName: { type: String },
     comments: { type: String },
     customerVehicleNumber: { type: String },
@@ -50,10 +50,10 @@ const bookingSchema = new mongoose.Schema({
     dropoffImages: { type: [String], default: [] },
     feedback: [
         {
-            questionId: { type: String, required: true },
-            response: { type: String, enum: ["yes", "no"], required: true },
-            yesPoint: { type: Number, required: true },
-            noPoint: { type: Number, required: true }
+            questionId: { type: String },
+            response: { type: String, enum: ["yes", "no"] },
+            yesPoint: { type: Number },
+            noPoint: { type: Number }
         }
     ],
     verified: { type: Boolean },

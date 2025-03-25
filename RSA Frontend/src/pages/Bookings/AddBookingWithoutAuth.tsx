@@ -554,18 +554,18 @@ const AddBookingWithoutAuth: React.FC = () => {
         if (validate()) {
             // -----------------------------------------
             const data = {
-                workType: workType,
-                pickupDate: pickupDate,
+                workType: workType || "",
+                pickupDate: pickupDate || "",
                 company: selectedCompany?._id ?? '',
-                fileNumber: fileNumber,
-                location: location,
-                latitudeAndLongitude: latitudeAndLongitude,
+                fileNumber: fileNumber || "",
+                location: location || "",
+                latitudeAndLongitude: latitudeAndLongitude || "",
                 baselocation: selectedBaseLocation?.id ?? '',
                 showroom: selectedShowroom?.id ?? '',
-                totalDistence: totalDistance,
+                totalDistence: totalDistance || "",
                 dropoffLocation: selectedShowroom?.name ?? '',
                 dropoffLatitudeAndLongitude: selectedShowroom?.latitudeAndLongitude ?? '',
-                trapedLocation: trappedLocation,
+                trapedLocation: trappedLocation || "",
                 updatedAmount: updatedAmount?.toString() ?? '',
                 serviceType: selectedServiceType?._id ?? '',
                 driver: selectedEntity && drivers.some((driver) => driver._id === selectedEntity.id) ? selectedEntity.id : undefined,
@@ -575,21 +575,21 @@ const AddBookingWithoutAuth: React.FC = () => {
                 afterExpenseForDriver: selectedEntity && drivers.some((driver) => driver._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
                 afterExpenseForProvider: selectedEntity && providers.some((provider) => provider._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
                 pickupDistence: 'not defined',
-                serviceCategory: serviceCategory,
-                accidentOption: accidentOption,
-                insuranceAmount: insuranceAmount,
+                serviceCategory: serviceCategory || "",
+                accidentOption: accidentOption || "",
+                insuranceAmount: insuranceAmount || "",
                 adjustmentValue: adjustmentValue?.toString() ?? '',
                 amountWithoutInsurence: selectedEntity?.payableAmount?.toString() ?? '',
                 totalAmount: totalAmount?.toString() ?? '',
                 totalDriverDistence: totalDriverDistence?.toString() ?? '',
                 driverSalary: driverSalary?.toString() ?? '',
-                customerName: customerName,
-                mob1: mob1,
-                mob2: mob2,
-                customerVehicleNumber: customerVehicleNumber,
-                vehicleType: selectedVehicleType,
-                brandName: brandName,
-                comments: comments,
+                customerName: customerName || "",
+                mob1: mob1 || "",
+                mob2: mob2 || "",
+                customerVehicleNumber: customerVehicleNumber || "",
+                vehicleType: selectedVehicleType || "",
+                brandName: brandName || "",
+                comments: comments || "",
                 status: 'Booking Added',
                 bookedBy: `RSA-${role} `,
             };
@@ -597,7 +597,7 @@ const AddBookingWithoutAuth: React.FC = () => {
             setLoading(true);
 
             try {
-                const response = await axios.post(`${backendUrl}/booking`, data, {
+                const response = await axios.post(`${backendUrl}/booking/no-auth`, data, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -818,120 +818,6 @@ const AddBookingWithoutAuth: React.FC = () => {
 
     const validate = (): boolean => {
         const formErrors: Record<string, string> = {};
-
-        // Work type validation
-        if (!workType) {
-            formErrors.workType = 'Work type is required';
-            workTypeRef.current?.focus();
-        } else if (workType === 'RSAWork' && !selectedCompany) {
-            formErrors.selectedCompany = 'Selected company is required for RSAWork';
-            companyRef.current?.focus();
-
-        }
-
-        // File number validation
-        if (!fileNumber) {
-            formErrors.fileNumber = 'File number is required';
-            fileNumberRef.current?.focus();
-        }
-
-        // Location validation
-        if (!location) {
-            formErrors.location = 'Location is required';
-            locationRef.current?.focus();
-        }
-
-        // Latitude and longitude validation
-        if (!latitudeAndLongitude) {
-            formErrors.latitudeAndLongitude = 'Latitude and longitude are required';
-            latitudeAndLongitudeRef.current?.focus();
-        }
-
-        // Base location validation
-        if (!selectedBaseLocation) {
-            formErrors.selectedBaseLocation = 'Base location is required';
-            baselocationRef.current?.focus();
-        }
-
-        // Showroom validation
-        if (!selectedShowroom) {
-            formErrors.selectedShowroom = 'Showroom is required';
-            selectedShowroomRef.current?.focus();
-        }
-
-        // Total distance validation
-        if (!totalDistance) {
-            formErrors.totalDistance = 'Total distance is required';
-            totalDistanceRef.current?.focus();
-
-        }
-
-        // Trapped location validation
-        if (!trappedLocation) {
-            formErrors.trappedLocation = 'Trapped location is required';
-            trapedLocationRef.current?.focus();
-        }
-
-        // Updated amount validation (conditional)
-        if (trappedLocation === 'outsideOfRoad' && !updatedAmount) {
-            formErrors.updatedAmount = 'Updated amount is required for outsideOfRoad';
-            updatedAmountRef.current?.focus();
-        }
-
-        // Service type and other fields validation (conditional)
-        if (trappedLocation !== 'outsideOfRoad') {
-            if (!selectedServiceType) {
-                formErrors.selectedServiceType = 'Service type is required';
-                selectedServiceTypeRef.current?.focus();
-            }
-            if (!selectedEntity) {
-                formErrors.selectedEntity = 'Driver is required';
-                selectedEndityRef.current?.focus();
-
-            }
-            if (!serviceCategory) {
-                formErrors.serviceCategory = 'Service category is required';
-                serviceCategoryRef.current?.focus();
-
-            }
-            if (!totalAmount) {
-                formErrors.totalAmount = 'Total amount is required';
-                totalAmountRef.current?.focus();
-            }
-            if (!totalDriverDistence) {
-                formErrors.totalDriverDistence = 'Total driver distance is required';
-                totalDriverDistenceRef.current?.focus();
-
-            }
-
-            // Accident option validation (nested)
-            if (serviceCategory === 'accident') {
-                if (!accidentOption) {
-                    formErrors.accidentOption = 'Accident option is required';
-                    accidentOptionRef.current?.focus();
-                } else if (accidentOption === 'both' && !insuranceAmount) {
-                    formErrors.insuranceAmount = 'Insurance amount is required for both options';
-                    accidentOptionRef.current?.focus();
-                }
-            }
-        }
-
-        // Mobile number 1 validation
-        if (!mob1) {
-            formErrors.mob1 = 'Mobile number 1 is required';
-            mob1Ref.current?.focus();
-        }
-
-        // Customer name validation
-        if (!customerName) {
-            formErrors.customerName = 'Customer name is required';
-            customerNameRef.current?.focus();
-        }
-
-        // Vehicle type validation
-        if (!selectedVehicleType) {
-            formErrors.selectedVehicleType = 'Vehicle type is required';
-        }
 
         // Set errors in the state
         setErrors(formErrors);
