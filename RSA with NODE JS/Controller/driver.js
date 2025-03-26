@@ -41,49 +41,7 @@ exports.createDriver = async (req, res) => {
 
 exports.getDrivers = async (req, res) => {
   try {
-
-    const today = new Date().toISOString().split('T')[0];
-
-    const pipeline = [
-      {
-        $lookup: {
-          from: "leaves",
-          localField: "_id",
-          foreignField: "driver",
-          as: "leaves"
-        }
-      },
-      {
-        $lookup: {
-          from: "ServiceType",
-          localField: "vehicle.serviceType",
-          foreignField: "_id",
-          as: "vehicle.serviceType"
-        }
-      },
-      {
-        $addFields: { // adding new property to every docs 
-          isLeave: { // new field property
-            $anyElementTrue: { // if any element retunt true the then set true otherwise set fasle 
-              $map: { // $map is loop iterating array of field
-                input: "$leaves", // mention to ilerate the leaves field 
-                as: "leave", // creating temp variable every docs is accessble in leave variable
-                in: { // part of map what we return 
-                  $eq: [ // compring two fields 
-                    { $dateToString: { format: "%Y-%m-%d", date: "$$leave.leaveDate" } },
-                    today
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }, {
-        $project: { leaves: 0 }
-      }
-    ]
-
-    const drivers = await Driver.aggregate(pipeline);
+    const drivers = await Driver.find().populate('vehicle.serviceType');
 
     res.json(drivers);
   } catch (error) {
