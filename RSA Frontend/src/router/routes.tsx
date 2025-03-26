@@ -131,13 +131,17 @@ const Status = lazy(() => import('../pages/Status/Status'))
 const ShowroomReport = lazy(() => import('../pages/Reports/ShowroomReport'))
 const Leaves = lazy(() => import('../pages/Leaves/Leaves'))
 
-const StaffReport = lazy(() => import('../pages/Reports/StaffReport'))
-const AppBokk = lazy(() => import('../pages/AppClose/AppBokk'))
+
+const StaffReport = lazy(()=> import('../pages/Reports/StaffReport'))
+const AppBokk = lazy(()=> import('../pages/AppClose/AppBokk'))
+const PickupLocation = lazy(()=> import('../pages/AppClose/PickupLocation'))
+
 
 
 const ServiceCenterReport = lazy(() => import('../pages/Reports/DriverReport/ServiceCenterReport'))
 const StaffCashReport = lazy(() => import('../pages/Reports/DriverReport/StaffCashReport'));
-
+const DropoffLocation = lazy(() => import('../pages/AppClose/DropoffLocation'));
+const PaymentSettlement = lazy(() => import('../pages/AppClose/PaymentSettlement'));
 
 const routes = [
     // dashboard
@@ -299,11 +303,18 @@ const routes = [
         path: '/Status',
         element: <Status />,
     },
-    // {
-    //     path: '/index',
-    //     element: <Index />,
-    // },
-
+    {
+        path: '/pickupLocation',
+        element: <PickupLocation />,
+    },
+    {
+        path: '/onTheWayDropoff',
+        element: <DropoffLocation />,
+    },
+    {
+        path: '/paymentSettlement',
+        element: <PaymentSettlement />,
+    },
     {
         path: '/appBooking',
         element: <AppBokk />,
