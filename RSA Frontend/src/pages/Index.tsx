@@ -37,7 +37,7 @@ const Index = () => {
     useEffect(() => {
         const token = localStorage.getItem('token');
         const storedRole = localStorage.getItem('role');
-        const navigateToLogin = () => navigate('/addbooking');
+        const navigateToLogin = () => navigate('/auth/boxed-signin');
         setRole(storedRole || '')
         // Define the type of the role object
         interface Role {
