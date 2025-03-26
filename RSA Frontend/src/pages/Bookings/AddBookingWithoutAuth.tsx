@@ -1,7 +1,6 @@
-import React, { useState, useEffect, ChangeEvent, Fragment, useRef } from 'react';
+import React, { useState, useEffect, Fragment, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
 import axios, { AxiosError } from 'axios';
 import styles from './bookingAdd.module.css';
@@ -11,135 +10,9 @@ import ShowroomCreate from './ShowroomCreateModal';
 import { GiPathDistance } from 'react-icons/gi';
 import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import IconPlus from '../../components/Icon/IconPlus';
+import type { Baselocation, Company, Driver, ExtendedBaselocation, Provider, SelectedEntity, ServiceType, Showroom } from './BookingAdd'
 
-export interface Company {
-    _id: string;
-    name: string;
-    idNumber: string;
-    creditLimitAmount: number;
-    phone: string;
-    personalPhoneNumber: string;
-    password: string;
-    vehicle: [
-        {
-            serviceType: {
-                _id: string;
-                serviceName: string;
-                firstKilometer: number;
-                additionalAmount: number;
-                firstKilometerAmount: number;
-                expensePerKm: number;
-            };
-            basicAmount: number;
-            kmForBasicAmount: number;
-            overRideCharge: number;
-            vehicleNumber: string;
-        }
-    ];
-    image: string;
-}
-
-export interface Baselocation {
-    _id: string;
-    baseLocation: string;
-    latitudeAndLongitude: string;
-}
-
-export interface ExtendedBaselocation extends Baselocation {
-    distance: number;
-}
-
-export interface Showroom {
-    _id: string;
-    name: string;
-    latitudeAndLongitude: string;
-    services: {
-        bodyShop: {
-            amount: number;
-            selected: boolean;
-        };
-    };
-}
-
-export interface Driver {
-    _id: string;
-    name: string;
-    idNumber: string;
-    phone: string;
-    personalPhoneNumber: string;
-    password: string;
-    vehicle: [
-        {
-            serviceType: {
-                _id: string;
-                serviceName: string;
-                firstKilometer: number;
-                additionalAmount: number;
-                firstKilometerAmount: number;
-                expensePerKm: number;
-            };
-            basicAmount: number;
-            kmForBasicAmount: number;
-            overRideCharge: number;
-            vehicleNumber: string;
-        }
-    ];
-    image: string;
-}
-
-export interface Provider {
-    _id: string;
-    name: string;
-    companyName: string;
-    baseLocation: {
-        _id: string;
-        baseLocation: string;
-        latitudeAndLongitude: string;
-    };
-    idNumber: string;
-    creditAmountLimit: number;
-    phone: string;
-    personalPhoneNumber: string;
-    password: string;
-    serviceDetails: [
-        {
-            serviceType: {
-                _id: string;
-                serviceName: string;
-                firstKilometer: number;
-                additionalAmount: number;
-                firstKilometerAmount: number;
-                expensePerKm: number;
-            };
-            basicAmount: number;
-            kmForBasicAmount: number;
-            overRideCharge: number;
-            vehicleNumber: string;
-        }
-    ];
-    image: string;
-}
-
-export interface ServiceType {
-    _id: string;
-    serviceName: string;
-    expensePerKm: number;
-    firstKilometerAmount: number;
-    additionalAmount: number;
-    firstKilometer: number;
-}
-
-export interface SelectedEntity {
-    name?: string;
-    id: string;
-    payableAmount?: number;
-    afterExpence?: number;
-    details?: any;
-}
-
-
-
-const BookingAdd: React.FC = () => {
+const AddBookingWithoutAuth: React.FC = () => {
     // Checking message from openBooking 
 
     const locationFromOpen = useLocation();
@@ -210,8 +83,8 @@ const BookingAdd: React.FC = () => {
     const [accidentOption, setAccidentOption] = useState<string>('');
     const [insuranceAmount, setInsuranceAmount] = useState<string>('');
     const [pickupLat, pickupLng] = latitudeAndLongitude.split(',');
-    const [baseLat, baseLng] = selectedBaseLocation?.latitudeAndLongitude ? selectedBaseLocation?.latitudeAndLongitude.split(',') : [null, null];
-    const [showroomLat, showroomLng] = selectedShowroom?.latitudeAndLongitude ? selectedShowroom?.latitudeAndLongitude.split(',') : [null, null];
+    const [baseLat, baseLng] = selectedBaseLocation?.latitudeAndLongitude ? selectedBaseLocation.latitudeAndLongitude.split(',') : [null, null];
+    const [showroomLat, showroomLng] = selectedShowroom?.latitudeAndLongitude ? selectedShowroom.latitudeAndLongitude.split(',') : [null, null];
     const uid = id.id;
 
     //ref for states 
@@ -235,31 +108,12 @@ const BookingAdd: React.FC = () => {
     const selectedShowroomRef = useRef<any>(null);
 
     // check the page for token and redirect
-
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const role = localStorage.getItem('role');
-        if (role === 'admin') {
-            setRole(role);
-        } else if (role !== 'admin') {
-            const name = localStorage.getItem('name');
-            if (name) {
-                setRole(`${role}-${name}`);
-            } else {
-                console.error('No user found');
-            }
-        }
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            console.error('Token  found in localStorage');
-        } else {
-            navigate('/auth/boxed-signin');
-            console.error('Token not found in localStorage');
-        }
+        axios.defaults.headers.common['Authorization'] = `Bearer nothing`;
+        setRole('admin');
     }, []);
 
     // Fetching companies
-
     const fetchCompanies = async () => {
         try {
             const response = await axios.get(`${backendUrl}/company`);
@@ -270,17 +124,14 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling company
-
     const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedId = e.target.value;
-        const company = companies.find((comp) => comp?._id === selectedId) || null;
+        const company = companies.find((comp) => comp._id === selectedId) || null;
         setSelectedCompany(company);
 
     };
 
     // fetching baselocations
-
-
     const fetchBaselocation = async () => {
         try {
             const response = await axios.get(`${backendUrl}/baselocation`);
@@ -291,14 +142,12 @@ const BookingAdd: React.FC = () => {
     };
 
     // Function to generate a unique ID for Payment Work
-
     const generateFileNumber = () => {
         const uniqueId = `${Date.now()}`;
         return `PMNA-${uniqueId}`;
     };
 
     // checking work type for condition
-
     const handleWorkTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedWorkType = e.target.value;
         setSelectedCompany(null);
@@ -344,20 +193,20 @@ const BookingAdd: React.FC = () => {
     };
 
     const calculateDistances = async () => {
-        const originCoords = latitudeAndLongitude?.split(',').map(Number);
+        const originCoords = latitudeAndLongitude.split(',').map(Number);
         const origin = { lat: originCoords[0], lng: originCoords[1] };
 
         const distancePromises = baseLocations.map(async (location) => {
-            const destinationCoords = location?.latitudeAndLongitude?.split(',').map(Number);
+            const destinationCoords = location.latitudeAndLongitude.split(',').map(Number);
             const destination = { lat: destinationCoords[0], lng: destinationCoords[1] };
-            return await getDistanceAndDuration(origin, destination, location?._id);
+            return await getDistanceAndDuration(origin, destination, location._id);
         });
 
         const distances = await Promise.all(distancePromises);
 
         const sortedLocations = baseLocations
             .map((location) => {
-                const matchedDistance = distances.find((d) => d.id === location?._id);
+                const matchedDistance = distances.find((d) => d.id === location._id);
                 return {
                     ...location,
                     distance: matchedDistance?.distance ?? Number.MAX_SAFE_INTEGER, // Fallback for missing distance
@@ -369,7 +218,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // fetching all showrooms
-
     const fetchShowroom = async () => {
         try {
             const response = await axios.get(`${backendUrl}/showroom`);
@@ -380,21 +228,18 @@ const BookingAdd: React.FC = () => {
     };
 
     //handle open modal for creating showroom
-
     const handleOpenModal = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         setModal2(true);
     };
 
     //handle close modal for creating showroom
-
     const handleCloseModal = async () => {
         setModal2(false);
         fetchShowroom();
     };
 
     // handling the input for the change dropoff location
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedName = e.target.value;
 
@@ -402,7 +247,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling the input for the change dropoff latitude and longitude
-
     const handleLatitudeAndLongitudeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedValue = e.target.value;
 
@@ -410,7 +254,6 @@ const BookingAdd: React.FC = () => {
     };
 
     //   handling the traped location
-
     const handleTrappedLocationChange = (e: any) => {
         setSelectedServiceType(null);
         setSelectedEntity(null);
@@ -421,7 +264,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // getting service types
-
     const fetchServiceTypes = async () => {
         try {
             const response = await axios.get(`${backendUrl}/serviceType`);
@@ -432,10 +274,9 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling the servicetype
-
     const handleServiceTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const serviceTypeId = e.target.value;
-        const selectedService = serviceTypes.find((item) => item?._id === serviceTypeId);
+        const selectedService = serviceTypes.find((item) => item._id === serviceTypeId);
 
         setSelectedEntity(null);
 
@@ -451,8 +292,7 @@ const BookingAdd: React.FC = () => {
         try {
             const response = await axios.get(`${backendUrl}/driver`);
             const allDrivers = response.data;
-            console.log("drover", allDrivers)
-            const filteredDrivers = allDrivers.filter((driver: any) => driver.vehicle.some((vehicle: any) => vehicle.serviceType?._id === serviceTypeId?._id));
+            const filteredDrivers = allDrivers.filter((driver: any) => driver.vehicle.some((vehicle: any) => vehicle.serviceType._id === serviceTypeId._id));
             setDrivers(filteredDrivers);
         } catch (error) {
             console.error('Error fetching drivers:', error);
@@ -464,7 +304,7 @@ const BookingAdd: React.FC = () => {
         try {
             const response = await axios.get(`${backendUrl}/provider`);
             const allProviders = response.data;
-            const filteredProviders = allProviders.filter((provider: any) => provider.serviceDetails.some((center: any) => center.serviceType?._id === serviceTypeId?._id));
+            const filteredProviders = allProviders.filter((provider: any) => provider.serviceDetails.some((center: any) => center.serviceType._id === serviceTypeId._id));
             setProviders(filteredProviders);
         } catch (error) {
             console.error('Error fetching providers:', error);
@@ -486,7 +326,7 @@ const BookingAdd: React.FC = () => {
             setPayableAmount(PayableAmount);
             setAfterExpence(afterExpence);
         } else {
-            const getServiceType = selectedCompany.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType?._id === selectedServiceType?._id);
+            const getServiceType = selectedCompany.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType._id === selectedServiceType?._id);
             const kilometerLessed = parseFloat(totalDistance) - (getServiceType?.kmForBasicAmount || 0);
             const lessedAmt = kilometerLessed * (getServiceType?.overRideCharge || 0);
             const PayableAmount = lessedAmt + (getServiceType?.basicAmount || 0);
@@ -508,7 +348,7 @@ const BookingAdd: React.FC = () => {
             // Entity is a driver
             setSelectedEntity({
                 name: entity.name,
-                id: entity?._id, // Only storing the ID part
+                id: entity._id, // Only storing the ID part
                 payableAmount: PayableAmount,
                 afterExpence: afterExpence,
                 details: entity.vehicle, // Setting vehicle details
@@ -517,7 +357,7 @@ const BookingAdd: React.FC = () => {
             // Entity is a provider
             setSelectedEntity({
                 name: entity.name,
-                id: entity?._id, // Only storing the ID part
+                id: entity._id, // Only storing the ID part
                 payableAmount: PayableAmount,
                 afterExpence: afterExpence,
                 details: entity.serviceDetails, // Setting service details
@@ -611,10 +451,10 @@ const BookingAdd: React.FC = () => {
     // handling the baselocation
 
     const options = sortedBaseLocations.map((location) => ({
-        value: location?._id,
+        value: location._id,
         label: `${location.baseLocation.charAt(0).toUpperCase() + location.baseLocation.slice(1)} - ${location.distance !== Number.MAX_SAFE_INTEGER ? `${location.distance.toFixed(2)} km` : 'Distance Unavailable'
             }`,
-        latitudeAndLongitude: location?.latitudeAndLongitude,
+        latitudeAndLongitude: location.latitudeAndLongitude,
     }));
 
     const handleChangeBaseLocation = (selectedOption: any) => {
@@ -631,9 +471,9 @@ const BookingAdd: React.FC = () => {
     // handling showroom
 
     const showroomOptions = showrooms.map((showroom) => ({
-        value: showroom?._id,
+        value: showroom._id,
         label: showroom.name.charAt(0).toUpperCase() + showroom.name.slice(1),
-        latitudeAndLongitude: showroom?.latitudeAndLongitude,
+        latitudeAndLongitude: showroom.latitudeAndLongitude,
         insurenceAmount: showroom.services.bodyShop.amount,
         name: showroom.name,
     }));
@@ -642,7 +482,7 @@ const BookingAdd: React.FC = () => {
         if (selectedOption) {
             setSelectedShowroom({
                 id: selectedOption.value,
-                latitudeAndLongitude: selectedOption?.latitudeAndLongitude,
+                latitudeAndLongitude: selectedOption.latitudeAndLongitude,
                 name: selectedOption.name,
                 insurenceAmount: selectedOption.insurenceAmount,
             });
@@ -660,7 +500,7 @@ const BookingAdd: React.FC = () => {
         }
 
         const matchingService = Array.isArray(selectedEntity.details)
-            ? selectedEntity.details.find((detail: any) => detail.serviceType?._id === selectedServiceType?._id)
+            ? selectedEntity.details.find((detail: any) => detail.serviceType._id === selectedServiceType._id)
             : null; // Or handle the case where it's not an array (e.g., provide a fallback)
 
         if (!matchingService) {
@@ -696,7 +536,6 @@ const BookingAdd: React.FC = () => {
             setTotalAmount(updatedAmount);
         }
     }, [trappedLocation, updatedAmount]);
-
     useEffect(() => {
         setSelectedEntity({
             name: 'Dummy Driver',
@@ -715,42 +554,42 @@ const BookingAdd: React.FC = () => {
         if (validate()) {
             // -----------------------------------------
             const data = {
-                workType: workType,
-                pickupDate: pickupDate,
+                workType: workType || "",
+                pickupDate: pickupDate || "",
                 company: selectedCompany?._id ?? '',
-                fileNumber: fileNumber,
-                location: location,
-                latitudeAndLongitude: latitudeAndLongitude,
+                fileNumber: fileNumber || "",
+                location: location || "",
+                latitudeAndLongitude: latitudeAndLongitude || "",
                 baselocation: selectedBaseLocation?.id ?? '',
                 showroom: selectedShowroom?.id ?? '',
-                totalDistence: totalDistance,
+                totalDistence: totalDistance || "",
                 dropoffLocation: selectedShowroom?.name ?? '',
                 dropoffLatitudeAndLongitude: selectedShowroom?.latitudeAndLongitude ?? '',
-                trapedLocation: trappedLocation,
+                trapedLocation: trappedLocation || "",
                 updatedAmount: updatedAmount?.toString() ?? '',
                 serviceType: selectedServiceType?._id ?? '',
-                driver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.id : undefined,
-                provider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.id : undefined,
-                payableAmountForDriver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
-                payableAmountForProvider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
-                afterExpenseForDriver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
-                afterExpenseForProvider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
+                driver: selectedEntity && drivers.some((driver) => driver._id === selectedEntity.id) ? selectedEntity.id : undefined,
+                provider: selectedEntity && providers.some((provider) => provider._id === selectedEntity.id) ? selectedEntity.id : undefined,
+                payableAmountForDriver: selectedEntity && drivers.some((driver) => driver._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
+                payableAmountForProvider: selectedEntity && providers.some((provider) => provider._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
+                afterExpenseForDriver: selectedEntity && drivers.some((driver) => driver._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
+                afterExpenseForProvider: selectedEntity && providers.some((provider) => provider._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
                 pickupDistence: 'not defined',
-                serviceCategory: serviceCategory,
-                accidentOption: accidentOption,
-                insuranceAmount: insuranceAmount,
+                serviceCategory: serviceCategory || "",
+                accidentOption: accidentOption || "",
+                insuranceAmount: insuranceAmount || "",
                 adjustmentValue: adjustmentValue?.toString() ?? '',
                 amountWithoutInsurence: selectedEntity?.payableAmount?.toString() ?? '',
                 totalAmount: totalAmount?.toString() ?? '',
                 totalDriverDistence: totalDriverDistence?.toString() ?? '',
                 driverSalary: driverSalary?.toString() ?? '',
-                customerName: customerName,
-                mob1: mob1,
-                mob2: mob2,
-                customerVehicleNumber: customerVehicleNumber,
-                vehicleType: selectedVehicleType,
-                brandName: brandName,
-                comments: comments,
+                customerName: customerName || "",
+                mob1: mob1 || "",
+                mob2: mob2 || "",
+                customerVehicleNumber: customerVehicleNumber || "",
+                vehicleType: selectedVehicleType || "",
+                brandName: brandName || "",
+                comments: comments || "",
                 status: 'Booking Added',
                 bookedBy: `RSA-${role} `,
             };
@@ -758,7 +597,7 @@ const BookingAdd: React.FC = () => {
             setLoading(true);
 
             try {
-                const response = await axios.post(`${backendUrl}/booking`, data, {
+                const response = await axios.post(`${backendUrl}/booking/no-auth`, data, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -784,10 +623,9 @@ const BookingAdd: React.FC = () => {
                         padding: '10px 20px',
                     });
                 }
-                navigate('/bookings');
-            } catch (error: any) {
+            } catch (error: unknown) {
                 if (axios.isAxiosError(error)) {
-                    const errorMessage = error?.response?.data?.message || 'An error occurred';
+                    const errorMessage = error.response?.data?.message || 'An error occurred';
                     console.error('Error creating booking:', errorMessage);
 
                     Swal.fire({
@@ -801,7 +639,7 @@ const BookingAdd: React.FC = () => {
                         padding: '10px 20px',
                     });
 
-                    setErrors(error?.response?.data || {});
+                    setErrors(error.response?.data || {});
                 } else {
                     console.error('Unexpected error:', error);
                     setErrors({ message: 'An unexpected error occurred' });
@@ -824,7 +662,6 @@ const BookingAdd: React.FC = () => {
                 const response = await axios.get(`${backendUrl}/booking/${uid}`);
                 const data = response.data;
 
-                console.log('data', data);
 
                 // Set fields with fallback values
                 setWorkType(data.workType || '');
@@ -835,8 +672,8 @@ const BookingAdd: React.FC = () => {
                 setLatitudeAndLongitude(data.latitudeAndLongitude || '');
                 setSelectedBaseLocation((prev) => {
                     const baseLocationData = {
-                        id: data.baselocation?._id,
-                        latitudeAndLongitude: data.baselocation?.latitudeAndLongitude
+                        id: data.baselocation._id,
+                        latitudeAndLongitude: data.baselocation.latitudeAndLongitude
                     }
                     return prev ? { ...prev, ...baseLocationData } : baseLocationData;
                 })
@@ -844,7 +681,7 @@ const BookingAdd: React.FC = () => {
                 // Update selected showroom state
                 setSelectedShowroom((prev) => {
                     const showroomData = {
-                        id: data.showroom?._id || '', // Safe access using optional chaining
+                        id: data.showroom._id || '', // Safe access using optional chaining
                         latitudeAndLongitude: data.dropoffLatitudeAndLongitude || '',
                         name: data.dropoffLocation || prev?.name || '', // Retain existing name if not provided
                         insurenceAmount: data.showroom?.services?.bodyShop?.amount, // Ensure the property name matches the expected type
@@ -858,9 +695,9 @@ const BookingAdd: React.FC = () => {
                 setSelectedServiceType(data.serviceType || '');
 
                 if (data.driver) {
-                    setSelectedEntity({ id: data.driver?._id, payableAmount: data.payableAmountForDriver, name: data.driver?.name });
+                    setSelectedEntity({ id: data.driver._id, payableAmount: data.payableAmountForDriver, name: data.driver?.name });
                 } else if (data.provider) {
-                    setSelectedEntity({ id: data.provider?._id, payableAmount: data.payableAmountForProvider, name: data.provider?.name });
+                    setSelectedEntity({ id: data.provider._id, payableAmount: data.payableAmountForProvider, name: data.provider?.name });
                 } else {
                     setSelectedEntity(null);
                 }
@@ -917,12 +754,12 @@ const BookingAdd: React.FC = () => {
                 trapedLocation: trappedLocation,
                 updatedAmount: updatedAmount?.toString() ?? '',
                 serviceType: selectedServiceType?._id ?? '',
-                driver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.id : undefined,
-                provider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.id : undefined,
-                payableAmountForDriver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
-                payableAmountForProvider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
-                afterExpenseForDriver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
-                afterExpenseForProvider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
+                driver: selectedEntity && drivers.some((driver) => driver._id === selectedEntity.id) ? selectedEntity.id : undefined,
+                provider: selectedEntity && providers.some((provider) => provider._id === selectedEntity.id) ? selectedEntity.id : undefined,
+                payableAmountForDriver: selectedEntity && drivers.some((driver) => driver._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
+                payableAmountForProvider: selectedEntity && providers.some((provider) => provider._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
+                afterExpenseForDriver: selectedEntity && drivers.some((driver) => driver._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
+                afterExpenseForProvider: selectedEntity && providers.some((provider) => provider._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
                 pickupDistence: 'not defined',
                 serviceCategory: serviceCategory,
                 accidentOption: accidentOption,
@@ -960,11 +797,6 @@ const BookingAdd: React.FC = () => {
                     timer: 3000,
                     padding: '10px 20px',
                 });
-                if (isMessageTrue) {
-                    navigate('/completedbookings');
-                } else {
-                    navigate('/bookings');
-                }
             } catch (error: unknown) {
                 if (error instanceof AxiosError) {
                     console.error('Error creating booking:', error.response?.data?.message || error.message);
@@ -987,124 +819,8 @@ const BookingAdd: React.FC = () => {
     const validate = (): boolean => {
         const formErrors: Record<string, string> = {};
 
-        // Work type validation
-        if (!workType) {
-            formErrors.workType = 'Work type is required';
-            workTypeRef.current?.focus();
-        } else if (workType === 'RSAWork' && !selectedCompany) {
-            formErrors.selectedCompany = 'Selected company is required for RSAWork';
-            companyRef.current?.focus();
-
-        }
-
-        // File number validation
-        if (!fileNumber) {
-            formErrors.fileNumber = 'File number is required';
-            fileNumberRef.current?.focus();
-        }
-
-        // Location validation
-        if (!location) {
-            formErrors.location = 'Location is required';
-            locationRef.current?.focus();
-        }
-
-        // Latitude and longitude validation
-        if (!latitudeAndLongitude) {
-            formErrors.latitudeAndLongitude = 'Latitude and longitude are required';
-            latitudeAndLongitudeRef.current?.focus();
-        }
-
-        // Base location validation
-        if (!selectedBaseLocation) {
-            formErrors.selectedBaseLocation = 'Base location is required';
-            baselocationRef.current?.focus();
-        }
-
-        // Showroom validation
-        if (!selectedShowroom) {
-            formErrors.selectedShowroom = 'Showroom is required';
-            selectedShowroomRef.current?.focus();
-        }
-
-        // Total distance validation
-        if (!totalDistance) {
-            formErrors.totalDistance = 'Total distance is required';
-            totalDistanceRef.current?.focus();
-
-        }
-
-        // Trapped location validation
-        if (!trappedLocation) {
-            formErrors.trappedLocation = 'Trapped location is required';
-            trapedLocationRef.current?.focus();
-        }
-
-        // Updated amount validation (conditional)
-        if (trappedLocation === 'outsideOfRoad' && !updatedAmount) {
-            formErrors.updatedAmount = 'Updated amount is required for outsideOfRoad';
-            updatedAmountRef.current?.focus();
-        }
-
-        // Service type and other fields validation (conditional)
-        if (trappedLocation !== 'outsideOfRoad') {
-            if (!selectedServiceType) {
-                formErrors.selectedServiceType = 'Service type is required';
-                selectedServiceTypeRef.current?.focus();
-            }
-            if (!selectedEntity) {
-                formErrors.selectedEntity = 'Driver is required';
-                selectedEndityRef.current?.focus();
-
-            }
-            if (!serviceCategory) {
-                formErrors.serviceCategory = 'Service category is required';
-                serviceCategoryRef.current?.focus();
-
-            }
-            if (!totalAmount) {
-                formErrors.totalAmount = 'Total amount is required';
-                totalAmountRef.current?.focus();
-            }
-            if (!totalDriverDistence) {
-                formErrors.totalDriverDistence = 'Total driver distance is required';
-                totalDriverDistenceRef.current?.focus();
-
-            }
-
-            // Accident option validation (nested)
-            if (serviceCategory === 'accident') {
-                if (!accidentOption) {
-                    formErrors.accidentOption = 'Accident option is required';
-                    accidentOptionRef.current?.focus();
-                } else if (accidentOption === 'both' && !insuranceAmount) {
-                    formErrors.insuranceAmount = 'Insurance amount is required for both options';
-                    accidentOptionRef.current?.focus();
-                }
-            }
-        }
-
-        // Mobile number 1 validation
-        if (!mob1) {
-            formErrors.mob1 = 'Mobile number 1 is required';
-            mob1Ref.current?.focus();
-        }
-
-        // Customer name validation
-        if (!customerName) {
-            formErrors.customerName = 'Customer name is required';
-            customerNameRef.current?.focus();
-
-        }
-
-        // Vehicle type validation
-        if (!selectedVehicleType) {
-            formErrors.selectedVehicleType = 'Vehicle type is required';
-        }
-
         // Set errors in the state
         setErrors(formErrors);
-
 
         return Object.keys(formErrors).length === 0;
     };
@@ -1169,7 +885,7 @@ const BookingAdd: React.FC = () => {
                                         -- Select a company --
                                     </option>
                                     {companies.map((company, index) => (
-                                        <option key={index} value={company?._id}>
+                                        <option key={index} value={company._id}>
                                             {company.name.charAt(0).toLocaleUpperCase() + company.name.slice(1)}
                                         </option>
                                     ))}
@@ -1233,7 +949,7 @@ const BookingAdd: React.FC = () => {
                                 value={latitudeAndLongitude}
                                 onChange={(e) => setLatitudeAndLongitude(e.target.value)}
                             />
-                            {errors?.latitudeAndLongitude && <p className="text-red-500">{errors?.latitudeAndLongitude}</p>}
+                            {errors.latitudeAndLongitude && <p className="text-red-500">{errors.latitudeAndLongitude}</p>}
                         </div>
                         {/* select start location (baselocation) */}
                         <div>
@@ -1400,7 +1116,7 @@ const BookingAdd: React.FC = () => {
                                             -- Select a service type --
                                         </option>
                                         {serviceTypes.map((item) => (
-                                            <option key={item?._id} value={item?._id}>
+                                            <option key={item._id} value={item._id}>
                                                 {item.serviceName.charAt(0).toUpperCase() + item.serviceName.slice(1)}
                                             </option>
                                         ))}
@@ -1734,8 +1450,8 @@ const BookingAdd: React.FC = () => {
                                                                 <div className="whitespace-nowrap font-bold text-red-500">Dummy Driver</div>
                                                             </td>
                                                             <td>Location</td>
-                                                            <td style={{ color: 'green' }}>{PayableAmount || "N/A"}</td>
-                                                            <td style={{ color: 'blue' }}>{afterExpence || "N/A"}</td>
+                                                            <td style={{ color: 'green' }}>{PayableAmount}</td>
+                                                            <td style={{ color: 'blue' }}>{afterExpence}</td>
                                                             <td className="text-center">
                                                                 <button
                                                                     className="btn btn-danger"
@@ -1752,9 +1468,9 @@ const BookingAdd: React.FC = () => {
                                                             </td>
                                                         </tr>
                                                         {drivers.map((data) => (
-                                                            <tr key={data?._id}>
+                                                            <tr key={data._id}>
                                                                 <td>
-                                                                    <div className="whitespace-nowrap">{data?.name}</div>
+                                                                    <div className="whitespace-nowrap">{data.name}</div>
                                                                 </td>
                                                                 <td>location</td>
                                                                 <td style={{ color: 'green' }}>{PayableAmount}</td>
@@ -1766,11 +1482,11 @@ const BookingAdd: React.FC = () => {
                                                                 </td>
                                                             </tr>
                                                         ))}
-                                                        {providers?.map((data) => (
-                                                            <tr key={data?._id}>
+                                                        {providers.map((data) => (
+                                                            <tr key={data._id}>
                                                                 <td>
                                                                     <div className="whitespace-nowrap" style={{ color: 'blue' }}>
-                                                                        {data?.name}
+                                                                        {data.name}
                                                                     </div>
                                                                 </td>
                                                                 <td>location</td>
@@ -1814,4 +1530,4 @@ const BookingAdd: React.FC = () => {
     );
 };
 
-export default BookingAdd;
+export default AddBookingWithoutAuth;

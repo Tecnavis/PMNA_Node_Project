@@ -3,7 +3,6 @@ import React, { ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
 import { Dialog, DialogPanel, Transition, TransitionChild, Tab } from '@headlessui/react';
-
 import { IoIosCloseCircleOutline } from 'react-icons/io';
 import Swal from 'sweetalert2';
 import Button from '@mui/material/Button';
@@ -152,7 +151,7 @@ const Preview = () => {
     const [fileNumber, setFileNumber] = useState<string>('');
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [selectedResponses, setSelectedResponses] = useState<{ [key: string]: string }>({});
-
+    const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
     const dropoffAndPickup = useRef<any>(null);
 
     // checking the token
@@ -184,19 +183,19 @@ const Preview = () => {
             setRemark(response.data.remark);
             setServiceVehicleNumber(response.data.serviceVehicleNumber);
             setFileNumber(response.data.fileNumber);
-            const files = response.data.pickupImages.map((filename: any) => {
+            const files = response.data.pickupImages?.map((filename: any) => {
                 const blob = new Blob(); // Simulate a file blob (replace this if you receive actual blobs)
                 return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
             });
 
-            const urls = files.map((file: any) => `${backendUrl}/images/${file.name}`);
+            const urls = files?.map((file: any) => `${backendUrl}/images/${file.name}`);
 
-            const dropoffFiles = response.data.dropoffImages.map((filename: any) => {
+            const dropoffFiles = response.data.dropoffImages?.map((filename: any) => {
                 const blob = new Blob(); // Simulate a file blob (replace this if you receive actual blobs)
                 return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
             });
 
-            const dropoffUrls = dropoffFiles.map((file: any) => `${backendUrl}/images/${file.name}`);
+            const dropoffUrls = dropoffFiles?.map((file: any) => `${backendUrl}/images/${file.name}`);
             setDropoffImageUrls(dropoffUrls);
             setPickuptImageUrls(urls);
         } catch (error) {
@@ -205,20 +204,20 @@ const Preview = () => {
     };
 
     useEffect(() => {
-        const files = pickupImages.map((filename: any) => {
+        const files = pickupImages?.map((filename: any) => {
             const blob = new Blob(); // Simulate a file blob (replace this if you receive actual blobs)
             return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
         });
 
-        const urls = files.map((file: any) => `${backendUrl}/images/${file.name}`);
+        const urls = files?.map((file: any) => `${backendUrl}/images/${file.name}`);
         setPickuptImageUrls(urls);
 
-        const dropoffFiles = dropoffImages.map((filename: any) => {
+        const dropoffFiles = dropoffImages?.map((filename: any) => {
             const blob = new Blob(); // Simulate a file blob (replace this if you receive actual blobs)
             return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
         });
 
-        const dropoffUrls = dropoffFiles.map((file: any) => `${backendUrl}/images/${file.name}`);
+        const dropoffUrls = dropoffFiles?.map((file: any) => `${backendUrl}/images/${file.name}`);
         setDropoffImageUrls(dropoffUrls);
     }, []);
 
@@ -240,7 +239,7 @@ const Preview = () => {
     //   removing prefix fro booking id
 
     const removePrefix = (fileNumber: any) => {
-        return fileNumber.startsWith('PMNA-') ? fileNumber.replace('PMNA-', '') : fileNumber;
+        return fileNumber?.startsWith('PMNA-') ? fileNumber.replace('PMNA-', '') : fileNumber;
     };
 
     // toogling for button
@@ -252,8 +251,6 @@ const Preview = () => {
         setCompanyAmountIsChecked((prev) => !prev);
     };
 
-    console.log('pickup image urls ', pickupImageUrls);
-    console.log('dropoff image urls ', dropoffImageUrls);
 
     // handling pickup and dropoff images
 
@@ -436,7 +433,6 @@ const Preview = () => {
         setModal6(false);
     };
 
-    console.log('the feedback', feedbacks);
 
     // Verifying booking
 
@@ -493,7 +489,7 @@ const Preview = () => {
             return; // Stop the function if not all questions are answered
         }
 
-        const feedbackData = feedbacks.map((feedback) => ({
+        const feedbackData = feedbacks?.map((feedback) => ({
             questionId: feedback._id,
             response: selectedResponses[feedback._id] || '', // "yes" or "no"
             yesPoint: feedback.yesPoint,
@@ -520,6 +516,24 @@ const Preview = () => {
             }
         }
     };
+
+    const handleDownloadImage = () => {
+        if (!enlargedImage) return;
+
+        fetch(enlargedImage)
+            .then(response => response.blob())
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "downloaded-image.jpg";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            })
+            .catch(error => console.error("Error downloading the image:", error));
+    }
 
     useEffect(() => {
         gettingToken();
@@ -549,15 +563,14 @@ const Preview = () => {
                 <hr className="border-white-light dark:border-[#1b2e4b] my-6" />
 
                 <div className="table-responsive mt-6">
-                    <Tab.Group>
+                    <Tab.Group onChange={() => setEnlargedImage(null)}>
                         <Tab.List className="flex flex-wrap mt-3 border-b border-white-light dark:border-[#191e3a]">
                             <Tab as={Fragment}>
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${
-                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Pickup Details
                                     </button>
@@ -567,9 +580,8 @@ const Preview = () => {
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${
-                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Dropoff Details
                                     </button>
@@ -581,10 +593,16 @@ const Preview = () => {
                                 <div>
                                     <div className="flex items-start pt-5">
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
-                                            {pickupImageUrls.map((url, index) => (
+                                            {pickupImageUrls?.map((url, index) => (
                                                 <div key={index}>
                                                     <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
-                                                    <img src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }} className="w-16 h-16" />
+                                                    <img
+                                                        src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
+                                                        className="w-16 h-16 hover:cursor-pointer"
+                                                        onClick={() => {
+                                                            setEnlargedImage(url)
+                                                        }}
+                                                    />
                                                 </div>
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
@@ -602,16 +620,21 @@ const Preview = () => {
                             <Tab.Panel>
                                 <div>
                                     <div className="flex items-start pt-5">
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
+                                        <div className="flex items-center justify-center gap-6">
                                             {dropoffImageUrls.map((url, index) => (
                                                 <div key={index}>
                                                     <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} />
-                                                    <img src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }} className="w-16 h-16" />
+                                                    <img
+                                                        src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
+                                                        className="w-16 h-16 hover:cursor-pointer"
+                                                        onClick={() => {
+                                                            setEnlargedImage(url);
+                                                        }}
+                                                    />
                                                 </div>
                                             ))}
-                                            {dropoffImageUrls.length >= 6 ? (
-                                                <div></div>
-                                            ) : (
+
+                                            {dropoffImageUrls.length < 6 && (
                                                 <Button component="label" role={undefined} variant="contained" tabIndex={-1} startIcon={<FaCloudUploadAlt />}>
                                                     Upload files
                                                     <VisuallyHiddenInput type="file" accept="image/png, image/jpeg, image/jpg" onChange={(e) => handleImageChange(e, 'dropoff')} multiple />
@@ -619,8 +642,25 @@ const Preview = () => {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Modal for Enlarged Image */}
                                 </div>
                             </Tab.Panel>
+                            {enlargedImage && (
+                                <div
+                                    className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000]"
+                                    onClick={() => setEnlargedImage(null)}
+                                >
+                                    <div className="relative">
+                                        <IoIosCloseCircleOutline
+                                            className="absolute -top-2 -right-2 text-white text-4xl cursor-pointer "
+                                            onClick={() => setEnlargedImage(null)}
+                                        />
+                                        <img src={enlargedImage} alt="Enlarged" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg" />
+                                        <button className='text-white w-full py-2 rounded-md mt-1  bg-primary' onClick={handleDownloadImage}>Download</button>
+                                    </div>
+                                </div>
+                            )}
                         </Tab.Panels>
                     </Tab.Group>
 
@@ -631,36 +671,36 @@ const Preview = () => {
                                     {/* Work Type */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Date And Time</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking.createdAt)}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.createdAt)}</td>
                                     </tr>
 
                                     {/* Booking Id */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Booking ID</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{removePrefix(booking.fileNumber)}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{removePrefix(booking?.fileNumber) || "N/A"}</td>
                                     </tr>
 
                                     {/* Pickup date */}
-                                    {booking.pickupDate && (
+                                    {booking?.pickupDate && (
                                         <tr>
                                             <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Date</td>
-                                            <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking.pickupDate)}</td>
+                                            <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.pickupDate) || "N/A"}</td>
                                         </tr>
                                     )}
 
                                     {/* Edited Person */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Edited Person</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.bookedBy}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.bookedBy || "N/A"}</td>
                                     </tr>
 
                                     {/* Compnay */}
-                                    {booking.workType === 'PaymentWork' ? (
+                                    {booking?.workType === 'PaymentWork' ? (
                                         <tr>
                                             <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Company</td>
                                             <td style={{ border: '1px solid #ccc', padding: '8px' }}>Payment work</td>
                                         </tr>
-                                    ) : booking.workType === 'RSAWork' ? (
+                                    ) : booking?.workType === 'RSAWork' ? (
                                         <>
                                             <tr>
                                                 <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Company</td>
@@ -668,7 +708,7 @@ const Preview = () => {
                                             </tr>
                                             <tr>
                                                 <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Selected Company</td>
-                                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.company?.name || 'No company available'}</td>
+                                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.company?.name || 'No company available'}</td>
                                             </tr>
                                         </>
                                     ) : null}
@@ -677,101 +717,101 @@ const Preview = () => {
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Traped Location</td>
 
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.trapedLocation}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.trapedLocation || "N/A"}</td>
                                     </tr>
 
                                     {/* Service center  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Center</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.showroom.name}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.showroom?.name || "N/A"}</td>
                                     </tr>
 
                                     {/* File number  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>File Number</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.fileNumber}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.fileNumber || "N/A"}</td>
                                     </tr>
 
                                     {/* Customer name  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Customer Name</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.customerName}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.customerName || "N/A"}</td>
                                     </tr>
 
                                     {/* Driver name  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Driver Name</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                            {booking.driver ? booking.driver?.name : booking.provider ? booking.provider?.name : 'No driver or provider available'}
+                                            {booking?.driver ? booking?.driver?.name : booking?.provider ? booking.provider?.name : 'No driver or provider available'}
                                         </td>
                                     </tr>
 
                                     {/* Driver total distence  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Driver Total Distence</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.totalDriverDistence}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.totalDriverDistence || "N/A"}</td>
                                     </tr>
 
                                     {/* Driver salary  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Driver Salary</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                            <p style={{ color: 'red', fontWeight: 'bold', fontSize: 'large' }}>{booking.driverSalary}</p>
+                                            <p style={{ color: 'red', fontWeight: 'bold', fontSize: 'large' }}>{booking?.driverSalary || "N/A"}</p>
                                         </td>
                                     </tr>
 
                                     {/* Customer vehicle number  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Customer Vehicle Number</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.customerVehicleNumber}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.customerVehicleNumber || "N/A"}</td>
                                     </tr>
 
                                     {/* Brand name  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Brand Name</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.brandName}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.brandName || "N/A"}</td>
                                     </tr>
 
                                     {/* Mobile 1  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Mobile 1</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.mob1}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.mob1 || "N/A"}</td>
                                     </tr>
 
                                     {/* Mobile 2  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Mobile 2</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.mob2}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.mob2 || "N/A"}</td>
                                     </tr>
 
                                     {/* Start location  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Start Location</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.baselocation.baseLocation}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.baselocation?.baseLocation || "N/A"}</td>
                                     </tr>
 
                                     {/* Pickup location  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Location</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.location}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.location || "N/A"}</td>
                                     </tr>
 
                                     {/* Dropoff location  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Dropoff Location</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.showroom.location}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.showroom?.location}</td>
                                     </tr>
 
                                     {/* Distence  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Distence</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.totalDistence}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.totalDistence || "N/A"}</td>
                                     </tr>
 
                                     {/* Service type  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Type</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.serviceType.serviceName}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.serviceType?.serviceName}</td>
                                     </tr>
 
                                     {/* Service vehicle number  */}
@@ -783,7 +823,7 @@ const Preview = () => {
                                     {/*Comments  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Comments</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.comments}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.comments || "N/A"}</td>
                                     </tr>
                                 </>
                             )}
@@ -802,17 +842,17 @@ const Preview = () => {
                                     {/* Pickup time  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Time</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking.pickupTime)}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.pickupTime)}</td>
                                     </tr>
                                     {/* Dropoff time  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Dropoff Time</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking.dropoffTime)}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.dropoffTime)}</td>
                                     </tr>
                                     {/* Remark */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Remark</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking.remark}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.remark}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -894,7 +934,7 @@ const Preview = () => {
                                                 <h3>Pickup images</h3>
                                                 <div className="flex">
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                                                        {pickupImageUrls.map((url, index) => (
+                                                        {pickupImageUrls?.map((url, index) => (
                                                             <div key={index}>
                                                                 <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
 
@@ -921,7 +961,7 @@ const Preview = () => {
                                                 <h3>Dropoff images</h3>
                                                 <div className="flex">
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                                                        {dropoffImageUrls.map((url, index) => (
+                                                        {dropoffImageUrls?.map((url, index) => (
                                                             <div key={index}>
                                                                 <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} />
                                                                 <img src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }} className="w-16 h-16" />
@@ -1092,7 +1132,7 @@ const Preview = () => {
                                         <form className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black mt-3">
                                             <div className="flex flex-col sm:flex-row">
                                                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                                    {feedbacks.map((feedback) => (
+                                                    {feedbacks?.map((feedback) => (
                                                         <div key={feedback._id} className="mb-4">
                                                             <label className="block text-sm font-medium mb-2">{feedback.question}</label>
                                                             <div className="flex space-x-4">

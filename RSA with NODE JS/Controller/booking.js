@@ -102,6 +102,44 @@ exports.createBooking = async (req, res) => {
         });
     }
 };
+// Controller to create a booking
+exports.createBookingNoAuth = async (req, res) => {
+    try {
+        const bookingData = req.body;
+
+        // Handle the case where 'company' is an empty string
+        if (!bookingData.company || bookingData.company === "") {
+            bookingData.company = null; // Or you can delete the field entirely if required
+        }
+
+        // Fetch driver details
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(bookingData.baselocation)) bookingData.baselocation = null;
+        if (!mongoose.Types.ObjectId.isValid(bookingData.showroom)) bookingData.showroom = null;
+        if (!mongoose.Types.ObjectId.isValid(bookingData.serviceType)) bookingData.serviceType = null;
+
+        const newBooking = new Booking(bookingData);
+
+        await newBooking.save();
+
+        res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
+    } catch (error) {
+        console.log(error)
+        if (error.name === "ValidationError") {
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                errors: error.errors,
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "An internal server error occurred",
+            error: error.message,
+        });
+    }
+};
 
 //Helper function for check and udpate the vehicle serviceKM 
 const checkVehicleServiceStatus = async (booking) => {
@@ -240,7 +278,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10, status = '', driverId } = req.query;
+        let { search, startDate, endDate, endingDate, page = 1, limit = 10, status = '', driverId } = req.query;
 
         // Convert page and limit to integers
         page = parseInt(page, 10);
@@ -250,26 +288,26 @@ exports.getAllBookings = async (req, res) => {
         const query = {};
 
         if (status) {
-            query.status = { $nin: [status] }
+            query.status = { $ne: status }
         }
 
         // If driverId as query then fetch drivers bookings
         if (driverId) {
-            query.driver = driverId;
+            query.driver = new mongoose.Types.ObjectId(driverId);
         }
-
 
         // Handle search
         if (search) {
             search = search.trim();
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-            if (dateRegex.test(search)) {
-                const [day, month, year] = search.split('/');
+
+            if (dateRegex.test(search) || search) {
+                const [year, month, day] = search.split('-');
                 const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
 
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
-            } else {
+
                 const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
                 const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
@@ -285,15 +323,14 @@ exports.getAllBookings = async (req, res) => {
             }
         }
 
-        // Handle date range filter
-        if (startDate || endDate) {
-            query.createdAt = {};
-            if (startDate) {
-                query.createdAt.$gte = new Date(`${startDate}T00:00:00.000Z`);
-            }
-            if (endDate) {
-                query.createdAt.$lte = new Date(`${endDate}T23:59:59.999Z`);
-            }
+        if (startDate && endingDate) {
+            const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
+            const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
+
+            query.createdAt = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
         }
 
         // Pagination and sorting by createdAt in descending order
@@ -309,6 +346,10 @@ exports.getAllBookings = async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
 
+        const balanceAmount = bookings.reduce((total, booking) => {
+            return total + booking.receivedAmount;
+        }, 0);
+
         // Aggregate data for total amounts
         const aggregationResult = await Booking.aggregate([
             { $match: query },
@@ -321,6 +362,7 @@ exports.getAllBookings = async (req, res) => {
             }
         ]);
 
+        // Extract financial data from aggregation result
         const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
         const balanceAmountToCollect = overallAmount - totalCollectedAmount;
@@ -332,13 +374,12 @@ exports.getAllBookings = async (req, res) => {
             limit,
             totalPages: Math.ceil(total / limit),
             bookings,
-            ...(driverId && {
-                financials: {
-                    totalCollectedAmount,
-                    totalBalanceAmount,
-                    overallAmount
-                }
-            })
+            balanceAmount,
+            financials: {
+                totalCollectedAmount,
+                overallAmount,
+                balanceAmountToCollect: balanceAmountToCollect
+            }
         });
     } catch (error) {
         console.error('Error fetching bookings:', error);
@@ -374,7 +415,7 @@ exports.getBookingById = async (req, res) => {
 exports.updateBooking = async (req, res) => {
     const { id } = req.params;
     const updatedData = req.body;
-    
+
     try {
         // Fetch the existing booking
         const booking = await Booking.findById(id);
@@ -1089,9 +1130,10 @@ exports.settleAmount = async (req, res) => {
 //Controller for update booking as approved 
 exports.updateBookingApproved = async (req, res) => {
     try {
-        const { id } = req.query
+        const { id } = req.params
 
         const booking = await Booking.findById(id)
+
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }

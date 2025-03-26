@@ -6,7 +6,7 @@ const router = express.Router();
 const jwt = require('../Middileware/jwt')
 
 router.post('/',jwt, upload.single('image'), driverController.createDriver); // 'image' is the name of the file field
-router.get('/',jwt, driverController.getDrivers);
+router.get('/', driverController.getDrivers);
 router.get('/filtered',jwt, driverController.filtergetDrivers);
 router.get('/:id',jwt, driverController.getDriverById);
 router.put('/:id',jwt,upload.single('image'), driverController.updateDriver);
