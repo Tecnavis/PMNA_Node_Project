@@ -71,7 +71,7 @@ const LoginBoxed = () => {
             return; // Exit the function early if no internet connection
         }
 
-        const endpoint = role === 'admin' ? `${backendUrl}/admin/login` : `${backendUrl}/staff/login`; // API endpoint
+        const endpoint = role === 'admin' ? `${backendUrl}/admin/login` : `${backendUrl}staff/login`; // API endpoint
         const payload = role === 'admin' ? { email: credentials.email, password: credentials.password } : { userName: credentials.userName, password: credentials.password };
 
         try {

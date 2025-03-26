@@ -6,7 +6,10 @@ const upload = require('../config/multer');
 
 
 // Route to create a new booking
-router.post('/', jwt, controller.createBooking);
+router.post('/', controller.createBooking);
+
+//Route for getting approved bookings
+router.post('/no-auth', controller.createBookingNoAuth);
 
 //Route for getting approved bookings
 router.get('/approvedbookings', jwt, controller.getApprovedBookings);
@@ -21,10 +24,10 @@ router.get('/', jwt, controller.getAllBookings);
 router.get('/getordercompleted', jwt, controller.getOrderCompletedBookings);
 
 // Route to get booking by id
-router.get('/:id', jwt, controller.getBookingById);
+router.get('/:id', controller.getBookingById);
 
 // Route to update booking
-router.put('/:id', jwt, controller.updateBooking);
+router.put('/:id', controller.updateBooking);
 
 // Route to delete booking
 // router.delete('/:id',jwt,controller.deleteBooking);
@@ -60,7 +63,7 @@ router.patch('/accountantverify/:id', jwt, controller.accountVerifying);
 router.patch('/sattle-amount/:id', jwt, controller.settleAmount);
 
 //Route to approve booking
-// router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
+router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
 
 
 module.exports = router;

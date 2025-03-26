@@ -32,7 +32,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, onConf
         <div className="fixed inset-0 flex items-start justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded shadow-lg mt-10">
                 <h3 className="text-lg font-semibold">
-                Enter Password  {role === "admin" && confirmPassword }  to Confirm 
+                Enter Password  {role === "admin" || confirmPassword }  to Confirm 
                 </h3>
                 <div className="relative">
                     <input

@@ -361,22 +361,22 @@ function Rewards() {
                       <div className="p-4 text-[13px] border-t border-[#d3d3d3] dark:border-[#1b2e4b]">
                         <ul className="space-y-1">
                           {rewards.map((reward, index) => (<>
-                            <li className='text-gray-800 bg-gray-200 p-5 rounded flex justify-between text-sm'>
-                              <p>{reward.name}</p>
-                              <div className='flex gap-3'>
+                            <li className='text-gray-800 bg-gray-200 p-5 rounded sm:flex justify-between'>
+                              <p className='sm:text-left text-center sm:font-normal  underline sm:no-underline'>{reward.name}</p>
+                              <div className='flex flex-col sm:flex-row gap-3 text-center sm:text-nowrap'>
                                 {
                                   reward.category === "Showroom" && (<>
-                                    <span>Reward Points : {reward.bookingPoint || 0}</span>
-                                    <div className="inline-block h-[20px] min-h-[1em] w-0.5 self-stretch bg-gray-600 dark:bg-white/10"></div>
+                                    <span className='mt-1.5'>Reward Points : {reward.bookingPoint || 0}</span>
+                                    <div className="hidden sm:inline-block  h-[30px] min-h-[1em] w-0.5 self-stretch bg-gray-600 dark:bg-white/10"></div>
                                   </>
                                   )
                                 }
-                                <button type="button">Points : {reward.rewardPoints}</button>
-                                <IconEye className='text-purple-500' />
+                                <button type="button">Points : {reward.rewardPoints || 0}</button>
+                                <IconEye className='text-purple-500 hover:cursor-pointer m-auto' />
                                 {
                                   reward.category === "Showroom" && (<>
                                     <button onClick={() => setNestedAccord(reward.name)}>
-                                      <IconCaretDown className='text-black ml-5' />
+                                      <IconCaretDown className='text-black sm:ml-5 m-auto sm:m-0' />
                                     </button>
                                   </>
                                   )
@@ -392,7 +392,7 @@ function Rewards() {
                                         <p>{staff.name}</p>
                                         <div className="flex gap-3">
                                           <button type="button">Points : {staff.rewardPoints || 0}</button>
-                                          <IconEye className="text-purple-500" />
+                                          <IconEye className="text-purple-500 hover:cursor-pointer" />
                                         </div>
                                       </li>
                                     ))

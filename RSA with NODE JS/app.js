@@ -30,7 +30,7 @@ var app = express();
 connectDB()
 
 app.use(cors({
-  origin:process.env.BACKEND_URL
+  origin: [process.env.FRONT_URL1, process.env.FRONT_URL2, process.env.FRONT_URL3]
 }))
 
 // view engine setup
@@ -45,9 +45,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use('/admin',adminRouter);
-app.use('/baselocation',baseLocationRouter);
-app.use('/servicetype',serviceTypeRouter);
+app.use('/admin', adminRouter);
+app.use('/baselocation', baseLocationRouter);
+app.use('/servicetype', serviceTypeRouter);
 app.use('/role', roleRouter);
 app.use('/staff', staffRouter);
 app.use('/provider', providerRouter);
@@ -63,12 +63,12 @@ app.use('/vehicle', vehicleRouter);
 app.use('/point', pointRouter);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};

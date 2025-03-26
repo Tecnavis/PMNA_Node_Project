@@ -1,8 +1,10 @@
+// @ts-nocheck
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { DataTable } from 'mantine-datatable';
+import Swal from 'sweetalert2'
 import { IRootState } from '../../../store';
 import Dropdown from '../../../components/Dropdown';
 import IconShoppingBag from '../../../components/Icon/IconShoppingBag';
@@ -13,25 +15,35 @@ import { Booking } from '../../Bookings/Bookings';
 import IconPhone from '../../../components/Icon/IconPhone';
 import IconEye from '../../../components/Icon/IconEye';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
-import Swal from 'sweetalert2'
 import { BASE_URL } from '../../../config/axiosConfig';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+interface FilterData {
+    totalCollectedAmount: number,
+    overallAmount: number,
+    balanceAmountToCollect: number
+}
 
 const DriverCashCollectionsReport = () => {
 
     const [driver, serDriver] = useState<Driver | null>(null);
     const [bookings, setBookings] = useState<Booking[]>([]);
-    const [selectedMonth, setSelectedMonth] = useState<string>('March');
-    const [selectedYear, setSelectedYear] = useState<number>(2025)
-
+    const [selectedMonth, setSelectedMonth] = useState<string>(new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date()));
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+    const [filterData, setFilterData] = useState<FilterData>({
+        totalCollectedAmount: 0,
+        overallAmount: 0,
+        balanceAmountToCollect: 0
+    })
     const [startDate, setStartDate] = useState<string>('2025-03-01')
     const [endingDate, setEndingDate] = useState<string>('2025-03-31')
-
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [initialRecords, setInitialRecords] = useState(bookings);
     const [inputValues, setInputValues] = useState<Record<string, number>>({});
+    const [totalBalance, setTotalBalance] = useState<string, number>(0);
     const [search, setSearch] = useState('');
+    const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());
 
     const { id } = useParams();
     const navigate = useNavigate();
@@ -61,22 +73,21 @@ const DriverCashCollectionsReport = () => {
     const fetchBookings = async () => {
         try {
             const response = await axios.get(`${backendUrl}/booking`, {
-                params: { driverId: driver?._id, startDate, endingDate }
+                params: { driverId: driver?._id, startDate, endingDate, search }
             });
 
             const data = response.data
-
             setBookings(data.bookings);
+            setTotalBalance(data.balanceAmount || 0);
+            setFilterData({
+                balanceAmountToCollect: data.financials.balanceAmountToCollect,
+                overallAmount: data.financials.overallAmount,
+                totalCollectedAmount: data.financials.totalCollectedAmount
+            })
         } catch (error) {
             console.error("Error fetching api booking in report section : ", error)
         }
     }
-
-    useEffect(() => {
-        gettingToken();
-        fetchBookings();
-        getDriver();
-    }, [search, endingDate, startDate])
 
     const updateInputValues = (bookingId: string, value: number) => {
         setInputValues((prev) => ({
@@ -86,9 +97,26 @@ const DriverCashCollectionsReport = () => {
     };
 
     const handleApproveClick = async (record: Booking) => {
+        // Check if receivedAmount is not zero
+        if (calculateBalance(
+            parseFloat(record.totalAmount?.toString() || '0'),
+            record.receivedAmount || 0,
+            record.receivedUser
+        ) !== 0) {
+            Swal.fire({
+                title: 'Balance Amount Not Zero',
+                text: 'The balance amount needs to be zero before approving this booking.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK',
+            });
+            return; // Stop further execution
+        }
+
+        // Proceed with approval if receivedAmount is zero
         Swal.fire({
             title: 'Are you sure?',
-            text: 'Do you want to approve this booking!',
+            text: 'Do you want to approve this booking?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
@@ -96,15 +124,48 @@ const DriverCashCollectionsReport = () => {
             confirmButtonText: 'Yes, approve it!',
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await axios.patch(`${BASE_URL}/booking/update-approve/${record._id}`
-                )
-                fetchBookings()
-                Swal.fire('Deleted!', 'The driver has been deleted.', 'success');
+                try {
+                    const res = await axios.patch(`${BASE_URL}/booking/update-approve/${record._id}`);
+                    fetchBookings(); // Refresh the bookings list
+                    Swal.fire('Approved!', 'The booking has been approved.', 'success');
+                } catch (error) {
+                    console.error('Error approving booking:', error);
+                    Swal.fire('Error!', 'Failed to approve the booking.', 'error');
+                }
             }
         });
-    }
+    };
 
+    const handleSelectAll = () => {
+        if (selectedBookings.size === bookings.length) {
+            // Deselect all
+            setSelectedBookings(new Map());
+        } else {
+            // Select all
+            const allIds = new Map(bookings.map((booking) => [booking._id, booking]));
+            setSelectedBookings(allIds);
+        }
+    };
 
+    //Handle navigation for invoice
+    const handleGenerateInvoices = () => {
+        // Collect selected bookings
+        const selected = bookings.filter((booking) => selectedBookings.has(booking._id));
+        // Navigate to the invoice generation page or handle the invoice generation here
+        if (selected.length > 0) {
+            navigate('/showroom-cashcollection/selectiveInvoice', { state: { bookings: selected } });
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Please select any booking',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            })
+        }
+    };
 
     const cols = [
         {
@@ -118,17 +179,40 @@ const DriverCashCollectionsReport = () => {
             accessor: 'selectall',
             title: (
                 <label className="flex items-center mt-2">
-                    <input type="checkbox" name="selectAll" className="mr-2" />
+                    <input
+                        type="checkbox"
+                        name="selectAll"
+                        className="mr-2"
+                        onChange={handleSelectAll}
+                    />
                     <span>Select All</span>
                 </label>
             ),
             render: (record: Booking) =>
-                record._id !== 'total' ? <input type="checkbox" /> : null
+                record._id !== 'total' ? <input
+                    type="checkbox"
+                    disabled={record.approve}
+                    checked={selectedBookings.has(record._id)}
+                    onChange={() => {
+                        if (record.approve) return; // Prevent state update if disabled
+                        setSelectedBookings((prevSelected) => {
+                            const updatedSelection = new Set(prevSelected);
+                            if (updatedSelection.has(record._id)) {
+                                updatedSelection.delete(record._id);
+                            } else {
+                                updatedSelection.add(record._id);
+                            }
+                            return updatedSelection;
+                        });
+                    }}
+                /> : null
         },
         {
             accessor: 'createdAt',
             title: 'Date',
-            render: (record: Booking) => new Date(record.createdAt || '').toLocaleDateString()
+            render: (record: Booking) => record.createdAt
+                ? new Date(record.createdAt).toLocaleDateString()
+                : ""
         },
         {
             accessor: 'fileNumber',
@@ -152,97 +236,103 @@ const DriverCashCollectionsReport = () => {
             accessor: 'receivedAmount',
             title: 'Amount Received From The Customer',
             render: (booking: Booking) => {
-                return (<td key={booking._id}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className='text-center'>
-                        {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                            <span className={`text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
-                        ) : (
-                            <>
-                                <input
-                                    type="text"
-                                    value={inputValues[booking._id] || ""}
-                                    onChange={(e) => updateInputValues(booking._id, +e.target.value)}
-                                    style={{
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '0.25rem',
-                                        padding: '0.25rem 0.5rem',
-                                        marginRight: '0.5rem',
-                                    }}
-                                    disabled={booking.approve}
-                                    min="0"
-                                />
-                                <button
-                                    // onClick={() => handleOkClick(booking._id)}
-                                    disabled={booking.approve || loadingStates[booking._id]}
-                                    style={{
-                                        backgroundColor:
-                                            Number(
-                                                calculateBalance(
-                                                    parseFloat(booking.totalAmount?.toString() || '0'),
-                                                    inputValues[booking._id] || booking.receivedAmount || '0',
-                                                    booking.receivedUser
-                                                )
-                                            ) === 0
-                                                ? '#28a745' // Green for zero balance
-                                                : '#dc3545', // Red for non-zero balance
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '0.25rem',
-                                        padding: '0.3rem',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    {loadingStates[booking._id] ? 'Loading...' : 'OK'}
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </td>)
+                if (booking._id === 'total') {
+                    return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
+                } else {
+                    return (<td key={booking._id}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className='text-center'>
+                            {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
+                                <span className={`text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
+                            ) : (
+                                <>
+                                    <input
+                                        type="text"
+                                        value={inputValues[booking._id] || ""}
+                                        onChange={(e) => updateInputValues(booking._id, +e.target.value)}
+                                        style={{
+                                            border: '1px solid #d1d5db',
+                                            borderRadius: '0.25rem',
+                                            padding: '0.25rem 0.5rem',
+                                            marginRight: '0.5rem',
+                                        }}
+                                        disabled={booking.approve}
+                                        min="0"
+                                    />
+                                    <button
+                                        onClick={() => handleUpdateAmount(booking._id)}
+                                        disabled={booking.approve || loadingStates[booking._id]}
+                                        style={{
+                                            backgroundColor:
+                                                Number(
+                                                    calculateBalance(
+                                                        parseFloat(booking.totalAmount?.toString() || '0'),
+                                                        inputValues[booking._id] || booking.receivedAmount || '0',
+                                                        booking.receivedUser
+                                                    )
+                                                ) === 0
+                                                    ? '#28a745' // Green for zero balance
+                                                    : '#dc3545', // Red for non-zero balance
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '0.25rem',
+                                            padding: '0.3rem',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {loadingStates[booking._id] ? 'Loading...' : 'OK'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </td>)
+                }
             }
         },
         {
             accessor: 'balance',
             title: 'Balance',
             render: (booking: Booking) => {
+                if (booking._id === 'total') {
+                    return (
+                        <span className="font-semibold text-lg text-blue-600">
+                            {booking.receivedAmount}
+                        </span>
+                    );
+                }
+
                 const effectiveReceivedAmount = booking.receivedAmount || 0;
                 return (
-                    <span
-                        className={`
-                        ${booking.workType === 'RSAWork'
-                                ? 'text-green-500' // Light green for zero balance
-                                : 'text-red-500' // Light red for non-zero balance
-                            }
-                        `}
-                    >
+                    <span className={`text-red-500`}>
                         {
-                            booking.workType === 'RSAWork' ?
-                                '0.00'
-                                : calculateBalance(
-                                    parseFloat(booking.totalAmount?.toString() || '0'),
-                                    effectiveReceivedAmount || 0,
-                                    booking.receivedUser
-                                )
+                            booking.workType === 'RSAWork'
+                                ? '0.00'
+                                : (booking.totalAmount - booking.receivedAmount)
                         }
                     </span>
                 );
-            }
+            }   
         },
         {
             accessor: 'approve',
             title: 'Approve',
             className: 'text-center',
             headerClassName: 'text-center',
-            render: (record: Booking) =>
-                record._id !== 'total' && record.workType !== 'RSAWork' ? (
-                    <button
-                        onClick={() => handleApproveClick(record)}
-                        className={`${record.accountantVerified ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.accountantVerified ? 'bg-green-300' : 'bg-red-300'
-                            } ${record.accountantVerified ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
-                        disabled={record.accountantVerified}
-                    >
-                        {record.accountantVerified ? 'Approved' : 'Approve'}
-                    </button>
-                ) : <div className='text-green-500'>Company Work</div>
+            render: (record: Booking) => {
+                if (record._id === 'total') {
+                    return ""
+                } else {
+                    return record._id !== 'total' && record.workType !== 'RSAWork' ? (
+                        <button
+                            onClick={() => handleApproveClick(record)}
+                            className={`${record.accountantVerified ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.accountantVerified ? 'bg-green-300' : 'bg-red-300'
+                                } ${record.accountantVerified ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
+                            disabled={record.accountantVerified}
+                        >
+                            {record.accountantVerified ? 'Approved' : 'Approve'}
+                        </button>
+                    ) : <div className='text-green-500'>Company Work</div>
+                }
+            }
         },
         {
             accessor: 'viewmore',
@@ -290,6 +380,19 @@ const DriverCashCollectionsReport = () => {
         return balance; // Always return a string
     };
 
+    const handleUpdateAmount = async (id: string) => {
+        const receivedAmount = inputValues[id]
+        if (!receivedAmount) return;
+        try {
+            const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { receivedAmount });
+            fetchBookings();
+            Swal.fire('Balance!', 'The booking balance amount udated.', 'success');
+        } catch (error) {
+            console.error('Error updatebalnce amount:', error);
+            Swal.fire('Error!', 'Failed to update balance amount in booking.', 'error');
+        }
+    }
+
     useEffect(() => {
         const updatedValues: Record<string, number> = {};
         bookings.forEach((booking) => {
@@ -302,10 +405,14 @@ const DriverCashCollectionsReport = () => {
         setInputValues(updatedValues);
     }, [bookings]);
 
+    useEffect(() => {
+        gettingToken();
+        fetchBookings();
+        getDriver();
+    }, [search, endingDate, startDate])
 
     return (
         <div>
-
             <div className="pt-5">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 w-full">
                     {/* DriverCashCollectionsReport Section */}
@@ -377,7 +484,7 @@ const DriverCashCollectionsReport = () => {
                                         </Dropdown>
                                     </div>
                                 </div>
-                                <div className="inline-flex mb-5">
+                                <div className="inline-flex mb-5 dropdown">
                                     <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedYear}</button>
                                     <Dropdown
                                         placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
@@ -412,7 +519,7 @@ const DriverCashCollectionsReport = () => {
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base  dark:text-white-dark">
                                             Total Collected Amount in {selectedMonth}
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹92,600</span>
+                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.totalCollectedAmount}</span>
                                         </h6>
                                     </div>
                                 </div>
@@ -425,7 +532,7 @@ const DriverCashCollectionsReport = () => {
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base dark:text-white-dark">
                                             Balance Amount To Collect in {selectedMonth}
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
+                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
                                         </h6>
                                     </div>
                                 </div>
@@ -439,7 +546,7 @@ const DriverCashCollectionsReport = () => {
                                         <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                             <h6 className="text-white-dark text-base dark:text-white-dark">
                                                 Overall Amount in {selectedMonth}
-                                                <span className="block text-base text-[#515365] dark:text-white-light">₹37,515</span>
+                                                <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.overallAmount}</span>
                                             </h6>
                                         </div>
                                     </div>
@@ -451,7 +558,7 @@ const DriverCashCollectionsReport = () => {
                 {/* Report Table */}
                 <div className="panel mt-6">
                     <div className="flex md:items-center md:flex-row flex-col mb-5 ">
-                        <button className='btn btn-primary'>Generate Invoice</button>
+                        <button className='btn btn-primary' onClick={handleGenerateInvoices}>Generate Invoice</button>
                         <div className="flex items-center gap-5 ltr:ml-auto rtl:mr-auto">
                             <div className="text-right">
                                 <input type="text" className="form-input" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -464,16 +571,28 @@ const DriverCashCollectionsReport = () => {
                             verticalAlignment={"center"}
                             highlightOnHover
                             striped
-                            // totalRecords={bookings?.length}
-                            // recordsPerPage={10}
-                            // page={1}
-                            // onPageChange={() => { }}
-                            // recordsPerPageOptions={[10, 20, 50]}
-                            // onRecordsPerPageChange={() => { }}
+                            totalRecords={bookings?.length}
+                            recordsPerPage={10}
+                            page={1}
+                            onPageChange={() => { }}
+                            recordsPerPageOptions={[10, 20, 50]}
+                            onRecordsPerPageChange={() => { }}
                             minHeight={300}
                             columns={cols}
                             records={[
-                                ...bookings.map(item => ({ ...item, id: item._id }))
+                                ...bookings.map(item => ({ ...item, id: item._id })),
+                                {
+                                    selectall: '',
+                                    createdAt: '',
+                                    _id: 'total',
+                                    fileNumber: '',
+                                    customerVehicleNumber: '',
+                                    totalAmount: '',
+                                    receivedAmount: totalBalance,
+                                    balance: totalBalance,
+                                    approve: '',
+                                    viewmore: '',
+                                }
                             ]}
                         />
                     </div>

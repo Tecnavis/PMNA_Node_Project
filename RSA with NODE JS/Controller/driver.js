@@ -42,11 +42,13 @@ exports.createDriver = async (req, res) => {
 exports.getDrivers = async (req, res) => {
   try {
     const drivers = await Driver.find().populate('vehicle.serviceType');
+
     res.json(drivers);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 exports.filtergetDrivers = async (req, res) => {
   try {

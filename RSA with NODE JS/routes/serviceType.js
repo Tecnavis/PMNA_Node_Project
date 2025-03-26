@@ -8,7 +8,7 @@ const jwt = require('../Middileware/jwt');
 router.post('/',jwt,controller.createServiceType);
 
 // Route for getting all service types
-router.get('/',jwt,controller.getAllServiceTypes);
+router.get('/',controller.getAllServiceTypes);
 
 // Route for getting a specific service type by ID
 router.get('/:id',jwt,controller.getServiceTypeById);
