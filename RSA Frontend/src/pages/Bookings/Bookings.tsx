@@ -47,7 +47,7 @@ interface Company {
 }
 
 export interface Booking {
-    receivedUser: string,// new prop
+    receivedUser?: string,// new prop
     companyBooking: boolean,// new prop
     approve: boolean,// new prop
     receivedAmount: number,
