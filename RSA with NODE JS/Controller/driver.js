@@ -1,5 +1,7 @@
 // controllers/driver.controller.js
 const Driver = require('../Model/driver');
+const Leaves = require('../Model/leaves');
+const Booking = require('../Model/booking');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -41,10 +43,45 @@ exports.createDriver = async (req, res) => {
 
 exports.getDrivers = async (req, res) => {
   try {
-    const drivers = await Driver.find().populate('vehicle.serviceType');
+    const drivers = await Driver.find().populate('vehicle.serviceType').lean();
+    const driverIds = drivers.map(driver => driver._id);
 
-    res.json(drivers);
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+    // Fetch leaves for today
+    const leaves = await Leaves.find({
+      driver: { $in: driverIds },
+      leaveDate: { $gte: startOfDay, $lt: endOfDay }
+    }).lean();
+
+    // Fetch the last booking status for each driver
+    const lastBookings = await Booking.aggregate([
+      { $match: { driver: { $in: driverIds } } },
+      { $sort: { updatedAt: -1 } }, // Sort by latest updatedAt
+      {
+        $group: {
+          _id: "$driver",
+          status: { $first: "$status" }, // Get the latest status
+        }
+      }
+    ]);
+
+    // Convert to lookup maps for fast access
+    const leaveSet = new Set(leaves.map(leave => leave.driver.toString()));
+    const statusMap = new Map(lastBookings.map(booking => [booking._id.toString(), booking.status]));
+
+    // Merge data into driver objects
+    const updatedDrivers = drivers.map(driver => ({
+      ...driver,
+      isLeave: leaveSet.has(driver._id.toString()),
+      status: statusMap.get(driver._id.toString()) || "Unknown"
+    }));
+
+    res.json(updatedDrivers);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 };
