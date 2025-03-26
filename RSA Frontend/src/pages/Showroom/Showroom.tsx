@@ -1,5 +1,5 @@
-import React, { useEffect, useState, Fragment } from 'react';
-import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
+import React, { useEffect, useState, Fragment, useRef } from 'react';
+import { Dialog, Transition, TransitionChild } from '@headlessui/react';
 import { Link, useNavigate } from 'react-router-dom';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPencil from '../../components/Icon/IconPencil';
@@ -15,13 +15,21 @@ import { BsBuildingAdd } from 'react-icons/bs';
 import IconPrinter from '../../components/Icon/IconPrinter';
 import IconFile from '../../components/Icon/IconFile';
 import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
+import { FaQrcode } from 'react-icons/fa';
+import { QRCodeSVG as QRCode } from 'qrcode.react';
+import A4Page from '../../components/A4Page';
 
-interface Showroom {
+
+
+export interface Showroom {
     _id: string;
+    bookingPoints: string
+    rewardPoints: string
     name: string;
     showroomId: string;
-    description: string;
     location: string;
+    description: string;
+    showroomLink: string;
     latitudeAndLongitude: string;
     username: string;
     password: string;
@@ -55,12 +63,14 @@ const Showroom: React.FC = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [search, setSearch] = useState('');
     const [isModalVisible, setModalVisible] = useState<boolean>(false);
+    const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+    const [url, setUrl] = useState<string>('');
+
 
     const navigate = useNavigate();
 
     // checking the token
-
     const gettingToken = () => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -73,7 +83,6 @@ const Showroom: React.FC = () => {
     };
 
     // getting all showroom
-
     const fetchShowroom = async () => {
         try {
             const response = await axios.get(`${backendUrl}/showroom`);
@@ -85,7 +94,6 @@ const Showroom: React.FC = () => {
     };
 
     // deleting showroom
-
     const handleDelete = (itemId: any) => {
         Swal.fire({
             title: 'Are you sure?',
@@ -106,7 +114,6 @@ const Showroom: React.FC = () => {
     };
 
     // getting showroom by id in modal
-
     const handleOpen = async (id: any) => {
         setModal5(true);
         const response = await axios.get(`${backendUrl}/showroom/${id}`);
@@ -121,7 +128,6 @@ const Showroom: React.FC = () => {
     }, []);
 
     // Download excel sheet
-
     const handleDownloadExcel = () => {
         // Convert the data to JSON format suitable for Excel
         const dataForExcel = showrooms.map((showroom) => ({
@@ -156,7 +162,6 @@ const Showroom: React.FC = () => {
     };
 
     // Print the table
-
     const handlePrint = () => {
         // Create a new window to hold the table for printing
         const printWindow = window.open('', '', 'height=500, width=800');
@@ -254,7 +259,7 @@ const Showroom: React.FC = () => {
 
 
     // Handle search input change
-    const handleSearchChange = (e:any) => {
+    const handleSearchChange = (e: any) => {
         const value = e.target.value;
         setSearch(value);
 
@@ -272,16 +277,14 @@ const Showroom: React.FC = () => {
         setFilteredShowrooms(filtered);
     };
 
-       // opening modal for delete confirmation 
-
-       const openDeleteModal = (item: string) => {
+    // opening modal for delete confirmation 
+    const openDeleteModal = (item: string) => {
         setItemToDelete(item);
         setModalVisible(true);
     };
 
-     // closing modal for delete confirmation 
-
-     const closeModal = () => {
+    // closing modal for delete confirmation 
+    const closeModal = () => {
         setModalVisible(false);
         setItemToDelete(null);
     };
@@ -311,7 +314,7 @@ const Showroom: React.FC = () => {
                         </button>
                     </div>
 
-                    <input type="text" className="form-input w-auto" placeholder="Search..." value={search}  onChange={handleSearchChange}/>
+                    <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={handleSearchChange} />
                 </div>
                 <div className="table-responsive mb-5">
                     <table>
@@ -322,6 +325,7 @@ const Showroom: React.FC = () => {
                                 <th>Location</th>
                                 <th>Helpline</th>
                                 <th>Phone</th>
+                                <th>QR</th>
                                 <th className="!text-center">Action</th>
                             </tr>
                         </thead>
@@ -330,11 +334,17 @@ const Showroom: React.FC = () => {
                                 <tr key={index}>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
-                                            <img src={items.image ? `${backendUrl}/images/${items.image}` : defaultImage} className="w-full h-full object-cover" alt="Profile" />{' '}
+                                            <img
+                                                src={items.image ? `${backendUrl}/images/${items.image}` : defaultImage}
+                                                className="w-full h-full object-cover"
+                                                alt="Profile"
+                                            />
                                         </div>
                                     </td>
                                     <td>
-                                        <div className="whitespace-nowrap">{items.name.charAt(0).toLocaleUpperCase() + items.name.slice(1)}</div>
+                                        <div className="whitespace-nowrap">
+                                            {items.name.charAt(0).toLocaleUpperCase() + items.name.slice(1)}
+                                        </div>
                                     </td>
                                     <td>
                                         <div className="whitespace-nowrap">{items.location}</div>
@@ -344,8 +354,42 @@ const Showroom: React.FC = () => {
                                     </td>
                                     <td>{items.helpline}</td>
                                     <td>{items.phone}</td>
-                                    {/* <td>{item.userName}</td>
-                                    <td>{item.password}</td> */}
+                                    <td>
+                                        {items?.showroomLink ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                    {/* View QR Button (Opens Modal) */}
+                                                    <button
+                                                        onClick={() => {
+                                                            setModalOpen(true)
+                                                            setUrl(items.showroomLink)
+                                                        }}
+                                                        style={{
+                                                            backgroundColor: '#007bff',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            padding: '10px 14px',
+                                                            fontSize: '1rem',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '8px',
+                                                            transition: 'all 0.3s ease-in-out',
+                                                            boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
+                                                        }}
+                                                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
+                                                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
+                                                    >
+                                                        <FaQrcode size={18} /> View QR
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p>No QR Available</p>
+                                        )}
+                                    </td>
                                     <td className="text-center">
                                         <ul className="flex items-center justify-center gap-2">
                                             <li>
@@ -376,7 +420,7 @@ const Showroom: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div >
             <Transition appear show={modal5} as={Fragment}>
                 <Dialog as="div" open={modal5} onClose={() => setModal5(false)}>
                     <TransitionChild as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
@@ -564,7 +608,8 @@ const Showroom: React.FC = () => {
                 }}
                 onCancel={closeModal}
             />
-        </div>
+            <A4Page url={url} modalOpen={modalOpen} setModalOpen={setModalOpen} />
+        </div >
     );
 };
 

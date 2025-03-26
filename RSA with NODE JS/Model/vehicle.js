@@ -25,10 +25,22 @@ const vehicleSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    DismissedBy: {
+        type: String,
+        default: null
+    },
     vehicleServiceDue: {
         type: Boolean,
         default: false
     },
+    previousOdometer: {
+        type: Number,
+        default: 0
+    },
+    valid :{
+        type: Boolean,
+        default: true
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Vehicle', vehicleSchema);

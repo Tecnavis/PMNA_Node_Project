@@ -128,7 +128,7 @@ const Status: React.FC = () => {
                     </div>
                 </div>
             </div>
-            <div className=' w-full'>
+            <div className='w-full'>
                 <div
                     className="border-b border-gray-200 dark:border-gray-700"
                 >

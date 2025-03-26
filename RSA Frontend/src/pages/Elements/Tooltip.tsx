@@ -232,9 +232,9 @@ import 'tippy.js/dist/tippy.css';
                                     </button>
                                 </Tippy>
                                 <Tippy content="Delay 1s" delay={1000}>
-                                    <butFton type="button" data-delay="1000" className="btn btn-info">
+                                    <button  type="button" data-delay="1000" className="btn btn-info">
                                         Delay
-                                    </butFton>
+                                    </button>
                                 </Tippy>
                                 <Tippy content="Disabled Animation">
                                     <button type="button" data-animation="false" className="btn btn-dark">

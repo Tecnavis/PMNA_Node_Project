@@ -11,6 +11,7 @@ const rewardSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+    trim: true
   },
   price: {
     type: Number,
@@ -18,6 +19,8 @@ const rewardSchema = new mongoose.Schema({
   },
   description: {
     type: String,
+    required: true,
+    trim: true
   },
   pointsRequired: {
     type: Number,

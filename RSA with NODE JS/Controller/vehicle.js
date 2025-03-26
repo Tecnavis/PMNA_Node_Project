@@ -54,21 +54,8 @@ exports.getAllVehicle = async (req, res) => {
             Vehicle.countDocuments(query),
         ]);
 
-        const vehiclesWithBookings = await Promise.all(
-            vehicles.map(async (vehicle) => {
-                const bookings = await Booking.find({
-                    serviceVehicleNumber: vehicle.serviceVehicle,
-                });
-
-                return {
-                    ...vehicle.toObject(),
-                    totalOdometer: bookings.reduce((total, booking) => total + booking.totalDriverDistance, 0),
-                };
-            })
-        );
-
         res.status(200).json({
-            data: vehiclesWithBookings,
+            data: vehicles,
             page,
             limit,
             total: await Vehicle.countDocuments(query),
@@ -325,5 +312,73 @@ exports.dismissExpiredRecord = async (req, res) => {
     } catch (error) {
         console.error("Error dismissing expired record:", error);
         return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// Get all vehicles exceeding serviceKM and not dismissed
+exports.getVehiclesExceedingServiceKM = async (req, res) => {
+    try {
+        const vehicles = await Vehicle.find({
+            valid : false,
+            vehicleServiceDismissed: false, 
+        });
+
+        if (vehicles.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No vehicles have exceeded their service KM or all are dismissed.",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Vehicles exceeding service KM retrieved successfully.",
+            vehicles,
+        });
+    } catch (error) {
+        console.error("Error fetching vehicles:", error);
+        res.status(500).json({
+            success: false,
+            message: "An error occurred while fetching vehicles.",
+            error: error.message,
+        });
+    }
+};
+
+// Update service Km reached vehicle to valid state
+exports.updateVehicleServiceStatus = async (req, res) => {
+    try {
+        const { vehicleId } = req.params;
+        const {  role } = req.body; // New serviceKM value
+
+        // Find the vehicle
+        const vehicle = await Vehicle.findById(vehicleId);
+        if (!vehicle) {
+            return res.status(404).json({
+                success: false,
+                message: "Vehicle not found",
+            });
+        }
+
+        // Update fields
+        vehicle.vehicleServiceDue = true;
+        vehicle.vehicleServiceDismissed = true;
+        vehicle.DismissedBy = role
+        vehicle.valid = true
+
+        await vehicle.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Vehicle updated successfully",
+            vehicle,
+        });
+    } catch (error) {
+        console.error("Error updating vehicle:", error);
+        res.status(500).json({
+            success: false,
+            message: "An error occurred while updating the vehicle.",
+            error: error.message,
+        });
     }
 };
