@@ -23,6 +23,7 @@ var vehicleRouter = require('./routes/vehicle')
 var pointRouter = require('./routes/point')
 var VehicleRouter = require('./routes/vehicle');
 var leavesRouter = require('./routes/leaves');
+var bookingNotesRouter = require('./routes/bookingNotes');
 
 const cors = require('cors')
 var app = express();
@@ -61,6 +62,7 @@ app.use('/leaves', leavesRouter);
 app.use('/feedback', feedbackRouter);
 app.use('/vehicle', vehicleRouter);
 app.use('/point', pointRouter);
+app.use('/bookingnote', bookingNotesRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

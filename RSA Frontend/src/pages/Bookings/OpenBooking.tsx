@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import Button from '@mui/material/Button';
 import { FaCloudUploadAlt } from 'react-icons/fa';
 import { styled } from '@mui/material/styles';
+import BookingNotes from './BookingNotes';
 
 export interface Booking {
     _id: string;
@@ -152,12 +153,24 @@ const Preview = () => {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [selectedResponses, setSelectedResponses] = useState<{ [key: string]: string }>({});
     const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+    const [role, setRole] = useState<string>('');
     const dropoffAndPickup = useRef<any>(null);
 
     // checking the token
 
     const gettingToken = () => {
         const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        if (role === 'admin') {
+            setRole(role);
+        } else if (role !== 'admin') {
+            const name = localStorage.getItem('name');
+            if (name) {
+                setRole(`${role}-${name}`);
+            } else {
+                console.error('No user found');
+            }
+        }
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             console.error('Token  found in localStorage');
@@ -859,14 +872,16 @@ const Preview = () => {
                         </div>
                     )}
                 </div>
-                <div className="grid sm:grid-cols-2 grid-cols-1 px-4 mt-6">
-                    <div></div>
-                    <div className="ltr:text-right rtl:text-left space-y-2">
-                        <div className="flex items-center font-semibold text-lg">
-                            <div className="flex-1">Payable Amount by Customer/Company</div>
-                            <div className="w-[37%]" style={{ color: 'red' }}>
-                                ₹ {booking?.totalAmount}
-                            </div>
+                <div className="grid sm:grid-cols-1 grid-cols-1 px-4 mt-6 gap-5">
+                    {/* Notes section goes here */}
+                    <BookingNotes role={role} id={id || ''} />
+                    <div className='w-full border mt-8'></div>
+                    <div className="ltr:text-right rtl:text-left space-y-2 my-1 md:my-6">
+                        <div className="flex items-center justify-center font-semibold text-lg">
+                            <div className="flex-1">Payable Amount by Customer/Company :<span className='text-red-500 ml-2'>₹ {booking?.totalAmount}</span> </div>
+                            {/* <div className="w-[37%]" style={{ color: 'red' }}>
+                                
+                            </div> */}
                         </div>
                         {booking?.status === 'Order Completed' ? (
                             <div>
@@ -1105,7 +1120,7 @@ const Preview = () => {
                         <div className="fixed inset-0" />
                     </TransitionChild>
                     <div className="fixed inset-0 bg-[black]/60 z-[999]">
-                        <div className="flex items-start justify-center min-h-screen px-4">
+                        <div className="flex items-start justify-center min-h-screen  px-4">
                             <TransitionChild
                                 as={Fragment}
                                 enter="ease-out duration-300"

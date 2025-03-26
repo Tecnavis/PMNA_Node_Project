@@ -248,3 +248,70 @@ exports.getAllShowroomStaff = async (req, res) => {
     });
   }
 };
+
+
+// log-in for staff 
+exports.loginShowroomStaff = async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    console.log(req.body)
+    // Check if staff exists
+    const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
+    if (!showroomStaff) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ id: staff._id }, process.env.JWT_SECRET);
+
+    // Include role and name in the response
+    res.status(200).json({
+      token,
+      role: "Staff",
+      name: staff.name,
+      message: "Staff logged in successfully"
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+exports.shoromStaffSignup = async (req, res) => {
+  try {
+    const { name, phone: phoneNumber, whatsappNumber, designation, showroomId } = req.body;
+    console.log("body", req.body)
+
+    if (!name || !phoneNumber || !designation || !showroomId) {
+      return res.status(400).json({ message: "All required fields must be provided." });
+    }
+
+    // Check if user already exists
+    const existingUser = await ShowroomStaff.findOne({ phoneNumber });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const newUser = new ShowroomStaff({
+      name,
+      phoneNumber,
+      whatsappNumber,
+      designation,
+      showroomId
+    });
+
+    await newUser.save();
+
+    return res.status(201).json({ message: "Signup successful", data: newUser });
+  } catch (error) {
+    console.error("Error in showroom staff signup:", error);
+
+    // Handle specific errors
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({ message: "Internal Server Error. Please try again later." });
+  }
+}

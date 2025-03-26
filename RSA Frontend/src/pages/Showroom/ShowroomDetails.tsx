@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './showroomAdd.module.css';
 import Swal from 'sweetalert2';
-import { BASE_URL } from '../../config/axiosConfig';
+import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
 
 interface ShowRoomDetailsType {
     id: string;
@@ -16,10 +16,20 @@ interface ShowRoomDetailsType {
     uid: string;
 }
 
+interface SignupData {
+    name: string,
+    phone: string,
+    designation: string,
+    whatsappNumber: string
+}
+interface SigninData {
+    phone: string,
+}
+
 const ShowRoomDetails: React.FC = () => {
 
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [isRegistering, setIsRegistering] = useState(true);
+    const [registeringData, setRegisteringData] = useState({});
     const [isSignIn, setIsSignIn] = useState(true); // New state for switching between forms
     const [showRoomDetails, setShowRoomDetails] = useState<ShowRoomDetailsType>({
         id: '',
@@ -32,9 +42,25 @@ const ShowRoomDetails: React.FC = () => {
         district: '',
         uid: '',
     });
-
-    const [formData, setFormData] = useState({ name: '', phone: '' });
-    const [signInData, setSignInData] = useState({ phone: '' }); // New state for sign-in form
+    const [formData, setFormData] = useState<SignupData>(
+        {
+            name: '',
+            phone: '',
+            designation: '',
+            whatsappNumber: '',
+        }
+    );
+    const [signupErrors, setSignupErrors] = useState<SignupData>(
+        {
+            name: '',
+            phone: '',
+            designation: '',
+            whatsappNumber: '',
+        }
+    );
+    const [signInData, setSignInData] = useState<SigninData>(
+        { phone: '' }
+    );
 
     const userRole = sessionStorage.getItem('role'); // Assume 'role' is stored in sessionStorage
 
@@ -56,6 +82,41 @@ const ShowRoomDetails: React.FC = () => {
         });
     }, [location.search]);
 
+    const validateForm = () => {
+        const errors: SignupData = { name: '', phone: '', designation: '', whatsappNumber: '' };
+        let isValid = true;
+
+        if (!formData.name.trim()) {
+            errors.name = "Name is required.";
+            isValid = false;
+        }
+
+        if (!formData.phone.trim()) {
+            errors.phone = "Phone number is required.";
+            isValid = false;
+        } else if (!/^\d{10}$/.test(formData.phone)) {
+            errors.phone = "Invalid phone number format.";
+            isValid = false;
+        }
+
+        if (!formData.designation.trim()) {
+            errors.designation = "Designation is required.";
+            isValid = false;
+        }
+
+        if (!formData.whatsappNumber.trim()) {
+            errors.whatsappNumber = "WhatsApp number is required.";
+            isValid = false;
+        }
+
+        if (formData.whatsappNumber && !/^\d{10}$/.test(formData.whatsappNumber)) {
+            errors.designation = "Invalid WhatsApp number format.";
+            isValid = false;
+        }
+
+        setSignupErrors(errors);
+        return isValid;
+    };
 
 
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,49 +134,89 @@ const ShowRoomDetails: React.FC = () => {
     };
 
     const handleNavigation = () => {
-        navigate('/addbook', {
-            state: {
-                uid: showRoomDetails?.uid,
-                showroomId: showRoomDetails?.id,
-                name: formData.name,
-                phone: formData.phone
-            }
-        });
+        navigate('/bookings');
     };
 
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setErrorMessage(null);
-        const phone = /^[6-9]\d{9}$/;
 
-        if (!phone.test(formData.phone)) {
-            setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
-            return;
-        }
+        if (!validateForm()) return;
 
-        if (!showRoomDetails.id || !showRoomDetails.uid) return;
         try {
+            const res = await axiosInstance.post(`${BASE_URL}/showroom/staff-signup`, {
+                ...formData,
+                showroomId: showRoomDetails.id
+            });
 
-        } catch (error) {
-            setErrorMessage('An error occurred while adding the document.');
+            Swal.fire({
+                icon: 'success',
+                title: 'Registration successful. Please login.',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            setIsSignIn(!isSignIn)
+        } catch (error: any) {
+            if (error?.response?.data?.message) {
+                setSignupErrors((prevErrors) => ({
+                    ...prevErrors,
+                    phone: error.response.data.message.includes("User with this phone number already exists.")
+                        ? "User with this phone number already exists."
+                        : prevErrors.phone,
+                }));
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'An error occurred during sign-up.',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
         }
-    };
+    }
+
 
     const handleSignInSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setErrorMessage(null);
-        const phone = /^[6-9]\d{9}$/;
-
-        if (!phone.test(signInData.phone)) {
-            setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
-            return;
+        setErrorMessage(null)
+        if (!signInData.phone.trim()) {
+            setErrorMessage("Phone number is required.")
+            return
+        } else if (!/^\d{10}$/.test(signInData.phone)) {
+            setErrorMessage("Invalid phone number format.")
+            return
         }
 
         try {
-
+            const res = await axiosInstance.post(`${BASE_URL}/showroom/staff-signin`, {
+                phoneNumber: signInData.phone
+            })
+            Swal.fire({
+                icon: 'success',
+                title: 'Login successfull',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            handleNavigation()
         } catch (error) {
-            setErrorMessage('An error occurred during sign-in.');
+            Swal.fire({
+                icon: 'error',
+                title: 'registeration failed',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
         }
     };
 
@@ -147,7 +248,7 @@ const ShowRoomDetails: React.FC = () => {
                     </div>
                 </div>
                 {/* Hover Form */}
-                <div className="w-full  md:w-1/2   bg-gray-200 bg-opacity-90 p-5 rounded-lg shadow-md z-10 flex flex-col gap-3">
+                <div className="w-full  md:w-10/12   bg-gray-200 bg-opacity-90 p-5 rounded-lg shadow-md z-10 flex flex-col gap-3">
                     {isSignIn ? (
                         <div>
                             <h2 className="text-center text-xl font-semibold text-gray-800 mb-3">Sign In Here</h2>
@@ -160,7 +261,6 @@ const ShowRoomDetails: React.FC = () => {
                                     maxLength={10}
                                     value={signInData.phone}
                                     onChange={handleSignInFormChange}
-                                    required
                                     className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 />
                                 {errorMessage && <p className="text-red-600">{errorMessage}</p>}
@@ -190,9 +290,9 @@ const ShowRoomDetails: React.FC = () => {
                                     name="name"
                                     value={formData.name}
                                     onChange={handleFormChange}
-                                    required
                                     className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 />
+                                {signupErrors.name && <p className="text-red-600">{signupErrors.name}</p>}
                                 <label htmlFor="phone" className="text-gray-800">Phone Number:</label>
                                 <input
                                     type="text"
@@ -201,10 +301,31 @@ const ShowRoomDetails: React.FC = () => {
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleFormChange}
-                                    required
                                     className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                 />
-                                {errorMessage && <p className="text-red-600">{errorMessage}</p>}
+                                {signupErrors.phone && <p className="text-red-600">{signupErrors.phone}</p>}
+                                <label htmlFor="phone" className="text-gray-800">Designation:</label>
+                                <input
+                                    type="text"
+                                    maxLength={10}
+                                    id="designation"
+                                    name="designation"
+                                    value={formData.designation}
+                                    onChange={handleFormChange}
+                                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                {signupErrors.designation && <p className="text-red-600">{signupErrors.designation}</p>}
+                                <label htmlFor="phone" className="text-gray-800">Whatsapp Number:</label>
+                                <input
+                                    type="text"
+                                    maxLength={10}
+                                    id="whatsappNumber"
+                                    name="whatsappNumber"
+                                    value={formData.whatsappNumber}
+                                    onChange={handleFormChange}
+                                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                {signupErrors.whatsappNumber && <p className="text-red-600">{signupErrors.whatsappNumber}</p>}
                                 <button
                                     type="submit"
                                     className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -212,7 +333,7 @@ const ShowRoomDetails: React.FC = () => {
                                     Submit
                                 </button>
                             </form>
-                            <p className="text-center text-gray-700 mt-3">Are you registered already?</p>
+                            <p className="text-center text-gray-700 my-3">Are you registered already?</p>
                             <button
                                 onClick={() => setIsSignIn(true)}
                                 className="w-full py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
