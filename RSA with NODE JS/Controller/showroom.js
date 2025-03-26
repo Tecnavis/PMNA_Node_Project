@@ -1,5 +1,7 @@
 const Showroom = require('../Model/showroom');
+const ShowroomStaff = require('../Model/showroomStaff');
 const bcrypt = require('bcrypt');
+const { generateShowRoomLink } = require('../utils/generateLink')
 
 // Create a showroom
 exports.createShowroom = async (req, res) => {
@@ -36,6 +38,17 @@ exports.createShowroom = async (req, res) => {
 
     const imagePath = req.file ? req.file.filename : null;
 
+    const showroomLink = generateShowRoomLink({
+      id: showroomId,
+      name,
+      location,
+      image: imagePath,
+      helpline,
+      phone,
+      state,
+      district
+    })
+
     const showroom = new Showroom({
       name,
       showroomId,
@@ -49,6 +62,7 @@ exports.createShowroom = async (req, res) => {
       mobile,
       state,
       district,
+      showroomLink,
       image: imagePath,
       services: {
         serviceCenter: {
@@ -73,8 +87,6 @@ exports.createShowroom = async (req, res) => {
   }
 };
 
-
-
 // Get all showrooms
 exports.getShowrooms = async (req, res) => {
   try {
@@ -86,7 +98,6 @@ exports.getShowrooms = async (req, res) => {
 };
 
 // get showroom by id 
-
 exports.getShowroomById = async (req, res) => {
   try {
     const showroom = await Showroom.findById(req.params.id);
@@ -102,7 +113,7 @@ exports.filterGetShowrooms = async (req, res) => {
   try {
     const { search } = req.query;
     let filter = {};
-    
+
     if (search) {
       // Case-insensitive search on name, showroomId, or location
       filter = {
@@ -113,7 +124,7 @@ exports.filterGetShowrooms = async (req, res) => {
         ]
       };
     }
-    
+
     const showrooms = await Showroom.find(filter);
     res.json(showrooms);
   } catch (error) {
@@ -147,6 +158,17 @@ exports.updateShowroom = async (req, res) => {
 
     const imagePath = req.file ? req.file.filename : null;
 
+    const showroomLink = generateShowRoomLink({
+      id: showroomId,
+      name,
+      location,
+      image: imagePath,
+      helpline,
+      phone,
+      state,
+      district
+    })
+
     const updatedFields = {
       name,
       showroomId,
@@ -161,6 +183,7 @@ exports.updateShowroom = async (req, res) => {
       district,
       helpline,
       password,
+      showroomLink,
       services: {
         serviceCenter: {
           selected: services.serviceCenter.selected,
@@ -201,5 +224,27 @@ exports.deleteShowroom = async (req, res) => {
     res.json({ message: 'Showroom deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Get All Showroom Staff
+exports.getAllShowroomStaff = async (req, res) => {
+  try {
+    // Fetch all showroom staff from the database
+    const showroomStaff = await ShowroomStaff.find().populate('showroomId'); // Populating showroom details
+    console.log(showroomStaff, "showroom staff herer")
+    return res.status(200).json({
+      success: true,
+      message: "Showroom staff retrieved successfully.",
+      data: showroomStaff
+    });
+
+  } catch (error) {
+    console.error("Error fetching showroom staff:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve showroom staff.",
+      error: error.message
+    });
   }
 };

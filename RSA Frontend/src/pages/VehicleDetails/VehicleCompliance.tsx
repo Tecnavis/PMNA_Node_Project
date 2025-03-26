@@ -30,6 +30,7 @@ const columns = [
 export interface VehicleRecord {
     _id: string;
     vehicleNumber: string;
+    serviceVehicle: string;
     emiExpiryDate: string;
     insuranceExpiryDate: string;
     pollutionExpiryDate: string;
@@ -40,6 +41,7 @@ export interface VehicleRecord {
     insuranceDueDismissedBy: string;
     taxDueDismissedBy: string;
     emiDueDismissedBy: string;
+    serviceKM: string;
 }
 
 const VehicleCompliance: React.FC = () => {
