@@ -297,22 +297,22 @@ const Bookings: React.FC = () => {
                                         <td>{items.createdAt ? new Date(items.createdAt).toLocaleDateString('en-GB') : 'N/A'}</td>
                                         <td>
                                             <div style={{ background: fileNumberColor, padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px' }}>
-                                                <p>{items.fileNumber}</p>
+                                                <p>{items.fileNumber || "N/A"}</p>
                                             </div>{' '}
                                             {/* File Number with conditional color */}
                                         </td>
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
-                                        <td>{items.mob1}</td>
+                                        <td>{items.mob1 || "N/A"}</td>
                                         {items.driver ? (
                                             <td>
-                                                {items.driver.name} <p style={{ color: '#9a9a9a' }}>{items.driver.phone}</p>
+                                                {items.driver.name || "N/A"} <p style={{ color: '#9a9a9a' }}>{items.driver.phone || "N/A"}</p>
                                             </td>
                                         ) : (
                                             <td>
                                                 {items.provider?.name || 'No Provider'} <p style={{ color: '#9a9a9a' }}>{items.provider?.phone || 'N/A'}</p>
                                             </td>
                                         )}
-                                        <td>{items.bookedBy}</td>
+                                        <td>{items.bookedBy || "N/A"}</td>
                                         <td className="text-center">
                                             <ul className="flex items-center justify-center gap-2">
                                                 <li>
@@ -337,10 +337,10 @@ const Bookings: React.FC = () => {
                                                     </Tippy>
                                                 </li>
                                                 <TrackModal
-  open={trackModalOpen}
-  onClose={() => setTrackModalOpen(false)}
-  itemId={selectedItemId} // Pass the selected item ID
-/>
+                                                    open={trackModalOpen}
+                                                    onClose={() => setTrackModalOpen(false)}
+                                                    itemId={selectedItemId} // Pass the selected item ID
+                                                />
 
                                                 <li>
                                                     <Tippy content="Change Location">
@@ -460,7 +460,7 @@ const Bookings: React.FC = () => {
                                                                                 justifyContent: 'flex-start',
                                                                             }}
                                                                         >
-                                                                            {company?.idNumber}
+                                                                            {company?.idNumber || "N/A"}
                                                                         </div>
                                                                     </td>
                                                                 </tr>
@@ -484,7 +484,7 @@ const Bookings: React.FC = () => {
                                                                                 justifyContent: 'flex-start',
                                                                             }}
                                                                         >
-                                                                            {company?.creditLimitAmount}
+                                                                            {company?.creditLimitAmount || "N/A"}
                                                                         </div>
                                                                     </td>
                                                                 </tr>
@@ -508,7 +508,7 @@ const Bookings: React.FC = () => {
                                                                                 justifyContent: 'flex-start',
                                                                             }}
                                                                         >
-                                                                            {company?.phone}
+                                                                            {company?.phone || "N/A"}
                                                                         </div>
                                                                     </td>
                                                                 </tr>
@@ -532,7 +532,7 @@ const Bookings: React.FC = () => {
                                                                                 justifyContent: 'flex-start',
                                                                             }}
                                                                         >
-                                                                            {company?.personalPhoneNumber}
+                                                                            {company?.personalPhoneNumber || "N/A"}
                                                                         </div>
                                                                     </td>
                                                                 </tr>
@@ -581,11 +581,11 @@ const Bookings: React.FC = () => {
                                                             <tbody>
                                                                 {company?.vehicle.map((items, index) => (
                                                                     <tr key={index}>
-                                                                        <td>{items.serviceType.serviceName}</td>
-                                                                        <td>{items.basicAmount}</td>
-                                                                        <td>{items.kmForBasicAmount}</td>
-                                                                        <td>{items.overRideCharge}</td>
-                                                                        <td>{items.vehicleNumber}</td>
+                                                                        <td>{items.serviceType.serviceName || "N/A"}</td>
+                                                                        <td>{items.basicAmount || "N/A"}</td>
+                                                                        <td>{items.kmForBasicAmount }</td>
+                                                                        <td>{items.overRideCharge || "N/A"}</td>
+                                                                        <td>{items.vehicleNumber || "N/A"}</td>
                                                                     </tr>
                                                                 ))}
                                                             </tbody>
@@ -613,7 +613,7 @@ const Bookings: React.FC = () => {
                     </div>
                 </Dialog>
             </Transition>
-            
+
         </div>
     );
 };
