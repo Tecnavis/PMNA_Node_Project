@@ -54,8 +54,6 @@ exports.getDrivers = async (req, res) => {
         }
       },
       {
-<<<<<<< HEAD
-=======
         $lookup: {
           from: "ServiceType",
           localField: "vehicle.serviceType",
@@ -64,7 +62,6 @@ exports.getDrivers = async (req, res) => {
         }
       },
       {
->>>>>>> Hadhi_Hassan-branch
         $addFields: { // adding new property to every docs 
           isLeave: { // new field property
             $anyElementTrue: { // if any element retunt true the then set true otherwise set fasle 
@@ -81,13 +78,8 @@ exports.getDrivers = async (req, res) => {
             }
           }
         }
-<<<<<<< HEAD
-      },{
-        $project: { leaves: 1 }
-=======
       }, {
         $project: { leaves: 0 }
->>>>>>> Hadhi_Hassan-branch
       }
     ]
 
