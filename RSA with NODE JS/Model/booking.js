@@ -41,6 +41,7 @@ const bookingSchema = new mongoose.Schema({
     pickupDate: { type: Date },
     pickupTime: { type: Date },
     dropoffTime: { type: Date },
+    vehicleNumber: { type: String },
     driverSalaryCheck: { type: Boolean },
     compnayAmountCheck: { type: Boolean },
     remark: { type: String },

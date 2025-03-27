@@ -5,12 +5,102 @@ import { useLocation, useNavigate } from "react-router-dom";
 interface CombinedDeliveryUploadPageProps {
     itemId?: string | null;
   }
+  interface Booking {
+    receivedUser?: string,// new prop
+    companyBooking: boolean,// new prop
+    approve: boolean,// new prop
+    receivedAmount: number,
+    phoneNumber: any;
+    pickupDistance?:string;
+    pickupTime: string;
+    dropoffTime: string;
+    cashPending: boolean;
+    _id: string;
+    bookingDateTime:string;
+    workType: string;
+    customerVehicleNumber: string;
+    bookedBy: string;
+    fileNumber: string;
+    location: string;
+    latitudeAndLongitude: string;
+    baselocation: {
+        _id: string;
+        baseLocation: string;
+        latitudeAndLongitude: string;
+    }; // Reference to BaseLocation
+    showroom: string; // Reference to Showroom
+    totalDistence: number;
+    dropoffLocation: string;
+    dropoffLatitudeAndLongitude: string;
+    trapedLocation: string;
+    serviceType: {
+        additionalAmount: number;
+        expensePerKm: number;
+        firstKilometer: number;
+        firstKilometerAmount: number;
+        serviceName: string;
+        _id: string;
+    };
+    customerName: string;
+    mob1: string;
+    mob2?: string; // Optional field
+    vehicleType: string;
+    brandName?: string; // Optional field
+    comments?: string; // Optional field
+    status?: string; // Optional field
+    driver?: {
+        idNumber: string;
+        image: string;
+        name: string;
+        personalPhoneNumber: string;
+        phone: string;
+        _id: string;
+        companyName: string; // New Props
+        vehicle: [
+            {
+                basicAmount: number;
+                kmForBasicAmount: number;
+                overRideCharge: number;
+                serviceType: string;
+                vehicleNumber: string;
+                _id: string;
+            }
+        ];
+    };
+    provider?: {
+        idNumber: string;
+        image: string;
+        name: string;
+        personalPhoneNumber: string;
+        phone: string;
+        _id: string;
+        serviceDetails: [
+            {
+                basicAmount: number;
+                kmForBasicAmount: number;
+                overRideCharge: number;
+                serviceType: string;
+                vehicleNumber: string;
+                _id: string;
+            }
+        ];
+    };
+    totalAmount?: number; // Optional field
+    totalDriverDistence?: number; // Optional field
+    driverSalary?: number; // Optional field
+    accidentOption?: string; // Optional field
+    insuranceAmount?: number; // Optional field
+    adjustmentValue?: number; // Optional field
+    amountWithoutInsurance?: number; // Optional field
+    createdAt?: Date;
+    updatedAt?: Date;
+}
 const CombinedDeliveryUploadPage = () => {
   // --- Delivery Form States ---
-  const [recipientName, setRecipientName] = useState("");
-  const [deliveryDate, setDeliveryDate] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [pickupTime, setPickupTime] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
-  const [confirmationNumber, setConfirmationNumber] = useState("");
+  const [mob1, setMob1] = useState("");
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const location = useLocation();
@@ -80,13 +170,13 @@ const CombinedDeliveryUploadPage = () => {
           {/* Recipient Name */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Recipient's Name
+              Costomer's Name
             </label>
             <input
               type="text"
-              placeholder="Recipient's name"
-              value={recipientName}
-              onChange={(e) => setRecipientName(e.target.value)}
+              placeholder="Customer's name"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none"
             />
           </div>
@@ -99,8 +189,8 @@ const CombinedDeliveryUploadPage = () => {
               </label>
               <input
                 type="date"
-                value={deliveryDate}
-                onChange={(e) => setDeliveryDate(e.target.value)}
+                value={pickupTime}
+                onChange={(e) => setPickupTime(e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none"
               />
             </div>
@@ -120,13 +210,13 @@ const CombinedDeliveryUploadPage = () => {
           {/* Confirmation Number */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Confirmation Number
+              Customer Number
             </label>
             <input
               type="text"
-              placeholder="Confirmation Number"
-              value={confirmationNumber}
-              onChange={(e) => setConfirmationNumber(e.target.value)}
+              placeholder="Customer Number"
+              value={mob1}
+              onChange={(e) => setMob1(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none"
             />
           </div>
@@ -134,7 +224,7 @@ const CombinedDeliveryUploadPage = () => {
           {/* Invoice or Receipt */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Invoice or Receipt
+              Vehicle Number
             </label>
             <label className="flex items-center justify-center border-2 border-dashed border-gray-400 rounded-md w-full h-16 cursor-pointer">
               {invoiceFile ? (
@@ -172,7 +262,7 @@ const CombinedDeliveryUploadPage = () => {
       {/* Title */}
       <h2 className="text-lg font-bold text-gray-900 mb-2">Attach Additional Images (POD)</h2>
       <p className="text-gray-600 mb-6 text-center">
-        Upload legible pictures of your documents to verify them.
+        Upload legible pictures of your vehicle to verify them.
       </p>
 
       {/* Image Upload Grid */}
