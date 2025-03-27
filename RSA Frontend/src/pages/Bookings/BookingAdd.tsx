@@ -67,6 +67,8 @@ export interface Driver {
     idNumber: string;
     phone: string;
     personalPhoneNumber: string;
+    isLeave?: boolean;
+    status?: string;
     password: string;
     vehicle: [
         {
@@ -1723,6 +1725,12 @@ const BookingAdd: React.FC = () => {
                                                                 <p style={{ fontWeight: 'bold' }}>Profit</p>
                                                             </th>
                                                             <th>
+                                                                <p style={{ fontWeight: 'bold' }}>Leave Status</p>
+                                                            </th>
+                                                            <th>
+                                                                <p style={{ fontWeight: 'bold' }}>Current Status</p>
+                                                            </th>
+                                                            <th>
                                                                 <p style={{ fontWeight: 'bold' }}>Select</p>
                                                             </th>
                                                         </tr>
@@ -1736,6 +1744,10 @@ const BookingAdd: React.FC = () => {
                                                             <td>Location</td>
                                                             <td style={{ color: 'green' }}>{PayableAmount || "N/A"}</td>
                                                             <td style={{ color: 'blue' }}>{afterExpence || "N/A"}</td>
+
+                                                            <td style={{ color: 'blue' }}>---------</td> {/*Leave Status*/}
+                                                            <td style={{ color: 'blue' }}>---------</td> {/*Current Status*/}
+
                                                             <td className="text-center">
                                                                 <button
                                                                     className="btn btn-danger"
@@ -1759,6 +1771,8 @@ const BookingAdd: React.FC = () => {
                                                                 <td>location</td>
                                                                 <td style={{ color: 'green' }}>{PayableAmount}</td>
                                                                 <td style={{ color: 'blue' }}>{afterExpence}</td>
+                                                                <td style={{ color: 'blue' }}>{data?.isLeave ? "Leave" : "Available"}</td> {/*Leave Status*/}
+                                                                <td style={{ color: 'blue' }}>{data?.status}</td> {/*Current Status*/}
                                                                 <td className="text-center">
                                                                     <button className="btn btn-success" onClick={() => handleSelect(data)}>
                                                                         <IconPlus />
@@ -1776,6 +1790,8 @@ const BookingAdd: React.FC = () => {
                                                                 <td>location</td>
                                                                 <td style={{ color: 'green' }}>{PayableAmount}</td>
                                                                 <td style={{ color: 'blue' }}>{afterExpence}</td>{' '}
+                                                                <td style={{ color: 'blue' }}>---------</td> {/*Leave Status*/}
+                                                                <td style={{ color: 'blue' }}>---------</td> {/*Current Status*/}
                                                                 <td className="text-right">
                                                                     <button className="btn btn-success" onClick={() => handleSelect(data)}>
                                                                         <IconPlus />
