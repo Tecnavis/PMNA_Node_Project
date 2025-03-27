@@ -211,8 +211,10 @@ const NewJobsCard = () => {
             >
               ✖
             </button>
-            <SelectTruckPage itemId={itemId || undefined} />
-            </div>
+            <SelectTruckPage 
+        itemId={itemId || undefined} 
+        driverVehicle={bookingData.driver ? bookingData.driver.vehicle : []}
+      />            </div>
         </div>
       )}
     </div>
