@@ -150,6 +150,10 @@ const routes = [
         element: <Index />,
     },
     {
+        path: '/leaves',
+        element: <Leaves />,
+    },
+    {
         path: '/users/staff',
         element: <Staff />,
     },
