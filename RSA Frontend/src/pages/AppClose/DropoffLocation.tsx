@@ -30,7 +30,7 @@ interface Booking {
   showroom: string;
   totalDistence: number;
   dropoffLocation: string;
-  payableAmountForDriver:number;
+  payableAmountForDriver: number;
   dropoffLatitudeAndLongitude: string;
   trapedLocation: string;
   serviceType: {
@@ -78,7 +78,8 @@ const DropoffUploadPage = () => {
   const itemId = params.get("itemId");
 
   // --- Image Upload States ---
-  const [images, setImages] = useState<(string | null)[]>(Array(6).fill(null));
+  const [images, setImages] = useState<(File | null)[]>(Array(6).fill(null));
+  const [previews, setPreviews] = useState<(string | null)[]>(Array(6).fill(null));
   const [imageFiles, setImageFiles] = useState<(File | null)[]>(Array(6).fill(null));
 
   // Fetch existing booking data if itemId exists
@@ -87,22 +88,22 @@ const DropoffUploadPage = () => {
       axios
         .get(`${backendUrl}/booking/${itemId}`)
         .then((response) => {
-          
+
           const data = response.data as Booking;
           setBookingData(data);
-  
+
           setCustomerVehicleNumber(data.customerVehicleNumber || "");
           setFileNumber(data.fileNumber || "");
           setPickupTime(data.pickupTime || "");
           setMob1(data.mob1 || "");
-  
+
           // Assuming your backend returns dropoffImages as an array of filenames
           if (data.dropoffImages && data.dropoffImages.length > 0) {
             // Build the full URL for each image
             const imageUrls = data.dropoffImages.map(
               (img) => `${backendUrl}/images/${img}`
             );
-            setImages([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
+            setPreviews([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
           }
         })
         .catch((error) => {
@@ -110,33 +111,27 @@ const DropoffUploadPage = () => {
         });
     }
   }, [itemId, backendUrl]);
-  
 
- 
-// ----------------------------------------------------------------------------------------
+
+
+  // ----------------------------------------------------------------------------------------
   // Handler for image uploads
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
     if (file) {
-      new Compressor(file, {
-        quality: 0.6,
-        success(result) {
-          const compressedFile = new File([result], file.name, { type: result.type });
-          const imageUrl = URL.createObjectURL(new File([result], file.name, { type: result.type }));
-          setImages((prev) => { 
-            const updatedFiles = [...prev]; 
-            updatedFiles[index] = imageUrl; 
-            return updatedFiles; 
-          });
-                
-          setImages((prev) => {
-            const updatedFiles = [...prev];
-            updatedFiles[index] = imageUrl;
-            return updatedFiles;
-          });
-        },
+      const objectUrl = URL.createObjectURL(file);
+
+      setImages((prev) => {
+        const updatedFiles = [...prev];
+        updatedFiles[index] = file;
+        return updatedFiles;
       });
-      
+
+      setPreviews((prev) => {
+        const updatedPreviews = [...prev];
+        updatedPreviews[index] = objectUrl;
+        return updatedPreviews;
+      });
     }
   };
 
@@ -147,13 +142,19 @@ const DropoffUploadPage = () => {
   const handleSubmit = async () => {
     try {
       // Prepare common data
-      const formData = {
-        fileNumber,
-        pickupTime,
-        mob1,
-        customerVehicleNumber,
-      };
-  
+      const formData = new FormData();
+
+      // Append fields
+      formData.append("fileNumber", fileNumber);
+      formData.append("pickupTime", pickupTime);
+      formData.append("mob1", mob1);
+      formData.append("customerVehicleNumber", customerVehicleNumber);
+
+      // Append images (only if they exist)
+      images.forEach((img) => {
+        if (img) formData.append("images", img);
+      });
+
       if (bookingData) {
         // Update existing booking
         await axios.put(`${backendUrl}/booking/${itemId}`, formData);
@@ -163,7 +164,7 @@ const DropoffUploadPage = () => {
         await axios.post(`${backendUrl}/booking`, formData);
         console.log("New booking created:", formData);
       }
-  
+
       // Conditional navigation and additional updates
       if (bookingData?.workType === "PaymentWork") {
         await axios.put(`${backendUrl}/booking/${itemId}`, {
@@ -182,18 +183,17 @@ const DropoffUploadPage = () => {
       console.error("Error updating booking:", error);
     }
   };
-  
+
 
   return (
     <div className="min-h-screen bg-white px-4 py-6 flex flex-col items-center">
- {/* Step Indicator */}
- <div className="flex justify-center items-center gap-4 mb-6">
+      {/* Step Indicator */}
+      <div className="flex justify-center items-center gap-4 mb-6">
         {Array(6).fill(null).map((_, index) => (
           <React.Fragment key={index}>
             <div
-              className={`w-6 h-6 flex justify-center items-center rounded-full ${
-                index < uploadedCount ? "bg-red-500 text-white" : "border-2 border-red-500 text-red-500"
-              }`}
+              className={`w-6 h-6 flex justify-center items-center rounded-full ${index < uploadedCount ? "bg-red-500 text-white" : "border-2 border-red-500 text-red-500"
+                }`}
             >
               {index < uploadedCount ? "✔" : index + 1}
             </div>
@@ -202,87 +202,86 @@ const DropoffUploadPage = () => {
         ))}
       </div>      <div className="w-full max-w-md mb-4">
         <h1 className="text-xl font-bold text-gray-900 mb-2">Customer Verification</h1>
-      
+
         {/* Delivery Form */}
         <div className="border-2 border-red-200 rounded-lg p-4 space-y-4">
           {/* Recipient Name */}
           <div>
-  <label className="block text-sm font-semibold text-gray-700 mb-1">
-    File Number
-  </label>
-  {bookingData?.fileNumber ? (
-  <span className="text-danger font-medium">{bookingData.fileNumber}</span>
-) : (
-  <span className="text-gray-500 italic">No file number available</span>
-)}
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              File Number
+            </label>
+            {bookingData?.fileNumber ? (
+              <span className="text-danger font-medium">{bookingData.fileNumber}</span>
+            ) : (
+              <span className="text-gray-500 italic">No file number available</span>
+            )}
 
-</div>
+          </div>
 
 
-         
+
 
           <div>
-  <label className="block text-sm font-semibold text-gray-700 mb-1">
-    Customer Vehicle Number
-  </label>
-  <input
-  type="text"
-  value={bookingData?.customerVehicleNumber || ""}
-  onChange={(e) =>
-    setBookingData((prev) =>
-      prev ? { ...prev, customerVehicleNumber: e.target.value } : prev
-    )
-  }
-  className="border border-gray-300 rounded-md p-2 w-full"
-/>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Customer Vehicle Number
+            </label>
+            <input
+              type="text"
+              value={bookingData?.customerVehicleNumber || ""}
+              onChange={(e) =>
+                setBookingData((prev) =>
+                  prev ? { ...prev, customerVehicleNumber: e.target.value } : prev
+                )
+              }
+              className="border border-gray-300 rounded-md p-2 w-full"
+            />
 
-</div>
+          </div>
 
 
-         
+
         </div>
       </div>
-    
 
-    {/* Title */}
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Attach Additional Images (POD)</h2>
-          <p className="text-gray-600 mb-6 text-center">
-            Upload legible pictures of your delivery documentation.
-          </p>
-    
-          {/* Image Upload Grid */}
-          <div className="grid grid-cols-3 gap-4">
-            {images.map((img, index) => (
-              <label
-                key={index}
-                className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg w-24 h-24 cursor-pointer relative"
-              >
-               {img ? (
-      <img
-        src={img}
-        alt="Uploaded"
-        className="w-full h-full object-cover rounded-lg"
-      />
-    ) : (
-      // Placeholder UI if no image exists
-      <div className="flex flex-col items-center justify-center">
-        <FiUploadCloud className="text-gray-500 text-2xl" />
-        <span className="text-xs text-gray-600 text-center">Choose or Capture</span>
+
+      {/* Title */}
+      <h2 className="text-lg font-bold text-gray-900 mb-2">Attach Additional Images (POD)</h2>
+      <p className="text-gray-600 mb-6 text-center">
+        Upload legible pictures of your delivery documentation.
+      </p>
+
+      {/* Image Upload Grid */}
+      <div className="grid grid-cols-3 gap-4">
+        {images.map((_, index) => (
+          <label
+            key={index}
+            className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg w-24 h-24 cursor-pointer relative"
+          >
+            {previews[index] ? (
+              <img
+                src={previews[index] as string}
+                alt="Uploaded"
+                className="w-full h-full object-cover rounded-lg"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center">
+                <FiUploadCloud className="text-gray-500 text-2xl" />
+                <span className="text-xs text-gray-600 text-center">Choose or Capture</span>
+              </div>
+            )}
+
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleImageUpload(e, index)}
+            />
+          </label>
+        ))}
       </div>
-    )}
-    
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleImageUpload(e, index)}
-                />
-              </label>
-            ))}
-          </div>
-    
-          {/* Submit Button */}
-          {/* <button
+
+      {/* Submit Button */}
+      {/* <button
             onClick={handleSubmit}
             className={`mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${
               uploadedCount === 3
@@ -293,17 +292,16 @@ const DropoffUploadPage = () => {
           >
             Submit
           </button> */}
-           <button
-      onClick={handleSubmit}
-      disabled={uploadedCount < 6} // Example condition
-      className={` bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${
-        uploadedCount < 6 ? "opacity-50 cursor-not-allowed" : ""
-      }`}
-    >
-      Submit
-    </button>
-        </div>
-      );
-    };
+      <button
+        onClick={handleSubmit}
+        disabled={uploadedCount < 6} // Example condition
+        className={` bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${uploadedCount < 6 ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+      >
+        Submit
+      </button>
+    </div>
+  );
+};
 
 export default DropoffUploadPage;
