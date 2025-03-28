@@ -35,7 +35,7 @@ const statusRoutes: { [key: string]: string } = {
   "Vehicle Confirmed": "/vehicleConfirmed",
   "To DropOff Location": "/dropoffLocation",
   "On the way to dropoff location": "/onTheWayDropoff",
-  "Vehicle Dropped": "/vehicleDropped"
+  "Vehicle Dropped": "/paymentSettlement"
 };
 
 const TrackModal: React.FC<TrackModalProps> = ({ open, onClose, itemId }) => {
