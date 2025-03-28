@@ -409,7 +409,7 @@ exports.getAllBookings = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching bookings' });
     }
 };
-  
+
 // Controller to get a booking by ID
 exports.getBookingById = async (req, res) => {
     const { id } = req.params;
@@ -472,10 +472,10 @@ exports.updateBooking = async (req, res) => {
                 await Booking.updateOne({ _id: id }, { $unset: { driver: "" } }); // Remove driver
             }
         }
-       // Handle uploaded images
-       if (req.files && req.files.length > 0) {
-        updatedData.pickupImages = req.files.map(file => file.filename);
-    }
+        // Handle uploaded images
+        if (req.files && req.files.length > 0) {
+            updatedData.pickupImages = req.files.map(file => file.filename);
+        }
         const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
             .populate('baselocation') // Populate related documents
             .populate('showroom')
@@ -483,7 +483,7 @@ exports.updateBooking = async (req, res) => {
             .populate('company')
             .populate('driver')
             .populate('provider');
-            
+
 
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found' });
