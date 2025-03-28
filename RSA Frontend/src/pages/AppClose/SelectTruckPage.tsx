@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 interface Vehicle {
   basicAmount: number;
@@ -52,8 +53,12 @@ const SelectTruckPage: React.FC<SelectTruckPageProps> = ({ itemId, driverVehicle
 
   const handleContinue = async () => {
     if (!selectedVehicle) {
-      alert("Please select a vehicle before continuing.");
-      return;
+      Swal.fire({
+        title: "Vehicle Required",
+        text: "Please select a vehicle before continuing.",
+        icon: "warning",
+        confirmButtonText: "OK",
+      });      return;
     }
 
     try {

@@ -1,176 +1,223 @@
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
 import { FiUploadCloud } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
-interface CombinedDeliveryUploadPageProps {
-    itemId?: string | null;
-  }
-  interface Booking {
-    receivedUser?: string,// new prop
-    companyBooking: boolean,// new prop
-    approve: boolean,// new prop
-    receivedAmount: number,
-    phoneNumber: any;
-    pickupDistance?:string;
-    pickupTime: string;
-    dropoffTime: string;
-    cashPending: boolean;
+import Compressor from "compressorjs";
+
+interface Booking {
+  _id?: string;
+  receivedUser?: string;
+  companyBooking: boolean;
+  approve: boolean;
+  receivedAmount: number;
+  phoneNumber: any;
+  pickupDistance?: string;
+  pickupTime: string;
+  dropoffTime: string;
+  cashPending: boolean;
+  bookingDateTime: string;
+  workType: string;
+  customerVehicleNumber: string;
+  bookedBy: string;
+  fileNumber: string;
+  location: string;
+  latitudeAndLongitude: string;
+  baselocation: {
     _id: string;
-    bookingDateTime:string;
-    workType: string;
-    customerVehicleNumber: string;
-    bookedBy: string;
-    fileNumber: string;
-    location: string;
+    baseLocation: string;
     latitudeAndLongitude: string;
-    baselocation: {
-        _id: string;
-        baseLocation: string;
-        latitudeAndLongitude: string;
-    }; // Reference to BaseLocation
-    showroom: string; // Reference to Showroom
-    totalDistence: number;
-    dropoffLocation: string;
-    dropoffLatitudeAndLongitude: string;
-    trapedLocation: string;
-    serviceType: {
-        additionalAmount: number;
-        expensePerKm: number;
-        firstKilometer: number;
-        firstKilometerAmount: number;
-        serviceName: string;
-        _id: string;
-    };
-    customerName: string;
-    mob1: string;
-    mob2?: string; // Optional field
-    vehicleType: string;
-    brandName?: string; // Optional field
-    comments?: string; // Optional field
-    status?: string; // Optional field
-    driver?: {
-        idNumber: string;
-        image: string;
-        name: string;
-        personalPhoneNumber: string;
-        phone: string;
-        _id: string;
-        companyName: string; // New Props
-        vehicle: [
-            {
-                basicAmount: number;
-                kmForBasicAmount: number;
-                overRideCharge: number;
-                serviceType: string;
-                vehicleNumber: string;
-                _id: string;
-            }
-        ];
-    };
-    provider?: {
-        idNumber: string;
-        image: string;
-        name: string;
-        personalPhoneNumber: string;
-        phone: string;
-        _id: string;
-        serviceDetails: [
-            {
-                basicAmount: number;
-                kmForBasicAmount: number;
-                overRideCharge: number;
-                serviceType: string;
-                vehicleNumber: string;
-                _id: string;
-            }
-        ];
-    };
-    totalAmount?: number; // Optional field
-    totalDriverDistence?: number; // Optional field
-    driverSalary?: number; // Optional field
-    accidentOption?: string; // Optional field
-    insuranceAmount?: number; // Optional field
-    adjustmentValue?: number; // Optional field
-    amountWithoutInsurance?: number; // Optional field
-    createdAt?: Date;
-    updatedAt?: Date;
+  };
+  showroom: string;
+  totalDistence: number;
+  dropoffLocation: string;
+  dropoffLatitudeAndLongitude: string;
+  trapedLocation: string;
+  serviceType: {
+    additionalAmount: number;
+    expensePerKm: number;
+    firstKilometer: number;
+    firstKilometerAmount: number;
+    serviceName: string;
+    _id: string;
+  };
+  customerName: string;
+  mob1: string;
+  mob2?: string;
+  vehicleType: string;
+  brandName?: string;
+  comments?: string;
+  status?: string;
+  driver?: any;
+  provider?: any;
+  totalAmount?: number;
+  totalDriverDistence?: number;
+  driverSalary?: number;
+  accidentOption?: string;
+  insuranceAmount?: number;
+  adjustmentValue?: number;
+  amountWithoutInsurance?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+  pickupImages?: string[]; // Added field: array of image filenames or URLs
 }
+
 const CombinedDeliveryUploadPage = () => {
   // --- Delivery Form States ---
   const [customerName, setCustomerName] = useState("");
   const [pickupTime, setPickupTime] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
   const [mob1, setMob1] = useState("");
+  const [customerVehicleNumber, setCustomerVehicleNumber] = useState("");
+
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [bookingData, setBookingData] = useState<Booking | null>(null);
+  const [fileNumber, setFileNumber] = useState("");
+
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const location = useLocation();
+  const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
-  const navigate = useNavigate(); // Initialize navigation
-
   const itemId = params.get("itemId");
 
   // --- Image Upload States ---
   const [images, setImages] = useState<(string | null)[]>(Array(6).fill(null));
+  const [imageFiles, setImageFiles] = useState<(File | null)[]>(Array(6).fill(null));
 
-  // Handler for invoice or receipt
-  const handleInvoiceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Fetch existing booking data if itemId exists
+  useEffect(() => {
+    if (itemId) {
+      axios
+        .get(`${backendUrl}/booking/${itemId}`)
+        .then((response) => {
+          
+          const data = response.data as Booking;
+          setBookingData(data);
+  
+          // Pre-fill form fields...
+          setFileNumber(data.fileNumber || "");
+                    setCustomerName(data.customerName || "");
+          // setPickupTime(data.pickupTime || "");
+          setDeliveryTime(data.dropoffTime || "");
+          setMob1(data.mob1 || "");
+          setCustomerVehicleNumber(data.customerVehicleNumber || "");
+          if (data.pickupTime) {
+            const pickupDate = new Date(data.pickupTime);
+            const formattedDate = pickupDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
+            const formattedTime = pickupDate.toISOString().split("T")[1].slice(0, 5); // "HH:MM"
+            
+            setPickupTime(formattedDate);
+            setDeliveryTime(formattedTime);
+          }
+          // Assuming your backend returns pickupImages as an array of filenames
+          if (data.pickupImages && data.pickupImages.length > 0) {
+            // Build the full URL for each image
+            const imageUrls = data.pickupImages.map(
+              (img) => `${backendUrl}/images/${img}`
+            );
+            setImages([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching booking data:", error);
+        });
+    }
+  }, [itemId, backendUrl]);
+  
+
+  // Handler for invoice or receipt file upload
+  const handleInvoiceUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setInvoiceFile(file);
     }
   };
-
-  // Handler for images
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+//  -----------------------------------------------------------------------------
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newImages = [...images];
-        newImages[index] = reader.result as string;
-        setImages(newImages);
-      };
-      reader.readAsDataURL(file);
+      new Compressor(file, {
+        quality: 0.6,
+        success(result) {
+          const compressedFile = new File([result], file.name, { type: result.type });
+          const imageUrl = URL.createObjectURL(new File([result], file.name, { type: result.type }));
+          setImages((prev) => { 
+            const updatedFiles = [...prev]; 
+            updatedFiles[index] = imageUrl; 
+            return updatedFiles; 
+          });
+                
+          setImages((prev) => {
+            const updatedFiles = [...prev];
+            updatedFiles[index] = imageUrl;
+            return updatedFiles;
+          });
+        },
+      });
+      
     }
   };
 
-  // Count the number of uploaded images
+  // Count of uploaded images
   const uploadedCount = images.filter((img) => img !== null).length;
 
-  // Handler for final submission
+  // Handler for form submission
   const handleSubmit = async () => {
-  try {
-    // Prepare update data with the new status
-    const updateData = { status: "On the way to dropoff location" };
+    try {
+      const combinedPickupDate = new Date(`${pickupTime}T${deliveryTime}:00`).toISOString();
+      const formData = {
+        customerName,
+        pickupDate: combinedPickupDate,
+        customerVehicleNumber:customerVehicleNumber,
+        mob1,
+        fileNumber,
+        pickupImages: images, 
+        status: "On the way to dropoff location",
+            };
 
-    // Update the booking by sending a PUT request to the backend
-    await axios.put(`${backendUrl}/booking/${itemId}`, updateData);
-
-    // Navigate to '/bookings' after a successful update
-    navigate("/bookings");
-  } catch (error) {
-    console.error("Error updating booking:", error);
-  }
-};
-
+      if (bookingData) {
+        // Update existing booking with PUT request
+        await axios.put(`${backendUrl}/booking/${itemId}`, formData);
+        console.log("Booking updated:", formData);
+      } else {
+        // Create new booking with POST request
+        await axios.post(`${backendUrl}/booking`, formData);
+        console.log("New booking created:", formData);
+      }
+      navigate("/bookings");
+    } catch (error) {
+      console.error("Error submitting booking data:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white px-4 py-6 flex flex-col items-center">
       {/* Header + Description */}
       <div className="w-full max-w-md mb-4">
-        <button className="text-sm text-gray-600 mb-3">&#8592; Back</button>
+        <button className="text-sm text-gray-600 mb-3" onClick={() => navigate(-1)}>
+          &#8592; Back
+        </button>
         <h1 className="text-xl font-bold text-gray-900 mb-2">Confirm Delivery</h1>
         <p className="text-gray-500 mb-4">
-          After filling, users receive a proof of delivery (POD) and invoice/receipt if applicable.
-          Drivers provide copies of these documents along with any return labels.
+          {bookingData
+            ? "Booking data found. Review and update if needed."
+            : "No booking data found. Please enter new details."}
         </p>
 
         {/* Delivery Form */}
         <div className="border-2 border-red-200 rounded-lg p-4 space-y-4">
-          {/* Recipient Name */}
-          <div>
+        <div>
+  <label className="block text-sm font-semibold text-gray-700 mb-1">
+    File Number
+  </label>
+  {bookingData?.fileNumber ? (
+  <span className="text-danger font-medium">{bookingData.fileNumber}</span>
+) : (
+  <span className="text-gray-500 italic">No file number available</span>
+)}
+
+</div>          <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Costomer's Name
+              Customer's Name
             </label>
             <input
               type="text"
@@ -181,11 +228,11 @@ const CombinedDeliveryUploadPage = () => {
             />
           </div>
 
-          {/* Delivery date + time */}
+          {/* Delivery Date + Time */}
           <div className="flex gap-2">
             <div className="flex-1">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Delivery date
+                Delivery Date
               </label>
               <input
                 type="date"
@@ -196,7 +243,7 @@ const CombinedDeliveryUploadPage = () => {
             </div>
             <div className="flex-1">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Delivery time
+                Delivery Time
               </label>
               <input
                 type="time"
@@ -207,7 +254,7 @@ const CombinedDeliveryUploadPage = () => {
             </div>
           </div>
 
-          {/* Confirmation Number */}
+          {/* Customer Number */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Customer Number
@@ -221,23 +268,21 @@ const CombinedDeliveryUploadPage = () => {
             />
           </div>
 
-          {/* Invoice or Receipt */}
+          {/* Invoice or Receipt Upload */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Vehicle Number
+              Customer Vehicle Number
             </label>
             <label className="flex items-center justify-center border-2 border-dashed border-gray-400 rounded-md w-full h-16 cursor-pointer">
-              {invoiceFile ? (
-                <span className="text-gray-700 text-sm px-2">{invoiceFile.name}</span>
-              ) : (
-                <span className="text-gray-500 text-sm">Upload Invoice or Receipt</span>
-              )}
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                className="hidden"
-                onChange={handleInvoiceUpload}
-              />
+             
+            <input
+  className="text-xl font-bold text-center border-2 border-gray-400 rounded-lg p-3 w-full max-w-md shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+  type="text"
+  placeholder="Customer Number"
+  value={customerVehicleNumber}
+  onChange={(e) => setCustomerVehicleNumber(e.target.value)}
+/>
+
             </label>
           </div>
         </div>
@@ -245,24 +290,28 @@ const CombinedDeliveryUploadPage = () => {
 
       {/* Step Indicator */}
       <div className="flex justify-center items-center gap-4 mb-6">
-        {Array(6).fill(null).map((_, index) => (
-          <React.Fragment key={index}>
-            <div
-              className={`w-6 h-6 flex justify-center items-center rounded-full ${
-                index < uploadedCount ? "bg-red-500 text-white" : "border-2 border-red-500 text-red-500"
-              }`}
-            >
-              {index < uploadedCount ? "✔" : index + 1}
-            </div>
-            {index < 5 && <div className="w-16 border-t-2 border-red-500"></div>}
-          </React.Fragment>
-        ))}
+        {Array(6)
+          .fill(null)
+          .map((_, index) => (
+            <React.Fragment key={index}>
+              <div
+                className={`w-6 h-6 flex justify-center items-center rounded-full ${
+                  index < uploadedCount
+                    ? "bg-red-500 text-white"
+                    : "border-2 border-red-500 text-red-500"
+                }`}
+              >
+                {index < uploadedCount ? "✔" : index + 1}
+              </div>
+              {index < 5 && <div className="w-16 border-t-2 border-red-500"></div>}
+            </React.Fragment>
+          ))}
       </div>
 
       {/* Title */}
-      <h2 className="text-lg font-bold text-gray-900 mb-2">Attach Additional Images (POD)</h2>
+      <h2 className="text-lg font-bold text-gray-900 mb-2">Attach Additional Images (Please upload images for Dashboard, Front, Rear, and Scratches)</h2>
       <p className="text-gray-600 mb-6 text-center">
-        Upload legible pictures of your vehicle to verify them.
+        Upload legible pictures of your delivery documentation.
       </p>
 
       {/* Image Upload Grid */}
@@ -272,14 +321,20 @@ const CombinedDeliveryUploadPage = () => {
             key={index}
             className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg w-24 h-24 cursor-pointer relative"
           >
-            {img ? (
-              <img src={img} alt="Uploaded" className="w-full h-full object-cover rounded-lg" />
-            ) : (
-              <div className="flex flex-col items-center justify-center">
-                <FiUploadCloud className="text-gray-500 text-2xl" />
-                <span className="text-xs text-gray-600 text-center">Choose or Capture</span>
-              </div>
-            )}
+           {img ? (
+  <img
+    src={img}
+    alt="Uploaded"
+    className="w-full h-full object-cover rounded-lg"
+  />
+) : (
+  // Placeholder UI if no image exists
+  <div className="flex flex-col items-center justify-center">
+    <FiUploadCloud className="text-gray-500 text-2xl" />
+    <span className="text-xs text-gray-600 text-center">Choose or Capture</span>
+  </div>
+)}
+
             <input
               type="file"
               accept="image/*"
@@ -291,15 +346,26 @@ const CombinedDeliveryUploadPage = () => {
       </div>
 
       {/* Submit Button */}
-      <button
+      {/* <button
         onClick={handleSubmit}
         className={`mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${
-          uploadedCount === 3 ? "bg-red-500 text-white" : "bg-gray-300 text-gray-600 cursor-not-allowed"
+          uploadedCount === 3
+            ? "bg-red-500 text-white"
+            : "bg-gray-300 text-gray-600 cursor-not-allowed"
         }`}
         disabled={uploadedCount < 3}
       >
         Submit
-      </button>
+      </button> */}
+       <button
+  onClick={handleSubmit}
+  disabled={uploadedCount < 6} // Example condition
+  className={` bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${
+    uploadedCount < 6 ? "opacity-50 cursor-not-allowed" : ""
+  }`}
+>
+  Submit
+</button>
     </div>
   );
 };

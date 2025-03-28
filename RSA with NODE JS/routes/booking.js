@@ -64,6 +64,7 @@ router.patch('/sattle-amount/:id', jwt, controller.settleAmount);
 
 //Route to approve booking
 router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
+router.post('/upload', upload.single('image'), controller.uploadImage);
 
 
 module.exports = router;

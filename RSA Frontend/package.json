@@ -33,6 +33,7 @@
         "@x1mrdonut1x/nouislider-react": "^3.4.3",
         "apexcharts": "^3.54.0",
         "axios": "^1.7.7",
+        "compressorjs": "^1.2.1",
         "dom-to-image": "^2.6.0",
         "easymde": "^2.18.0",
         "formik": "^2.2.9",
