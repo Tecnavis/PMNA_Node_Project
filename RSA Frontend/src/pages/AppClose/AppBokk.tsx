@@ -138,7 +138,7 @@ const NewJobsCard = () => {
       {/* Job Details */}
       <div className="flex justify-between text-gray-700 text-sm">
         <p>
-          <span className="font-semibold">File ID:</span> {bookingData.fileNumber}
+          <span className="font-semibold">File ID:</span> <span className="text-danger">{bookingData.fileNumber}</span>
         </p>
         <p>{formatDate(bookingData.createdAt)}</p>
         </div>
@@ -182,10 +182,10 @@ const NewJobsCard = () => {
       {/* Salary & Payable Amount */}
       <div className="mt-4 text-gray-700 text-sm">
         <p>
-          <span className="font-semibold">Salary:</span> Rs {bookingData.driverSalary}
+          <span className="font-semibold">Salary:</span> <span>Rs </span> <span className="text-danger">{bookingData.driverSalary}</span>
         </p>
         <p>
-          <span className="font-semibold">Payable Amount:</span> Rs {bookingData.totalAmount}
+          <span className="font-semibold">Payable Amount:</span> Rs <span className="text-success">{bookingData.totalAmount}</span>
         </p>
       </div>
 
