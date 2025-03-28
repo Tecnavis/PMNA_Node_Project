@@ -740,4 +740,10 @@ pre.hljs {
   .custom-scrollbar::-webkit-scrollbar-track {
     background: #f1f1f1; /* Background color of the scrollbar track */
   }
-  
+  @layer base {
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }

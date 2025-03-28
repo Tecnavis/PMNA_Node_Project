@@ -32,6 +32,7 @@ const driverSchema = new mongoose.Schema({
   },
   cashInHand: {
     type: Number, 
+    default : 0
   },
   advance: {
     type: Number, 

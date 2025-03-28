@@ -30,6 +30,13 @@ const rewardSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  TotalRedeem: {
+    type: Number,
+    default: 0,
+  },
+  percentage: {
+    type: Number,
+  },
   rewardFor: {
     type: String,
     enum: Object.values(RewardFor),
