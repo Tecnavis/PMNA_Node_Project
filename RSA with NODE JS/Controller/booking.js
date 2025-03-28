@@ -274,7 +274,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching bookings' });
     }
 };
-
+// ------------------------------
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     try {
@@ -409,7 +409,7 @@ exports.getAllBookings = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching bookings' });
     }
 };
-
+  
 // Controller to get a booking by ID
 exports.getBookingById = async (req, res) => {
     const { id } = req.params;
@@ -472,7 +472,10 @@ exports.updateBooking = async (req, res) => {
                 await Booking.updateOne({ _id: id }, { $unset: { driver: "" } }); // Remove driver
             }
         }
-
+       // Handle uploaded images
+       if (req.files && req.files.length > 0) {
+        updatedData.pickupImages = req.files.map(file => file.filename);
+    }
         const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
             .populate('baselocation') // Populate related documents
             .populate('showroom')
@@ -480,6 +483,7 @@ exports.updateBooking = async (req, res) => {
             .populate('company')
             .populate('driver')
             .populate('provider');
+            
 
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found' });
@@ -560,7 +564,15 @@ exports.updatePickupByAdmin = async (req, res) => {
         res.status(500).json({ message: 'Internal server error.', error: error.message });
     }
 };
+exports.uploadImage = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+    }
 
+    const filename = req.file.filename;
+    res.status(200).json({ filename });
+};
+// -------------------------------------------------------
 // remove the pickup image 
 exports.removePickupImages = async (req, res) => {
     const { id, index } = req.params;
