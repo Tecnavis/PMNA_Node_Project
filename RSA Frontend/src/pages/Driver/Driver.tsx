@@ -38,6 +38,7 @@ interface Driver {
     ];
     image: string;
     rewardPoints: number;
+    cashInHand: number;//New props
 }
 
 const Driver: React.FC = () => {

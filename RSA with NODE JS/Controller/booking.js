@@ -275,107 +275,140 @@ exports.getOrderCompletedBookings = async (req, res) => {
     }
 };
 // ------------------------------
+// Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     try {
-      let { search, startDate, endDate, endingDate, page = 1, limit = 10, status = '', driverId } = req.query;
-  
-      // Convert page and limit to integers
-      page = parseInt(page, 10);
-      limit = parseInt(limit, 10);
-  
-      const query = {};
-  
-      if (status) {
-        query.status = { $ne: status };
-      }
-  
-      // If driverId is provided then fetch driver bookings
-      if (driverId) {
-        query.driver = new mongoose.Types.ObjectId(driverId);
-      }
-  
-      // Handle search parameter
-      if (search) {
-        search = search.trim();
-        const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-        if (dateRegex.test(search)) {
-          // Assume date format is DD/MM/YYYY
-          const [day, month, year] = search.split('/');
-          const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
-          const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
-          query.createdAt = { $gte: startOfDay, $lte: endOfDay };
-        } else {
-          const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
-          const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
-          const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
-  
-          query.$or = [
-            { fileNumber: searchRegex },
-            { mob1: searchRegex },
-            { customerVehicleNumber: searchRegex },
-            { bookedBy: searchRegex },
-            { driver: { $in: matchingDrivers.map(d => d._id) } },
-            { provider: { $in: matchingProviders.map(p => p._id) } },
-          ];
+        let {
+            search,
+            startDate,
+            endDate,
+            endingDate,
+            page = 1,
+            limit = 10,
+            status = '',
+            driverId,
+            providerId,
+            companyId
+        } = req.query;
+
+        // Convert page and limit to integers
+        page = parseInt(page, 10);
+        limit = parseInt(limit, 10);
+
+        const query = {};
+
+        if (status) {
+            query.status = { $ne: status }
         }
-      }
-  
-      // Handle date range filter from startDate and endingDate
-      if (startDate && endingDate) {
-        const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
-        const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
-        query.createdAt = { $gte: startOfDay, $lte: endOfDay };
-      }
-  
-      // Pagination and sorting
-      const total = await Booking.countDocuments(query);
-      const bookings = await Booking.find(query)
-        .populate('baselocation')
-        .populate('showroom')
-        .populate('serviceType')
-        .populate('company')
-        .populate('driver')
-        .populate('provider')
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .sort({ createdAt: -1 });
-  
-      const balanceAmount = bookings.reduce((total, booking) => total + booking.receivedAmount, 0);
-  
-      // Aggregate data for total amounts
-      const aggregationResult = await Booking.aggregate([
-        { $match: query },
-        {
-          $group: {
-            _id: null,
-            totalCollected: { $sum: "$receivedAmount" },
-            totalOverall: { $sum: "$totalAmount" }
-          }
+
+        // If driverId as query then fetch drivers bookings
+        if (driverId) {
+            query.driver = new mongoose.Types.ObjectId(driverId);
         }
-      ]);
-  
-      const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
-      const overallAmount = aggregationResult[0]?.totalOverall || 0;
-      const balanceAmountToCollect = overallAmount - totalCollectedAmount;
-  
-      return res.status(200).json({
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        bookings,
-        balanceAmount,
-        financials: {
-          totalCollectedAmount,
-          overallAmount,
-          balanceAmountToCollect
+
+        // If providerId as query then fetch provider bookings
+        if (providerId) {
+            query.provider = new mongoose.Types.ObjectId(providerId);
         }
-      });
+
+        // If providerId as query then fetch company bookings
+        if (companyId) {
+            query.company = new mongoose.Types.ObjectId(companyId);
+        }
+
+        // Handle search
+        if (search) {
+            search = search.trim();
+            const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+
+            if (dateRegex.test(search) || search) {
+                const [year, month, day] = search.split('-');
+                const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+                const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
+
+                query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+
+                const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
+                const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
+                const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
+
+                query.$or = [
+                    { fileNumber: searchRegex },
+                    { mob1: searchRegex },
+                    { customerVehicleNumber: searchRegex },
+                    { bookedBy: searchRegex },
+                    { driver: { $in: matchingDrivers.map(d => d._id) } },
+                    { provider: { $in: matchingProviders.map(p => p._id) } },
+                ];
+            }
+        }
+
+        if (startDate && endingDate) {
+            const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
+            const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
+
+            query.createdAt = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
+        }
+
+        // Pagination and sorting by createdAt in descending order
+        const total = await Booking.countDocuments(query);
+        const bookings = await Booking.find(query)
+            .populate('baselocation')
+            .populate('showroom')
+            .populate('serviceType')
+            .populate('company')
+            .populate('driver')
+            .populate('provider')
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
+
+        const balanceAmount = bookings.reduce((total, booking) => {
+            return total + booking.receivedAmount;
+        }, 0);
+
+        // Aggregate data for total amounts
+        const aggregationResult = await Booking.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalCollected: { $sum: "$receivedAmount" },
+                    totalOverall: { $sum: "$totalAmount" }
+                }
+            }
+        ]);
+
+        // Extract financial data from aggregation result
+        const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
+        const overallAmount = aggregationResult[0]?.totalOverall || 0;
+        const balanceAmountToCollect = overallAmount - totalCollectedAmount;
+
+        console.log(query)
+        console.log(req.query)
+        console.log(bookings)
+        console.log(aggregationResult)
+        return res.status(200).json({
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            bookings,
+            balanceAmount,
+            financials: {
+                totalCollectedAmount,
+                overallAmount,
+                balanceAmountToCollect: balanceAmountToCollect
+            }
+        });
     } catch (error) {
-      console.error('Error fetching bookings:', error);
-      res.status(500).json({ message: 'Server error while fetching bookings' });
+        console.error('Error fetching bookings:', error);
+        res.status(500).json({ message: 'Server error while fetching bookings' });
     }
-  };
+};
   
 // Controller to get a booking by ID
 exports.getBookingById = async (req, res) => {
