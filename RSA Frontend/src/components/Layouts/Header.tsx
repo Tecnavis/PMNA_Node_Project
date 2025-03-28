@@ -32,10 +32,15 @@ import IconMenuDatatables from '../Icon/Menu/IconMenuDatatables';
 import IconMenuForms from '../Icon/Menu/IconMenuForms';
 import IconMenuPages from '../Icon/Menu/IconMenuPages';
 import IconMenuMore from '../Icon/Menu/IconMenuMore';
+import RSAlogo from '../../assets/images/rsa-2[1].jpg'
 
 const Header = () => {
     const navigate = useNavigate();
     const location = useLocation();
+
+    const role = localStorage.getItem('role')
+    const userName =sessionStorage.getItem('username');
+
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
         if (selector) {
@@ -147,7 +152,7 @@ const Header = () => {
         localStorage.removeItem('role');
         localStorage.removeItem('name');
         navigate('/auth/boxed-signin', { replace: true });
-      }
+    }
 
     return (
         <header className={`z-40 ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
@@ -155,7 +160,7 @@ const Header = () => {
                 <div className="relative bg-white flex w-full items-center px-5 py-2.5 dark:bg-black">
                     <div className="horizontal-logo flex lg:hidden justify-between items-center ltr:mr-2 rtl:ml-2">
                         <Link to="/" className="main-logo flex items-center shrink-0">
-                            <img  style={{width:'183px', height:'50px', objectFit:'cover'}} src="../../assets/images/RSALogo.png" alt="logo" />
+                            <img style={{ width: '183px', height: '50px', objectFit: 'cover' }} src="../../assets/images/RSALogo.png" alt="logo" />
                         </Link>
                         <button
                             type="button"
@@ -169,15 +174,14 @@ const Header = () => {
                     </div>
                     <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                         <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
-                           
+
                         </div>
                         <div>
                             {themeConfig.theme === 'light' ? (
                                 <button
-                                    className={`${
-                                        themeConfig.theme === 'light' &&
+                                    className={`${themeConfig.theme === 'light' &&
                                         'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                    }`}
+                                        }`}
                                     onClick={() => {
                                         dispatch(toggleTheme('dark'));
                                     }}
@@ -189,10 +193,9 @@ const Header = () => {
                             )}
                             {themeConfig.theme === 'dark' && (
                                 <button
-                                    className={`${
-                                        themeConfig.theme === 'dark' &&
+                                    className={`${themeConfig.theme === 'dark' &&
                                         'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                    }`}
+                                        }`}
                                     onClick={() => {
                                         dispatch(toggleTheme('system'));
                                     }}
@@ -202,10 +205,9 @@ const Header = () => {
                             )}
                             {themeConfig.theme === 'system' && (
                                 <button
-                                    className={`${
-                                        themeConfig.theme === 'system' &&
+                                    className={`${themeConfig.theme === 'system' &&
                                         'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                    }`}
+                                        }`}
                                     onClick={() => {
                                         dispatch(toggleTheme('light'));
                                     }}
@@ -214,14 +216,44 @@ const Header = () => {
                                 </button>
                             )}
                         </div>
-                        
-                       
+
+
                         <div className="dropdown shrink-0 flex">
-                        <button onClick={handleLogOut} className="text-danger !py-3">
+                            <Dropdown
+                                offset={[0, 8]}
+                                placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                                btnClassName="relative group block"
+                                button={<img className="w-9 h-9 rounded-full object-cover saturate-50 group-hover:saturate-100" src={RSAlogo} alt="userProfile" />}
+                            >
+                                <ul className="text-dark dark:text-white-dark !py-0 w-[230px] font-semibold dark:text-white-light/90">
+                                    <li>
+                                        <div className="flex items-center px-4 py-4">
+                                            <img className="rounded-md w-10 h-10 object-cover" src={RSAlogo} alt="userProfile" />
+                                            <div className="ltr:pl-4 rtl:pr-4 truncate">
+                                                <h4 className="text-base">
+                                                    {role === 'staff' ? userName : 'RSA Admin'}
+                                                </h4>
+                                                <button type="button" className="text-black/60 hover:text-primary dark:text-dark-light/60 dark:hover:text-white">
+                                                    RSA@gmail.com
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </li>
+
+                                    <li className="border-t border-white-light dark:border-white-light/10">
+                                        <button
+                                            type="button"
+                                            className="text-danger !py-3 flex items-center w-full"
+                                            onClick={handleLogOut}
+                                        >
                                             <IconLogout className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 rotate-90 shrink-0" />
                                             Sign Out
                                         </button>
+                                    </li>
+                                </ul>
+                            </Dropdown>
                         </div>
+
                     </div>
                 </div>
 

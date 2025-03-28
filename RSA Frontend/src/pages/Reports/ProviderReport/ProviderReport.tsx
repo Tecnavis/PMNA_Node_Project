@@ -10,14 +10,14 @@ import Dropdown from '../../../components/Dropdown';
 import IconShoppingBag from '../../../components/Icon/IconShoppingBag';
 import IconTag from '../../../components/Icon/IconTag';
 import IconCreditCard from '../../../components/Icon/IconCreditCard';
-import { Driver } from '../DCPReport';
 import { Booking } from '../../Bookings/Bookings';
 import IconPhone from '../../../components/Icon/IconPhone';
 import IconEye from '../../../components/Icon/IconEye';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
 import { BASE_URL } from '../../../config/axiosConfig';
-import IconPrinter from '../../../components/Icon/IconPrinter';
+import { Provider } from '../../Provider/Provider';
 import { handlePrint } from '../../../utils/PrintInvoice';
+import IconPrinter from '../../../components/Icon/IconPrinter';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -27,9 +27,9 @@ interface FilterData {
     balanceAmountToCollect: number
 }
 
-const DriverCashCollectionsReport = () => {
+const ProviderReport = () => {
 
-    const [driver, serDriver] = useState<Driver | null>(null);
+    const [provider, setProvider] = useState<Provider | null>(null);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [selectedMonth, setSelectedMonth] = useState<string>(new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date()));
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
@@ -68,23 +68,23 @@ const DriverCashCollectionsReport = () => {
         }
     };
 
-    // getting drvier 
-    const getDriver = async () => {
+    // getting provder 
+    const getProvider = async () => {
         try {
-            const response = await axios.get(`${backendUrl}/driver/${id}`);
-            serDriver(response.data);
+            const response = await axios.get(`${backendUrl}/provider/${id}`);
+            setProvider(response.data);
         } catch (error) {
             console.error("API Error: ", error);
         }
     };
-
-    //Fetch booking related driverID
+    //Fetch booking related providerID
     const fetchBookings = async () => {
+        if (!id) return;
         setIsLoading(true);
         try {
             const response = await axios.get(`${backendUrl}/booking`, {
                 params: {
-                    driverId: id,
+                    providerId: id,
                     startDate,
                     endingDate,
                     search,
@@ -92,8 +92,7 @@ const DriverCashCollectionsReport = () => {
                     limit: pageSize
                 }
             });
-
-            const data = response.data
+            const data = response.data;
             const totalBalanceCalculated = (data.bookings || []).reduce(
                 (total, booking) => total + (booking.totalAmount - booking.receivedAmount),
                 0
@@ -101,15 +100,14 @@ const DriverCashCollectionsReport = () => {
 
             setTotalBalance(totalBalanceCalculated);
             setBookings(data.bookings);
-            setTotalBalance(data.balanceAmount || 0);
             setTotalRecords(data.total);
             setFilterData({
                 balanceAmountToCollect: data.financials.balanceAmountToCollect,
                 overallAmount: data.financials.overallAmount,
                 totalCollectedAmount: data.financials.totalCollectedAmount
-            })
+            });
         } catch (error) {
-            console.error("Error fetching api booking in report section : ", error)
+            console.error("Error fetching bookings:", error);
         } finally {
             setIsLoading(false);
         }
@@ -179,7 +177,7 @@ const DriverCashCollectionsReport = () => {
         const selected = bookings.filter((booking) => selectedBookings.has(booking._id));
         // Navigate to the invoice generation page or handle the invoice generation here
         if (selected.length > 0) {
-            navigate('/showroom-cashcollection/selectiveInvoice', { state: { bookings: selected, role: "driver" } });
+            navigate('/showroom-cashcollection/selectiveInvoice', { state: { bookings: selected, role: "provider" } });
         } else {
             Swal.fire({
                 icon: 'warning',
@@ -267,7 +265,7 @@ const DriverCashCollectionsReport = () => {
                 } else {
                     return (<td key={booking._id}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className='text-center'>
-                            {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
+                            {booking.workType === 'RSAWork' && provider?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
                                 <span className={`text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
                             ) : (
                                 <>
@@ -285,7 +283,7 @@ const DriverCashCollectionsReport = () => {
                                         min="0"
                                     />
                                     <button
-                                        onClick={() => handleUpdateAmount(booking._id)}
+                                        onClick={() => booking.status ? null : handleUpdateAmount(booking._id)}
                                         disabled={booking.approve || loadingStates[booking._id]}
                                         style={{
                                             backgroundColor:
@@ -321,22 +319,20 @@ const DriverCashCollectionsReport = () => {
                 if (booking._id === 'total') {
                     return (
                         <span className="font-semibold text-lg text-blue-600">
-                            {booking.receivedAmount}
+                            {totalBalance}
                         </span>
                     );
                 }
-
-                const effectiveReceivedAmount = booking.receivedAmount || 0;
                 return (
                     <span className={`text-red-500`}>
                         {
                             booking.workType === 'RSAWork'
-                                ? '0.00'
+                                ? '0'
                                 : (booking.totalAmount - booking.receivedAmount)
                         }
                     </span>
                 );
-            }
+            },
         },
         {
             accessor: 'approve',
@@ -407,15 +403,11 @@ const DriverCashCollectionsReport = () => {
     };
 
     const handleUpdateAmount = async (id: string) => {
-        const updatingBooking = bookings.filter((booking) => booking._id === id)
         const receivedAmount = inputValues[id]
-
-        if (!receivedAmount || receivedAmount <= 0) return;
-
-        if ((updatingBooking.totalAmount - updatingBooking.receivedAmount) === 0) {
+        if (!receivedAmount) return;
+        if(bookings[id].receivedAmount === 0){
             Swal.fire('Error!', 'Full amount receved successfully.', 'error');
         }
-
         try {
             const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { receivedAmount });
             fetchBookings();
@@ -440,9 +432,13 @@ const DriverCashCollectionsReport = () => {
 
     useEffect(() => {
         gettingToken();
-        getDriver();
-    }, [])
+        fetchBookings();
+        getProvider();
+    }, [search, endingDate, startDate])
 
+    useEffect(() => {
+        fetchBookings();
+    }, [])
 
     useEffect(() => {
         fetchBookings();
@@ -452,30 +448,30 @@ const DriverCashCollectionsReport = () => {
         <div>
             <div className="pt-5">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 w-full">
-                    {/* DriverCashCollectionsReport Section */}
+                    {/* provder CashCollectionsReport Section */}
                     <div className="panel w-full">
                         <div className="flex items-center justify-between mb-5">
                             <h5 className="font-semibold text-lg dark:text-white-light">Cash Collection Report</h5>
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src={`${backendUrl}/images/${driver?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
-                                <p className="font-semibold text-primary text-xl">{driver?.name}</p>
+                                <img src={`${backendUrl}/images/${provider?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
+                                <p className="font-semibold text-primary text-xl">{provider?.name}</p>
                                 <span className="whitespace-nowrap" dir="ltr">
-                                    {driver?.idNumber}
+                                    {provider?.idNumber}
                                 </span>
                             </div>
                             <ul className="mt-5 flex flex-row  m-auto  font-semibold text-white-dark items-center justify-center gap-5">
                                 <li className="flex items-center gap-2">
                                     <IconPhone className='text-black' />
                                     <span dir="ltr">
-                                        {driver?.phone}
+                                        {provider?.phone}
                                     </span>
                                 </li>
                                 <li className="flex ">
                                     <span>Advance Payment :  </span>
                                     <span className='text-primary'>
-                                        ₹{driver?.advance || 0}
+                                        ₹{provider?.advance || 0}
                                     </span>
                                 </li>
                             </ul>
@@ -485,7 +481,7 @@ const DriverCashCollectionsReport = () => {
                     {/* Cash in Hand Section */}
                     <div className="panel w-full flex flex-col items-center justify-center">
                         <h5 className="font-semibold text-lg dark:text-white-light mb-3">Net Total Amount in Hand</h5>
-                        <p className="text-2xl font-bold text-primary">₹{driver?.cashInHand || 0}</p>
+                        <p className="text-2xl font-bold text-primary">₹{provider?.cashInHand || 0}</p>
                     </div>
                 </div>
 
@@ -599,8 +595,10 @@ const DriverCashCollectionsReport = () => {
                             <button className='btn btn-primary' onClick={handleGenerateInvoices}>Generate Invoice</button>
                             <button
                                 className='btn btn-primary'
-                                onClick={() => handlePrint(printRef, selectedYear, selectedMonth, role, driver?.name, bookings, filterData.totalCollectedAmount, filterData.balanceAmountToCollect)}
-                            ><IconPrinter />Print</button>
+                                onClick={() => handlePrint(printRef, selectedYear, selectedMonth, role, provider?.name, bookings, filterData.totalCollectedAmount, filterData.balanceAmountToCollect)}
+                            ><IconPrinter />
+                                Print
+                            </button>
                         </div>
                         <div className="flex items-center gap-5 ltr:ml-auto rtl:mr-auto">
                             <div className="text-right">
@@ -618,19 +616,29 @@ const DriverCashCollectionsReport = () => {
                             recordsPerPageOptions={[10, 20, 50]}
                             onRecordsPerPageChange={(newPageSize) => {
                                 setPageSize(newPageSize);
-                                setPage(1);
+                                setPage(1); // Reset to first page when page size changes
                             }}
+
                             withColumnBorders
+                            verticalAlignment={"center"}
                             highlightOnHover
                             striped
                             minHeight={300}
                             columns={cols}
-                            rowClassName={(record) =>
-                                record.approve ? classes.disabledRow : ''
-                            }
                             records={[
                                 ...(bookings || [])?.map(item => ({ ...item, id: item._id })),
-                                { _id: 'total', id: 'total', isTotalRow: true } as Booking
+                                {
+                                    selectall: '',
+                                    createdAt: '',
+                                    _id: 'total',
+                                    fileNumber: '',
+                                    customerVehicleNumber: '',
+                                    totalAmount: filterData.overallAmount,
+                                    receivedAmount: filterData.totalCollectedAmount,
+                                    balance: filterData.balanceAmountToCollect,
+                                    approve: '',
+                                    viewmore: '',
+                                }
                             ]}
                         />
                     </div>
@@ -640,4 +648,4 @@ const DriverCashCollectionsReport = () => {
     );
 };
 
-export default DriverCashCollectionsReport;
+export default ProviderReport;

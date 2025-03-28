@@ -14,7 +14,6 @@ var staffRouter = require('./routes/staff');
 var providerRouter = require('./routes/provider');
 var driverRouter = require('./routes/driver');
 var companyRouter = require('./routes/company');
-
 var showroomRouter = require('./routes/showroom');
 var rewardRouter = require('./routes/reward');
 var bookingRouter = require('./routes/booking');
@@ -24,6 +23,8 @@ var pointRouter = require('./routes/point')
 var VehicleRouter = require('./routes/vehicle');
 var leavesRouter = require('./routes/leaves');
 var bookingNotesRouter = require('./routes/bookingNotes');
+var advanceRouter = require('./routes/advance')
+var cashReceivedDetails = require('./routes/cashReceivedDetails')
 
 const cors = require('cors')
 var app = express();
@@ -63,6 +64,8 @@ app.use('/feedback', feedbackRouter);
 app.use('/vehicle', vehicleRouter);
 app.use('/point', pointRouter);
 app.use('/bookingnote', bookingNotesRouter);
+app.use('/advance-payment', advanceRouter);
+app.use('/cash-received-details', cashReceivedDetails);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

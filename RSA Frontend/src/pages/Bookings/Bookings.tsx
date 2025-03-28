@@ -47,6 +47,7 @@ interface Company {
 }
 
 export interface Booking {
+    invoiceNumber: string;
     receivedUser: string,// new prop
     companyBooking: boolean,// new prop
     approve: boolean,// new prop
@@ -96,6 +97,7 @@ export interface Booking {
         phone: string;
         _id: string;
         companyName: string; // New Props
+        cashInHand: number,// new prop
         vehicle: [
             {
                 basicAmount: number;
@@ -583,7 +585,7 @@ const Bookings: React.FC = () => {
                                                                     <tr key={index}>
                                                                         <td>{items.serviceType.serviceName || "N/A"}</td>
                                                                         <td>{items.basicAmount || "N/A"}</td>
-                                                                        <td>{items.kmForBasicAmount }</td>
+                                                                        <td>{items.kmForBasicAmount}</td>
                                                                         <td>{items.overRideCharge || "N/A"}</td>
                                                                         <td>{items.vehicleNumber || "N/A"}</td>
                                                                     </tr>

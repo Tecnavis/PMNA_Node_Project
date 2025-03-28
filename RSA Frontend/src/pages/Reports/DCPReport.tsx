@@ -18,8 +18,8 @@ interface Company {
     idNumber: string;
     creditLimitAmount: number;
     phone: string;
-    cashInHand:number;
-    driverSalary:number;
+    cashInHand: number;
+    driverSalary: number;
     personalPhoneNumber: string;
     password: string;
     vehicle: [
@@ -826,9 +826,9 @@ const MultipleTables = () => {
                                 accessor: 'action',
                                 title: 'Action',
                                 titleClassName: '!text-center',
-                                render: (driver:Driver) => (
+                                render: (driver: Driver) => (
                                     <div className="relative inline-flex items-center space-x-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <button type="button" className="btn btn-success px-2 py-1 text-xs" onClick={()=> navigate(`/driverreport/${driver._id}`)}>
+                                        <button type="button" className="btn btn-success px-2 py-1 text-xs" onClick={() => navigate(`/driverreport/${driver._id}`)}>
                                             Cash Report
                                         </button>
                                         <button type="button" className="btn btn-primary px-2 py-1 text-xs">
@@ -884,9 +884,9 @@ const MultipleTables = () => {
                                 accessor: 'action',
                                 title: 'Action',
                                 titleClassName: '!text-center',
-                                render: () => (
+                                render: (provider: Provider) => (
                                     <div className="relative inline-flex items-center space-x-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <button type="button" className="btn btn-success px-2 py-1 text-xs">
+                                        <button type="button" className="btn btn-success px-2 py-1 text-xs" onClick={() => navigate(`/provider-report/${provider._id}`)}>
                                             Cash Report
                                         </button>
                                         <button type="button" className="btn btn-primary px-2 py-1 text-xs">
@@ -913,7 +913,7 @@ const MultipleTables = () => {
                     </div>
                 </div>
                 <div className="datatables">
-                <DataTable
+                    <DataTable
                         className="whitespace-nowrap table-hover"
                         records={companies} // Set an empty array to clear the table
                         columns={[
@@ -929,15 +929,17 @@ const MultipleTables = () => {
                             },
                             { accessor: 'idNumber', title: 'Driver ID', render: (company: Company) => <div>{company.idNumber}</div> },
                             { accessor: 'cashInHand', title: 'Cash in Hand', render: (company: Company) => <div>₹{company.cashInHand ? company.cashInHand : 0}</div> },
-                          
+
 
                             {
                                 accessor: 'action',
                                 title: 'Action',
                                 titleClassName: '!text-center',
-                                render: () => (
+                                render: (company) => (
                                     <div className="relative inline-flex items-center space-x-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <button type="button" className="btn btn-success px-2 py-1 text-xs">
+                                        <button type="button" className="btn btn-success px-2 py-1 text-xs"
+                                            onClick={() => navigate(`/company-report/${company._id}`)}
+                                        >
                                             Cash Report
                                         </button>
                                     </div>

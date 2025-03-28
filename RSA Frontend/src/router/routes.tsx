@@ -1,9 +1,12 @@
 import { lazy } from 'react';
-import VehicleFinanceCompliance from '../pages/VehicleDetails/VehicleCompliance';
-import RewardsItem from '../pages/Rewards/RewardsItems';
-import Rewards from '../pages/Rewards/Rewards';
-import ShowRoomDetails from '../pages/Showroom/ShowroomDetails';
-import SelectiveShowroomInvoice from '../pages/Reports/DriverReport/SelectiveInvoice';
+import AdvancePayment from '../pages/PaymentManagment/AdvancePayment';
+import ProviderReport from '../pages/Reports/ProviderReport/ProviderReport';
+import CompanyReport from '../pages/Reports/CompanyReport/CompanyReport';
+const RewardsItem = lazy(() => import('../pages/Rewards/RewardsItems'))
+const Rewards = lazy(() => import('../pages/Rewards/Rewards'))
+const ShowRoomDetails = lazy(() => import('../pages/Showroom/ShowroomDetails'))
+const SelectiveShowroomInvoice = lazy(() => import('../pages/Reports/DriverReport/SelectiveInvoice'))
+const VehicleFinanceCompliance = lazy(() => import('../pages/VehicleDetails/VehicleCompliance'))
 const Index = lazy(() => import('../pages/Index'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Finance = lazy(() => import('../pages/Finance'));
@@ -187,12 +190,24 @@ const routes = [
         element: <DriverReport />,
     },
     {
+        path: '/provider-report/:id',
+        element: <ProviderReport />,
+    },
+    {
+        path: '/company-report/:id',
+        element: <CompanyReport />,
+    },
+    {
         path: '/showroomreport',
         element: <ShowroomReport />,
     },
     {
         path: '/staffreport',
         element: <StaffReport />,
+    },
+    {
+        path: '/advance-payment-managment',
+        element: <AdvancePayment />,
     },
     {
         path: '/staffcashreport/:id',
