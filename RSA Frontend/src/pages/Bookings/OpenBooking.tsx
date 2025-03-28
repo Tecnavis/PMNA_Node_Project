@@ -9,6 +9,7 @@ import Button from '@mui/material/Button';
 import { FaCloudUploadAlt } from 'react-icons/fa';
 import { styled } from '@mui/material/styles';
 import BookingNotes from './BookingNotes';
+import { dateFormate, formattedTime } from '../../utils/dateUtils';
 
 export interface Booking {
     _id: string;
@@ -607,7 +608,7 @@ const Preview = () => {
                                     <div className="flex items-start pt-5">
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
                                             {pickupImageUrls?.map((url, index) => (
-                                                <div key={index}>
+                                                <div key={index} className='flex flex-col gap-5 justify-center items-center'>
                                                     <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
                                                     <img
                                                         src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
@@ -616,6 +617,10 @@ const Preview = () => {
                                                             setEnlargedImage(url)
                                                         }}
                                                     />
+                                                    <div className='text-xs'>
+                                                        <span>{formattedTime(booking?.pickupDate as unknown as string)}</span> -
+                                                        <span> {dateFormate(booking?.pickupTime as unknown as string)}</span>
+                                                    </div>
                                                 </div>
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
@@ -635,7 +640,7 @@ const Preview = () => {
                                     <div className="flex items-start pt-5">
                                         <div className="flex items-center justify-center gap-6">
                                             {dropoffImageUrls.map((url, index) => (
-                                                <div key={index}>
+                                                <div key={index} className='flex flex-col gap-5 justify-center items-center'>
                                                     <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} />
                                                     <img
                                                         src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
@@ -644,6 +649,10 @@ const Preview = () => {
                                                             setEnlargedImage(url);
                                                         }}
                                                     />
+                                                    <div className='text-xs'>
+                                                        <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span> -
+                                                        <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span>
+                                                    </div>
                                                 </div>
                                             ))}
 

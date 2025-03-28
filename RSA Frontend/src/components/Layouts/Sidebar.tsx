@@ -238,13 +238,28 @@ const Sidebar = () => {
                                     </div>
                                 </NavLink>
                             </li>
-                            <li className="nav-item">
-                                <NavLink to="/paymentmanagement" className="group">
+                            <li className="menu nav-item">
+                                <button type="button" className={`${currentMenu === 'Payment Management' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('Payment Management')}>
                                     <div className="flex items-center">
                                         <BsCashStack className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Payment Management')}</span>
                                     </div>
-                                </NavLink>
+
+                                    <div className={currentMenu !== 'Payment Management' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                        <IconCaretDown />
+                                    </div>
+                                </button>
+
+                                <AnimateHeight duration={300} height={currentMenu === 'Payment Management' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        <li>
+                                            <NavLink to="/advance-payment-managment">{t('Payment Report')}</NavLink>
+                                        </li>
+                                        <li>
+                                            <NavLink to="/pmnr-report">{t('Payment Work Report')}</NavLink>
+                                        </li>
+                                    </ul>
+                                </AnimateHeight>
                             </li>
                             <li className="menu nav-item">
                                 <button type="button" className={`${currentMenu === 'reports' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('reports')}>

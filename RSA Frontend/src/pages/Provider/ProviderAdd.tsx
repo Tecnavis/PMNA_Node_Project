@@ -111,7 +111,7 @@ const ProviderAdd: React.FC = () => {
 
     const handleTableInputChange = (id: string, field: string, value: string) => {
         setSelectedServiceTypes((prev) =>
-            prev.map((item) =>
+            prev?.map((item) =>
                 item.id === id
                     ? {
                           ...item,
@@ -210,7 +210,7 @@ const ProviderAdd: React.FC = () => {
 
                 // Transform serviceDetails and set selectedServiceTypes
                 if (data.serviceDetails?.length) {
-                    const formattedServiceDetails = data.serviceDetails.map((service: any) => ({
+                    const formattedServiceDetails = data.serviceDetails?.map((service: any) => ({
                         id: service.serviceType._id,
                         name: service.serviceType?.serviceName || 'Unknown',
                         overRideCharge: service.overRideCharge.toString(),
@@ -401,7 +401,7 @@ const ProviderAdd: React.FC = () => {
                             <label htmlFor="baseLocation">Base Location</label>
                             <select id="baseLocation" className="form-input" value={baseLocation} onChange={(e) => setBaseLocation(e.target.value)}>
                                 <option value="">Select Base Location</option>
-                                {baseLocations.map((items, index) => (
+                                {baseLocations?.map((items, index) => (
                                     <option key={index} value={items._id}>
                                         {items.baseLocation.charAt(0).toUpperCase() + items.baseLocation.slice(1)}
                                     </option>
@@ -492,7 +492,7 @@ const ProviderAdd: React.FC = () => {
                             <div>
                                 <h6 className="text-md font-bold mb-3">Choose Service Types</h6>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {serviceTypes.map((type) => (
+                                    {serviceTypes?.map((type) => (
                                         <label key={type._id} className="flex items-center space-x-2">
                                             <input
                                                 type="checkbox"
@@ -521,7 +521,7 @@ const ProviderAdd: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {selectedServiceTypes.map((service) => (
+                                            {selectedServiceTypes?.map((service) => (
                                                 <tr key={service.id}>
                                                     <td className="p-2 text-sm">{service.name.charAt(0).toUpperCase() + service.name.slice(1)}</td>
                                                     <td className="p-2 text-sm">

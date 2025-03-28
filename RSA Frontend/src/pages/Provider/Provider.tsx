@@ -13,7 +13,7 @@ import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import { IoIosCloseCircleOutline } from 'react-icons/io';
 
 
-interface Provider {
+export interface Provider {
     _id: string;
     name: string;
     companyName: string;

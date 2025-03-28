@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useRef } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import IconSend from '../../../components/Icon/IconSend';
@@ -7,12 +7,16 @@ import IconPrinter from '../../../components/Icon/IconPrinter';
 import IconDownload from '../../../components/Icon/IconDownload';
 import IconPlus from '../../../components/Icon/IconPlus';
 import { Booking } from '../../Bookings/Bookings';
+import Logo from '../../../assets/images/RSALogo.png'
+import { dateFormate, formattedTime } from '../../../utils/dateUtils';
 
 const SelectiveShowroomInvoice = () => {
     const location = useLocation();
     const booking = location.state?.bookings || [];
+    const role = location.state?.role || "Driver";
     const invoiceRef = useRef<HTMLDivElement>(null);
-    console.log(booking[0])
+    const [searchParams] = useSearchParams()
+
     if (!booking || booking.length === 0) {
         return <div>No bookings selected for invoice generation.</div>;
     }
@@ -57,27 +61,34 @@ const SelectiveShowroomInvoice = () => {
     };
 
     // Calculate total payable amount
-    const totalPayableAmount = booking.reduce((total: any, booking: any) => total + (Number(booking.totalAmount) + Number(booking.receivedAmount)), 0);
+    const totalPayableAmount = booking.reduce((total: any, booking: any) => total + (Number(booking.totalAmount) || 0), 0);
+    // Calculate total balance amount
+    const totalBalanceAmount = booking.reduce((total: any, booking: any) => total + Number(booking.receivedAmount), 0);
 
 
-    const columns = [
-        { key: 'id', label: 'S.NO' },
-        { key: 'serviceType', label: 'Service Type' },
-        { key: 'vehicleNumber', label: 'Vehicle Number', class: 'text-center' },
+    const columnsForDriver = [
+        { key: 'id', label: 'SL.NO' },
+        { key: 'dateAndTime', label: 'Date and Time' },
+        { key: 'fileNumber', label: 'FileNumber' },
+        { key: 'amountOfBooking', label: 'Amount of Booking', class: 'text-center' },
         { key: 'payableAmount', label: 'Payable Amount', class: 'text-center' },
         { key: 'receivedAmount', label: 'Amount Received', class: 'text-center' },
         { key: 'balanceSalary', label: 'Balance', class: 'text-center' },
     ];
 
+    const columnsForCompany = [
+        { key: 'id', label: 'SL.NO' },
+        { key: 'serviceType', label: 'Service Type' },
+        { key: 'Vehicle Number', label: 'Vehicle Number' },
+        { key: 'amountOfBooking', label: 'Amount of Booking', class: 'text-center' },
+        { key: 'receivedAmount', label: 'Amount Received from Company', class: 'text-center' },
+        { key: 'balanceSalary', label: 'Balance', class: 'text-center' },
+    ];
 
+    const columns = role === 'driver' ? columnsForDriver : columnsForCompany;
     return (
         <div>
             <div className="flex items-center lg:justify-end justify-center flex-wrap gap-4 mb-6">
-                <button type="button" className="btn btn-info gap-2">
-                    <IconSend />
-                    Send Invoice
-                </button>
-
                 <button type="button" className="btn btn-primary gap-2" onClick={handlePrint}>
                     <IconPrinter />
                     Print
@@ -87,25 +98,20 @@ const SelectiveShowroomInvoice = () => {
                     <IconDownload />
                     Download
                 </button>
-
-                <Link to="/apps/invoice/add" className="btn btn-secondary gap-2">
-                    <IconPlus />
-                    Create
-                </Link>
             </div>
             <div className="panel" ref={invoiceRef} id='invoice-content'>
                 <div className="flex justify-between flex-wrap gap-4 px-4">
                     <div className="text-2xl font-semibold uppercase">Invoice</div>
                     <div className="shrink-0">
                         <img
-                            src="/assets/images/auth/rsa-png.png"
+                            src={Logo}
                             alt="img"
                             className="w-24 ltr:ml-auto rtl:mr-auto"
                         />
                     </div>
                 </div>
                 <div className="ltr:text-right rtl:text-left px-4">
-                    <div className="space-y-1 mt-6 text-white-dark">
+                    <div className="space-y-1 mt-6">
                         <div>perinthalmanna Road, kerala, 33884, India</div>
                         <div>rsa@gmail.com</div>
                         <div>+91 9817100100</div>
@@ -115,21 +121,20 @@ const SelectiveShowroomInvoice = () => {
                 <div className="flex justify-between lg:flex-row flex-col gap-6 flex-wrap" >
                     <div className="flex-1">
                         <div className="space-y-1 text-white-dark">
-                            <div>Issue For:</div>
-                            <div className="text-black dark:text-white font-semibold">{booking[0]?.showroomLocation || ""}</div>
+                            <div>Issue For : <span className='text-black'> {booking[0]?.driver?.name || booking[0]?.provider?.name || ""}</span></div>
                         </div>
                     </div>
                     <div className="flex justify-between sm:flex-row flex-col gap-6 lg:w-2/3">
                         <div className="xl:1/3 lg:w-2/5 sm:w-1/2">
-                            <div className="flex items-center w-full justify-between mb-2">
+                            <div className="flex items-center w-full gap-2 mb-2">
                                 <div className="text-white-dark">Invoice :</div>
                                 <div>{generateInvoiceNumber()}</div>
                             </div>
-                            <div className="flex items-center w-full justify-between mb-2">
+                            <div className="flex items-center w-full gap-2 mb-2">
                                 <div className="text-white-dark">Issue Date :</div>
                                 <div>{new Date().toLocaleDateString()}</div>
                             </div>
-                            <div className="flex items-center w-full justify-between mb-2">
+                            <div className="flex items-center w-full gap-2 mb-2">
                                 <div className="text-white-dark">Order ID :</div>
                                 <div>{booking[0]?.fileNumber}</div>
                             </div>
@@ -140,22 +145,32 @@ const SelectiveShowroomInvoice = () => {
                     <table className="table-striped w-full">
                         <thead>
                             <tr>
-                                {columns.map((column) => (
-                                    <th key={column.key} className={column.class}>
+                                {(role === 'driver' ? columnsForDriver : columnsForCompany).map((column) => (
+                                    <th key={column.key} className={column.class || ''}>
                                         {column.label}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {booking?.map((booking: any, index: any) => (
+                            {booking?.map((booking: any, index: number) => (
                                 <tr key={booking?.id}>
-                                    <td>{index + 1}</td>
-                                    <td>{booking?.serviceType.serviceName }</td>
-                                    <td className="text-center">{booking?.customerVehicleNumber}</td>
-                                    <td className="text-center">{booking.totalAmount}</td>
-                                    <td className="text-center">{booking?.receivedAmount}</td>
-                                    <td className="text-center">{booking.totalAmount -  booking?.receivedAmount}</td>
+                                    {columns.map((column) => (
+                                        <td key={column.key} className={column.class || ''}>
+                                            {column.key === 'id' && index + 1}
+                                            {column.key === 'dateAndTime' &&
+                                                role === 'driver' &&
+                                                `${dateFormate(booking.createdAt)} at ${formattedTime(booking.createdAt)}`}
+                                            {column.key === 'serviceType' && role === 'company' && (booking.serviceType.serviceName || "N/A")}
+                                            {column.key === 'Vehicle Number' && role === 'company' && (booking.customerVehicleNumber || "N/A")}
+                                            {column.key === 'fileNumber' && (booking?.fileNumber || "N/A")}
+                                            {column.key === 'amountOfBooking' && (booking?.totalAmount || 0)}
+                                            {column.key === 'payableAmount' && role === 'driver' && (booking?.totalAmount || 0)}
+                                            {column.key === 'receivedAmount' && (booking?.receivedAmount || 0)}
+                                            {column.key === 'balanceSalary' &&
+                                                (booking?.totalAmount || 0) - (booking?.receivedAmount || 0)}
+                                        </td>
+                                    ))}
                                 </tr>
                             ))}
                         </tbody>
@@ -164,6 +179,9 @@ const SelectiveShowroomInvoice = () => {
                 <div className="mt-6 px-4">
                     <div className="flex justify-end font-semibold text-lg text-gray-800">
                         Total Payable Amount: <span className="ml-2 text-blue-600">{totalPayableAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-end font-semibold text-lg text-gray-800">
+                        Balance Amount: <span className="ml-2 text-blue-600">{totalBalanceAmount.toFixed(2)}</span>
                     </div>
                 </div>
             </div>

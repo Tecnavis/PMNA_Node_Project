@@ -278,12 +278,22 @@ exports.getOrderCompletedBookings = async (req, res) => {
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, endingDate, page = 1, limit = 10, status = '', driverId } = req.query;
+        let {
+            search,
+            startDate,
+            endDate,
+            endingDate,
+            page = 1,
+            limit = 10,
+            status = '',
+            driverId,
+            providerId,
+            companyId
+        } = req.query;
 
         // Convert page and limit to integers
         page = parseInt(page, 10);
         limit = parseInt(limit, 10);
-
 
         const query = {};
 
@@ -294,6 +304,16 @@ exports.getAllBookings = async (req, res) => {
         // If driverId as query then fetch drivers bookings
         if (driverId) {
             query.driver = new mongoose.Types.ObjectId(driverId);
+        }
+
+        // If providerId as query then fetch provider bookings
+        if (providerId) {
+            query.provider = new mongoose.Types.ObjectId(providerId);
+        }
+
+        // If providerId as query then fetch company bookings
+        if (companyId) {
+            query.company = new mongoose.Types.ObjectId(companyId);
         }
 
         // Handle search
@@ -367,7 +387,10 @@ exports.getAllBookings = async (req, res) => {
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
         const balanceAmountToCollect = overallAmount - totalCollectedAmount;
 
-
+        console.log(query)
+        console.log(req.query)
+        console.log(bookings)
+        console.log(aggregationResult)
         return res.status(200).json({
             total,
             page,
