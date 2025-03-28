@@ -80,7 +80,9 @@ const CombinedDeliveryUploadPage = () => {
   const itemId = params.get("itemId");
 
   // --- Image Upload States ---
-  const [images, setImages] = useState<(string | null)[]>(Array(6).fill(null));
+  // --- Image Upload States ---
+  const [images, setImages] = useState<(File | null)[]>(Array(6).fill(null));
+  const [previews, setPreviews] = useState<(string | null)[]>(Array(6).fill(null));
   const [imageFiles, setImageFiles] = useState<(File | null)[]>(Array(6).fill(null));
 
   // Fetch existing booking data if itemId exists
@@ -89,13 +91,13 @@ const CombinedDeliveryUploadPage = () => {
       axios
         .get(`${backendUrl}/booking/${itemId}`)
         .then((response) => {
-          
+
           const data = response.data as Booking;
           setBookingData(data);
-  
+
           // Pre-fill form fields...
           setFileNumber(data.fileNumber || "");
-                    setCustomerName(data.customerName || "");
+          setCustomerName(data.customerName || "");
           // setPickupTime(data.pickupTime || "");
           setDeliveryTime(data.dropoffTime || "");
           setMob1(data.mob1 || "");
@@ -104,7 +106,7 @@ const CombinedDeliveryUploadPage = () => {
             const pickupDate = new Date(data.pickupTime);
             const formattedDate = pickupDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
             const formattedTime = pickupDate.toISOString().split("T")[1].slice(0, 5); // "HH:MM"
-            
+
             setPickupTime(formattedDate);
             setDeliveryTime(formattedTime);
           }
@@ -114,7 +116,7 @@ const CombinedDeliveryUploadPage = () => {
             const imageUrls = data.pickupImages.map(
               (img) => `${backendUrl}/images/${img}`
             );
-            setImages([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
+            setPreviews([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
           }
         })
         .catch((error) => {
@@ -122,7 +124,7 @@ const CombinedDeliveryUploadPage = () => {
         });
     }
   }, [itemId, backendUrl]);
-  
+
 
   // Handler for invoice or receipt file upload
   const handleInvoiceUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -131,29 +133,24 @@ const CombinedDeliveryUploadPage = () => {
       setInvoiceFile(file);
     }
   };
-//  -----------------------------------------------------------------------------
+  //  -----------------------------------------------------------------------------
+  // Handler for image uploads
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, index: number) => {
     const file = e.target.files?.[0];
     if (file) {
-      new Compressor(file, {
-        quality: 0.6,
-        success(result) {
-          const compressedFile = new File([result], file.name, { type: result.type });
-          const imageUrl = URL.createObjectURL(new File([result], file.name, { type: result.type }));
-          setImages((prev) => { 
-            const updatedFiles = [...prev]; 
-            updatedFiles[index] = imageUrl; 
-            return updatedFiles; 
-          });
-                
-          setImages((prev) => {
-            const updatedFiles = [...prev];
-            updatedFiles[index] = imageUrl;
-            return updatedFiles;
-          });
-        },
+      const objectUrl = URL.createObjectURL(file);
+
+      setImages((prev) => {
+        const updatedFiles = [...prev];
+        updatedFiles[index] = file;
+        return updatedFiles;
       });
-      
+
+      setPreviews((prev) => {
+        const updatedPreviews = [...prev];
+        updatedPreviews[index] = objectUrl;
+        return updatedPreviews;
+      });
     }
   };
 
@@ -164,15 +161,20 @@ const CombinedDeliveryUploadPage = () => {
   const handleSubmit = async () => {
     try {
       const combinedPickupDate = new Date(`${pickupTime}T${deliveryTime}:00`).toISOString();
-      const formData = {
-        customerName,
-        pickupDate: combinedPickupDate,
-        customerVehicleNumber:customerVehicleNumber,
-        mob1,
-        fileNumber,
-        pickupImages: images, 
-        status: "On the way to dropoff location",
-            };
+      const formData = new FormData();
+
+      // Append fields
+      formData.append("customerName", customerName);
+      formData.append("pickupDate", combinedPickupDate);
+      formData.append("customerVehicleNumber", customerVehicleNumber);
+      formData.append("mob1", mob1);
+      formData.append("fileNumber", fileNumber);
+      formData.append("status", "On the way to dropoff location");
+
+      // Append images (only if they exist)
+      images.forEach((img) => {
+        if (img) formData.append("images", img);
+      });
 
       if (bookingData) {
         // Update existing booking with PUT request
@@ -205,17 +207,17 @@ const CombinedDeliveryUploadPage = () => {
 
         {/* Delivery Form */}
         <div className="border-2 border-red-200 rounded-lg p-4 space-y-4">
-        <div>
-  <label className="block text-sm font-semibold text-gray-700 mb-1">
-    File Number
-  </label>
-  {bookingData?.fileNumber ? (
-  <span className="text-danger font-medium">{bookingData.fileNumber}</span>
-) : (
-  <span className="text-gray-500 italic">No file number available</span>
-)}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              File Number
+            </label>
+            {bookingData?.fileNumber ? (
+              <span className="text-danger font-medium">{bookingData.fileNumber}</span>
+            ) : (
+              <span className="text-gray-500 italic">No file number available</span>
+            )}
 
-</div>          <div>
+          </div>          <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Customer's Name
             </label>
@@ -274,14 +276,14 @@ const CombinedDeliveryUploadPage = () => {
               Customer Vehicle Number
             </label>
             <label className="flex items-center justify-center border-2 border-dashed border-gray-400 rounded-md w-full h-16 cursor-pointer">
-             
-            <input
-  className="text-xl font-bold text-center border-2 border-gray-400 rounded-lg p-3 w-full max-w-md shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-  type="text"
-  placeholder="Customer Number"
-  value={customerVehicleNumber}
-  onChange={(e) => setCustomerVehicleNumber(e.target.value)}
-/>
+
+              <input
+                className="text-xl font-bold text-center border-2 border-gray-400 rounded-lg p-3 w-full max-w-md shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                type="text"
+                placeholder="Customer Number"
+                value={customerVehicleNumber}
+                onChange={(e) => setCustomerVehicleNumber(e.target.value)}
+              />
 
             </label>
           </div>
@@ -295,11 +297,10 @@ const CombinedDeliveryUploadPage = () => {
           .map((_, index) => (
             <React.Fragment key={index}>
               <div
-                className={`w-6 h-6 flex justify-center items-center rounded-full ${
-                  index < uploadedCount
-                    ? "bg-red-500 text-white"
-                    : "border-2 border-red-500 text-red-500"
-                }`}
+                className={`w-6 h-6 flex justify-center items-center rounded-full ${index < uploadedCount
+                  ? "bg-red-500 text-white"
+                  : "border-2 border-red-500 text-red-500"
+                  }`}
               >
                 {index < uploadedCount ? "✔" : index + 1}
               </div>
@@ -321,19 +322,19 @@ const CombinedDeliveryUploadPage = () => {
             key={index}
             className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg w-24 h-24 cursor-pointer relative"
           >
-           {img ? (
-  <img
-    src={img}
-    alt="Uploaded"
-    className="w-full h-full object-cover rounded-lg"
-  />
-) : (
-  // Placeholder UI if no image exists
-  <div className="flex flex-col items-center justify-center">
-    <FiUploadCloud className="text-gray-500 text-2xl" />
-    <span className="text-xs text-gray-600 text-center">Choose or Capture</span>
-  </div>
-)}
+            {previews[index] ? (
+              <img
+                src={previews[index] as string}
+                alt="Uploaded"
+                className="w-full h-full object-cover rounded-lg"
+              />
+            ) : (
+              // Placeholder UI if no image exists
+              <div className="flex flex-col items-center justify-center">
+                <FiUploadCloud className="text-gray-500 text-2xl" />
+                <span className="text-xs text-gray-600 text-center">Choose or Capture</span>
+              </div>
+            )}
 
             <input
               type="file"
@@ -357,15 +358,14 @@ const CombinedDeliveryUploadPage = () => {
       >
         Submit
       </button> */}
-       <button
-  onClick={handleSubmit}
-  disabled={uploadedCount < 6} // Example condition
-  className={` bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${
-    uploadedCount < 6 ? "opacity-50 cursor-not-allowed" : ""
-  }`}
->
-  Submit
-</button>
+      <button
+        onClick={handleSubmit}
+        disabled={uploadedCount < 6} // Example condition
+        className={` bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${uploadedCount < 6 ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+      >
+        Submit
+      </button>
     </div>
   );
 };

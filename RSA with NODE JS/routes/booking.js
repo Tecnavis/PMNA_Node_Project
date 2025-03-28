@@ -27,7 +27,7 @@ router.get('/getordercompleted', jwt, controller.getOrderCompletedBookings);
 router.get('/:id', controller.getBookingById);
 
 // Route to update booking
-router.put('/:id', controller.updateBooking);
+router.put('/:id', upload.array('images', 6), controller.updateBooking);
 
 // Route to delete booking
 // router.delete('/:id',jwt,controller.deleteBooking);
