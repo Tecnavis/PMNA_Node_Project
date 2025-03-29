@@ -40,6 +40,7 @@ import IconBook from '../Icon/IconBook';
 import { BsCashStack } from 'react-icons/bs';
 import IconAt from '../Icon/IconAt';
 import IconAward from '../Icon/IconAward';
+import { ROLES } from '../../constants/roles'
 
 const Sidebar = () => {
     const [currentMenu, setCurrentMenu] = useState<string>('');
@@ -54,6 +55,8 @@ const Sidebar = () => {
             return oldValue === value ? '' : value;
         });
     };
+
+    const role = localStorage.getItem('role') || ''
 
     useEffect(() => {
         const selector = document.querySelector('.sidebar ul a[href="' + window.location.pathname + '"]');
@@ -127,198 +130,238 @@ const Sidebar = () => {
                                         <li>
                                             <NavLink to="/add-booking">{t('Add Bookings')}</NavLink>
                                         </li>
-                                        <li>
-                                            <NavLink to="/completedbookings">{t('Driver Completed Bookings')}</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/approvedbookings">{t('Service Details')}</NavLink>
-                                        </li>
+                                        {![ROLES.CASHIER, ROLES.CALL_EXECUTIVE].includes(role) && (
+                                            <li>
+                                                <NavLink to="/completedbookings">{t('Driver Completed Bookings')}</NavLink>
+                                            </li>
+                                        )}
+                                        {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                            <li>
+                                                <NavLink to="/approvedbookings">{t('Service Details')}</NavLink>
+                                            </li>
+                                        )}
 
                                     </ul>
                                 </AnimateHeight>
                             </li>
-                            <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'users' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('users')}>
-                                    <div className="flex items-center">
-                                        <IconMenuUsers className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('users')}</span>
-                                    </div>
+                            {/* User */}
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'users' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('users')}>
+                                        <div className="flex items-center">
+                                            <IconMenuUsers className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('users')}</span>
+                                        </div>
 
-                                    <div className={currentMenu !== 'users' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
+                                        <div className={currentMenu !== 'users' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
 
-                                <AnimateHeight duration={300} height={currentMenu === 'users' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/users/staff">Staff Creation</NavLink>
-                                        </li>
+                                    <AnimateHeight duration={300} height={currentMenu === 'users' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            {![ROLES.SECONDARY_ADMIN].includes(role) && (
+                                                <li>
+                                                    <NavLink to="/users/staff">Staff Creation</NavLink>
+                                                </li>
+                                            )}
+                                            <li>
+                                                <NavLink to="/users/provider">Provider Creation</NavLink>
+                                            </li>
+                                            <li>
+                                                <NavLink to="/users/driver">Driver Creation</NavLink>
+                                            </li>
+                                            <li>
+                                                <NavLink to="/users/company">Company Creation</NavLink>
+                                            </li>
+                                        </ul>
+                                    </AnimateHeight>
+                                </li>
+                            )}
+                            {/* Service Type */}
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'service' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('service')}>
+                                        <div className="flex items-center">
+                                            <IconServer className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">Service Types</span>
+                                        </div>
 
-                                        <li>
-                                            <NavLink to="/users/provider">Provider Creation</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/users/driver">Driver Creation</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/users/company">Company Creation</NavLink>
-                                        </li>
-                                    </ul>
-                                </AnimateHeight>
-                            </li>
-                            <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'service' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('service')}>
-                                    <div className="flex items-center">
-                                        <IconServer className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">Service Types</span>
-                                    </div>
+                                        <div className={currentMenu !== 'service' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
+                                    <AnimateHeight duration={300} height={currentMenu === 'service' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            <li>
+                                                <NavLink to="/service_type">Service Types</NavLink>
+                                            </li>
+                                            <li>
+                                                <NavLink to="/service/tarrif">Tarrif Details</NavLink>
+                                            </li>
+                                            <li>
+                                                <NavLink to="/service/adjustment"> Adjustments</NavLink>
+                                            </li>
+                                        </ul>
+                                    </AnimateHeight>
+                                </li>
+                            )}
+                            {/* Vehicle Details */}
+                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'vehicle-details' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('vehicle-details')}>
+                                        <div className="flex items-center">
+                                            <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">Vehicle Details</span>
+                                        </div>
 
-                                    <div className={currentMenu !== 'service' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-                                <AnimateHeight duration={300} height={currentMenu === 'service' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/service_type">Service Types</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/service/tarrif">Tarrif Details</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/service/adjustment"> Adjustments</NavLink>
-                                        </li>
-                                    </ul>
-                                </AnimateHeight>
-                            </li>
-                            <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'vehicle-details' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('vehicle-details')}>
-                                    <div className="flex items-center">
-                                        <IconMenuDocumentation className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">Vehicle Details</span>
-                                    </div>
+                                        <div className={currentMenu !== 'vehicle-details' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
+                                    <AnimateHeight duration={300} height={currentMenu === 'vehicle-details' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            <li>
+                                                <NavLink to="/vehicle">RSA Vehicle</NavLink>
+                                            </li>
+                                            <li>
+                                                <NavLink to="/taxandinsurance">Tax And Insurance</NavLink>
+                                            </li>
+                                        </ul>
+                                    </AnimateHeight>
+                                </li>
+                            )}
+                            {/* Baselocation */}
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                <li className="nav-item">
+                                    <NavLink to="/baselocation" className="group">
+                                        <div className="flex items-center">
+                                            <MdShareLocation className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Baselocation')}</span>
+                                        </div>
+                                    </NavLink>
+                                </li>
+                            )}
+                            {/* Feedback */}
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                <li className="nav-item">
+                                    <NavLink to="/feedback" className="group">
+                                        <div className="flex items-center">
+                                            <VscFeedback className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Feedback')}</span>
+                                        </div>
+                                    </NavLink>
+                                </li>
+                            )}
+                            {/* // Showroom */}
+                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                < li className="nav-item">
+                                    <NavLink to="/showroom" className="group">
+                                        <div className="flex items-center">
+                                            <PiBuildingApartmentLight className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Showroom')}</span>
+                                        </div>
+                                    </NavLink>
+                                </li>
+                            )}
+                            {/* Payment Managment */}
+                            {![ROLES.VERIFIER, ROLES.CALL_EXECUTIVE].includes(role) && (
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'Payment Management' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('Payment Management')}>
+                                        <div className="flex items-center">
+                                            <BsCashStack className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Payment Management')}</span>
+                                        </div>
 
-                                    <div className={currentMenu !== 'vehicle-details' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-                                <AnimateHeight duration={300} height={currentMenu === 'vehicle-details' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/vehicle">RSA Vehicle</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/taxandinsurance">Tax And Insurance</NavLink>
-                                        </li>
-                                    </ul>
-                                </AnimateHeight>
-                            </li>
-                            <li className="nav-item">
-                                <NavLink to="/baselocation" className="group">
-                                    <div className="flex items-center">
-                                        <MdShareLocation className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Baselocation')}</span>
-                                    </div>
-                                </NavLink>
-                            </li>
-                            <li className="nav-item">
-                                <NavLink to="/feedback" className="group">
-                                    <div className="flex items-center">
-                                        <VscFeedback className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Feedback')}</span>
-                                    </div>
-                                </NavLink>
-                            </li>
-                            <li className="nav-item">
-                                <NavLink to="/showroom" className="group">
-                                    <div className="flex items-center">
-                                        <PiBuildingApartmentLight className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Showroom')}</span>
-                                    </div>
-                                </NavLink>
-                            </li>
-                            <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'Payment Management' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('Payment Management')}>
-                                    <div className="flex items-center">
-                                        <BsCashStack className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Payment Management')}</span>
-                                    </div>
+                                        <div className={currentMenu !== 'Payment Management' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
 
-                                    <div className={currentMenu !== 'Payment Management' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
+                                    <AnimateHeight duration={300} height={currentMenu === 'Payment Management' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            <li>
+                                                <NavLink to="/advance-payment-managment">{t('Payment Report')}</NavLink>
+                                            </li>
+                                            <li>
+                                                <NavLink to="/pmnr-report">{t('Payment Work Report')}</NavLink>
+                                            </li>
+                                        </ul>
+                                    </AnimateHeight>
+                                </li>
+                            )}
+                            {/* Report */}
+                            {![ROLES.CALL_EXECUTIVE].includes(role) && (
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'reports' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('reports')}>
+                                        <div className="flex items-center">
+                                            <TbReport className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reports')}</span>
+                                        </div>
 
-                                <AnimateHeight duration={300} height={currentMenu === 'Payment Management' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/advance-payment-managment">{t('Payment Report')}</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/pmnr-report">{t('Payment Work Report')}</NavLink>
-                                        </li>
-                                    </ul>
-                                </AnimateHeight>
-                            </li>
-                            <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'reports' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('reports')}>
-                                    <div className="flex items-center">
-                                        <TbReport className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reports')}</span>
-                                    </div>
+                                        <div className={currentMenu !== 'reports' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
 
-                                    <div className={currentMenu !== 'reports' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
+                                    <AnimateHeight duration={300} height={currentMenu === 'reports' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            <li>
+                                                <NavLink to="/dcpreport">{t('Driver/Company/Provider Report')}</NavLink>
+                                            </li>
+                                            {![ROLES.VERIFIER, ROLES.CASHIER].includes(role) && (
+                                                <li>
+                                                    <NavLink to="/showroomreport">{t('ShowRoom Report')}</NavLink>
+                                                </li>
+                                            )}
+                                            <li>
+                                                <NavLink to="/staffreport">{t('Staff Report')}</NavLink>
+                                            </li>
 
-                                <AnimateHeight duration={300} height={currentMenu === 'reports' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/dcpreport">{t('Driver/Company/Provider Report')}</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/showroomreport">{t('ShowRoom Report')}</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/staffreport">{t('Staff Report')}</NavLink>
-                                        </li>
+                                        </ul>
+                                    </AnimateHeight>
+                                </li>
+                            )}
+                            {/* Reward */}
+                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'rewards' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('rewards')}>
+                                        <div className="flex items-center">
+                                            <IconAward className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Rewards')}</span>
+                                        </div>
 
-                                    </ul>
-                                </AnimateHeight>
-                            </li>
-                            <li className="menu nav-item">
-                                <button type="button" className={`${currentMenu === 'rewards' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('rewards')}>
-                                    <div className="flex items-center">
-                                        <IconAward className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Rewards')}</span>
-                                    </div>
+                                        <div className={currentMenu !== 'rewards' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
 
-                                    <div className={currentMenu !== 'rewards' ? 'rtl:rotate-90 -rotate-90' : ''}>
-                                        <IconCaretDown />
-                                    </div>
-                                </button>
-
-                                <AnimateHeight duration={300} height={currentMenu === 'rewards' ? 'auto' : 0}>
-                                    <ul className="sub-menu text-gray-500">
-                                        <li>
-                                            <NavLink to="/reward-item">{t('Reward Item')}</NavLink>
-                                        </li>
-                                        <li>
-                                            <NavLink to="/reward">{t('Rewards')}</NavLink>
-                                        </li>
-                                    </ul>
-                                </AnimateHeight>
-                            </li>
-                            <li className="nav-item">
-                                <NavLink to="/leaves" className="group">
-                                    <div className="flex items-center">
-                                        <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
-                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('leaves')}</span>
-                                    </div>
-                                </NavLink>
-                            </li>
+                                    <AnimateHeight duration={300} height={currentMenu === 'rewards' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            {![ROLES.VERIFIER].includes(role) && (
+                                                <li>
+                                                    <NavLink to="/reward-item">{t('Reward Item')}</NavLink>
+                                                </li>
+                                            )}
+                                            <li>
+                                                <NavLink to="/reward">{t('Rewards')}</NavLink>
+                                            </li>
+                                        </ul>
+                                    </AnimateHeight>
+                                </li>
+                            )}
+                            {/* Leaves */}
+                            {![ROLES.VERIFIER, ROLES.CASHIER, ROLES.CALL_EXECUTIVE].includes(role) && (
+                                <li className="nav-item">
+                                    <NavLink to="/leaves" className="group">
+                                        <div className="flex items-center">
+                                            <IconMenuCalendar className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('leaves')}</span>
+                                        </div>
+                                    </NavLink>
+                                </li>
+                            )}
+                            {/* Status */}
                             <li className="nav-item">
                                 <NavLink to="/status" className="group">
                                     <div className="flex items-center">
@@ -909,8 +952,8 @@ const Sidebar = () => {
                         </ul>
                     </PerfectScrollbar>
                 </div>
-            </nav>
-        </div>
+            </nav >
+        </div >
     );
 };
 
