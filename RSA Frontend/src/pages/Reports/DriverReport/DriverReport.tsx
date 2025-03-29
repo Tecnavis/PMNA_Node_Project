@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
@@ -18,6 +18,9 @@ import { MONTHS, YEARS_FOR_FILTER } from '../constant'
 import { BASE_URL } from '../../../config/axiosConfig';
 import IconPrinter from '../../../components/Icon/IconPrinter';
 import { handlePrint } from '../../../utils/PrintInvoice';
+import { Dialog, Transition } from '@headlessui/react';
+import { dateFormate } from '../../../utils/dateUtils';
+import { ROLES } from '../../../constants/roles';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -31,7 +34,9 @@ const DriverCashCollectionsReport = () => {
 
     const [driver, serDriver] = useState<Driver | null>(null);
     const [bookings, setBookings] = useState<Booking[]>([]);
-    const [selectedMonth, setSelectedMonth] = useState<string>(new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date()));
+    const [selectedMonth, setSelectedMonth] = useState<string>(
+        new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date())
+    );
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
     const [filterData, setFilterData] = useState<FilterData>({
         totalCollectedAmount: 0,
@@ -44,8 +49,11 @@ const DriverCashCollectionsReport = () => {
     const [initialRecords, setInitialRecords] = useState(bookings);
     const [inputValues, setInputValues] = useState<Record<string, number>>({});
     const [totalBalance, setTotalBalance] = useState<string, number>(0);
+    const [balanceForApplay, setBalanceForApplay] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());
+    const [modal2, setModal2] = useState(false);
+    const [totalSelectedBalance, setTotalSelectedBalance] = useState<string>('0.00');
     //Pagination states 
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -56,7 +64,7 @@ const DriverCashCollectionsReport = () => {
     const navigate = useNavigate();
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
     const printRef = useRef<HTMLDivElement>(null);
-    const role = localStorage.getItem('role');
+    const role = localStorage.getItem('role') || '';
 
     // checking the token
     const gettingToken = () => {
@@ -168,8 +176,15 @@ const DriverCashCollectionsReport = () => {
             setSelectedBookings(new Map());
         } else {
             // Select all
-            const allIds = new Map(bookings.map((booking) => [booking._id, booking]));
-            setSelectedBookings(allIds);
+            const allIds = new Map(
+                bookings
+                    .filter(booking => !booking.approved)
+                    .map((booking) => [booking._id, booking])
+            );
+            setSelectedBookings(new Map(allIds));
+            if (![ROLES.VERIFIER].includes(role)) {
+                setModal2(true)
+            }
         }
     };
 
@@ -264,8 +279,10 @@ const DriverCashCollectionsReport = () => {
             render: (booking: Booking) => {
                 if (booking._id === 'total') {
                     return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
+                } else if (booking.totalAmount == booking.receivedAmount) {
+                    return <div className='text-center flex item-center  justify-center'>{booking.receivedAmount}</div>
                 } else {
-                    return (<td key={booking._id}>
+                    return (<td key={booking._id} >
                         <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className='text-center'>
                             {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
                                 <span className={`text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
@@ -285,7 +302,7 @@ const DriverCashCollectionsReport = () => {
                                         min="0"
                                     />
                                     <button
-                                        onClick={() => handleUpdateAmount(booking._id)}
+                                        onClick={() => [ROLES.VERIFIER].includes(role) ? null : handleUpdateAmount(booking._id)}
                                         disabled={booking.approve || loadingStates[booking._id]}
                                         style={{
                                             backgroundColor:
@@ -310,7 +327,7 @@ const DriverCashCollectionsReport = () => {
                                 </>
                             )}
                         </div>
-                    </td>)
+                    </td >)
                 }
             }
         },
@@ -320,15 +337,15 @@ const DriverCashCollectionsReport = () => {
             render: (booking: Booking) => {
                 if (booking._id === 'total') {
                     return (
-                        <span className="font-semibold text-lg text-blue-600">
-                            {booking.receivedAmount}
-                        </span>
+                        <div className="font-semibold text-lg text-blue-600 flex item-center  justify-center  text-center">
+                            {bookings.reduce((total, booking) => total + booking.totalAmount - booking.receivedAmount, 0)}
+                        </div>
                     );
                 }
 
                 const effectiveReceivedAmount = booking.receivedAmount || 0;
                 return (
-                    <span className={`text-red-500`}>
+                    <span className={`text-red-500 flex item-center  justify-center  text-center`}>
                         {
                             booking.workType === 'RSAWork'
                                 ? '0.00'
@@ -419,10 +436,51 @@ const DriverCashCollectionsReport = () => {
         try {
             const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { receivedAmount });
             fetchBookings();
-            Swal.fire('Balance!', 'The booking balance amount udated.', 'success');
+            Swal.fire('Balance!', 'The booking balance amount updated.', 'success');
         } catch (error) {
             console.error('Error updatebalnce amount:', error);
             Swal.fire('Error!', 'Failed to update balance amount in booking.', 'error');
+        }
+    }
+
+
+    // Calculate the total selected bookings
+    const calculateTotalSelectedBalance = () => {
+        let totalBalances = 0;
+        // Iterate over selected bookings (Map values)
+        selectedBookings.forEach((booking) => {
+            if (!booking) return;
+
+            // If receivedUser is "Staff", amount should be 0
+            const amountToUse = booking.receivedUser === "Staff" ? 0 : booking.totalAmount;
+            const receivedAmount = booking.receivedUser === "Staff" ? 0 : booking.receivedAmount;
+            const balance = amountToUse - receivedAmount;
+
+            totalBalances += isNaN(balance) ? 0 : balance;
+        });
+
+        setTotalSelectedBalance(totalBalances.toFixed(2));
+    };
+
+    //distribute the received balance amount
+    const distributeReceivedAmount = async () => {
+        try {
+            const bookingIds = []
+            selectedBookings.forEach((booking) => {
+                if (!booking) return;
+                bookingIds.push(booking._id)
+            })
+            const res = await axios.patch(`${BASE_URL}/booking/distribute-amount`, {
+                receivedAmount: balanceForApplay,
+                driverId: id,
+                bookingIds
+            })
+            fetchBookings();
+            setSelectedBookings(new Map());
+            setModal2(false)
+            setBalanceForApplay('')
+        } catch (error) {
+            console.log(error.message, 'error in distribute received amount')
         }
     }
 
@@ -443,10 +501,15 @@ const DriverCashCollectionsReport = () => {
         getDriver();
     }, [])
 
-
     useEffect(() => {
         fetchBookings();
     }, [page, pageSize, id, startDate, endingDate, search]);
+
+    useEffect(() => {
+        if (selectedBookings.size > 0) {
+            calculateTotalSelectedBalance();
+        }
+    }, [selectedBookings]);
 
     return (
         <div>
@@ -630,11 +693,74 @@ const DriverCashCollectionsReport = () => {
                             }
                             records={[
                                 ...(bookings || [])?.map(item => ({ ...item, id: item._id })),
-                                { _id: 'total', id: 'total', isTotalRow: true } as Booking
+                                ...(Array.isArray(bookings) && bookings.length > 0
+                                    ? [{ _id: 'total', id: 'total', isTotalRow: true } as Booking]
+                                    : [])
                             ]}
                         />
                     </div>
                 </div>
+            </div>
+            {/* Modal for balance applay  */}
+            <div className="mb-5">
+                <Transition appear show={modal2} as={Fragment}>
+                    <Dialog as="div" open={modal2} onClose={() => {
+                        setModal2(false)
+                        setSelectedBookings(new Map());
+                    }}>
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0"
+                            enterTo="opacity-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            <div className="fixed inset-0" />
+                        </Transition.Child>
+                        <div className="fixed inset-0 bg-[black]/60 z-[999] overflow-y-auto">
+                            <div className="flex items-center justify-center min-h-screen px-4">
+                                <Transition.Child
+                                    as={Fragment}
+                                    enter="ease-out duration-300"
+                                    enterFrom="opacity-0 scale-95"
+                                    enterTo="opacity-100 scale-100"
+                                    leave="ease-in duration-200"
+                                    leaveFrom="opacity-100 scale-100"
+                                    leaveTo="opacity-0 scale-95"
+                                >
+                                    <Dialog.Panel as="div" className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-md my-8 text-black dark:text-white-dark">
+                                        <div className="flex bg-[#fbfbfb] dark:bg-[#121c2c] items-center justify-between px-5 py-3">
+                                            <button type="button" className="text-white-dark hover:text-dark" onClick={() => setModal2(false)}>
+                                            </button>
+                                        </div>
+                                        <div className="p-5 text-center">
+                                            <p className=''>
+                                                Total Balance : {totalSelectedBalance}
+                                            </p>
+                                            <p className=''>
+                                                Amount Received On : {dateFormate(new Date() + '')}
+                                            </p>
+                                            <div className="flex justify-end items-center mt-8 flex-col gap-1 w-full">
+                                                <input
+                                                    type="number"
+                                                    className='w-full rounded-md py-2 px-3 border-gray-400 outline-1 outline-gray-300'
+                                                    placeholder='Enter amount...'
+                                                    value={balanceForApplay}
+                                                    onChange={(e) => setBalanceForApplay((pre) => e.target.value)}
+                                                />
+                                                <button type="button" className="btn btn-primary w-full" onClick={distributeReceivedAmount}>
+                                                    Apply amount
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </Dialog.Panel>
+                                </Transition.Child>
+                            </div>
+                        </div>
+                    </Dialog>
+                </Transition>
             </div>
         </div>
     );

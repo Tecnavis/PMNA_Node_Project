@@ -11,6 +11,7 @@ import IconPencil from '../../components/Icon/IconPencil';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { ROLES } from '../../constants/roles';
 
 interface Company {
     _id: string;
@@ -617,6 +618,8 @@ const MultipleTables = () => {
     useEffect(() => {
         dispatch(setPageTitle('Multiple Tables'));
     });
+    const role = localStorage.getItem('role') || '';
+
     const [page, setPage] = useState(1);
     const PAGE_SIZES = [10, 20, 30, 50, 100];
     const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
@@ -786,125 +789,125 @@ const MultipleTables = () => {
 
     return (
         <div>
-            {/* Driver Table................................................................................ */}
+            {![ROLES.VERIFIER].includes(role) && (
+                // {/* Driver Table................................................................................ */}
+                <div className="panel mt-6">
+                    <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
+                        <h5 className="font-semibold text-lg dark:text-white-light">PMNA Drivers</h5>
+                        <div className="ltr:ml-auto rtl:mr-auto">
+                            <input type="text" className="form-input w-auto" placeholder="Search..." value={searchDriver} onChange={(e) => setSearchDriver(e.target.value)} />
+                        </div>
+                    </div>
+                    <div className="datatables">
+                        <DataTable
+                            className="whitespace-nowrap table-hover"
+                            records={drivers} // Set an empty array to clear the table
+                            columns={[
+                                {
+                                    accessor: 'name',
+                                    title: 'Name',
+                                    render: (driver: Driver) => (
+                                        <div className="flex items-center w-max">
+                                            <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${backendUrl}/images/${driver.image}`} alt="" />
+                                            <div>{driver.name}</div>
+                                        </div>
+                                    ),
+                                },
+                                { accessor: 'idNumber', title: 'Driver ID', render: (driver: Driver) => <div>{driver.idNumber}</div> },
+                                { accessor: 'cashInHand', title: 'Cash in Hand', render: (driver: Driver) => <div>₹{driver.cashInHand ? driver.cashInHand : 0}</div> },
+                                {
+                                    accessor: 'driverSalary',
+                                    title: 'Salary Amount',
+                                    render: (driver: Driver) => (
+                                        <div>
+                                            <div>₹{driver.driverSalary ? driver.driverSalary : 0}</div>
+                                        </div>
+                                    ),
+                                },
 
-            <div className="panel mt-6">
-                <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
-                    <h5 className="font-semibold text-lg dark:text-white-light">PMNA Drivers</h5>
-                    <div className="ltr:ml-auto rtl:mr-auto">
-                        <input type="text" className="form-input w-auto" placeholder="Search..." value={searchDriver} onChange={(e) => setSearchDriver(e.target.value)} />
+                                {
+                                    accessor: 'action',
+                                    title: 'Action',
+                                    titleClassName: '!text-center',
+                                    render: (driver: Driver) => (
+                                        <div className="relative inline-flex items-center space-x-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <button type="button" className="btn btn-success px-2 py-1 text-xs" onClick={() => navigate(`/driverreport/${driver._id}`)}>
+                                                Cash Report
+                                            </button>
+                                            <button type="button" className="btn btn-primary px-2 py-1 text-xs">
+                                                Salary
+                                            </button>
+                                            <button type="button" className="btn btn-danger px-2 py-1 text-xs">
+                                                Expense
+                                            </button>
+                                        </div>
+                                    ),
+                                },
+                            ]}
+                        />
                     </div>
                 </div>
-                <div className="datatables">
-                    <DataTable
-                        className="whitespace-nowrap table-hover"
-                        records={drivers} // Set an empty array to clear the table
-                        columns={[
-                            {
-                                accessor: 'name',
-                                title: 'Name',
-                                render: (driver: Driver) => (
-                                    <div className="flex items-center w-max">
-                                        <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${backendUrl}/images/${driver.image}`} alt="" />
-                                        <div>{driver.name}</div>
-                                    </div>
-                                ),
-                            },
-                            { accessor: 'idNumber', title: 'Driver ID', render: (driver: Driver) => <div>{driver.idNumber}</div> },
-                            { accessor: 'cashInHand', title: 'Cash in Hand', render: (driver: Driver) => <div>₹{driver.cashInHand ? driver.cashInHand : 0}</div> },
-                            {
-                                accessor: 'driverSalary',
-                                title: 'Salary Amount',
-                                render: (driver: Driver) => (
-                                    <div>
-                                        <div>₹{driver.driverSalary ? driver.driverSalary : 0}</div>
-                                    </div>
-                                ),
-                            },
+            )}
+            {![ROLES.VERIFIER].includes(role) && (
+                // {/* Provider Table................................................................ */}
+                <div className="panel mt-6">
+                    <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
+                        <h5 className="font-semibold text-lg dark:text-white-light">Providers</h5>
+                        <div className="ltr:ml-auto rtl:mr-auto">
+                            <input type="text" className="form-input w-auto" placeholder="Search..." value={searchProviders} onChange={(e) => setSearchProviders(e.target.value)} />
+                        </div>
+                    </div>
+                    <div className="datatables">
+                        <DataTable
+                            className="whitespace-nowrap table-hover"
+                            records={providers} // Set an empty array to clear the table
+                            columns={[
+                                {
+                                    accessor: 'name',
+                                    title: 'Name',
+                                    render: (provider: Provider) => (
+                                        <div className="flex items-center w-max">
+                                            <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${backendUrl}/images/${provider.image}`} alt="" />
+                                            <div>{provider.name}</div>
+                                        </div>
+                                    ),
+                                },
+                                { accessor: 'idNumber', title: 'Driver ID', render: (provider: Provider) => <div>{provider.idNumber}</div> },
+                                { accessor: 'cashInHand', title: 'Cash in Hand', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
+                                {
+                                    accessor: 'driverSalary',
+                                    title: 'Salary Amount',
+                                    render: (provider: Provider) => (
+                                        <div>
+                                            <div>₹{provider.driverSalary ? provider.driverSalary : 0}</div>
+                                        </div>
+                                    ),
+                                },
 
-                            {
-                                accessor: 'action',
-                                title: 'Action',
-                                titleClassName: '!text-center',
-                                render: (driver: Driver) => (
-                                    <div className="relative inline-flex items-center space-x-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <button type="button" className="btn btn-success px-2 py-1 text-xs" onClick={() => navigate(`/driverreport/${driver._id}`)}>
-                                            Cash Report
-                                        </button>
-                                        <button type="button" className="btn btn-primary px-2 py-1 text-xs">
-                                            Salary
-                                        </button>
-                                        <button type="button" className="btn btn-danger px-2 py-1 text-xs">
-                                            Expense
-                                        </button>
-                                    </div>
-                                ),
-                            },
-                        ]}
-                    />
-                </div>
-            </div>
-
-            {/* Provider Table................................................................ */}
-            <div className="panel mt-6">
-                <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
-                    <h5 className="font-semibold text-lg dark:text-white-light">Providers</h5>
-                    <div className="ltr:ml-auto rtl:mr-auto">
-                        <input type="text" className="form-input w-auto" placeholder="Search..." value={searchProviders} onChange={(e) => setSearchProviders(e.target.value)} />
+                                {
+                                    accessor: 'action',
+                                    title: 'Action',
+                                    titleClassName: '!text-center',
+                                    render: (provider: Provider) => (
+                                        <div className="relative inline-flex items-center space-x-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <button type="button" className="btn btn-success px-2 py-1 text-xs" onClick={() => navigate(`/provider-report/${provider._id}`)}>
+                                                Cash Report
+                                            </button>
+                                            <button type="button" className="btn btn-primary px-2 py-1 text-xs">
+                                                Salary
+                                            </button>
+                                            <button type="button" className="btn btn-danger px-2 py-1 text-xs">
+                                                Expense
+                                            </button>
+                                        </div>
+                                    ),
+                                },
+                            ]}
+                        />
                     </div>
                 </div>
-                <div className="datatables">
-                    <DataTable
-                        className="whitespace-nowrap table-hover"
-                        records={providers} // Set an empty array to clear the table
-                        columns={[
-                            {
-                                accessor: 'name',
-                                title: 'Name',
-                                render: (provider: Provider) => (
-                                    <div className="flex items-center w-max">
-                                        <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${backendUrl}/images/${provider.image}`} alt="" />
-                                        <div>{provider.name}</div>
-                                    </div>
-                                ),
-                            },
-                            { accessor: 'idNumber', title: 'Driver ID', render: (provider: Provider) => <div>{provider.idNumber}</div> },
-                            { accessor: 'cashInHand', title: 'Cash in Hand', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
-                            {
-                                accessor: 'driverSalary',
-                                title: 'Salary Amount',
-                                render: (provider: Provider) => (
-                                    <div>
-                                        <div>₹{provider.driverSalary ? provider.driverSalary : 0}</div>
-                                    </div>
-                                ),
-                            },
-
-                            {
-                                accessor: 'action',
-                                title: 'Action',
-                                titleClassName: '!text-center',
-                                render: (provider: Provider) => (
-                                    <div className="relative inline-flex items-center space-x-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <button type="button" className="btn btn-success px-2 py-1 text-xs" onClick={() => navigate(`/provider-report/${provider._id}`)}>
-                                            Cash Report
-                                        </button>
-                                        <button type="button" className="btn btn-primary px-2 py-1 text-xs">
-                                            Salary
-                                        </button>
-                                        <button type="button" className="btn btn-danger px-2 py-1 text-xs">
-                                            Expense
-                                        </button>
-                                    </div>
-                                ),
-                            },
-                        ]}
-                    />
-                </div>
-            </div>
-
+            )}
             {/* Compnay Table ............................................................................... */}
-
             <div className="panel mt-6">
                 <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
                     <h5 className="font-semibold text-lg dark:text-white-light">Companies</h5>

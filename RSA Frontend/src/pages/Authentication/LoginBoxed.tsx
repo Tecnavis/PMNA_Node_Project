@@ -71,25 +71,25 @@ const LoginBoxed = () => {
             return; // Exit the function early if no internet connection
         }
 
-        const endpoint = role === 'admin' ? `${backendUrl}/admin/login` : `${backendUrl}staff/login`; // API endpoint
+        const endpoint = role === 'admin' ? `${backendUrl}/admin/login` : `${backendUrl}/staff/login`; // API endpoint
         const payload = role === 'admin' ? { email: credentials.email, password: credentials.password } : { userName: credentials.userName, password: credentials.password };
 
         try {
             const response = await axios.post(endpoint, payload);
             const { token, message } = response.data;
-if(role === 'admin'){
-   // Save role, token, and user info in local storage
-   localStorage.setItem('role', role || '');
-   localStorage.setItem('token', token);
-}else{
-    const { token, role: userRole, name, message } = response.data; // Extract token, role, and name
+            if (role === 'admin') {
+                // Save role, token, and user info in local storage
+                localStorage.setItem('role', role || '');
+                localStorage.setItem('token', token);
+            } else {
+                const { token, role: userRole, name, message } = response.data; // Extract token, role, and name
 
-    // Save role, name, token, and user info in localStorage
-    localStorage.setItem('role', userRole || '');
-    localStorage.setItem('name', name || '');
-    localStorage.setItem('token', token);
-}
-         
+                // Save role, name, token, and user info in localStorage
+                localStorage.setItem('role', userRole || '');
+                localStorage.setItem('name', name || '');
+                localStorage.setItem('token', token);
+            }
+
 
             Swal.fire({
                 icon: 'success',
@@ -118,6 +118,7 @@ if(role === 'admin'){
             } else {
                 // Handle unexpected errors
                 setErrorMessage('An unexpected error occurred. Please try again.');
+                console.log(error)
             }
         }
     };
@@ -193,7 +194,7 @@ if(role === 'admin'){
                                                     <IconLockDots fill={true} />
                                                 </span>
                                                 <span className="absolute end-4 top-1/2 -translate-y-1/2 cursor-pointer" onClick={togglePasswordVisibility}>
-                                                    {showPassword ? <IoMdEyeOff size={20}/>: <IoMdEye size={20}/>}
+                                                    {showPassword ? <IoMdEyeOff size={20} /> : <IoMdEye size={20} />}
                                                 </span>
                                             </div>
                                         </div>
