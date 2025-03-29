@@ -387,10 +387,6 @@ exports.getAllBookings = async (req, res) => {
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
         const balanceAmountToCollect = overallAmount - totalCollectedAmount;
 
-        console.log(query)
-        console.log(req.query)
-        console.log(bookings)
-        console.log(aggregationResult)
         return res.status(200).json({
             total,
             page,
@@ -1179,6 +1175,69 @@ exports.updateBookingApproved = async (req, res) => {
         return res.status(200).json({
             message: "Booking updated successfully, approved"
         })
+    } catch (error) {
+        console.log(error.message)
+        return res.status(500).json({
+            message: error.message
+        })
+    }
+}
+
+//Controller for distribute received amount
+exports.distributeReceivedAmount = async (req, res) => {
+    const { receivedAmount, driverId, bookingIds } = req.body
+    try {
+        let remainingAmount = receivedAmount;
+        const selectedBookingIds = [];
+
+        // Fetch bookings from DB where receivedUser is NOT "Staff" and balance > 0
+        const bookings = await Booking.find({
+            _id: { $in: bookingIds },
+            receivedUser: { $ne: "Staff" },
+            $expr: { $gt: ["$totalAmount", { $ifNull: ["$receivedAmount", 0] }] }
+        }).sort({ dateTime: -1 }); // Sort by latest date first
+        
+        // Update bookings by distributing receivedAmount
+        for (const booking of bookings) {
+            if (remainingAmount <= 0) break; // Stop if amount is fully distributed
+            console.log('updated before',booking.receivedAmount, booking.totalAmount)
+            const bookingBalance = booking.totalAmount - (booking.receivedAmount || 0);
+            if (bookingBalance > 0) {
+                const appliedAmount = Math.min(remainingAmount, bookingBalance);
+                booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+                remainingAmount -= appliedAmount;
+                selectedBookingIds.push(booking._id);
+
+                await booking.save(); // Save updated booking to DB
+                console.log('updated data',booking.receivedAmount, booking.totalAmount)
+            }
+        }
+
+        //Deduct remaining amount from driver's advance
+        const deductRemainingFromAdvance = async (remainingAmount, driverId) => {
+            try {
+                const driver = await Driver.findById(driverId);
+                if (!driver) {
+                    throw new Error("Driver not found");
+                }
+                if(driver.advance && driver.advance > 0){
+                    driver.advance -= remainingAmount;
+                }
+                await driver.save();
+            } catch (error) {
+                console.error("Error deducting from driver advance:", error);
+                throw new Error("Failed to deduct advance amount");
+            }
+        };
+
+        // Deduct remaining amount from the driver's advance if not fully used
+        if (remainingAmount > 0) {
+            await deductRemainingFromAdvance(remainingAmount, driverId);
+        }
+
+        return res.status(200).json(
+            { message: "Amount distributed successfully" }
+        )
     } catch (error) {
         console.log(error.message)
         return res.status(500).json({

@@ -678,7 +678,9 @@ const CompanyReport = () => {
                             }
                             records={[
                                 ...(bookings || [])?.map(item => ({ ...item, id: item._id })),
-                                { _id: 'total', id: 'total', isTotalRow: true } as Booking
+                                ...(Array.isArray(bookings) && bookings.length > 0 
+                                ? [{ _id: 'total', id: 'total', isTotalRow: true } as Booking] 
+                                : [])
                             ]}
                         />
                     </div>

@@ -23,6 +23,9 @@ router.get('/', jwt, controller.getAllBookings);
 // Route to get booking
 router.get('/getordercompleted', jwt, controller.getOrderCompletedBookings);
 
+// Route to distribute received amount
+router.patch('/distribute-amount', jwt, controller.distributeReceivedAmount);
+
 // Route to get booking by id
 router.get('/:id', controller.getBookingById);
 
