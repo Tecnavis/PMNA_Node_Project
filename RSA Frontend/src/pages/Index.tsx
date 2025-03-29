@@ -9,6 +9,7 @@ import { dateFormate } from '../utils/dateUtils';
 import Swal from "sweetalert2";
 import { VehicleRecord } from './VehicleDetails/VehicleCompliance';
 import { BASE_URL } from '../config/axiosConfig';
+import { ROLES } from '../constants/roles';
 
 interface Record {
     type: string,
@@ -352,13 +353,14 @@ const Index = () => {
                                                 </span>
                                             )
                                         }
-
-                                        <button
-                                            className="bg-pink-500 text-white rounded-md py-2 px-3"
-                                            onClick={() => handleDismissRecord(record)}
-                                        >
-                                            Dismiss
-                                        </button>
+                                        {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (
+                                            <button
+                                                className="bg-pink-500 text-white rounded-md py-2 px-3"
+                                                onClick={() => handleDismissRecord(record)}
+                                            >
+                                                Dismiss
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );
