@@ -347,6 +347,8 @@ const Leaves: React.FC = () => {
                     <div className="col-12 my-3">
                         <h5 className="font-semibold text-lg dark:text-white-light sm:w-auto w-full text-center sm:text-left">Leaves</h5>
                     </div>
+                    <br />
+
                     <div className="flex-grow sm:w-auto w-full m-2">
   <input
     type="text"
@@ -363,7 +365,8 @@ const Leaves: React.FC = () => {
                             Show Calendar
                         </span>
                     </button>
-                    <button className="font-semibold text-success hover:text-gray-400" onClick={() => handleOpen()}>
+                  
+                    <button className="font-semibold text-success hover:text-gray-400 ml-2" onClick={() => handleOpen()}>
                         <span className="flex items-center">
                             <GrChapterAdd className="me-2" />
                             Add Leave
@@ -406,6 +409,7 @@ const Leaves: React.FC = () => {
                                     <button onClick={() => handleOpen(leave._id)}>
                                         <IconPencil className="text-primary" />
                                     </button>
+                                  
                                     <button onClick={() => openDeleteModal(leave._id)}>
                                         <IconTrashLines className="text-danger" />
                                     </button>

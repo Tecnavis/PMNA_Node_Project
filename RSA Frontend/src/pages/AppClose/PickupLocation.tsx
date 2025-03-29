@@ -2,7 +2,7 @@ import axios from "axios";
 import React, { useState, useEffect, ChangeEvent } from "react";
 import { FiUploadCloud } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
-import Compressor from "compressorjs";
+import Swal from "sweetalert2";
 
 interface Booking {
   _id?: string;
@@ -155,14 +155,13 @@ const CombinedDeliveryUploadPage = () => {
   };
 
   // Count of uploaded images
-  const uploadedCount = images.filter((img) => img !== null).length;
+  const uploadedCount = previews.filter((img) => img !== null).length;
 
-  // Handler for form submission
   const handleSubmit = async () => {
     try {
       const combinedPickupDate = new Date(`${pickupTime}T${deliveryTime}:00`).toISOString();
       const formData = new FormData();
-
+  
       // Append fields
       formData.append("customerName", customerName);
       formData.append("pickupDate", combinedPickupDate);
@@ -170,35 +169,51 @@ const CombinedDeliveryUploadPage = () => {
       formData.append("mob1", mob1);
       formData.append("fileNumber", fileNumber);
       formData.append("status", "On the way to dropoff location");
-
+  
       // Append images (only if they exist)
       images.forEach((img) => {
         if (img) formData.append("images", img);
       });
-
+  
       if (bookingData) {
-        // Update existing booking with PUT request
+        // Update existing booking
         await axios.put(`${backendUrl}/booking/${itemId}`, formData);
-        console.log("Booking updated:", formData);
+        Swal.fire({
+          title: "Success!",
+          text: "Booking updated successfully.",
+          icon: "success",
+          confirmButtonText: "OK",
+        }).then(() => navigate("/bookings"));
       } else {
-        // Create new booking with POST request
+        // Create new booking
         await axios.post(`${backendUrl}/booking`, formData);
-        console.log("New booking created:", formData);
+        Swal.fire({
+          title: "Success!",
+          text: "New booking created successfully.",
+          icon: "success",
+          confirmButtonText: "OK",
+        }).then(() => navigate("/bookings"));
       }
-      navigate("/bookings");
     } catch (error) {
       console.error("Error submitting booking data:", error);
+      Swal.fire({
+        title: "Error!",
+        text: "Failed to submit booking data. Please try again.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
     }
   };
+  
 
   return (
     <div className="min-h-screen bg-white px-4 py-6 flex flex-col items-center">
       {/* Header + Description */}
       <div className="w-full max-w-md mb-4">
-        <button className="text-sm text-gray-600 mb-3" onClick={() => navigate(-1)}>
+        {/* <button className="text-sm text-gray-600 mb-3" onClick={() => navigate(-1)}>
           &#8592; Back
-        </button>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Confirm Delivery</h1>
+        </button> */}
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Confirm Customer & Pickup Details</h1>
         <p className="text-gray-500 mb-4">
           {bookingData
             ? "Booking data found. Review and update if needed."
@@ -358,14 +373,16 @@ const CombinedDeliveryUploadPage = () => {
       >
         Submit
       </button> */}
-      <button
-        onClick={handleSubmit}
-        disabled={uploadedCount < 6} // Example condition
-        className={` bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${uploadedCount < 6 ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-      >
-        Submit
-      </button>
+     <button
+  onClick={handleSubmit}
+  disabled={uploadedCount < 3} // Change threshold to 3
+  className={`bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${
+    uploadedCount < 3 ? "opacity-50 cursor-not-allowed" : ""
+  }`}
+>
+  Submit
+</button>
+
     </div>
   );
 };

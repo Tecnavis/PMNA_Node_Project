@@ -22,7 +22,8 @@ const statuses = [
   "Vehicle Confirmed",
   "To DropOff Location",
   "On the way to dropoff location",
-  "Vehicle Dropped"
+  "Vehicle Dropped",
+  "Rejected"
 ];
 
 // Map each status to a route
@@ -112,6 +113,8 @@ const TrackModal: React.FC<TrackModalProps> = ({ open, onClose, itemId }) => {
                 to: (value: number) => "",
               },
             }}
+            behaviour="none" // Prevents dragging
+
           />
         </div>
         {/* Display Current Status */}
@@ -119,18 +122,24 @@ const TrackModal: React.FC<TrackModalProps> = ({ open, onClose, itemId }) => {
           <h3 className="text-lg font-semibold">Current Status:</h3>
           <p className="text-xl text-blue-600 mt-2">{statuses[statusIndex]}</p>
         </div>
-        {/* Navigation Button */}
-        <div className="mt-4">
-          <Button variant="contained" color="primary" onClick={handleProceed}>
-            Proceed to {statusRoutes[statuses[statusIndex]] ? statuses[statusIndex] : "Next"}
-          </Button>
-        </div>
-        {/* Close Button */}
-        <div className="mt-4">
-          <Button variant="outlined" color="error" onClick={onClose}>
-            Close
-          </Button>
-        </div>
+        <Button 
+  variant="outlined" 
+  sx={{
+    borderColor: "red",
+    marginTop:"10px",
+    color: "red",
+    backgroundColor: "white",
+    "&:hover": {
+      backgroundColor: "red",
+      color: "white",
+    }
+  }} 
+  onClick={handleProceed}
+>
+  Proceed to {statusRoutes[statuses[statusIndex]] ? statuses[statusIndex] : "Next"}
+</Button>
+
+       
       </DialogContent>
     </Dialog>
   );
