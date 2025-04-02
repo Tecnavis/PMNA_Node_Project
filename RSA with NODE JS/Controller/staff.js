@@ -6,24 +6,24 @@ const { ClientSession } = require('mongodb');
 
 // Create Staff
 exports.createStaff = async (req, res) => {
-    try {
-      const staffData = new Staff({
-        name: req.body.name,
-        email: req.body.email,
-        address: req.body.address,
-        phone: req.body.phone,
-        userName: req.body.userName,
-        password: req.body.password,
-        image: req.file ? req.file.filename : null, // Store the image 
-        role: req.body.role,
-      });
-  
-      await staffData.save();
-      res.status(201).json({ message: 'Staff created successfully!', data: staffData });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  };
+  try {
+    const staffData = new Staff({
+      name: req.body.name,
+      email: req.body.email,
+      address: req.body.address,
+      phone: req.body.phone,
+      userName: req.body.userName,
+      password: req.body.password,
+      image: req.file ? req.file.filename : null, // Store the image 
+      role: req.body.role,
+    });
+
+    await staffData.save();
+    res.status(201).json({ message: 'Staff created successfully!', data: staffData });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
 
 // Read Staff (Get all staff)
 exports.getAllStaff = async (req, res) => {
@@ -38,7 +38,9 @@ exports.getAllStaff = async (req, res) => {
 // Read Staff by ID
 exports.getStaffById = async (req, res) => {
   try {
-    const staff = await Staff.findById(req.params.id).populate('role');
+    const id = req.params.id !== "id" ? req.params.id : req.user.id;
+    
+    const staff = await Staff.findById(id).populate('role');
     if (!staff) return res.status(404).json({ message: 'Staff not found' });
     res.status(200).json(staff);
   } catch (error) {
@@ -50,7 +52,7 @@ exports.filterGetStaffs = async (req, res) => {
   try {
     const { search } = req.query;
     let filter = {};
-    
+
     if (search) {
       // Case-insensitive search on name, showroomId, or location
       filter = {
@@ -60,7 +62,7 @@ exports.filterGetStaffs = async (req, res) => {
         ]
       };
     }
-    
+
     const staffs = await Staff.find(filter);
     res.json(staffs);
   } catch (error) {

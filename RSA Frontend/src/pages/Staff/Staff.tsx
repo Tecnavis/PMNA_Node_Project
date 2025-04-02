@@ -11,7 +11,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 
-interface User {
+export interface User {
     _id: string;
     name: string;
     email: string;

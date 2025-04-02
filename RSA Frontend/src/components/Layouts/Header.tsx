@@ -4,24 +4,11 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { IRootState } from '../../store';
 import { toggleRTL, toggleTheme, toggleSidebar } from '../../store/themeConfigSlice';
 import { useTranslation } from 'react-i18next';
-import i18next from 'i18next';
 import Dropdown from '../Dropdown';
 import IconMenu from '../Icon/IconMenu';
-import IconCalendar from '../Icon/IconCalendar';
-import IconEdit from '../Icon/IconEdit';
-import IconChatNotification from '../Icon/IconChatNotification';
-import IconSearch from '../Icon/IconSearch';
-import IconXCircle from '../Icon/IconXCircle';
 import IconSun from '../Icon/IconSun';
 import IconMoon from '../Icon/IconMoon';
 import IconLaptop from '../Icon/IconLaptop';
-import IconMailDot from '../Icon/IconMailDot';
-import IconArrowLeft from '../Icon/IconArrowLeft';
-import IconInfoCircle from '../Icon/IconInfoCircle';
-import IconBellBing from '../Icon/IconBellBing';
-import IconUser from '../Icon/IconUser';
-import IconMail from '../Icon/IconMail';
-import IconLockDots from '../Icon/IconLockDots';
 import IconLogout from '../Icon/IconLogout';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
 import IconCaretDown from '../Icon/IconCaretDown';
@@ -33,13 +20,92 @@ import IconMenuForms from '../Icon/Menu/IconMenuForms';
 import IconMenuPages from '../Icon/Menu/IconMenuPages';
 import IconMenuMore from '../Icon/Menu/IconMenuMore';
 import RSAlogo from '../../assets/images/rsa-2[1].jpg'
+import { HiOutlineCalculator } from "react-icons/hi2";
+import { IoCalendarOutline } from "react-icons/io5";
+import { axiosInstance } from '../../config/axiosConfig';
+import Select from "react-select";
+
+
+interface ServiceData {
+    serviceName: string;
+    basicSalaryKM: string;
+    salaryPerKM: string;
+    salary: string;
+    _id: string;
+    firstKilometer: string,
+    additionalAmount: string,
+    firstKilometerAmount: string
+}
 
 const Header = () => {
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [serviceTypes, setServiceTypes] = useState<ServiceData[]>([]);
+    const [selectedService, setSelectedService] = useState<{ value: string; label: string } | null>(null);
+    const [showDistanceInput, setShowDistanceInput] = useState(false);
+    const [distance, setDistance] = useState("");
+    const [totalSalary, setTotalSalary] = useState<number>(0);
+    let selectedServiceData = null;
+    const [showSalary, setShowSalary] = useState(false);
+
+    // Convert to react-select format
+    const serviceOptions = serviceTypes.map(service => ({
+        value: service._id,
+        label: service.serviceName
+    }));
+
+    const handleSelectChange = (newValue: { value: string; label: string } | null) => {
+        setSelectedService(newValue);
+    };
+    // Function to fetch service types from Firestore
+    const fetchServiceTypes = async () => {
+        try {
+            const res = await axiosInstance.get('/servicetype')
+            const data = res.data
+            setServiceTypes(data);
+        } catch (error) {
+            console.error("Error fetching service types:", error);
+        }
+    };
+
+    const handleCalculateSalary = async () => {
+        if (!selectedService || !distance) {
+            alert("Please select a service and enter distance.");
+            return;
+        }
+
+        try {
+            // Fetch selected service details
+            const res = await axiosInstance.get(`/servicetype/${selectedService.value}`);
+            const selectedServiceData: ServiceData = res.data;
+
+            if (!selectedServiceData) {
+                alert("Selected service not found.");
+                return;
+            }
+
+            const { firstKilometer, additionalAmount, firstKilometerAmount } = selectedServiceData;
+            const distanceValue = parseFloat(distance);
+
+            if (isNaN(distanceValue)) {
+                alert("Please enter a valid distance.");
+                return;
+            }
+
+            // Salary Calculation
+            const calculatedSalary = (Number(distanceValue) - Number(firstKilometer)) * Number(additionalAmount) + Number(firstKilometerAmount);
+            setTotalSalary(isNaN(calculatedSalary) ? 0 : calculatedSalary);
+        } catch (error) {
+            console.error("Error fetching service details:", error);
+        }
+    };
+
+
     const navigate = useNavigate();
     const location = useLocation();
 
     const role = localStorage.getItem('role')
-    const userName =sessionStorage.getItem('username');
+    const userName = sessionStorage.getItem('username');
 
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
@@ -63,13 +129,9 @@ const Header = () => {
     }, [location]);
 
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
-
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
     const dispatch = useDispatch();
 
-    function createMarkup(messages: any) {
-        return { __html: messages };
-    }
     const [messages, setMessages] = useState([
         {
             id: 1,
@@ -101,10 +163,6 @@ const Header = () => {
         },
     ]);
 
-    const removeMessage = (value: number) => {
-        setMessages(messages.filter((user) => user.id !== value));
-    };
-
     const [notifications, setNotifications] = useState([
         {
             id: 1,
@@ -126,12 +184,6 @@ const Header = () => {
         },
     ]);
 
-    const removeNotification = (value: number) => {
-        setNotifications(notifications.filter((user) => user.id !== value));
-    };
-
-    const [search, setSearch] = useState(false);
-
     const setLocale = (flag: string) => {
         setFlag(flag);
         if (flag.toLowerCase() === 'ae') {
@@ -141,18 +193,22 @@ const Header = () => {
         }
     };
     const [flag, setFlag] = useState(themeConfig.locale);
-
     const { t } = useTranslation();
 
-
     // logout 
-
     const handleLogOut = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         localStorage.removeItem('name');
         navigate('/auth/boxed-signin', { replace: true });
     }
+
+    // When the modal opens, fetch service types
+    useEffect(() => {
+        if (isModalOpen) {
+            fetchServiceTypes();
+        }
+    }, [isModalOpen]);
 
     return (
         <header className={`z-40 ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
@@ -173,8 +229,21 @@ const Header = () => {
                         </button>
                     </div>
                     <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
-                        <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
-
+                        <div className="sm:ltr:mr-auto sm:rtl:ml-auto flex justify-center items-center gap-2">
+                            <span className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
+                                <HiOutlineCalculator
+                                    onClick={() => {
+                                        setSelectedService(null);
+                                        setDistance("");
+                                        setTotalSalary(0);
+                                        setIsModalOpen(true);
+                                        setShowSalary(true);
+                                    }}
+                                    className=' hover:cursor-pointer size-5 text-gray-900 font-bold' />
+                            </span>
+                            <span onClick={() => navigate("/attendance")} className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
+                                <IoCalendarOutline className='size-5' />
+                            </span>
                         </div>
                         <div>
                             {themeConfig.theme === 'light' ? (
@@ -776,6 +845,43 @@ const Header = () => {
                     </li>
                 </ul>
             </div>
+            {isModalOpen && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                    <div className="bg-white dark:bg-black p-5 rounded-lg shadow-lg w-80 text-center">
+                        <h2 className="text-xl font-semibold mb-4">Calculator</h2>
+                        <div className="flex flex-col gap-3">
+                            {/* ✅ Use react-select correctly */}
+                            <Select
+                                options={serviceOptions}
+                                value={selectedService}
+                                onChange={handleSelectChange}
+                                placeholder="Select Service Type"
+                                className="w-full"
+                            />
+                            <div className="mt-4">
+                                <input
+                                    type="text"
+                                    value={distance}
+                                    onChange={(e) => setDistance(e.target.value)}
+                                    className="w-full border p-2 rounded"
+                                    placeholder="Enter distance"
+                                />
+                            </div>
+                            <button className="bg-blue-500 text-white py-2 rounded" onClick={handleCalculateSalary}>
+                                Result
+                            </button>
+                            {totalSalary !== null && (
+                                <div className="mt-4 text-lg font-semibold">
+                                    Total Amount: <span className="text-green-500">{totalSalary.toFixed(2)}</span>
+                                </div>
+                            )}
+                        </div>
+                        <button className="mt-4 text-gray-500 hover:text-gray-700" onClick={() => setIsModalOpen(false)}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </header>
     );
 };
