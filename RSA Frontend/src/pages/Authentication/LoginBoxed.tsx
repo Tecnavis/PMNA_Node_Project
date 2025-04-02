@@ -89,6 +89,7 @@ const LoginBoxed = () => {
                 localStorage.setItem('name', name || '');
                 localStorage.setItem('token', token);
             }
+            localStorage.setItem('email', credentials.email);
 
 
             Swal.fire({

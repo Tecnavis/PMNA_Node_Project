@@ -2,6 +2,8 @@ import { lazy } from 'react';
 import AdvancePayment from '../pages/PaymentManagment/AdvancePayment';
 import ProviderReport from '../pages/Reports/ProviderReport/ProviderReport';
 import CompanyReport from '../pages/Reports/CompanyReport/CompanyReport';
+import AdminAttendance from '../pages/Attendance/AdminAttendance';
+import StaffAttendance from '../pages/Attendance/StaffAttendance';
 const RewardsItem = lazy(() => import('../pages/Rewards/RewardsItems'))
 const Rewards = lazy(() => import('../pages/Rewards/Rewards'))
 const ShowRoomDetails = lazy(() => import('../pages/Showroom/ShowroomDetails'))
@@ -135,9 +137,9 @@ const ShowroomReport = lazy(() => import('../pages/Reports/ShowroomReport'))
 const Leaves = lazy(() => import('../pages/Leaves/Leaves'))
 
 
-const StaffReport = lazy(()=> import('../pages/Reports/StaffReport'))
-const AppBokk = lazy(()=> import('../pages/AppClose/AppBokk'))
-const PickupLocation = lazy(()=> import('../pages/AppClose/PickupLocation'))
+const StaffReport = lazy(() => import('../pages/Reports/StaffReport'))
+const AppBokk = lazy(() => import('../pages/AppClose/AppBokk'))
+const PickupLocation = lazy(() => import('../pages/AppClose/PickupLocation'))
 
 
 
@@ -145,6 +147,8 @@ const ServiceCenterReport = lazy(() => import('../pages/Reports/DriverReport/Ser
 const StaffCashReport = lazy(() => import('../pages/Reports/DriverReport/StaffCashReport'));
 const DropoffLocation = lazy(() => import('../pages/AppClose/DropoffLocation'));
 const PaymentSettlement = lazy(() => import('../pages/AppClose/PaymentSettlement'));
+
+const role = localStorage.getItem('role')
 
 const routes = [
     // dashboard
@@ -335,25 +339,29 @@ const routes = [
         element: <PaymentSettlement />,
     },
     {
+        path: '/attendance',
+        element: role === 'admin' ? <AdminAttendance /> : <StaffAttendance />,
+    },
+    {
         path: '/appBooking',
         element: <AppBokk />,
     },
 
     // analytics page
-    {
-        path: '/analytics',
-        element: <Analytics />,
-    },
+    // {
+    //     path: '/analytics',
+    //     element: <Analytics />,
+    // },
     // finance page
-    {
-        path: '/finance',
-        element: <Finance />,
-    },
+    // {
+    //     path: '/finance',
+    //     element: <Finance />,
+    // },
     // crypto page
-    {
-        path: '/crypto',
-        element: <Crypto />,
-    },
+    // {
+    //     path: '/crypto',
+    //     element: <Crypto />,
+    // },
     {
         path: '/apps/todolist',
         element: <Todolist />,
