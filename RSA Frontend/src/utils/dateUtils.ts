@@ -18,3 +18,12 @@ export const formattedTime = (isoString: string) => new Date(isoString).toLocale
     second: "2-digit",
     hour12: true,
 });
+//Helper Function for Date Comparison
+export const isSameDay = (date1: Date, date2: Date): boolean => {
+    const result = date1.getFullYear() === date2.getFullYear() &&
+        date1.getMonth() === date2.getMonth() &&
+        date1.getDate() === date2.getDate();
+
+    console.log("isSameDay:", result);
+    return result;
+};
