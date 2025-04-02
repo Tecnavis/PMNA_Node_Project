@@ -103,7 +103,6 @@ const Header = () => {
 
     const navigate = useNavigate();
     const location = useLocation();
-
     const role = localStorage.getItem('role')
     const email = localStorage.getItem('email');
 
