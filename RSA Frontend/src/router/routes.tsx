@@ -348,20 +348,20 @@ const routes = [
     },
 
     // analytics page
-    {
-        path: '/analytics',
-        element: <Analytics />,
-    },
+    // {
+    //     path: '/analytics',
+    //     element: <Analytics />,
+    // },
     // finance page
-    {
-        path: '/finance',
-        element: <Finance />,
-    },
+    // {
+    //     path: '/finance',
+    //     element: <Finance />,
+    // },
     // crypto page
-    {
-        path: '/crypto',
-        element: <Crypto />,
-    },
+    // {
+    //     path: '/crypto',
+    //     element: <Crypto />,
+    // },
     {
         path: '/apps/todolist',
         element: <Todolist />,

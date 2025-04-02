@@ -105,7 +105,8 @@ const Header = () => {
     const location = useLocation();
 
     const role = localStorage.getItem('role')
-    const userName = sessionStorage.getItem('username');
+    const email = localStorage.getItem('email');
+
 
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
@@ -300,10 +301,10 @@ const Header = () => {
                                             <img className="rounded-md w-10 h-10 object-cover" src={RSAlogo} alt="userProfile" />
                                             <div className="ltr:pl-4 rtl:pr-4 truncate">
                                                 <h4 className="text-base">
-                                                    {role === 'staff' ? userName : 'RSA Admin'}
+                                                    {role === 'admin' ? 'RSA Admin' : role}
                                                 </h4>
                                                 <button type="button" className="text-black/60 hover:text-primary dark:text-dark-light/60 dark:hover:text-white">
-                                                    RSA@gmail.com
+                                                    {email ? email : 'RSA@gmail.com'}
                                                 </button>
                                             </div>
                                         </div>
