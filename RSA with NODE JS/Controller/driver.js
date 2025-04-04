@@ -1,9 +1,11 @@
 // controllers/driver.controller.js
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Driver = require('../Model/driver');
 const Leaves = require('../Model/leaves');
 const Booking = require('../Model/booking');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { sendOtp, verifyOtp } = require('../services/otpService')
+
 
 exports.createDriver = async (req, res) => {
   try {
@@ -172,31 +174,68 @@ exports.deleteDriver = async (req, res) => {
 
 // Driver log-in 
 
-exports.loginDriver = async (req, res) => {
+exports.sendOtp = async (req, res) => {
   try {
-    const { phone, password } = req.body;
+    const { phone } = req.body;
 
     // Check if driver exists
     const driver = await Driver.findOne({ phone });
     if (!driver) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid credentials", success: false });
     }
 
-    // Compare passwords
-    const isMatch = await bcrypt.compare(password, driver.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+    // generate OTP
+    const otpRespose = await sendOtp('+91', phone)
+    if (!otpRespose.success) {
+      return res.status(400).json({
+        success: false,
+        message: otpRespose.message
+      })
     }
-
     // Generate JWT token
     const token = jwt.sign({ id: driver._id }, process.env.JWT_SECRET);
     driver.tokens = token; // If you want to store the token, you can update the driver schema to include a `tokens` field
     await driver.save();
 
-    res.status(200).json({ token, message: "Driver logged in successfully" });
+    res.status(200).json({
+      message: "OTP sended successfully",
+      success: true
+    });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", success: false, });
   }
 };
+//verify otp
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
 
+    // Check if driver exists
+    const driver = await Driver.findOne({ phone });
+    if (!driver) {
+      return res.status(400).json({ message: "Invalid credentials", success: false, });
+    }
+
+    // Verify OTP
+    const otpRespose = await verifyOtp('+91', phone, otp)
+    if (!otpRespose.success) {
+      return res.status(400).json({
+        success: false,
+        message: otpRespose.message
+      })
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ id: driver._id }, process.env.JWT_SECRET);
+
+    res.status(200).json({
+      token,
+      message: "login successfully",
+      success: true
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Server error", success: false, });
+  }
+}

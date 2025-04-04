@@ -1,9 +1,9 @@
 import { lazy } from 'react';
-import AdvancePayment from '../pages/PaymentManagment/AdvancePayment';
-import ProviderReport from '../pages/Reports/ProviderReport/ProviderReport';
-import CompanyReport from '../pages/Reports/CompanyReport/CompanyReport';
-import AdminAttendance from '../pages/Attendance/AdminAttendance';
-import StaffAttendance from '../pages/Attendance/StaffAttendance';
+const AdvancePayment = lazy(()=> import( '../pages/PaymentManagment/AdvancePayment'))
+const ProviderReport = lazy(()=> import( '../pages/Reports/ProviderReport/ProviderReport'))
+const CompanyReport = lazy(()=> import( '../pages/Reports/CompanyReport/CompanyReport'))
+const AdminAttendance = lazy(()=> import( '../pages/Attendance/AdminAttendance'))
+const StaffAttendance = lazy(()=> import( '../pages/Attendance/StaffAttendance'))
 const RewardsItem = lazy(() => import('../pages/Rewards/RewardsItems'))
 const Rewards = lazy(() => import('../pages/Rewards/Rewards'))
 const ShowRoomDetails = lazy(() => import('../pages/Showroom/ShowroomDetails'))

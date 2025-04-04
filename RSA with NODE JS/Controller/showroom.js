@@ -1,7 +1,8 @@
 const Showroom = require('../Model/showroom');
 const ShowroomStaff = require('../Model/showroomStaff');
 const bcrypt = require('bcrypt');
-const { generateShowRoomLink } = require('../utils/generateLink')
+const { generateShowRoomLink } = require('../utils/generateLink');
+const { sendOtp, verifyOtp } = require('../services/otpService');
 
 // Create a showroom
 exports.createShowroom = async (req, res) => {
@@ -250,30 +251,77 @@ exports.getAllShowroomStaff = async (req, res) => {
 };
 
 
-// log-in for staff 
-exports.loginShowroomStaff = async (req, res) => {
+// send otp for staff 
+exports.sendOtpForShowroomStaff = async (req, res) => {
   try {
     const { phoneNumber } = req.body;
     console.log(req.body)
     // Check if staff exists
     const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
     if (!showroomStaff) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid credentials", success:false });
+    }
+
+    // Generate JWT token
+    // const token = jwt.sign({ id: staff._id }, process.env.JWT_SECRET);
+
+    // generate OTP
+    const otpRespose = await sendOtp('+91', phone)
+    if (!otpRespose.success) {
+      return res.status(400).json({
+        success: false,
+        message: otpRespose.message
+      })
+    }
+
+    // Include role and name in the response
+    res.status(200).json({
+      // token,
+      // role: "Staff",
+      // name: staff.name,
+      success: true,
+      message: "OTP sended successfully"
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: "Server error" , success:false});
+  }
+};
+
+// verify otp and login 
+exports.verifyOTPAndLogin = async (req, res) => {
+  try {
+    const { phoneNumber, otp } = req.body;
+    
+    // Check if staff exists
+    const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
+    if (!showroomStaff) {
+      return res.status(400).json({ message: "Invalid credentials" , success:false});
     }
 
     // Generate JWT token
     const token = jwt.sign({ id: staff._id }, process.env.JWT_SECRET);
+
+    // generate OTP
+    const otpRespose = await verifyOtp('+91', phoneNumber, otp)
+    if (!otpRespose.success) {
+      return res.status(400).json({
+        success: false,
+        message: otpRespose.message
+      })
+    }
 
     // Include role and name in the response
     res.status(200).json({
       token,
       role: "Staff",
       name: staff.name,
-      message: "Staff logged in successfully"
+      success: true,
+      message: "OTP sended successfully"
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", success:false });
   }
 };
 
