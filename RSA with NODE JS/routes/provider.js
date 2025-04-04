@@ -23,6 +23,8 @@ router.put('/:id', jwt, upload.single('image'), controller.updateProvider);
 router.delete('/:id', jwt, controller.deleteProvider);
 
 // Log in for provider
-router.post('/login', controller.loginProvider);
+router.post('/send-otp', controller.loginProvider);
+// OTP verify and login
+router.post('/verify-login',controller.verifyOTP);
 
 module.exports = router;
