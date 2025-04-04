@@ -13,6 +13,9 @@ router.put('/:id',jwt,upload.single('image'), driverController.updateDriver);
 router.delete('/:id',jwt, driverController.deleteDriver);
 
 // Log in for provider
-router.post('/login',driverController.loginDriver);
+router.post('/send-otp',driverController.sendOtp);
+
+// OTP verify and login
+router.post('/verify-login',driverController.verifyOTP);
 
 module.exports = router;

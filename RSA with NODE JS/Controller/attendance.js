@@ -12,15 +12,22 @@ exports.checkIn = async (req, res) => {
                 message: 'Staff ID and check-in location are required.'
             })
         }
+        const startOfDay = new Date();
+        startOfDay.setUTCHours(0, 0, 0, 0); // Ensure UTC start time
 
-        const isAlreadyCheckIn = await Attendance.find({
+        const endOfDay = new Date();
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        const isAlreadyCheckIn = await Attendance.findOne({
             staff: id,
-        }).sort({ createdAt: -1 }).limit(1)
-        console.log(isAlreadyCheckIn);
+            createdAt: { $gte: startOfDay, $lt: endOfDay }
+        })
+
+        console.log(isAlreadyCheckIn)
         if (isAlreadyCheckIn && isAlreadyCheckIn.length) {
             //This statments for checking already in checkIn
             const targetDate = new Date();
-            const dbDate = new Date(isAlreadyCheckIn[0].checkIn);
+            const dbDate = new Date(isAlreadyCheckIn[0].createdAt);
 
             if (
                 dbDate.getFullYear() === targetDate.getFullYear() &&
@@ -57,13 +64,20 @@ exports.checkOut = async (req, res) => {
             return res.status(400).json({ message: "Staff ID and check-out location are required." });
         }
 
+        const startOfDay = new Date();
+        startOfDay.setUTCHours(0, 0, 0, 0); // Ensure UTC start time
+
+        const endOfDay = new Date();
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
         // Find today's attendance record for the staff member
         const todayAttendance = await Attendance.findOne({
-            staff: id
-        }).sort({ createdAt: -1 })
-
+            staff: id,
+            createdAt: { $gte: startOfDay, $lt: endOfDay }
+        })
+        console.log(todayAttendance, "for  checkout")
         // Ensure attendance exists and is from today
-        if (!todayAttendance || !isSameDay(new Date(todayAttendance.checkIn), new Date())) {
+        if (!todayAttendance || !isSameDay(new Date(todayAttendance.createdAt), new Date())) {
             return res.status(404).json({ message: "No attendance record found for today." });
         }
 

@@ -27,6 +27,7 @@ const StaffAttendance = () => {
 
     const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
     const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [status, setStatus] = useState<string>('showCheckIn')
     const [staff, setStaff] = useState<User | null>(null);
     const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
 
@@ -43,6 +44,19 @@ const StaffAttendance = () => {
         {
             title: 'Check-in Location',
             accessor: 'checkInLocation',
+            render: (record: AttendanceRecord) =>
+                record.checkInLocation
+                    ? (
+                        <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(record.checkInLocation)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 underline"
+                        >
+                            {record.checkInLocation}
+                        </a>
+                    )
+                    : "N/A"
         },
         {
             title: 'Check-out Time',
@@ -52,9 +66,42 @@ const StaffAttendance = () => {
         {
             title: 'Check-out Location',
             accessor: 'checkOutLocation',
-            render: (record: AttendanceRecord) => record.checkOutLocation || "N/A"
+            render: (record: AttendanceRecord) =>
+                record.checkOutLocation
+                    ? (
+                        <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(record.checkOutLocation)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 underline"
+                        >
+                            {record.checkOutLocation}
+                        </a>
+                    )
+                    : "N/A"
         },
     ]
+
+    const findStatus = (records: AttendanceRecord[]) => {
+        if (!records.length) {
+            setStatus('showCheckIn'); // No records, default to check-in
+            return;
+        }
+
+        // Get today's attendance record
+        const todayRecord = records.find(record =>
+            isSameDay(new Date(record.createdAt), new Date())
+        );
+
+        if (!todayRecord) {
+            setStatus('showCheckIn'); // No check-in today
+        } else if (todayRecord.checkIn && !todayRecord.checkOut) {
+            setStatus('checkOut'); // Checked in, but not out
+        } else if (todayRecord.checkIn && todayRecord.checkOut) {
+            setStatus('showpresent'); // Checked in and out
+        }
+    };
+
 
     //Fetch this staff attendace records
     const fetchAttendanceRecors = async (id?: string) => {
@@ -148,7 +195,7 @@ const StaffAttendance = () => {
                 throw new Error("Location not available");
             }
 
-            const res = await axiosInstance.patch(`/attendance/${attendanceRecords[0]._id}`, {
+            const res = await axiosInstance.patch(`/attendance/${staff?._id}`, {
                 checkOutLocation: `${latitude}, ${longitude}`
             });
 
@@ -172,17 +219,10 @@ const StaffAttendance = () => {
         }
     };
 
-    const hasCheckedInToday = attendanceRecords.some(record =>
-        isSameDay(new Date(record.createdAt), new Date()) && record.checkIn
-    );
-    const hasCheckedOutToday = attendanceRecords.some(record =>
-        isSameDay(new Date(record.createdAt), new Date()) && record.checkOut
-    );
-
     const handleAttendance = async () => {
-        if (hasCheckedInToday && !hasCheckedOutToday) {
+        if (status === 'checkOut') {
             await handleCheckOut();
-        } else if (!hasCheckedInToday) {
+        } else if (status === 'showCheckIn') {
             await handleCheckIn();
         }
     };
@@ -190,6 +230,10 @@ const StaffAttendance = () => {
     useEffect(() => {
         fetchStaffData()
     }, [])
+
+    useEffect(() => {
+        findStatus(attendanceRecords);
+    }, [attendanceRecords]);
 
     return <main className='flex flex-col justify-center items-center gap-5 pt-5 px-3'>
         <div>
@@ -224,11 +268,24 @@ const StaffAttendance = () => {
                             <span>{staff?.address}</span>
                         </div>
                         <button
-                            onClick={handleAttendance}
-                            className={`btn ${hasCheckedInToday && !hasCheckedOutToday ? 'bg-green-500 text-white' : 'btn-primary'} my-2 flex items-center justify-center`}
+                            onClick={status === 'showpresent' ? undefined : handleAttendance}
+                            disabled={status === 'showpresent'}
+                            className={`btn ${status === 'checkOut'
+                                    ? 'bg-green-500 text-white'
+                                    : status === 'showpresent'
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'btn-primary'
+                                } my-2 flex items-center justify-center`}
                         >
-                            {hasCheckedInToday && !hasCheckedOutToday ? "Check Out" : "Check In"}
-                            <IoIosCheckmarkCircleOutline className="text-primary bg-white rounded-full mx-1" />
+                            {status === 'checkOut'
+                                ? "Check Out"
+                                : status === 'showpresent'
+                                    ? "Attended"
+                                    : "Check In"
+                            }
+                            {status !== 'showpresent' && (
+                                <IoIosCheckmarkCircleOutline className="text-primary bg-white rounded-full mx-1" />
+                            )}
                         </button>
                     </div>
                 </div>
