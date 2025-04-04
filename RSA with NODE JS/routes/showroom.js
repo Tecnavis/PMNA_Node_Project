@@ -8,8 +8,10 @@ router.post('/',jwt, upload.single('image'), controller.createShowroom);
 router.get('/', controller.getShowrooms);
 router.get('/showroom-staff', jwt, controller.getAllShowroomStaff)
 router.get('/filtered', jwt, controller.filterGetShowrooms);
-
-router.post('/staff-signin', jwt, controller.loginShowroomStaff);
+// OTP send for verification
+router.post('/staff-send-otp', jwt, controller.sendOtpForShowroomStaff);
+// OTP verify and login
+router.post('/staff-verify-login', jwt, controller.verifyOTPAndLogin);
 router.post('/staff-signup', jwt, controller.shoromStaffSignup);
 
 router.put('/:id',jwt, upload.single('image'), controller.updateShowroom);
