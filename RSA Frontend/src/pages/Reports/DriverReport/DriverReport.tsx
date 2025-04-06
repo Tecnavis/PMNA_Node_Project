@@ -43,8 +43,8 @@ const DriverCashCollectionsReport = () => {
         overallAmount: 0,
         balanceAmountToCollect: 0
     })
-    const [startDate, setStartDate] = useState<string>('2025-03-01')
-    const [endingDate, setEndingDate] = useState<string>('2025-03-31')
+    const [startDate, setStartDate] = useState<string>('')
+    const [endingDate, setEndingDate] = useState<string>('')
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [initialRecords, setInitialRecords] = useState(bookings);
     const [inputValues, setInputValues] = useState<Record<string, number>>({});
@@ -499,10 +499,23 @@ const DriverCashCollectionsReport = () => {
     useEffect(() => {
         gettingToken();
         getDriver();
+        // Calculate the first and last day of the current month
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+
+        const firstDay = new Date(year, month, 2).toISOString().split('T')[0];
+        const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+        // Update the state
+        setStartDate(firstDay);
+        setEndingDate(lastDay);
     }, [])
 
     useEffect(() => {
-        fetchBookings();
+        if (startDate && endingDate) {
+            fetchBookings();
+        }
     }, [page, pageSize, id, startDate, endingDate, search]);
 
     useEffect(() => {

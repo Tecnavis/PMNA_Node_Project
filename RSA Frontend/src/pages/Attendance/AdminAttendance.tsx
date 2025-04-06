@@ -6,6 +6,10 @@ import { DataTable } from 'mantine-datatable';
 import { User } from '../Staff/Staff';
 import { dateFormate, formattedTime, isSameDay } from '../../utils/dateUtils';
 import { AttendanceRecord } from './StaffAttendance';
+import { MONTHS_NUMBER, YEARS_FOR_FILTER } from '../Reports/constant';
+import Dropdown from '../../components/Dropdown';
+import { useSelector } from 'react-redux';
+import { IRootState } from '../../store';
 
 interface AdminAttendanceRecord {
     records: AttendanceRecord[];
@@ -24,6 +28,13 @@ const AdminAttendance = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [staffs, setStaffs] = useState<User[]>([]);
     const [attendanceStatus, setAttendanceStatus] = useState<Record<string, AttendanceStatus>>({});
+    // state for filter attendance 
+    const today = new Date()
+    const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth() + 1)
+    const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear())
+
+    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
+
 
     const cols = [
         {
@@ -83,7 +94,12 @@ const AdminAttendance = () => {
     const fetchAttendanceRecords = async () => {
         setIsLoading(true);
         try {
-            const res = await axiosInstance.get('/attendance/');
+            const res = await axiosInstance.get('/attendance/', {
+                params: {
+                    year: selectedYear,
+                    month: selectedMonth,
+                }
+            });
             setAttendanceRecords(res.data.data);
             return res.data.data;
         } catch (error) {
@@ -222,6 +238,9 @@ const AdminAttendance = () => {
         }
     };
 
+    const handleYear = (year: number) => setSelectedYear(year)
+    const handleMonth = (month: number) => setSelectedMonth(month)
+
     useEffect(() => {
         refreshData();
     }, []);
@@ -276,10 +295,14 @@ const AdminAttendance = () => {
         );
     };
 
+    useEffect(() => {
+        fetchAttendanceRecords()
+    }, [selectedMonth, selectedYear])
+
     return (
         <main className='flex flex-col justify-center items-center gap-5 pt-5 px-3'>
-            <div>
-                <h2 className='text-3xl font-bold text-gray-700'>Attendance Records</h2>
+            <div className='flex justify-between'>
+                <h2 className='text-3xl font-bold text-gray-700 text-center mb-10'>Attendance Records</h2>
             </div>
 
             <div className='w-full'>
@@ -287,34 +310,86 @@ const AdminAttendance = () => {
                     {staffs.map(renderStaffCard)}
                 </div>
             </div>
-
+            <div className='flex items-center justify-end w-full'>
+                <div className="inline-flex mb-5 mr-2">
+                    <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{MONTHS_NUMBER[selectedMonth]}</button>
+                    <div className="dropdown">
+                        <Dropdown
+                            placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                            btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
+                            button={<span className="sr-only">Filter by Month:</span>}
+                        >
+                            <ul className="!min-w-[170px]">
+                                {Object.entries(MONTHS_NUMBER).map(([key, month]) => (
+                                    <li key={key}>
+                                        <button
+                                            onClick={() => handleMonth(Number(key))} // Convert key to a number
+                                            type="button"
+                                            aria-label={`Select ${month}`} // Improves accessibility
+                                        >
+                                            {month}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </Dropdown>
+                    </div>
+                </div>
+                <div className="inline-flex mb-5 dropdown">
+                    <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedYear}</button>
+                    <Dropdown
+                        placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                        btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light "
+                        button={<span className="sr-only">All Years</span>}
+                    >
+                        <ul className="!min-w-[170px]">
+                            {
+                                YEARS_FOR_FILTER.map((year: number, index: number) => (
+                                    <li key={index}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleYear(year)}
+                                        >
+                                            {year}
+                                        </button>
+                                    </li>
+                                ))
+                            }
+                        </ul>
+                    </Dropdown>
+                </div>
+            </div>
             {/* Date wise staff's attendance records */}
             <div className='w-full'>
-                {attendanceRecords.map((attendance, index) => (
-                    <React.Fragment key={index}>
-                        <h2 className='text-xl font-bold text-gray-700 text-center bg-gray-200 py-2 rounded-lg'>
-                            {attendance.date}
-                        </h2>
-                        <div className='bg-white w-full shadow-[4px_6px_10px_-3px_#bfc9d4] rounded-lg border p-5 mt-1'>
-                            <DataTable
-                                fetching={isLoading}
-                                withColumnBorders
-                                highlightOnHover
-                                withBorder
-                                styles={{
-                                    header: {
-                                        fontWeight: 'bold',
-                                        color: '#37415'
-                                    }
-                                }}
-                                striped
-                                minHeight={300}
-                                columns={cols}
-                                records={attendance.records ?? []}
-                            />
-                        </div>
-                    </React.Fragment>
-                ))}
+                {attendanceRecords.length < 1 ? (
+                    <span className='text-center'>No attendance records</span>
+                )
+                    : (
+                        attendanceRecords.map((attendance, index) => (
+                            <React.Fragment key={index}>
+                                <h2 className='text-xl font-bold text-gray-700 text-center bg-gray-200 py-2 rounded-lg'>
+                                    {attendance.date}
+                                </h2>
+                                <div className='bg-white w-full shadow-[4px_6px_10px_-3px_#bfc9d4] rounded-lg border p-5 mt-1'>
+                                    <DataTable
+                                        fetching={isLoading}
+                                        withColumnBorders
+                                        highlightOnHover
+                                        withBorder
+                                        styles={{
+                                            header: {
+                                                fontWeight: 'bold',
+                                                color: '#37415'
+                                            }
+                                        }}
+                                        striped
+                                        minHeight={300}
+                                        columns={cols}
+                                        records={attendance.records ?? []}
+                                    />
+                                </div>
+                            </React.Fragment>
+                        )))}
             </div>
         </main>
     );

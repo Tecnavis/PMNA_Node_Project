@@ -207,6 +207,36 @@ const CompanyReport = () => {
         }
     };
 
+    const calculateBookingProfitOrLoss = (
+        booking: Booking,
+        type: 'overall' | 'actual' = 'overall'
+    ): string => {
+        const {
+            receivedAmount = 0,
+            afterExpenseForDriver = 0,
+            afterExpenseForProvider = 0,
+            insuranceAmount = 0,
+            adjustmentValue = 0,
+            driverSalary = 0,
+        } = booking;
+
+        const totalExpenses = afterExpenseForDriver + afterExpenseForProvider + insuranceAmount;
+        const netProfit = receivedAmount - totalExpenses + adjustmentValue;
+        const actualProfit = netProfit - driverSalary;
+
+        const value = type === 'overall' ? netProfit : actualProfit;
+
+        if (value < 0) {
+            return <span className='text-red-500'>Loss: ₹{Math.abs(value).toFixed(2)}</span>;
+        }
+
+        if (value > 0) {
+            return <span className='text-green-500'>Profit: ₹{value.toFixed(2)}</span>;
+        }
+
+        return <span >No profit, no loss</span>
+    };
+
     const cols = [
         {
             accessor: '_id',
@@ -412,13 +442,15 @@ const CompanyReport = () => {
         {
             accessor: 'viewmore',
             title: 'Profit and Loss',
-            render: (record: Booking) => record._id !== 'total' && <span>Loss : 10</span>
+            render: (record: Booking) =>
+                record._id !== 'total' && <> {calculateBookingProfitOrLoss(record, 'overall')}</>
         },
         {
             accessor: 'viewmore',
-            title: 'Actual Profit(After Deduct DriverSalary)',
+            title: 'Actual Profit (After Deduct DriverSalary)',
             width: 250,
-            render: (record: Booking) => record._id !== 'total' && <span>Loss : 10</span>
+            render: (record: Booking) =>
+                record._id !== 'total' && <> {calculateBookingProfitOrLoss(record, 'actual')}</>
         }
     ];
 
@@ -678,9 +710,9 @@ const CompanyReport = () => {
                             }
                             records={[
                                 ...(bookings || [])?.map(item => ({ ...item, id: item._id })),
-                                ...(Array.isArray(bookings) && bookings.length > 0 
-                                ? [{ _id: 'total', id: 'total', isTotalRow: true } as Booking] 
-                                : [])
+                                ...(Array.isArray(bookings) && bookings.length > 0
+                                    ? [{ _id: 'total', id: 'total', isTotalRow: true } as Booking]
+                                    : [])
                             ]}
                         />
                     </div>

@@ -16,7 +16,7 @@ const SelectiveShowroomInvoice = () => {
     const role = location.state?.role || "Driver";
     const invoiceRef = useRef<HTMLDivElement>(null);
     const [searchParams] = useSearchParams()
-
+    console.log(booking)
     if (!booking || booking.length === 0) {
         return <div>No bookings selected for invoice generation.</div>;
     }

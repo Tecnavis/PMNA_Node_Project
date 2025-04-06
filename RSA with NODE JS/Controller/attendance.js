@@ -1,5 +1,5 @@
 const Attendance = require('../Model/attendance');
-const { isSameDay } = require('../utils/dateUtils');
+const { isSameDay, getMonthDateRange } = require('../utils/dateUtils');
 
 //Controller for checkin staff
 exports.checkIn = async (req, res) => {
@@ -104,8 +104,16 @@ exports.checkOut = async (req, res) => {
 };
 // Controller: Get full staff attendance
 exports.getAllStaffAttendance = async (req, res) => {
+    const { month, year } = req.query
+    const { startDate, endDate } = getMonthDateRange(month, year)
     try {
+
         const attendanceRecords = await Attendance.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate, $lte: endDate }
+                }
+            },
             {
                 $lookup: {
                     from: "staffs", // Ensure it matches your actual collection name
@@ -166,9 +174,16 @@ exports.getAllStaffAttendance = async (req, res) => {
 //Controller get full  attendance for staff
 exports.getAttendanceForStaff = async (req, res) => {
     const { id } = req.params
+    const { month, year } = req.query
+    const { startDate, endDate } = getMonthDateRange(month, year)
     try {
 
-        const attendance = await Attendance.find({ staff: id }).sort({ createdAt: -1 }).populate('staff');
+        const attendance = await Attendance.find(
+            {
+                staff: id,
+                createdAt: { $gte: startDate, $lte: endDate }
+            }).sort({ createdAt: -1 })
+            .populate('staff');
 
         return res.status(200).json({
             message: "Successfully fetched attendances",

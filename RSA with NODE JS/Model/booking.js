@@ -32,6 +32,7 @@ const bookingSchema = new mongoose.Schema({
     receivedAmount: { type: Number, default: 0 },
     totalDriverDistence: { type: Number },
     driverSalary: { type: Number },
+    transferedSalary: { type: Number },
     accidentOption: { type: String },
     insuranceAmount: { type: Number },
     adjustmentValue: { type: Number },
