@@ -472,6 +472,21 @@ exports.updateBooking = async (req, res) => {
         if (req.files && req.files.length > 0) {
             updatedData.pickupImages = req.files.map(file => file.filename);
         }
+
+        // update driver transfer amount
+        if (updatedData.transferedSalary) {
+            const newTransferedSalary = (booking.transferedSalary || 0) + updatedData.transferedSalary;
+            console.log("driver salary", booking.driverSalary)
+            console.log("body", updatedData.transferedSalary)
+            console.log("newTransferedSalary", newTransferedSalary)
+            if (newTransferedSalary !== booking.driverSalary) {
+                return res.status(400).json({
+                    message: 'Driver Transfer amount should be equal to Driver Salary'
+                });
+            }
+            updatedData.transferedSalary = newTransferedSalary
+        }
+
         const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
             .populate('baselocation') // Populate related documents
             .populate('showroom')
@@ -1196,11 +1211,11 @@ exports.distributeReceivedAmount = async (req, res) => {
             receivedUser: { $ne: "Staff" },
             $expr: { $gt: ["$totalAmount", { $ifNull: ["$receivedAmount", 0] }] }
         }).sort({ dateTime: -1 }); // Sort by latest date first
-        
+
         // Update bookings by distributing receivedAmount
         for (const booking of bookings) {
             if (remainingAmount <= 0) break; // Stop if amount is fully distributed
-            console.log('updated before',booking.receivedAmount, booking.totalAmount)
+            console.log('updated before', booking.receivedAmount, booking.totalAmount)
             const bookingBalance = booking.totalAmount - (booking.receivedAmount || 0);
             if (bookingBalance > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
@@ -1209,7 +1224,7 @@ exports.distributeReceivedAmount = async (req, res) => {
                 selectedBookingIds.push(booking._id);
 
                 await booking.save(); // Save updated booking to DB
-                console.log('updated data',booking.receivedAmount, booking.totalAmount)
+                console.log('updated data', booking.receivedAmount, booking.totalAmount)
             }
         }
 
@@ -1220,7 +1235,7 @@ exports.distributeReceivedAmount = async (req, res) => {
                 if (!driver) {
                     throw new Error("Driver not found");
                 }
-                if(driver.advance && driver.advance > 0){
+                if (driver.advance && driver.advance > 0) {
                     driver.advance -= remainingAmount;
                 }
                 await driver.save();
@@ -1238,6 +1253,42 @@ exports.distributeReceivedAmount = async (req, res) => {
         return res.status(200).json(
             { message: "Amount distributed successfully" }
         )
+    } catch (error) {
+        console.log(error.message)
+        return res.status(500).json({
+            message: error.message
+        })
+    }
+}
+
+//Controller for udpate driver balance salary
+exports.updateBalanceSalary = async (req, res) => {
+    const { bookingIds, totalAmount } = req.body
+    try {
+        let amount = Number(totalAmount) || 0;
+
+        const bookings = await Booking.find({
+            _id: { $in: bookingIds }
+        })
+
+        for (const booking of bookings) {
+            let balanceSalary = (Number(booking.driverSalary) || 0) - (Number(booking.transferedSalary) || 0);
+
+            const transferAmount = Math.min(balanceSalary, amount);
+
+            booking.transferedSalary = (Number(booking.transferedSalary) || 0) + transferAmount
+            amount -= transferAmount;
+
+            await booking.save();
+
+            if (amount <= 0) break;
+        }
+
+        return res.status(200).json({
+            message: "Driver balance salary updated successfully",
+            remainingAmount: amount
+        });
+
     } catch (error) {
         console.log(error.message)
         return res.status(500).json({

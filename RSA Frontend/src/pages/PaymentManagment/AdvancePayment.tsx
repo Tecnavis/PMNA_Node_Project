@@ -1,35 +1,14 @@
-import React, { Fragment, useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Tab } from '@headlessui/react';
+import { DataTable } from 'mantine-datatable';
+import { axiosInstance as axios, BASE_URL } from '../../config/axiosConfig';
 import Driver from '../Driver/Driver';
 import { Booking } from '../Bookings/Bookings';
-import { AdvanceDetailsTableColumn, CashCollectionDetailsTableColumn, ReceivedDetailsTableColumn } from './constant'
-import { Tab } from '@headlessui/react';
-import { DataTable, DataTableColumn } from 'mantine-datatable';
 import IconPrinter from '../../components/Icon/IconPrinter';
-import { axiosInstance as axios, BASE_URL } from '../../config/axiosConfig';
-
-export interface AdvanceData {
-    _id: string;
-    addedAdvance: number;
-    advance: number;
-    driver: {
-        name: string
-        _id: string
-    } | string
-    type: string;
-    createdAt: string,
-    updatedAt: string
-}
-
-export interface ReceivedDetails {
-    _id: string;
-    amount: string;
-    balance: string;
-    currentNetAmount: number;
-    driver: { name: string };  
-    receivedAmount: number;
-    createdAt: string;  
-    remark?: string; 
-}
+import { AdvanceDetailsTableColumn, CashCollectionDetailsTableColumn, colsForAdvance, ReceivedDetailsTableColumn } from './constant'
+import { AdvanceData, ReceivedDetails } from './types';
+import './AdvancePayment.module.css'
+import Swal from 'sweetalert2';
 
 const AdvancePayment: React.FC = () => {
 
@@ -44,9 +23,25 @@ const AdvancePayment: React.FC = () => {
     const [receivedAmount, setReceivedAmount] = useState<string>('');
     const [remark, setRemark] = useState<string>('');
 
+    const [tabIndex, setTabIndex] = useState(0);
+    const printRef = useRef<HTMLDivElement>(null);
+
+    // creating columns 
     const colsForAdvanceDetails = AdvanceDetailsTableColumn.map((col) => col)
     const colsForCashCollection = CashCollectionDetailsTableColumn.map((col) => col)
     const colsForReceivedDetails = ReceivedDetailsTableColumn.map((col) => col)
+
+    const handlePrint = () => {
+        if (!printRef.current) return;
+
+        const printContents = printRef.current.innerHTML;
+        const originalContents = document.body.innerHTML;
+
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+        window.location.reload();
+    };
 
     const fetchDrivers = async () => {
         try {
@@ -67,6 +62,23 @@ const AdvancePayment: React.FC = () => {
     }
 
     const createAdvancePayment = async () => {
+
+        if (!amount || !remark.trim()) {
+            Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'warning', // or 'success', 'error', 'info'
+                title: 'All fields are required',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                // background: '#fff',
+                customClass: {
+                    popup: 'small-toast'
+                }
+            });
+            return
+        }
         try {
             const res = await axios.post(`${BASE_URL}/advance-payment`, {
                 advance: amount,
@@ -102,6 +114,23 @@ const AdvancePayment: React.FC = () => {
 
     const settleReceivedAmount = async () => {
         try {
+            if (!receivedAmount || !remark.trim()) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top',
+                    icon: 'warning', // or 'success', 'error', 'info'
+                    title: 'All fields are required',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    // background: '#fff',
+                    customClass: {
+                        popup: 'small-toast'
+                    }
+                });
+                return
+            }
+
             const res = await axios.post(`${BASE_URL}/cash-received-details`, {
                 amount: receivedAmount,
                 balance: ((Number(inHandAmount) || 0) - (Number(receivedAmount) || 0)),
@@ -129,7 +158,13 @@ const AdvancePayment: React.FC = () => {
 
     useEffect(() => {
         const inHandAmountForSelectedDriver = drivers.filter((driver) => driver._id === selectedDriver)
-        setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand ?? 0)
+        const totalSalary = bookings.reduce((acc, booking: Booking) => {
+            if (booking?.driver?._id === selectedDriver) {
+                return (acc + ((booking?.driverSalary || 0) - (booking.transferedSalary || 0)))
+            }
+            return 0
+        }, 0)
+        setInHandAmount(totalSalary + inHandAmountForSelectedDriver[0]?.advance || 0)
     }, [selectedDriver])
 
     return (
@@ -177,7 +212,7 @@ const AdvancePayment: React.FC = () => {
                                 <input
                                     type="text"
                                     id="dateField"
-                                    value={amount} // Use the 'date' state variable instead of 'formattedDate'
+                                    value={amount}
                                     onChange={(e) => setAmount(+e.target.value)}
                                     className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
                                 />
@@ -190,7 +225,7 @@ const AdvancePayment: React.FC = () => {
                                 <input
                                     type="number"
                                     id="dateField"
-                                    value={receivedAmount} // Use the 'date' state variable instead of 'formattedDate'
+                                    value={receivedAmount}
                                     onChange={(e) => setReceivedAmount(e.target.value)}
                                     className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
                                 />
@@ -238,7 +273,7 @@ const AdvancePayment: React.FC = () => {
             {/* Tabs and Tables */}
             {
                 selectedType !== '' && <section className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5 overflow-x-auto">
-                    <Tab.Group>
+                    <Tab.Group selectedIndex={tabIndex} onChange={setTabIndex}>
                         <Tab.List className="mt-5 flex justify-evenly w-full">
                             {selectedType === "advance" ? (
                                 <>
@@ -253,6 +288,18 @@ const AdvancePayment: React.FC = () => {
                                         `}
                                     >
                                         Advance Details
+                                    </Tab>
+                                    <Tab
+                                        as="button"
+                                        className={({ selected }) => `
+                                                        ${selected ? "text-gray-700 !outline-none before:!w-full bg-gray-100" : ""} 
+                                                        relative flex justify-center text-3xl w-full p-3 rounded   
+                                                        before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
+                                                        before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
+                                                        before:transition-all before:duration-700 hover:text-gray-700 hover:before:w-full
+                                        `}
+                                    >
+                                        Advance
                                     </Tab>
                                 </>
                             ) : (
@@ -286,10 +333,17 @@ const AdvancePayment: React.FC = () => {
                         </Tab.List>
                         <Tab.Panels className="mt-5">
                             <div className='my-5 flex flex-row gap-2'>
-                                <button type="button" className="btn btn-primary gap-2">
-                                    <IconPrinter />
-                                    Print
-                                </button>
+                                {
+                                    selectedType !== 'advance' && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-primary gap-2"
+                                            onClick={handlePrint}
+                                        >
+                                            <IconPrinter />
+                                            Print
+                                        </button>)
+                                }
                                 <input type="text" placeholder='Search by Date, Driver, File Number or Received Amount' className='p-3 w-full rounded-md border-2 ' />
                             </div>
                             {selectedType === "advance" ? (
@@ -305,29 +359,50 @@ const AdvancePayment: React.FC = () => {
                                             records={advanceDetails}
                                         />
                                     </Tab.Panel>
+                                    <Tab.Panel className="overflow-x-auto">
+                                        <DataTable
+                                            minHeight={300}
+                                            withBorder
+                                            withColumnBorders
+                                            striped
+                                            highlightOnHover
+                                            columns={colsForAdvance}
+                                            records={advanceDetails}
+                                        />
+                                    </Tab.Panel>
                                 </>
                             ) : (
                                 <>
-                                    <Tab.Panel className="overflow-x-auto">
-                                        <DataTable
-                                            withBorder
-                                            withColumnBorders
-                                            striped
-                                            highlightOnHover
-                                            columns={colsForReceivedDetails}
-                                            records={receivedDetails}
-                                        />
-                                    </Tab.Panel>
-                                    <Tab.Panel className="overflow-x-auto">
-                                        <DataTable
-                                            withBorder
-                                            withColumnBorders
-                                            striped
-                                            highlightOnHover
-                                            columns={colsForCashCollection}
-                                            records={bookings}
-                                        />
-                                    </Tab.Panel>
+                                    <div ref={tabIndex === 0 ? printRef : null} className=''>
+                                        <h1 className="hidden print:block text-2xl font-bold text-center mb-2">
+                                            Received Details
+                                        </h1>
+                                        <Tab.Panel className="overflow-x-auto">
+                                            <DataTable
+                                                withBorder
+                                                withColumnBorders
+                                                striped
+                                                highlightOnHover
+                                                columns={colsForReceivedDetails}
+                                                records={receivedDetails}
+                                            />
+                                        </Tab.Panel>
+                                    </div>
+                                    <div ref={tabIndex === 1 ? printRef : null} className='w-full overflow-x-auto print:overflow-visible print:w-full print:whitespace-normal print:text-sm'>
+                                        <h1 className="hidden print:block text-2xl font-bold text-center mb-2">
+                                            Cash Collection
+                                        </h1>
+                                        <Tab.Panel className="overflow-x-auto">
+                                            <DataTable
+                                                withBorder
+                                                withColumnBorders
+                                                striped
+                                                highlightOnHover
+                                                columns={colsForCashCollection}
+                                                records={receivedDetails}
+                                            />
+                                        </Tab.Panel>
+                                    </div>
                                 </>
                             )}
                         </Tab.Panels>

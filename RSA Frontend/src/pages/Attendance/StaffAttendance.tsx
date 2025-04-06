@@ -6,6 +6,10 @@ import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
 import { DataTable } from 'mantine-datatable';
 import { User } from '../Staff/Staff';
 import { dateFormate, formattedTime, isSameDay } from '../../utils/dateUtils';
+import { useSelector } from 'react-redux';
+import { IRootState } from '../../store';
+import Dropdown from '../../components/Dropdown';
+import { MONTHS, MONTHS_NUMBER, YEARS_FOR_FILTER } from '../Reports/constant';
 
 
 export interface AttendanceRecord {
@@ -19,7 +23,7 @@ export interface AttendanceRecord {
     readonly updatedAt: Date;
 }
 
-interface Location {
+export interface Location {
     latitude: number | null,
     longitude: number | null
 }
@@ -30,7 +34,14 @@ const StaffAttendance = () => {
     const [status, setStatus] = useState<string>('showCheckIn')
     const [staff, setStaff] = useState<User | null>(null);
     const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
-
+    // state for filter attendance 
+    const today = new Date()
+    const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth() + 1)
+    const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear())
+    
+    const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
+    
+    // Attendance table data's structure 
     const cols = [
         {
             accessor: 'staff.name',
@@ -82,6 +93,7 @@ const StaffAttendance = () => {
         },
     ]
 
+    // to find the current status of staff is present or not
     const findStatus = (records: AttendanceRecord[]) => {
         if (!records.length) {
             setStatus('showCheckIn'); // No records, default to check-in
@@ -102,14 +114,17 @@ const StaffAttendance = () => {
         }
     };
 
-
     //Fetch this staff attendace records
     const fetchAttendanceRecors = async (id?: string) => {
         setIsLoading(true)
         try {
             if (staff?._id || id) {
-
-                const res = axiosInstance.get(`/attendance/${staff?._id ? staff?._id : id}`);
+                const res = axiosInstance.get(`/attendance/${staff?._id ? staff?._id : id}`, {
+                    params: {
+                        year: selectedYear,
+                        month: selectedMonth,
+                    }
+                });
                 const data = (await res).data
                 setAttendanceRecords(data.data)
             }
@@ -120,6 +135,7 @@ const StaffAttendance = () => {
         }
     }
 
+    //Fetch this staffs records
     const fetchStaffData = async () => {
         try {
             const res = await axiosInstance.get(`/staff/id`)
@@ -188,6 +204,7 @@ const StaffAttendance = () => {
         }
     };
 
+    // handle checkout attendance
     const handleCheckOut = async () => {
         try {
             const { latitude, longitude } = await getLocations();
@@ -219,6 +236,7 @@ const StaffAttendance = () => {
         }
     };
 
+    // status base attendance udpdate 
     const handleAttendance = async () => {
         if (status === 'checkOut') {
             await handleCheckOut();
@@ -227,6 +245,9 @@ const StaffAttendance = () => {
         }
     };
 
+    const handleYear = (year: number) => setSelectedYear(year)
+    const handleMonth = (month: number) => setSelectedMonth(month)
+
     useEffect(() => {
         fetchStaffData()
     }, [])
@@ -234,6 +255,10 @@ const StaffAttendance = () => {
     useEffect(() => {
         findStatus(attendanceRecords);
     }, [attendanceRecords]);
+
+    useEffect(() => {
+        fetchAttendanceRecors(staff?._id)
+    }, [selectedMonth, selectedYear])
 
     return <main className='flex flex-col justify-center items-center gap-5 pt-5 px-3'>
         <div>
@@ -271,10 +296,10 @@ const StaffAttendance = () => {
                             onClick={status === 'showpresent' ? undefined : handleAttendance}
                             disabled={status === 'showpresent'}
                             className={`btn ${status === 'checkOut'
-                                    ? 'bg-green-500 text-white'
-                                    : status === 'showpresent'
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'btn-primary'
+                                ? 'bg-green-500 text-white'
+                                : status === 'showpresent'
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'btn-primary'
                                 } my-2 flex items-center justify-center`}
                         >
                             {status === 'checkOut'
@@ -292,7 +317,59 @@ const StaffAttendance = () => {
             </div>
         </div>
         <div className='w-full '>
-            <h2 className='text-3xl font-bold text-gray-700 text-center mb-10'>Attendance Records</h2>
+            <div className='flex justify-between'>
+                <h2 className='text-3xl font-bold text-gray-700 text-center mb-10'>Attendance Records</h2>
+                <div>
+                    <div className="inline-flex mb-5 mr-2">
+                        <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{MONTHS_NUMBER[selectedMonth]}</button>
+                        <div className="dropdown">
+                            <Dropdown
+                                placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                                btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
+                                button={<span className="sr-only">Filter by Month:</span>}
+                            >
+                                <ul className="!min-w-[170px]">
+                                    {Object.entries(MONTHS_NUMBER).map(([key, month]) => (
+                                        <li key={key}>
+                                            <button
+                                                onClick={() => handleMonth(Number(key))} // Convert key to a number
+                                                type="button"
+                                                aria-label={`Select ${month}`} // Improves accessibility
+                                            >
+                                                {month}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </Dropdown>
+                        </div>
+                    </div>
+                    <div className="inline-flex mb-5 dropdown">
+                        <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedYear}</button>
+                        <Dropdown
+                            placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                            btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light "
+                            button={<span className="sr-only">All Years</span>}
+                        >
+                            <ul className="!min-w-[170px]">
+                                <li><button type="button">All Years</button></li>
+                                {
+                                    YEARS_FOR_FILTER.map((year: number, index: number) => (
+                                        <li key={index}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleYear(year)}
+                                            >
+                                                {year}
+                                            </button>
+                                        </li>
+                                    ))
+                                }
+                            </ul>
+                        </Dropdown>
+                    </div>
+                </div>
+            </div>
             <div className='bg-white w-full shadow-[4px_6px_10px_-3px_#bfc9d4] rounded-lg border  dark:border-[#1b2e4b] dark:bg-[#191e3a] dark:shadow-none p-5 mt-3'>
                 <DataTable
                     fetching={isLoading}
