@@ -67,7 +67,10 @@ router.patch('/sattle-amount/:id', jwt, controller.settleAmount);
 
 //Route to approve booking
 router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
+// Rotute for upload image
 router.post('/upload', upload.single('image'), controller.uploadImage);
 
+// Route for settle driver balalance salary
+router.patch('/settle-driver-balance-salary', jwt, controller.updateBalanceSalary);
 
 module.exports = router;
