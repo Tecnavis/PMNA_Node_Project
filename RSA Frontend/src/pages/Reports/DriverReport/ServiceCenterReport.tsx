@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
@@ -9,6 +9,7 @@ import IconShoppingBag from '../../../components/Icon/IconShoppingBag';
 import IconTag from '../../../components/Icon/IconTag';
 import IconCreditCard from '../../../components/Icon/IconCreditCard';
 import IconPhone from '../../../components/Icon/IconPhone';
+import { MONTHS, YEARS_FOR_FILTER } from '../constant'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -19,7 +20,7 @@ type Showroom = {
   phone: string;
   advance: number;
   cashInHand: number;
-  // add any additional fields as needed
+  showroomId: string;
 };
 
 type Booking = {
@@ -32,7 +33,11 @@ type Booking = {
   approve?: boolean;
   // add or remove fields according to showroom requirements
 };
-
+interface FilterData {
+  totalCollectedAmount: number,
+  overallAmount: number,
+  balanceAmountToCollect: number
+}
 const PAGE_SIZES = [10, 20, 30, 50, 100];
 
 const ShowroomCashCollectionsReport = () => {
@@ -48,7 +53,23 @@ const ShowroomCashCollectionsReport = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const isRtl = useSelector((state: any) => state.themeConfig.rtlClass) === 'rtl';
+// ----------------------------------
+    const [selectedMonth, setSelectedMonth] = useState<string>(
+        new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date())
+    );
+    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+    const [filterData, setFilterData] = useState<FilterData>({
+        totalCollectedAmount: 0,
+        overallAmount: 0,
+        balanceAmountToCollect: 0
+    })
+    const [startDate, setStartDate] = useState<string>('2025-03-01')
+    const [endingDate, setEndingDate] = useState<string>('2025-03-31')
+  
+    const printRef = useRef<HTMLDivElement>(null);
+    const role = localStorage.getItem('role') || '';
 
+// -----------------------------------
   // Set token for API requests
   const gettingToken = () => {
     const token = localStorage.getItem('token');
@@ -71,15 +92,25 @@ const ShowroomCashCollectionsReport = () => {
 
   // Fetch bookings related to this showroom
   const fetchBookings = async () => {
+    if (!showroom?._id) return;
     try {
       const response = await axios.get(`${backendUrl}/booking`, {
-        params: { showroomId: showroom?._id }
+        params: {
+          showroomId: showroom._id,
+          startDate,
+          endingDate,
+          search,
+          page,
+          limit: pageSize
+        }
       });
       setBookings(response.data.bookings);
     } catch (error) {
       console.error("Error fetching bookings for showroom:", error);
     }
   };
+  
+  
 
   useEffect(() => {
     gettingToken();
@@ -87,12 +118,12 @@ const ShowroomCashCollectionsReport = () => {
     // Optionally, fetch bookings here if showroom data is not required for the query
   }, []);
 
-  // Fetch bookings when showroom data is ready
   useEffect(() => {
     if (showroom) {
       fetchBookings();
     }
-  }, [showroom]);
+  }, [showroom, startDate, endingDate, page, search, pageSize]);
+  
 
   useEffect(() => {
     dispatch(setPageTitle('Showroom Cash Collection Report'));
@@ -129,6 +160,8 @@ const ShowroomCashCollectionsReport = () => {
         new Date(record.createdAt || '').toLocaleDateString()
     },
     { accessor: 'fileNumber', title: 'File Number' },
+    { accessor: 'dropoffLocation', title: 'Drop' },
+
     { accessor: 'customerVehicleNumber', title: 'Customer Vehicle Number' },
     { accessor: 'totalAmount', title: 'Payable Amount' },
     {
@@ -196,6 +229,29 @@ const ShowroomCashCollectionsReport = () => {
         <button className="px-2 py-1 bg-green-500 text-white rounded">Approve</button>
     },
   ];
+  const handleMonth = (month: string) => {
+    setSelectedMonth(month);
+    updateDateRange(month, selectedYear);
+};
+
+const handleYear = (year: number) => {
+    setSelectedYear(year);
+    updateDateRange(selectedMonth, year);
+};
+
+const updateDateRange = (month: string, year: number) => {
+    const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
+
+    // Start date: First day of the selected month
+    const firstDay = new Date(year, monthIndex, 1);
+
+    // End date: Last day of the selected month
+    const lastDay = new Date(year, monthIndex + 1, 0);
+
+    // Ensure proper formatting to "YYYY-MM-DD"
+    setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
+    setEndingDate(lastDay.toISOString().slice(0, 10));
+};
 
   return (
     <div>
@@ -215,7 +271,7 @@ const ShowroomCashCollectionsReport = () => {
                 className="w-24 h-24 rounded-full object-cover mb-5 border-2"
               />
               <p className="font-semibold text-primary text-xl">{showroom?.name}</p>
-              <span>{showroom?._id}</span>
+              <span>{showroom?.showroomId}</span>
               <ul className="mt-5 flex gap-5 font-semibold text-white-dark">
                 <li className="flex items-center gap-2">
                   <IconPhone className="text-black" />
@@ -238,72 +294,109 @@ const ShowroomCashCollectionsReport = () => {
           </div>
         </div>
 
-        {/* Filter Section */}
-        <div className="grid grid-cols-1 gap-5 my-2">
-          <div className="panel">
-            <div className="mb-5 flex justify-between">
-              <h5 className="font-semibold text-lg dark:text-white-light">Filter Monthly Report</h5>
-              <div className="flex">
-                {/* Month Filter */}
-                <div className="inline-flex mb-5 mr-2">
-                  <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">
-                    All Months
-                  </button>
-                  <div className="dropdown">
-                    <Dropdown
-                      placement={isRtl ? 'bottom-start' : 'bottom-end'}
-                      btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle"
-                      button={<span className="sr-only">Filter by Month:</span>}
-                    >
-                      <ul className="!min-w-[170px]">
-                        <li><button type="button">January</button></li>
-                        <li><button type="button">February</button></li>
-                        <li><button type="button">March</button></li>
-                        {/* Add other months as needed */}
-                      </ul>
-                    </Dropdown>
-                  </div>
-                </div>
-                {/* Year Filter */}
-                <div className="inline-flex mb-5">
-                  <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">
-                    All Years
-                  </button>
-                  <div className="dropdown">
-                    <Dropdown
-                      placement={isRtl ? 'bottom-start' : 'bottom-end'}
-                      btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle"
-                      button={<span className="sr-only">Filter by Year:</span>}
-                    >
-                      <ul className="!min-w-[170px]">
-                        <li><button type="button">2020</button></li>
-                        <li><button type="button">2021</button></li>
-                        <li><button type="button">2022</button></li>
-                        {/* Add other years as needed */}
-                      </ul>
-                    </Dropdown>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Summary Cards (Optional) */}
-            <div className="space-y-4">
-              <div className="border rounded dark:bg-[#1b2e4b] p-4">
-                <div className="flex items-center">
-                  <div className="w-9 h-9 rounded-md bg-secondary-light flex items-center justify-center">
-                    <IconShoppingBag />
-                  </div>
-                  <div className="ml-4">
-                    <h6 className="text-white-dark">Total Collected Amount</h6>
-                    <span className="text-[#515365]">₹xx,xxx</span>
-                  </div>
-                </div>
-              </div>
-              {/* Add more summary cards as needed */}
-            </div>
-          </div>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-5 my-2 ">
+                           <div className="panel">
+                               <div className="mb-5 flex justify-between">
+                                   <h5 className="font-semibold text-lg dark:text-white-light">Filter Monthly Report</h5>
+                                   <div className='flex justify-end'>
+                                       <div className="inline-flex mb-5 mr-2">
+                                           <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedMonth}</button>
+                                           <div className="dropdown">
+                                               <Dropdown
+                                                   placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                                                   btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
+                                                   button={<span className="sr-only">Filter by Month:</span>}
+                                               >
+                                                   <ul className="!min-w-[170px]">
+                                                       {
+                                                           MONTHS.map((month: string, index: number) => (
+                                                               <li
+                                                                   key={index}
+                                                               >
+                                                                   <button
+                                                                       onClick={() => handleMonth(month)}
+                                                                       type="button"
+                                                                   >
+                                                                       {month}
+                                                                   </button>
+                                                               </li>
+                                                           ))
+                                                       }
+                                                   </ul>
+                                               </Dropdown>
+                                           </div>
+                                       </div>
+                                       <div className="inline-flex mb-5 dropdown">
+                                           <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedYear}</button>
+                                           <Dropdown
+                                               placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                                               btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
+                                               button={<span className="sr-only">All Years</span>}
+                                           >
+                                               <ul className="!min-w-[170px]">
+                                                   <li><button type="button">All Years</button></li>
+                                                   {
+                                                       YEARS_FOR_FILTER.map((year: number, index: number) => (
+                                                           <li key={index}>
+                                                               <button
+                                                                   type="button"
+                                                                   onClick={() => handleYear(year)}
+                                                               >
+                                                                   {year}
+                                                               </button>
+                                                           </li>
+                                                       ))
+                                                   }
+                                               </ul>
+                                           </Dropdown>
+                                       </div>
+                                   </div>
+                               </div>
+                               <div className="space-y-4" ref={printRef}>
+                                   <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                                       <div className="flex items-center justify-between p-4 py-4">
+                                           <div className="grid place-content-center w-9 h-9 rounded-md bg-secondary-light dark:bg-secondary text-secondary dark:text-secondary-light">
+                                               <IconShoppingBag />
+                                           </div>
+                                           <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                                               <h6 className="text-white-dark text-base  dark:text-white-dark">
+                                                   Total Collected Amount in {selectedMonth}
+                                                   <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.totalCollectedAmount}</span>
+                                               </h6>
+                                           </div>
+                                       </div>
+                                   </div>
+                                   <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                                       <div className="flex items-center justify-between p-4 py-4">
+                                           <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
+                                               <IconTag />
+                                           </div>
+                                           <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                                               <h6 className="text-white-dark text-base dark:text-white-dark">
+                                                   Balance Amount To Collect in {selectedMonth}
+                                                   <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
+                                               </h6>
+                                           </div>
+                                       </div>
+                                   </div>
+                                   {
+                                       (selectedMonth && selectedMonth !== 'All Months') && <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                                           <div className="flex items-center justify-between p-4 py-4">
+                                               <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
+                                                   <IconCreditCard />
+                                               </div>
+                                               <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                                                   <h6 className="text-white-dark text-base dark:text-white-dark">
+                                                       Overall Amount in {selectedMonth}
+                                                       <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.overallAmount}</span>
+                                                   </h6>
+                                               </div>
+                                           </div>
+                                       </div>
+                                   }
+                               </div>
+                           </div>
+                       </div>
 
         {/* Report Table */}
         <div className="panel mt-6">
