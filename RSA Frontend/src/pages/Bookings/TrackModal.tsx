@@ -29,12 +29,12 @@ const statuses = [
 // Map each status to a route
 const statusRoutes: { [key: string]: string } = {
   "Booking Added": "/appBooking",
-  "called to customer": "/callCustomer",
-  "Order Received": "/orderReceived",
+  "called to customer": "/appBooking",
+  "Order Received": "/pickupLocation",
   "On the way to pickup location": "/pickupLocation",
-  "Vehicle Picked": "/vehiclePicked",
-  "Vehicle Confirmed": "/vehicleConfirmed",
-  "To DropOff Location": "/dropoffLocation",
+  "Vehicle Picked": "/onTheWayDropoff",
+  "Vehicle Confirmed": "/onTheWayDropoff",
+  "To DropOff Location": "/onTheWayDropoff",
   "On the way to dropoff location": "/onTheWayDropoff",
   "Vehicle Dropped": "/paymentSettlement"
 };
