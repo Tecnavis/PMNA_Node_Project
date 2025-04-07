@@ -7,7 +7,7 @@ const Advance = require('../Model/advance.js')
 exports.createReceivedDetails = async (req, res) => {
     try {
         const { amount, currentNetAmount, driver, receivedAmount, remark } = req.body;
-        console.log(req.body)
+        
         if (!amount || !currentNetAmount || !driver || !receivedAmount) {
             return res.status(400).json({ message: 'All fields are required' });
         }

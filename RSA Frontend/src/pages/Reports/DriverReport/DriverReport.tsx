@@ -97,7 +97,8 @@ const DriverCashCollectionsReport = () => {
                     endingDate,
                     search,
                     page,
-                    limit: pageSize
+                    limit: pageSize,
+                    status: "Order Completed"
                 }
             });
 
@@ -283,9 +284,9 @@ const DriverCashCollectionsReport = () => {
                     return <div className='text-center flex item-center  justify-center'>{booking.receivedAmount}</div>
                 } else {
                     return (<td key={booking._id} >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className='text-center'>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className=' flex justify-center text-center'>
                             {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                                <span className={`text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
+                                <span className={`flex justify-center text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
                             ) : (
                                 <>
                                     <input
@@ -338,7 +339,9 @@ const DriverCashCollectionsReport = () => {
                 if (booking._id === 'total') {
                     return (
                         <div className="font-semibold text-lg text-blue-600 flex item-center  justify-center  text-center">
-                            {bookings.reduce((total, booking) => total + booking.totalAmount - booking.receivedAmount, 0)}
+                            {
+                                filterData.balanceAmountToCollect || 0
+                            }
                         </div>
                     );
                 }
