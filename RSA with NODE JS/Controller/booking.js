@@ -288,7 +288,8 @@ exports.getAllBookings = async (req, res) => {
             status = '',
             driverId,
             providerId,
-            companyId
+            companyId,
+            verified
         } = req.query;
 
         // Convert page and limit to integers
@@ -306,6 +307,11 @@ exports.getAllBookings = async (req, res) => {
             query.driver = new mongoose.Types.ObjectId(driverId);
         }
 
+        // If driverId as query then fetch drivers bookings
+        if (verified) {
+            query.verified = verified
+        }
+
         // If providerId as query then fetch provider bookings
         if (providerId) {
             query.provider = new mongoose.Types.ObjectId(providerId);
@@ -321,26 +327,26 @@ exports.getAllBookings = async (req, res) => {
             search = search.trim();
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
 
-            if (dateRegex.test(search) || search) {
-                const [year, month, day] = search.split('-');
+            // If search is a date in dd/mm/yyyy format
+            if (dateRegex.test(search)) {
+                const [day, month, year] = search.split('/');
                 const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
-
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
-
-                const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
-                const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
-                const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
-
-                query.$or = [
-                    { fileNumber: searchRegex },
-                    { mob1: searchRegex },
-                    { customerVehicleNumber: searchRegex },
-                    { bookedBy: searchRegex },
-                    { driver: { $in: matchingDrivers.map(d => d._id) } },
-                    { provider: { $in: matchingProviders.map(p => p._id) } },
-                ];
             }
+            
+            const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
+            const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
+            const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
+
+            query.$or = [
+                { fileNumber: searchRegex },
+                { mob1: searchRegex },
+                { customerVehicleNumber: searchRegex },
+                { bookedBy: searchRegex },
+                { driver: { $in: matchingDrivers.map(d => d._id) } },
+                { provider: { $in: matchingProviders.map(p => p._id) } },
+            ];
         }
 
         if (startDate && endingDate) {
@@ -369,6 +375,8 @@ exports.getAllBookings = async (req, res) => {
         const balanceAmount = bookings.reduce((total, booking) => {
             return total + booking.receivedAmount;
         }, 0);
+
+        query.workType = { $ne: 'RSAWork' };
 
         // Aggregate data for total amounts
         const aggregationResult = await Booking.aggregate([

@@ -105,7 +105,8 @@ const CompanyReport = () => {
                     endingDate,
                     search,
                     page,
-                    limit: pageSize
+                    limit: pageSize,
+                    status: "Order Completed"
                 }
             });
             const data = response.data;
