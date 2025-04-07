@@ -279,6 +279,7 @@ const DriverSalaryReport = () => {
                     driverId: id,
                     startDate,
                     endingDate,
+                    verified : true,
                     search,
                     page,
                     limit: pageSize
