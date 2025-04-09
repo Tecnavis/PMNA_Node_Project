@@ -26,19 +26,19 @@ var bookingNotesRouter = require('./routes/bookingNotes');
 var advanceRouter = require('./routes/advance')
 var cashReceivedDetails = require('./routes/cashReceivedDetails')
 var attendanceRouter = require('./routes/attendance')
+var pmnrRouter = require('./routes/pmnrReport')
 
 const cors = require('cors')
-var app = express();
+const { app, server } = require('./config/socket.js');
 
 connectDB()
 
 app.use(cors({
-  origin:[process.env.FRONT_URL1, process.env.FRONT_URL2]
+  origin: '*'
 }))
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -68,6 +68,7 @@ app.use('/bookingnote', bookingNotesRouter);
 app.use('/advance-payment', advanceRouter);
 app.use('/cash-received-details', cashReceivedDetails);
 app.use('/attendance', attendanceRouter);
+app.use('/pmnr', pmnrRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

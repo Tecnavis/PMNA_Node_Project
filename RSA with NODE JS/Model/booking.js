@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const visibleFilter = require('../plugins/visibleFilter');
 
 const bookingSchema = new mongoose.Schema({
     workType: { type: String },
@@ -64,8 +65,12 @@ const bookingSchema = new mongoose.Schema({
     cashPending: { type: Boolean, default: false },// New props
     approve: { type: Boolean, default: false },// New props
     receivedUser: { type: String }, // New props
+    dummyDriverName: { type: String }, // New props
+    dummyProviderName: { type: String }, // New props
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' } // New props
 
 }, { timestamps: true });
+
+bookingSchema.plugin(visibleFilter);
 
 module.exports = mongoose.model('Booking', bookingSchema);

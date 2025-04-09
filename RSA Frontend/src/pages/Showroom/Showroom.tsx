@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Fragment, useRef } from 'react';
+import React, { useEffect, useState, Fragment } from 'react';
 import { Dialog, Transition, TransitionChild } from '@headlessui/react';
 import { Link, useNavigate } from 'react-router-dom';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
@@ -16,8 +16,9 @@ import IconPrinter from '../../components/Icon/IconPrinter';
 import IconFile from '../../components/Icon/IconFile';
 import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import { FaQrcode } from 'react-icons/fa';
-import { QRCodeSVG as QRCode } from 'qrcode.react';
 import A4Page from '../../components/A4Page';
+import ShowroomStaffModal from './ShowroomStaffModal';
+import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 
 
 
@@ -60,12 +61,14 @@ const Showroom: React.FC = () => {
     const [filteredShowrooms, setFilteredShowrooms] = useState<Showroom[]>([]);
     const [showroom, setShowroom] = useState<Showroom | null>(null);
     const [modal5, setModal5] = useState(false);
+    const [modal, setModal] = useState(true);
     const [isVisible, setIsVisible] = useState(false);
     const [search, setSearch] = useState('');
     const [isModalVisible, setModalVisible] = useState<boolean>(false);
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const [url, setUrl] = useState<string>('');
+    const [showroomId, setShowroomId] = useState<string>('');
 
 
     const navigate = useNavigate();
@@ -257,7 +260,6 @@ const Showroom: React.FC = () => {
         }
     };
 
-
     // Handle search input change
     const handleSearchChange = (e: any) => {
         const value = e.target.value;
@@ -288,6 +290,12 @@ const Showroom: React.FC = () => {
         setModalVisible(false);
         setItemToDelete(null);
     };
+
+    // open staff modal
+    const openStaffModal = (id: string) => {
+        setModal(true);
+        setShowroomId(id)
+    }
 
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
@@ -322,6 +330,7 @@ const Showroom: React.FC = () => {
                             <tr>
                                 <th>Photo</th>
                                 <th>Name</th>
+                                <th>Staffs</th>
                                 <th>Location</th>
                                 <th>Helpline</th>
                                 <th>Phone</th>
@@ -339,6 +348,11 @@ const Showroom: React.FC = () => {
                                                 className="w-full h-full object-cover"
                                                 alt="Profile"
                                             />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div onClick={() => openStaffModal(items._id)}>
+                                            <IconUsersGroup />
                                         </div>
                                     </td>
                                     <td>
@@ -597,6 +611,7 @@ const Showroom: React.FC = () => {
                     </div>
                 </Dialog>
             </Transition>
+            <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId}/>
             {/* Delete confirmation modal  */}
 
             <ConfirmationModal

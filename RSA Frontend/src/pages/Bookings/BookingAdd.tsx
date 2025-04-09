@@ -190,14 +190,9 @@ const BookingAdd: React.FC = () => {
     const [latitudeAndLongitude, setLatitudeAndLongitude] = useState<string>('');
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [modal6, setModal6] = useState(false);
+    const [isLifting, setIsLifting] = useState(false);
     // -------------------------------------------------------
-    const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>({
-        name: 'Dummy Driver',
-        id: 'dummy',
-        payableAmount: PayableAmount,
-        afterExpence: afterExpence,
-        details: {}, // Provide any default details you need
-    });
+    const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>();
     const [selectedBaseLocation, setSelectedBaseLocation] = useState<{ id: string; latitudeAndLongitude: string } | null>(null);
     const [selectedShowroom, setSelectedShowroom] = useState<{ id: string; latitudeAndLongitude: string; name: string; insurenceAmount: number | null } | null>(null);
     const [totalDistance, setTotalDistance] = useState<string>('');
@@ -639,9 +634,23 @@ const BookingAdd: React.FC = () => {
         insurenceAmount: showroom.services.bodyShop.amount,
         name: showroom.name,
     }));
-
+    showroomOptions.unshift({
+        value: 'Lifting', label: 'Lifting',
+        latitudeAndLongitude: '',
+        insurenceAmount: 0,
+        name: ''
+    })
     const handleChangeShowroom = (selectedOption: any) => {
-        if (selectedOption) {
+        if (selectedOption.value === 'Lifting') {
+            setIsLifting(true)
+            setSelectedShowroom({
+                id: "Lifting",
+                latitudeAndLongitude: latitudeAndLongitude,
+                name: "Lifting",
+                insurenceAmount: 0,
+            });
+        } else if (selectedOption) {
+            setIsLifting(false)
             setSelectedShowroom({
                 id: selectedOption.value,
                 latitudeAndLongitude: selectedOption?.latitudeAndLongitude,
@@ -656,6 +665,10 @@ const BookingAdd: React.FC = () => {
     // calculating the drive salary
 
     const calculateDriverSalary = () => {
+        if (isLifting) {
+            setDriverSalary(0);
+            return
+        }
         if (!selectedEntity || !selectedServiceType || totalDriverDistence === null) {
             console.error('Missing data for calculation');
             return;
@@ -699,22 +712,14 @@ const BookingAdd: React.FC = () => {
         }
     }, [trappedLocation, updatedAmount]);
 
-    useEffect(() => {
-        setSelectedEntity({
-            name: 'Dummy Driver',
-            id: 'dummy',
-            payableAmount: PayableAmount,
-            afterExpence: afterExpence,
-            details: {}, // Provide any default details you need
-        });
-    }, []);
 
     // handle create booking
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
+        console.log("started submiting")
         if (validate()) {
+            console.log("started submiting")
             // -----------------------------------------
             const data = {
                 workType: workType,
@@ -724,7 +729,7 @@ const BookingAdd: React.FC = () => {
                 location: location,
                 latitudeAndLongitude: latitudeAndLongitude,
                 baselocation: selectedBaseLocation?.id ?? '',
-                showroom: selectedShowroom?.id ?? '',
+                ...(isLifting ? {} : { showroom: selectedShowroom?.id ?? '' }),
                 totalDistence: totalDistance,
                 dropoffLocation: selectedShowroom?.name ?? '',
                 dropoffLatitudeAndLongitude: selectedShowroom?.latitudeAndLongitude ?? '',
@@ -754,7 +759,11 @@ const BookingAdd: React.FC = () => {
                 brandName: brandName,
                 comments: comments,
                 status: 'Booking Added',
-                bookedBy: `RSA-${role} `,
+                bookedBy: `RSA-${role}`,
+                dummyEntity : {
+                    name : selectedEntity?.name,
+                    id : selectedEntity?.id
+                }
             };
 
             setLoading(true);
@@ -788,6 +797,7 @@ const BookingAdd: React.FC = () => {
                 }
                 navigate('/bookings');
             } catch (error: any) {
+                console.log(error)
                 if (axios.isAxiosError(error)) {
                     const errorMessage = error?.response?.data?.message || 'An error occurred';
                     console.error('Error creating booking:', errorMessage);
@@ -864,7 +874,11 @@ const BookingAdd: React.FC = () => {
                 } else if (data.provider) {
                     setSelectedEntity({ id: data.provider?._id, payableAmount: data.payableAmountForProvider, name: data.provider?.name });
                 } else {
-                    setSelectedEntity(null);
+                    setSelectedEntity({
+                        id : 'dummy',
+                        name : data.dummyDriverName || data.dummyProviderName,
+                        payableAmount : data.totalAmount,
+                    });
                 }
                 setServiceCategory(data.serviceCategory || '');
                 setAccidentOption(data.accidentOption || '');
@@ -1059,7 +1073,7 @@ const BookingAdd: React.FC = () => {
                 selectedEndityRef.current?.focus();
 
             }
-            if (!serviceCategory) {
+            if (!serviceCategory && !isLifting) {
                 formErrors.serviceCategory = 'Service category is required';
                 serviceCategoryRef.current?.focus();
 
@@ -1068,7 +1082,7 @@ const BookingAdd: React.FC = () => {
                 formErrors.totalAmount = 'Total amount is required';
                 totalAmountRef.current?.focus();
             }
-            if (!totalDriverDistence) {
+            if (!totalDriverDistence && !isLifting) {
                 formErrors.totalDriverDistence = 'Total driver distance is required';
                 totalDriverDistenceRef.current?.focus();
 
@@ -1107,7 +1121,7 @@ const BookingAdd: React.FC = () => {
         // Set errors in the state
         setErrors(formErrors);
 
-
+        console.log(formErrors)
         return Object.keys(formErrors).length === 0;
     };
     // ref to scrolling 
@@ -1268,6 +1282,17 @@ const BookingAdd: React.FC = () => {
                                         value={selectedShowroom ? showroomOptions.find((option) => option.value === selectedShowroom.id) : null}
                                         placeholder="Select a service center..."
                                         isSearchable={true} // Enables search functionality
+                                        styles={{
+                                            singleValue: (provided, state) => ({
+                                                ...provided,
+                                                color: state.data.value === 'Lifting' ? '#ef4444' : 'black', // Red if Lifting
+                                            }),
+                                            option: (provided, state) => ({
+                                                ...provided,
+                                                color: state.data.value === 'Lifting' ? '#ef4444' : 'black',
+                                                fontWeight: state.data.value === 'Lifting' ? 'bold' : '',
+                                            }),
+                                        }}
                                     />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
@@ -1433,7 +1458,7 @@ const BookingAdd: React.FC = () => {
                         {/* Service Type Radio Buttons */}
                     </div>
                 </div>
-                {selectedEntity && (
+                {selectedEntity && !isLifting && (
                     <div className={`${styles.serviceCategory} my-4`}>
                         <label>Service Category</label>
                         <div>
@@ -1545,15 +1570,29 @@ const BookingAdd: React.FC = () => {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px' }}>
                             <div>
-                                <p>Total amount without insurance</p> <h4 style={{ fontSize: 'x-large' }}>₹{selectedEntity?.payableAmount}</h4>
+                                <p>Total amount without insurance</p> <h4 style={{ fontSize: 'x-large' }}>₹{selectedEntity?.payableAmount || 0}</h4>
                             </div>
                             <div>
-                                <p> Insurence amount</p> <h4 style={{ fontSize: 'x-large' }}>₹{insuranceAmount}</h4>
+                                <p> Insurence amount</p> <h4 style={{ fontSize: 'x-large' }}>₹{insuranceAmount || 0}</h4>
                             </div>
                             <div>
                                 <p ref={totalAmountRef}>Payable Amount (with insurance)</p> <h4 style={{ fontSize: 'x-large', color: 'blue' }}> ₹{totalAmount !== null ? totalAmount : 0}</h4>
                             </div>
                         </div>
+                    </div>
+                )}
+                {isLifting && (
+                    <div>
+                        <label htmlFor="totalDriverDistence">Payable Amount</label>
+                        <input
+                            id="PayableAmount"
+                            type="number"
+                            placeholder="Enter Payable Amount"
+                            className="form-input"
+                            value={totalAmount || 0}
+                            onChange={(e) => setTotalAmount(+e.target.value)}
+                        />
+                        {errors.totalDriverDistence && <p className="text-red-500">{errors.totalDriverDistence}</p>}
                     </div>
                 )}
                 <div className="flex flex-col sm:flex-row mt-3">
@@ -1576,9 +1615,26 @@ const BookingAdd: React.FC = () => {
                         )}
                         {totalDriverDistence && (
                             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '7px' }}>
-                                <h2 style={{ fontSize: 'x-large' }}>
-                                    Driver salary is :<span style={{ marginLeft: '10px' }}>₹{driverSalary}</span>
-                                </h2>
+                                {
+                                    selectedEntity?.id === "dummy" ? <>
+                                        <h2 style={{ fontSize: 'x-large' }} className='flex items-center '>
+                                            <span className='w-full'>{selectedEntity?.name} salary is : ₹</span>
+                                            <input
+                                                type="number"
+                                                value={driverSalary === null || driverSalary === undefined ? '' : driverSalary}
+                                                onChange={(e) => setDriverSalary(e.target.value === '' ? null : Number(e.target.value))}
+                                                placeholder="Enter Driver Salary"
+                                                className="p-3 h-8 text-sm w-auto ml-2 border border-blue-500 rounded-md focus:outline-none focus:ring-0 focus:border-blue-600 transition-shadow"
+                                            />
+                                        </h2>
+                                    </>
+                                        : <>
+                                            <h2 style={{ fontSize: 'x-large' }}>
+                                                Driver salary is :<span style={{ marginLeft: '10px' }}>₹{driverSalary || 0}</span>
+                                            </h2>
+                                        </>
+                                }
+
                             </div>
                         )}
                         <div>
@@ -1754,6 +1810,32 @@ const BookingAdd: React.FC = () => {
                                                                     onClick={() =>
                                                                         handleSelect({
                                                                             name: 'Dummy Driver',
+                                                                            _id: 'dummy',
+                                                                            vehicle: {}, // Mark this as a driver by providing an empty vehicle object or desired details
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    <IconPlus />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <div className="whitespace-nowrap font-bold text-red-500">Dummy Provider</div>
+                                                            </td>
+                                                            <td>Location</td>
+                                                            <td style={{ color: 'green' }}>{PayableAmount || "N/A"}</td>
+                                                            <td style={{ color: 'blue' }}>{afterExpence || "N/A"}</td>
+
+                                                            <td style={{ color: 'blue' }}>---------</td> {/*Leave Status*/}
+                                                            <td style={{ color: 'blue' }}>---------</td> {/*Current Status*/}
+
+                                                            <td className="text-center">
+                                                                <button
+                                                                    className="btn btn-danger"
+                                                                    onClick={() =>
+                                                                        handleSelect({
+                                                                            name: 'Dummy Provider',
                                                                             _id: 'dummy',
                                                                             vehicle: {}, // Mark this as a driver by providing an empty vehicle object or desired details
                                                                         })
