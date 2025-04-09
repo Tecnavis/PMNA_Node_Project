@@ -49,6 +49,7 @@ interface Company {
 export interface Booking {
     invoiceNumber: string;
     receivedUser: string,// new prop
+    vehicleNumber: string,// new prop
     companyBooking: boolean,// new prop
     approve: boolean,// new prop
     accountantVerified: boolean,// new prop

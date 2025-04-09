@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+const PaymentWorkReport = lazy(()=> import( '../pages/PaymentManagment/PaymentWorkReport'))
 const DriverSalaryReport = lazy(()=> import( '../pages/Reports/DriverReport/SalaryReport'))
 const AdvancePayment = lazy(()=> import( '../pages/PaymentManagment/AdvancePayment'))
 const ProviderReport = lazy(()=> import( '../pages/Reports/ProviderReport/ProviderReport'))
@@ -225,6 +226,10 @@ const routes = [
     {
         path: '/advance-payment-managment',
         element: <AdvancePayment />,
+    },
+    {
+        path: '/pmnr-report',
+        element: <PaymentWorkReport />,
     },
     {
         path: '/staffcashreport/:id',

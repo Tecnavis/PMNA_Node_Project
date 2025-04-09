@@ -4,48 +4,9 @@ const Provider = require('../Model/provider'); // Import your Provider model
 const Company = require('../Model/company'); // Import your Provider model
 const mongoose = require('mongoose');
 const Vehicle = require('../Model/vehicle');
+const { io } = require('../config/socket');
 
 
-// ------------------------------
-// exports.createBooking = async (req, res) => {
-//     try {
-//         const { provider } = req.body;
-
-//         // Ensure provider ID is provided
-//         if (!provider) {
-//             return res.status(400).json({ message: 'Provider ID is required' });
-//         }
-
-//         // Fetch provider details from database
-//         const providerData = await Provider.findById(provider);
-
-//         if (!providerData) {
-//             return res.status(404).json({ message: 'Provider not found' });
-//         }
-
-//         // Check if cashInHand is less than creditAmountLimit
-//         if (providerData.cashInHand < providerData.creditAmountLimit) {
-//             return res.status(400).json({
-//                 message: 'Booking not allowed. Provider cash in hand is below the credit amount limit.',
-//             });
-//         }
-
-//         // Handle the case where 'company' is an empty string
-//         const bookingData = { ...req.body };
-//         if (!bookingData.company || bookingData.company === "") {
-//             bookingData.company = null;
-//         }
-
-//         // Create and save booking
-//         const newBooking = new Booking(bookingData);
-//         await newBooking.save();
-
-//         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
-//     } catch (error) {
-//         console.error('Error creating booking:', error);
-//         res.status(500).json({ message: 'Error creating booking', error: error.message });
-//     }
-// };
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
@@ -72,20 +33,31 @@ exports.createBooking = async (req, res) => {
             return res.status(404).json({ message: "Vehicle not found for the selected service type" });
         }
 
-        const vehicle = await Vehicle.findOne({ serviceVehicle: selectedVehicle.vehicleNumber })
-
-        if (!vehicle.valid) {
-            return res.status(400).json({
-                success: false,
-                message: "Please select another driver, this vehicle has exceeded its service KM limit.",
-            })
-        }
+        bookingData.vehicleNumber = selectedVehicle.vehicleNumber
 
         const newBooking = new Booking(bookingData);
-
         await newBooking.save();
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
+
+        // Populate and emit separately to improve response time
+        process.nextTick(async () => {
+            try {
+                const populatedBooking = await Booking.findById(newBooking._id)
+                    .populate('baselocation company driver provider')
+                    .lean();
+
+                if (populatedBooking) {
+                    io.emit("newChanges", {
+                        type: 'newBooking',
+                        bookingId: newBooking._id,
+                        newBooking: populatedBooking,
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to populate and emit:", err.message);
+            }
+        });
     } catch (error) {
         if (error.name === "ValidationError") {
             return res.status(400).json({
@@ -102,6 +74,7 @@ exports.createBooking = async (req, res) => {
         });
     }
 };
+
 // Controller to create a booking
 exports.createBookingNoAuth = async (req, res) => {
     try {
@@ -334,7 +307,7 @@ exports.getAllBookings = async (req, res) => {
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
             }
-            
+
             const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
             const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
             const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
@@ -466,6 +439,22 @@ exports.updateBooking = async (req, res) => {
                 // If there's a provider and driver is being set, remove provider and set driver
                 await Booking.updateOne({ _id: id }, { $unset: { provider: "" } }); // Remove provider
             }
+            // Fetch driver details
+            const driver = await Driver.findById(updatedData.driver);
+            if (!driver) {
+                return res.status(404).json({ message: "Driver not found" });
+            }
+
+            // Find the selected vehicle for the driver
+            const selectedVehicle = driver.vehicle.find(
+                (item) => item.serviceType.toString() === updatedData.serviceType.toString()
+            );
+
+            if (!selectedVehicle) {
+                return res.status(404).json({ message: "Vehicle not found for the selected service type" });
+            }
+
+            updatedData.vehicleNumber = selectedVehicle.vehicleNumber
         }
 
         // Check if the body contains 'provider' and handle 'driver' if it exists
@@ -484,9 +473,6 @@ exports.updateBooking = async (req, res) => {
         // update driver transfer amount
         if (updatedData.transferedSalary) {
             const newTransferedSalary = (booking.transferedSalary || 0) + updatedData.transferedSalary;
-            console.log("driver salary", booking.driverSalary)
-            console.log("body", updatedData.transferedSalary)
-            console.log("newTransferedSalary", newTransferedSalary)
             if (newTransferedSalary !== booking.driverSalary) {
                 return res.status(400).json({
                     message: 'Driver Transfer amount should be equal to Driver Salary'
@@ -503,11 +489,17 @@ exports.updateBooking = async (req, res) => {
             .populate('driver')
             .populate('provider');
 
-
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
-
+        // Notify booking update for realtime udpate 
+        // emit an event to socket connection for realtime changes
+        io.emit("newChanges", {
+            type: 'update',
+            bookingId: updatedBooking._id,
+            status: updatedBooking.status,
+            updatedBooking
+        })
         res.status(200).json({ message: 'Booking updated successfully', booking: updatedBooking });
     } catch (error) {
         console.error('Error updating booking:', error);
@@ -573,6 +565,12 @@ exports.updatePickupByAdmin = async (req, res) => {
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
+        // emit an event to socket connection for realtime changes
+        io.emit("newChanges", {
+            type: 'update',
+            bookingId: updatedBooking._id,
+            status: updatedBooking.status
+        })
 
         res.status(200).json({
             message: 'Booking updated successfully.',
@@ -1223,7 +1221,7 @@ exports.distributeReceivedAmount = async (req, res) => {
         // Update bookings by distributing receivedAmount
         for (const booking of bookings) {
             if (remainingAmount <= 0) break; // Stop if amount is fully distributed
-            console.log('updated before', booking.receivedAmount, booking.totalAmount)
+
             const bookingBalance = booking.totalAmount - (booking.receivedAmount || 0);
             if (bookingBalance > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);

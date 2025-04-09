@@ -190,6 +190,7 @@ const BookingAdd: React.FC = () => {
     const [latitudeAndLongitude, setLatitudeAndLongitude] = useState<string>('');
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [modal6, setModal6] = useState(false);
+    const [isLifting, setIsLifting] = useState(false);
     // -------------------------------------------------------
     const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>({
         name: 'Dummy Driver',
@@ -639,9 +640,23 @@ const BookingAdd: React.FC = () => {
         insurenceAmount: showroom.services.bodyShop.amount,
         name: showroom.name,
     }));
-
+    showroomOptions.unshift({
+        value: 'Lifting', label: 'Lifting',
+        latitudeAndLongitude: '',
+        insurenceAmount: 0,
+        name: ''
+    })
     const handleChangeShowroom = (selectedOption: any) => {
-        if (selectedOption) {
+        if (selectedOption.value === 'Lifting') {
+            setIsLifting(true)
+            setSelectedShowroom({
+                id: "Lifting",
+                latitudeAndLongitude: latitudeAndLongitude,
+                name: "Lifting",
+                insurenceAmount: 0,
+            });
+        } else if (selectedOption) {
+            setIsLifting(false)
             setSelectedShowroom({
                 id: selectedOption.value,
                 latitudeAndLongitude: selectedOption?.latitudeAndLongitude,
@@ -656,6 +671,10 @@ const BookingAdd: React.FC = () => {
     // calculating the drive salary
 
     const calculateDriverSalary = () => {
+        if (isLifting) {
+            setDriverSalary(0);
+            return 
+        }
         if (!selectedEntity || !selectedServiceType || totalDriverDistence === null) {
             console.error('Missing data for calculation');
             return;
@@ -713,8 +732,9 @@ const BookingAdd: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
+        console.log("started submiting")
         if (validate()) {
+            console.log("started submiting")
             // -----------------------------------------
             const data = {
                 workType: workType,
@@ -724,7 +744,7 @@ const BookingAdd: React.FC = () => {
                 location: location,
                 latitudeAndLongitude: latitudeAndLongitude,
                 baselocation: selectedBaseLocation?.id ?? '',
-                showroom: selectedShowroom?.id ?? '',
+                ...(isLifting ? {} : { showroom: selectedShowroom?.id ?? '' }),
                 totalDistence: totalDistance,
                 dropoffLocation: selectedShowroom?.name ?? '',
                 dropoffLatitudeAndLongitude: selectedShowroom?.latitudeAndLongitude ?? '',
@@ -788,6 +808,7 @@ const BookingAdd: React.FC = () => {
                 }
                 navigate('/bookings');
             } catch (error: any) {
+                console.log(error)
                 if (axios.isAxiosError(error)) {
                     const errorMessage = error?.response?.data?.message || 'An error occurred';
                     console.error('Error creating booking:', errorMessage);
@@ -1059,7 +1080,7 @@ const BookingAdd: React.FC = () => {
                 selectedEndityRef.current?.focus();
 
             }
-            if (!serviceCategory) {
+            if (!serviceCategory && !isLifting) {
                 formErrors.serviceCategory = 'Service category is required';
                 serviceCategoryRef.current?.focus();
 
@@ -1068,7 +1089,7 @@ const BookingAdd: React.FC = () => {
                 formErrors.totalAmount = 'Total amount is required';
                 totalAmountRef.current?.focus();
             }
-            if (!totalDriverDistence) {
+            if (!totalDriverDistence && !isLifting) {
                 formErrors.totalDriverDistence = 'Total driver distance is required';
                 totalDriverDistenceRef.current?.focus();
 
@@ -1107,7 +1128,7 @@ const BookingAdd: React.FC = () => {
         // Set errors in the state
         setErrors(formErrors);
 
-
+        console.log(formErrors)
         return Object.keys(formErrors).length === 0;
     };
     // ref to scrolling 
@@ -1268,6 +1289,17 @@ const BookingAdd: React.FC = () => {
                                         value={selectedShowroom ? showroomOptions.find((option) => option.value === selectedShowroom.id) : null}
                                         placeholder="Select a service center..."
                                         isSearchable={true} // Enables search functionality
+                                        styles={{
+                                            singleValue: (provided, state) => ({
+                                                ...provided,
+                                                color: state.data.value === 'Lifting' ? '#ef4444' : 'black', // Red if Lifting
+                                            }),
+                                            option: (provided, state) => ({
+                                                ...provided,
+                                                color: state.data.value === 'Lifting' ? '#ef4444' : 'black',
+                                                fontWeight: state.data.value === 'Lifting' ? 'bold' : '',
+                                            }),
+                                        }}
                                     />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
@@ -1433,7 +1465,7 @@ const BookingAdd: React.FC = () => {
                         {/* Service Type Radio Buttons */}
                     </div>
                 </div>
-                {selectedEntity && (
+                {selectedEntity && !isLifting && (
                     <div className={`${styles.serviceCategory} my-4`}>
                         <label>Service Category</label>
                         <div>
@@ -1556,6 +1588,20 @@ const BookingAdd: React.FC = () => {
                         </div>
                     </div>
                 )}
+                {isLifting && (
+                            <div>
+                                <label htmlFor="totalDriverDistence">Payable Amount</label>
+                                <input
+                                    id="PayableAmount"
+                                    type="number"
+                                    placeholder="Enter Payable Amount"
+                                    className="form-input"
+                                    value={totalAmount || 0}
+                                    onChange={(e)=> setTotalAmount(+e.target.value)}
+                                />
+                                {errors.totalDriverDistence && <p className="text-red-500">{errors.totalDriverDistence}</p>}
+                            </div>
+                        )}
                 <div className="flex flex-col sm:flex-row mt-3">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                         {trappedLocation !== 'outsideOfRoad' && (
