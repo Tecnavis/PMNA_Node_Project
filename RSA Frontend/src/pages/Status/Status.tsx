@@ -11,6 +11,16 @@ import IconListCheck from '../../components/Icon/IconListCheck';
 import { GrNext, GrPrevious } from 'react-icons/gr';
 import ReactModal from 'react-modal'
 import { debounce } from 'lodash';
+import { connectSocket, disconnectSocket, getSocket } from '../../utils/socket';
+import { Socket } from 'socket.io-client';
+
+interface SocketData {
+    type: 'udpdate' | 'newBooking';
+    bookingId: string;
+    status?: string;
+    newBooking?: Booking;
+    updatedBooking?: Booking;
+}
 
 enum Tabs {
     OngoingBookings = "OngoingBookings",
@@ -36,29 +46,30 @@ const Status: React.FC = () => {
     const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    const [socket, setSocket] = useState<Socket | null>(null);
 
     const navigate = useNavigate();
 
-    
+
     const handlePageChange = (page: number) => {
         if (page === currentPage || page < 1 || page > totalPages) return;
         fetchBookings("", page);
     };
-    
+
     const fetchBookings = async (search: string = '', page: number = 1, limit: number = 10) => {
         setLoader(true);
-        
+
         let status: string = tab === Tabs.CompletedBookings ? 'Order Completed' : tab === Tabs.CashPendingBookings ? Tabs.CashPendingBookings : Tabs.OngoingBookings;
-        
+
         try {
             const response = await axios.get(`/booking/status-based`, {
                 params: { page, limit, search, status }
             });
-            
+
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
             setCurrentPage(response.data.page);
-            
+
         } catch (error) {
             console.error("Error fetching bookings", error);
         } finally {
@@ -108,6 +119,75 @@ const Status: React.FC = () => {
     useEffect(() => {
         fetchBookings();
     }, [tab]);
+
+    // Helper function to update a single booking in state
+    const updateBookingInState = (
+        prevBookings: Booking[],
+        bookingId: string,
+        updateData: Partial<Booking>
+    ): Booking[] => {
+        return prevBookings.map(booking =>
+            booking._id === bookingId
+                ? { ...booking, ...updateData }
+                : booking
+        );
+    };
+
+    // Helper function to check if booking should be in a different tab
+    const shouldRefetchForTab = (status: string, currentTab: Tabs): boolean => {
+        return (
+            (status === 'Order Completed' && currentTab !== Tabs.CompletedBookings) ||
+            (status !== 'Order Completed' && currentTab === Tabs.CompletedBookings)
+        );
+    };
+
+    useEffect(() => {
+        try {
+            const socketInstance = connectSocket("test@example.com");
+            setSocket(socketInstance);
+
+            socketInstance.on("newChanges", async (data: SocketData) => {
+                try {
+                    if (!data.type) return;
+
+                    if (data.status) {
+                        if (data.status === 'Order Completed') {
+                            console.log("status order completed", data)
+                            setBookings(prev => prev.filter(booking => booking._id !== data.bookingId));
+                        } else {
+                            console.log("status other", data)
+                            setBookings(prev => updateBookingInState(prev, data.bookingId, data.updatedBooking as Booking));
+                        }
+                        return;
+                    } else if (data.type === 'newBooking') {
+                        console.log("status other", data)
+                        if (Tabs.OngoingBookings === tab && data.newBooking) {
+                            setBookings(prevData => [...prevData, data.newBooking as Booking]);
+                        }
+                    } else {
+                        console.log("else case", data)
+                        const response = await axios.get(`/booking/${data.bookingId}`);
+                        const updatedBooking = response.data;
+                        setBookings(prev => updateBookingInState(prev, data.bookingId, updatedBooking));
+
+                        if (shouldRefetchForTab(updatedBooking.status, tab)) {
+                            fetchBookings();
+                        }
+                    }
+                } catch (err) {
+                    console.error("Error handling socket data:", err);
+                }
+            });
+
+            return () => {
+                socketInstance.off("newChanges");
+                disconnectSocket();
+            };
+        } catch (error) {
+            console.error("Socket setup failed:", error);
+        }
+    }, [tab]);
+
 
     return <div>
         <div className="container-fluid">
@@ -196,16 +276,16 @@ const Status: React.FC = () => {
                                         </li>
                                         <li className='w-full flex flex-row mt-3 border-b'>
                                             <span className='w-1/2  font-semibold pl-4 dark:text-white'>Vehicle Number :</span>
-                                            <span className='w-1/2 text-end text-gray-500 dark:text-gray-300 pr-4'>{booking?.customerVehicleNumber}</span>
+                                            <span className='w-1/2 text-end text-gray-500 dark:text-gray-300 pr-4'>{booking?.customerVehicleNumber || "N/A"}</span>
                                         </li>
                                         <li className='w-full flex flex-row mt-3 border-b'>
                                             <span className='w-1/2  font-semibold pl-4 dark:text-white'>Customer Name :</span>
-                                            <span className='w-1/2 text-end text-gray-500 dark:text-gray-300 pr-4'>{booking?.customerName}</span>
+                                            <span className='w-1/2 text-end text-gray-500 dark:text-gray-300 pr-4'>{booking?.customerName || 'N/A'}</span>
                                         </li>
                                         <li className='w-full flex flex-row mt-3 border-b'>
                                             <span className='w-1/2  font-semibold pl-4 dark:text-white '>
                                                 Customer Contact Number :</span>
-                                            <span className='w-1/2 text-end text-gray-500 dark:text-gray-300 pr-4'>{booking?.phoneNumber ? booking?.phoneNumber : "N/A"}
+                                            <span className='w-1/2 text-end text-gray-500 dark:text-gray-300 pr-4'>{booking?.mob1 ? booking?.mob1 : booking?.mob2 || "N/A"}
                                             </span>
                                         </li>
                                         <li className='w-full flex flex-row mt-3 border-b'>
@@ -259,6 +339,7 @@ const Status: React.FC = () => {
                         !bookings.length && !loader && <EmptyData dataName={'bookings'}/>
                     } */}
                 </div>
+                {/* Pagination */}
                 {
                     bookings.length > 0 && <ul className="flex justify-center items-center space-x-2 mt-4">
                         <li>

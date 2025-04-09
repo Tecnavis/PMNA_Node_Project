@@ -3,6 +3,7 @@ const ShowroomStaff = require('../Model/showroomStaff');
 const bcrypt = require('bcrypt');
 const { generateShowRoomLink } = require('../utils/generateLink');
 const { sendOtp, verifyOtp } = require('../services/otpService');
+const { default: mongoose } = require('mongoose');
 
 // Create a showroom
 exports.createShowroom = async (req, res) => {
@@ -250,6 +251,42 @@ exports.getAllShowroomStaff = async (req, res) => {
   }
 };
 
+// Get All Showroom Staff
+exports.getShowroomStaffs = async (req, res) => {
+  const { id } = req.params
+  try {
+    const pipline = [
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) }
+      },
+      {
+        $lookup : {
+          from :'showroomstaffs',
+          localField : '_id',
+          foreignField : 'showroomId',
+          as :'showroomStaff'
+        }
+      }
+    ]
+    
+    const showroomStaff = await Showroom.aggregate(pipline)
+
+    return res.status(200).json({
+      success: true,
+      message: "Showroom staff retrieved successfully.",
+      data: showroomStaff[0].showroomStaff,
+      showroomName : showroomStaff[0].name || ""
+    });
+
+  } catch (error) {
+    console.error("Error fetching showroom staff:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve showroom staff.",
+      error: error.message
+    });
+  }
+};
 
 // send otp for staff 
 exports.sendOtpForShowroomStaff = async (req, res) => {
@@ -259,7 +296,7 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
     // Check if staff exists
     const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
     if (!showroomStaff) {
-      return res.status(400).json({ message: "Invalid credentials", success:false });
+      return res.status(400).json({ message: "Invalid credentials", success: false });
     }
 
     // Generate JWT token
@@ -284,7 +321,7 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ message: "Server error" , success:false});
+    res.status(500).json({ message: "Server error", success: false });
   }
 };
 
@@ -292,11 +329,11 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
 exports.verifyOTPAndLogin = async (req, res) => {
   try {
     const { phoneNumber, otp } = req.body;
-    
+
     // Check if staff exists
     const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
     if (!showroomStaff) {
-      return res.status(400).json({ message: "Invalid credentials" , success:false});
+      return res.status(400).json({ message: "Invalid credentials", success: false });
     }
 
     // Generate JWT token
@@ -321,7 +358,7 @@ exports.verifyOTPAndLogin = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ message: "Server error", success:false });
+    res.status(500).json({ message: "Server error", success: false });
   }
 };
 
