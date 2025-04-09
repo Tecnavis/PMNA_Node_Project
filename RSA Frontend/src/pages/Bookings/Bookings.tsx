@@ -50,8 +50,12 @@ export interface Booking {
     invoiceNumber: string;
     receivedUser: string,// new prop
     vehicleNumber: string,// new prop
+    dummyDriverName: string,// new prop
+    dummyProviderName: string,// new prop
     companyBooking: boolean,// new prop
     approve: boolean,// new prop
+    feedbackCheck: boolean,// new prop
+    verified: boolean,// new prop
     accountantVerified: boolean,// new prop
     transferedSalary: number,// new prop
     receivedAmount: number,
@@ -307,15 +311,35 @@ const Bookings: React.FC = () => {
                                         </td>
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
                                         <td>{items.mob1 || "N/A"}</td>
-                                        {items.driver ? (
-                                            <td>
-                                                {items.driver.name || "N/A"} <p style={{ color: '#9a9a9a' }}>{items.driver.phone || "N/A"}</p>
-                                            </td>
-                                        ) : (
-                                            <td>
-                                                {items.provider?.name || 'No Provider'} <p style={{ color: '#9a9a9a' }}>{items.provider?.phone || 'N/A'}</p>
-                                            </td>
-                                        )}
+                                        <td>
+                                            {items.provider ? (
+                                                <>
+                                                    {items.provider.name || "No Name"}
+                                                    <p style={{ color: '#9a9a9a' }}>{items.provider.phone || "N/A"}</p>
+                                                </>
+                                            ) : items.driver ? (
+                                                <>
+                                                    {items.driver.name || "No Name"}
+                                                    <p style={{ color: '#9a9a9a' }}>{items.driver.phone || "N/A"}</p>
+                                                </>
+                                            ) : items.dummyDriverName ? (
+                                                <>
+                                                    {items.dummyDriverName}
+                                                    <p style={{ color: '#9a9a9a' }}>No Phone</p>
+                                                </>
+                                            ) : items.dummyProviderName ? (
+                                                <>
+                                                    {items.dummyProviderName}
+                                                    <p style={{ color: '#9a9a9a' }}>No Phone</p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Not Found
+                                                    <p style={{ color: '#9a9a9a' }}>N/A</p>
+                                                </>
+                                            )}
+                                        </td>
+
                                         <td>{items.bookedBy || "N/A"}</td>
                                         <td className="text-center">
                                             <ul className="flex items-center justify-center gap-2">

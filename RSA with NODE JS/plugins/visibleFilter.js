@@ -13,9 +13,14 @@ const visibleFilter = (schema) => {
                 return;
             }
 
-            if (!query.pickupDate) {
-                this.where({ pickupDate: { $lte: today } });
-            }
+            this.where({
+                $or: [
+                    { pickupDate: { $lte: today } },
+                    { pickupDate: { $exists: false } },
+                    { pickupDate: null },
+                    { pickupDate: '' }
+                ]
+            });
         });
     });
 
@@ -30,7 +35,12 @@ const visibleFilter = (schema) => {
 
         this.pipeline().unshift({
             $match: {
-                pickupDate: { $lte: today }
+                $or: [
+                    { pickupDate: { $lte: today } },
+                    { pickupDate: { $exists: false } },
+                    { pickupDate: null },
+                    { pickupDate: '' }
+                ]
             }
         });
     });

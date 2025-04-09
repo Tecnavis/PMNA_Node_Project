@@ -10,6 +10,7 @@ const { io } = require('../config/socket');
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
+    console.log(req.body)
     try {
         const bookingData = req.body;
 
@@ -17,23 +18,30 @@ exports.createBooking = async (req, res) => {
         if (!bookingData.company || bookingData.company === "") {
             bookingData.company = null; // Or you can delete the field entirely if required
         }
+        if (bookingData.dummyEntity.id === 'dummy') {
+            if (bookingData.dummyEntity.name === 'Dummy Driver') {
+                bookingData.dummyDriverName = bookingData.dummyEntity.name
+            } else {
+                bookingData.dummyProviderName = bookingData.dummyEntity.name
+            }
+        } else {
+            // Fetch driver details
+            const driver = await Driver.findById(bookingData.driver);
+            if (!driver) {
+                return res.status(404).json({ message: "Driver not found" });
+            }
 
-        // Fetch driver details
-        const driver = await Driver.findById(bookingData.driver);
-        if (!driver) {
-            return res.status(404).json({ message: "Driver not found" });
+            // Find the selected vehicle for the driver
+            const selectedVehicle = driver.vehicle.find(
+                (item) => item.serviceType.toString() === bookingData.serviceType.toString()
+            );
+
+            if (!selectedVehicle) {
+                return res.status(404).json({ message: "Vehicle not found for the selected service type" });
+            }
+
+            bookingData.vehicleNumber = selectedVehicle.vehicleNumber || ""
         }
-
-        // Find the selected vehicle for the driver
-        const selectedVehicle = driver.vehicle.find(
-            (item) => item.serviceType.toString() === bookingData.serviceType.toString()
-        );
-
-        if (!selectedVehicle) {
-            return res.status(404).json({ message: "Vehicle not found for the selected service type" });
-        }
-
-        bookingData.vehicleNumber = selectedVehicle.vehicleNumber
 
         const newBooking = new Booking(bookingData);
         await newBooking.save();
