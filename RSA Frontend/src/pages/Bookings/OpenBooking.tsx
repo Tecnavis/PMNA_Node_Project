@@ -10,10 +10,13 @@ import { FaCloudUploadAlt } from 'react-icons/fa';
 import { styled } from '@mui/material/styles';
 import BookingNotes from './BookingNotes';
 import { dateFormate, formattedTime } from '../../utils/dateUtils';
+import FeedbackModal from './FeedbackModal';
 
 export interface Booking {
     _id: string;
     workType: string;
+    dummyProviderName?: string;
+    dummyDriverName?: string;
     customerVehicleNumber: string;
     bookedBy: string;
     feedbackCheck: boolean;
@@ -764,7 +767,11 @@ const Preview = () => {
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Driver Name</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                            {booking?.driver ? booking?.driver?.name : booking?.provider ? booking.provider?.name : 'No driver or provider available'}
+                                            {booking?.driver ?
+                                                booking?.driver?.name :
+                                                booking?.provider ?
+                                                    booking.provider?.name :
+                                                    booking?.dummyDriverName ? booking?.dummyDriverName : booking?.dummyProviderName ? booking?.dummyProviderName : "No Driver And No Provider found"}
                                         </td>
                                     </tr>
 
@@ -1122,82 +1129,14 @@ const Preview = () => {
             </Transition>
 
             {/* modal for feedback  */}
-
-            <Transition appear show={modal6} as={Fragment}>
-                <Dialog as="div" open={modal6} onClose={closeFeedbackModal} className="fixed inset-0 z-50 overflow-y-auto">
-                    <TransitionChild as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-                        <div className="fixed inset-0" />
-                    </TransitionChild>
-                    <div className="fixed inset-0 bg-[black]/60 z-[999]">
-                        <div className="flex items-start justify-center min-h-screen  px-4">
-                            <TransitionChild
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0 scale-95"
-                                enterTo="opacity-100 scale-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100 scale-100"
-                                leaveTo="opacity-0 scale-95"
-                            >
-                                <DialogPanel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-5xl my-8 text-black dark:text-white-dark">
-                                    {' '}
-                                    <div className="flex bg-[#fbfbfb] dark:bg-[#121c2c] items-center justify-between px-5 py-3">
-                                        <h5 className="font-bold text-lg">Feedback questions</h5>
-                                        <button onClick={closeFeedbackModal} type="button" className="text-white-dark hover:text-dark">
-                                            <IoIosCloseCircleOutline size={24} />
-                                        </button>
-                                    </div>
-                                    <div
-                                        style={{
-                                            height: '500px',
-                                            overflowY: 'auto',
-                                        }}
-                                    >
-                                        <form className="border border-[#ebedf2] dark:border-[#191e3a] rounded-md p-4 mb-5 bg-white dark:bg-black mt-3">
-                                            <div className="flex flex-col sm:flex-row">
-                                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                                    {feedbacks?.map((feedback) => (
-                                                        <div key={feedback._id} className="mb-4">
-                                                            <label className="block text-sm font-medium mb-2">{feedback.question}</label>
-                                                            <div className="flex space-x-4">
-                                                                <label className="inline-flex items-center">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name={`feedback_${feedback._id}`}
-                                                                        className="form-radio text-success"
-                                                                        value="yes"
-                                                                        onChange={() => handleOptionChange(feedback._id, 'yes')}
-                                                                        checked={selectedResponses[feedback._id] === 'yes'}
-                                                                    />
-                                                                    <span className="ml-2">Yes ({feedback.yesPoint} points)</span>
-                                                                </label>
-                                                                <label className="inline-flex items-center">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name={`feedback_${feedback._id}`}
-                                                                        className="form-radio text-danger"
-                                                                        value="no"
-                                                                        onChange={() => handleOptionChange(feedback._id, 'no')}
-                                                                        checked={selectedResponses[feedback._id] === 'no'}
-                                                                    />
-                                                                    <span className="ml-2">No ({feedback.noPoint} points)</span>
-                                                                </label>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-md mt-4" onClick={handleSubmitFeedback}>
-                                                Save Feedback
-                                            </button>
-                                        </form>
-                                    </div>
-                                </DialogPanel>
-                            </TransitionChild>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
+            <FeedbackModal
+                feedbacks={feedbacks}
+                isOpen={modal6}
+                onChange={handleOptionChange}
+                onClose={closeFeedbackModal}
+                selectedResponses={selectedResponses}
+                onSubmit={handleSubmitFeedback}
+            />
         </div>
     );
 };

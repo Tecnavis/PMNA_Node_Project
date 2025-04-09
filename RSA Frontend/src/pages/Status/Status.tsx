@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Booking } from '../Bookings/Bookings';
-import { axiosInstance as axios } from '../../config/axiosConfig';
+import { axiosInstance , BASE_URL } from '../../config/axiosConfig';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
 import IconBarChart from '../../components/Icon/IconBarChart';
 import { formattedTime, dateFormate } from '../../utils/dateUtils'
@@ -11,8 +11,12 @@ import IconListCheck from '../../components/Icon/IconListCheck';
 import { GrNext, GrPrevious } from 'react-icons/gr';
 import ReactModal from 'react-modal'
 import { debounce } from 'lodash';
-import { connectSocket, disconnectSocket, getSocket } from '../../utils/socket';
+import { connectSocket, disconnectSocket } from '../../utils/socket';
 import { Socket } from 'socket.io-client';
+import FeedbackModal from '../Bookings/FeedbackModal';
+import Feedbacks from '../Feedback/Feedback';
+import Swal from 'sweetalert2';
+import axios from 'axios';
 
 interface SocketData {
     type: 'udpdate' | 'newBooking';
@@ -46,7 +50,11 @@ const Status: React.FC = () => {
     const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    const [isOpen, setIsOpen] = useState(false);
     const [socket, setSocket] = useState<Socket | null>(null);
+    const [feedbacks, setFeedbacks] = useState<Feedbacks[]>([]);
+    const [selectedResponses, setSelectedResponses] = useState<{ [key: string]: string }>({});
+    const [selectedBookingId, setSelectedBookingId] = useState<string>('');
 
     const navigate = useNavigate();
 
@@ -62,7 +70,7 @@ const Status: React.FC = () => {
         let status: string = tab === Tabs.CompletedBookings ? 'Order Completed' : tab === Tabs.CashPendingBookings ? Tabs.CashPendingBookings : Tabs.OngoingBookings;
 
         try {
-            const response = await axios.get(`/booking/status-based`, {
+            const response = await axiosInstance.get(`/booking/status-based`, {
                 params: { page, limit, search, status }
             });
 
@@ -93,7 +101,7 @@ const Status: React.FC = () => {
         try {
             const receivedAmount = paymentAmount
 
-            const response = await axios.patch(`/booking/sattle-amount/${selectedBooking?._id}`, { receivedAmount });
+            const response = await axiosInstance.patch(`/booking/sattle-amount/${selectedBooking?._id}`, { receivedAmount });
 
             setShowPaymentModal(false);
             setPaymentAmount(0);
@@ -166,7 +174,7 @@ const Status: React.FC = () => {
                         }
                     } else {
                         console.log("else case", data)
-                        const response = await axios.get(`/booking/${data.bookingId}`);
+                        const response = await axiosInstance.get(`/booking/${data.bookingId}`);
                         const updatedBooking = response.data;
                         setBookings(prev => updateBookingInState(prev, data.bookingId, updatedBooking));
 
@@ -188,6 +196,77 @@ const Status: React.FC = () => {
         }
     }, [tab]);
 
+    const openFeedbackModal = async (id: string) => {
+        setIsOpen(true);
+        setSelectedBookingId(id)
+        try {
+            const response = await axiosInstance.get(`${BASE_URL}/feedback/`);
+            setFeedbacks(response.data.data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const onClose = async () => {
+        setIsOpen(false);
+        setSelectedBookingId('')
+        setSelectedResponses({})
+    };
+
+
+    const handleOptionChange = (questionId: string, response: string) => {
+        setSelectedResponses((prev) => ({ ...prev, [questionId]: response }));
+    };
+
+    // posting feedback
+
+    const handleSubmitFeedback = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // Check if all feedback questions have been answered
+        const allAnswered = feedbacks.every((feedback) => selectedResponses[feedback._id]);
+
+        if (!allAnswered) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Incomplete Feedback',
+                text: 'Please answer all questions before submitting.',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            return; // Stop the function if not all questions are answered
+        }
+
+        const feedbackData = feedbacks?.map((feedback) => ({
+            questionId: feedback._id,
+            response: selectedResponses[feedback._id] || '', // "yes" or "no"
+            yesPoint: feedback.yesPoint,
+            noPoint: feedback.noPoint,
+        }));
+
+        try {
+            const response = await axiosInstance.put(`${BASE_URL}/booking/postfeedback/${selectedBookingId}`, { feedback: feedbackData });
+            navigate('/completedbookings');
+            Swal.fire({
+                icon: 'success',
+                title: 'Feedback added',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+        } catch (error: unknown) {
+            if (axios.isAxiosError(error)) {
+                console.error('Error saving feedback:', error.response?.data || error.message);
+            } else {
+                console.error('An unexpected error occurred:', error);
+            }
+        }
+    };
 
     return <div>
         <div className="container-fluid">
@@ -313,13 +392,22 @@ const Status: React.FC = () => {
                                             </span>
                                         </li>
                                     </ul>
-                                    {!booking.cashPending && <div className="flex justify-start my-5">
+                                    {!booking.cashPending && <div className="flex items-center  justify-between my-5">
                                         <button onClick={() => navigate(`/openbooking/${booking?._id}`)}
                                             className='text-white mb-10 mx-4 flex justify-between items-center gap-2 bg-blue-500 px-10 py-1 rounded-md text-md hover:bg-blue-600'
                                         >
                                             Order Details
                                             <IconArrowLeft />
                                         </button>
+                                        {
+                                            !booking.feedbackCheck && booking.verified && (
+                                                <button onClick={() => openFeedbackModal(booking?._id)}
+                                                    className='text-white mb-10 mx-4 flex justify-between items-center gap-2 bg-green-500 px-10 py-1 rounded-md text-md hover:bg-green-600'
+                                                >
+                                                    Feedback
+                                                </button>
+                                            )
+                                        }
                                     </div>}
                                     {booking.cashPending && <div className="flex justify-start my-5">
                                         <button
@@ -454,6 +542,8 @@ const Status: React.FC = () => {
                         Save Payment
                     </button>
                 </ReactModal>
+                {/* Feedback */}
+                <FeedbackModal feedbacks={feedbacks} isOpen={isOpen} onChange={handleOptionChange} onClose={onClose} onSubmit={handleSubmitFeedback} selectedResponses={selectedResponses} />
             </div>
         </div >
     </div >
