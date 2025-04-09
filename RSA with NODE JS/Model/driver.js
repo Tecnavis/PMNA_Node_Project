@@ -64,6 +64,10 @@ const driverSchema = new mongoose.Schema({
       },
     },
   ],
+  currentLocation :{
+    type :String,
+    trim: true,
+  }
 });
 
 module.exports = mongoose.model('Driver', driverSchema);
