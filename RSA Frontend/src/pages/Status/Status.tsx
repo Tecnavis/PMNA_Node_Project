@@ -249,7 +249,6 @@ const Status: React.FC = () => {
 
         try {
             const response = await axiosInstance.put(`${BASE_URL}/booking/postfeedback/${selectedBookingId}`, { feedback: feedbackData });
-            navigate('/completedbookings');
             Swal.fire({
                 icon: 'success',
                 title: 'Feedback added',
