@@ -47,6 +47,8 @@ interface Company {
 interface Booking {
     _id: string;
     workType: string;
+    dummyProviderName: string;
+    dummyDriverName: string;
     verified: boolean;
     feedbackCheck: boolean;
     customerVehicleNumber: string;
@@ -167,32 +169,32 @@ const CompletedBookings: React.FC = () => {
         }
     };
 
-   
 
- // handling accountant verifying 
 
- const handleAccountantVerify = (id:any)=>{
-    try {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: 'This action cannot be undone!',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, verify it!',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                 axios.patch(`${backendUrl}/booking/accountantverify/${id}`);
-                setBookings((prev) => prev.filter((item) => item._id !== id));
-                Swal.fire('Verified!', 'The booking has been verified.', 'success');
-            }
-        });
-       
-    } catch (error) {
-        console.log(error)
+    // handling accountant verifying 
+
+    const handleAccountantVerify = (id: any) => {
+        try {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'This action cannot be undone!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, verify it!',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    axios.patch(`${backendUrl}/booking/accountantverify/${id}`);
+                    setBookings((prev) => prev.filter((item) => item._id !== id));
+                    Swal.fire('Verified!', 'The booking has been verified.', 'success');
+                }
+            });
+
+        } catch (error) {
+            console.log(error)
+        }
     }
- }
 
     useEffect(() => {
         gettingToken();
@@ -260,28 +262,47 @@ const CompletedBookings: React.FC = () => {
                                             </div>{' '}
                                             {/* File Number with conditional color */}
                                         </td>
-                                        {items.driver ? (
-                                            <td>
-                                                {items.driver.name} <p style={{ color: '#9a9a9a' }}>{items.driver.phone}</p>
-                                            </td>
-                                        ) : (
-                                            <td>
-                                                {items.provider?.name || 'No Provider'} <p style={{ color: '#9a9a9a' }}>{items.provider?.phone || 'N/A'}</p>
-                                            </td>
-                                        )}
+                                        <td>
+                                            {items.provider ? (
+                                                <>
+                                                    {items.provider.name || "No Name"}
+                                                    <p style={{ color: '#9a9a9a' }}>{items.provider.phone || "N/A"}</p>
+                                                </>
+                                            ) : items.driver ? (
+                                                <>
+                                                    {items.driver.name || "No Name"}
+                                                    <p style={{ color: '#9a9a9a' }}>{items.driver.phone || "N/A"}</p>
+                                                </>
+                                            ) : items.dummyDriverName ? (
+                                                <>
+                                                    {items.dummyDriverName}
+                                                    <p style={{ color: '#9a9a9a' }}>No Phone</p>
+                                                </>
+                                            ) : items.dummyProviderName ? (
+                                                <>
+                                                    {items.dummyProviderName}
+                                                    <p style={{ color: '#9a9a9a' }}>No Phone</p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Not Found
+                                                    <p style={{ color: '#9a9a9a' }}>N/A</p>
+                                                </>
+                                            )}
+                                        </td>
                                         <td>{items.mob1}</td>
                                         <td>
-  {items.serviceType?.serviceName
-    ? items.serviceType.serviceName.toUpperCase()
-    : 'N/A'}
-</td>
+                                            {items.serviceType?.serviceName
+                                                ? items.serviceType.serviceName.toUpperCase()
+                                                : 'N/A'}
+                                        </td>
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
                                         <td className="text-center">
                                             <ul className="flex items-center justify-center gap-2">
                                                 <li>
                                                     <Tippy content="View More">
                                                         <button type="button" onClick={() => navigate(`/openbooking/${items._id}`)}>
-                                                            <IconEye className="text-secondary" /> 
+                                                            <IconEye className="text-secondary" />
                                                         </button>
                                                     </Tippy>
                                                 </li>
@@ -289,7 +310,7 @@ const CompletedBookings: React.FC = () => {
                                                     <li>
                                                         <Tippy content="Accountantant verify">
                                                             <button type="button">
-                                                                <RiVerifiedBadgeFill size={25} className="text-success" onClick={()=> handleAccountantVerify(items._id)} /> 
+                                                                <RiVerifiedBadgeFill size={25} className="text-success" onClick={() => handleAccountantVerify(items._id)} />
                                                             </button>
                                                         </Tippy>
                                                     </li>
@@ -318,9 +339,8 @@ const CompletedBookings: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => handlePageChange(index + 1)}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            }`}
+                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                                }`}
                         >
                             {index + 1}
                         </button>
@@ -337,7 +357,7 @@ const CompletedBookings: React.FC = () => {
                 </li>
             </ul>
 
-         
+
         </div>
     );
 };
