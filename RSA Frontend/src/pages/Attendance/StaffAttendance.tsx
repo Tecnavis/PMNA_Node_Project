@@ -58,14 +58,10 @@ const StaffAttendance = () => {
             render: (record: AttendanceRecord) =>
                 record.checkInLocation
                     ? (
-                        <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(record.checkInLocation)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 underline"
+                        <span
                         >
                             {record.checkInLocation}
-                        </a>
+                        </span>
                     )
                     : "N/A"
         },
@@ -80,14 +76,9 @@ const StaffAttendance = () => {
             render: (record: AttendanceRecord) =>
                 record.checkOutLocation
                     ? (
-                        <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(record.checkOutLocation)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 underline"
-                        >
+                        <span >
                             {record.checkOutLocation}
-                        </a>
+                        </span>
                     )
                     : "N/A"
         },
@@ -175,26 +166,28 @@ const StaffAttendance = () => {
     const handleCheckIn = async () => {
         try {
             const { latitude, longitude } = await getLocations();
-
+    
             if (!latitude || !longitude) {
                 throw new Error("Location not available");
             }
-
-            const res = await axiosInstance.post(`/attendance/`, {
-                checkInLocation: `${latitude}, ${longitude}`
+    
+            const locationName = await getLocationName(latitude, longitude);
+    
+            await axiosInstance.post(`/attendance/`, {
+                checkInLocation: locationName
             });
-
+    
             Swal.fire({
                 title: "Check-in Successful!",
                 text: "Your attendance has been recorded.",
                 icon: "success",
                 confirmButtonText: "OK",
             });
-
+    
             fetchAttendanceRecors();
         } catch (error: any) {
             console.error(error.message);
-
+    
             Swal.fire({
                 title: "Error!",
                 text: error.response?.data?.message || "Something went wrong!",
@@ -203,30 +196,33 @@ const StaffAttendance = () => {
             });
         }
     };
-
+    
     // handle checkout attendance
     const handleCheckOut = async () => {
         try {
             const { latitude, longitude } = await getLocations();
+    
             if (!latitude || !longitude) {
                 throw new Error("Location not available");
             }
-
-            const res = await axiosInstance.patch(`/attendance/${staff?._id}`, {
-                checkOutLocation: `${latitude}, ${longitude}`
+    
+            const locationName = await getLocationName(latitude, longitude);
+    
+            await axiosInstance.patch(`/attendance/${staff?._id}`, {
+                checkOutLocation: locationName
             });
-
+    
             Swal.fire({
                 title: "Check-out Successful!",
                 text: "Your attendance has been recorded.",
                 icon: "success",
                 confirmButtonText: "OK",
             });
-
+    
             fetchAttendanceRecors();
         } catch (error: any) {
             console.error(error.message);
-
+    
             Swal.fire({
                 title: "Error!",
                 text: error.response?.data?.message || "Something went wrong!",
@@ -235,6 +231,7 @@ const StaffAttendance = () => {
             });
         }
     };
+    
 
     // status base attendance udpdate 
     const handleAttendance = async () => {
@@ -259,7 +256,19 @@ const StaffAttendance = () => {
     useEffect(() => {
         fetchAttendanceRecors(staff?._id)
     }, [selectedMonth, selectedYear])
-
+    const getLocationName = async (lat: number, lon: number): Promise<string> => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+            );
+            const data = await response.json();
+            return data.display_name || `${lat}, ${lon}`;
+        } catch (error) {
+            console.error("Error fetching location name:", error);
+            return `${lat}, ${lon}`;
+        }
+    };
+    
     return <main className='flex flex-col justify-center items-center gap-5 pt-5 px-3'>
         <div>
             <h2 className='text-3xl font-bold text-gray-700'>Attendance</h2>
