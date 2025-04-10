@@ -8,7 +8,7 @@ exports.sendOtp = async (countryCode = '+91', phoneNumber) => {
         const otpResponse = await twilioClient.verify.v2
             .services(process.env.TWILIO_SERVICE_SID)
             .verifications.create({
-                to: '+916235095411',
+                to: `${countryCode}${phoneNumber}`,
                 channel: 'sms'
             });
 
