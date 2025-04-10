@@ -1,11 +1,11 @@
 import { lazy } from 'react';
-const PaymentWorkReport = lazy(()=> import( '../pages/PaymentManagment/PaymentWorkReport'))
-const DriverSalaryReport = lazy(()=> import( '../pages/Reports/DriverReport/SalaryReport'))
-const AdvancePayment = lazy(()=> import( '../pages/PaymentManagment/AdvancePayment'))
-const ProviderReport = lazy(()=> import( '../pages/Reports/ProviderReport/ProviderReport'))
-const CompanyReport = lazy(()=> import( '../pages/Reports/CompanyReport/CompanyReport'))
-const AdminAttendance = lazy(()=> import( '../pages/Attendance/AdminAttendance'))
-const StaffAttendance = lazy(()=> import( '../pages/Attendance/StaffAttendance'))
+const PaymentWorkReport = lazy(() => import('../pages/PaymentManagment/PaymentWorkReport'))
+const DriverSalaryReport = lazy(() => import('../pages/Reports/DriverReport/SalaryReport'))
+const AdvancePayment = lazy(() => import('../pages/PaymentManagment/AdvancePayment'))
+const ProviderReport = lazy(() => import('../pages/Reports/ProviderReport/ProviderReport'))
+const CompanyReport = lazy(() => import('../pages/Reports/CompanyReport/CompanyReport'))
+const AdminAttendance = lazy(() => import('../pages/Attendance/AdminAttendance'))
+const StaffAttendance = lazy(() => import('../pages/Attendance/StaffAttendance'))
 const RewardsItem = lazy(() => import('../pages/Rewards/RewardsItems'))
 const Rewards = lazy(() => import('../pages/Rewards/Rewards'))
 const ShowRoomDetails = lazy(() => import('../pages/Showroom/ShowroomDetails'))
@@ -201,7 +201,7 @@ const routes = [
     },
     {
         path: '/dcpreport/driverreport/salaryreport/selectiveInvoice',
-        element: < SelectiveShowroomInvoice/>,
+        element: < SelectiveShowroomInvoice />,
     },
     {
         path: '/driverreport/:id',
@@ -354,7 +354,7 @@ const routes = [
     },
     {
         path: '/attendance',
-        element: role === 'admin' ? <AdminAttendance /> : <StaffAttendance />,
+        element: role === 'admin' || role === '' ? <AdminAttendance /> : <StaffAttendance />,
     },
     {
         path: '/appBooking',

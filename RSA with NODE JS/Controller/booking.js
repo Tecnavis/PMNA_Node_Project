@@ -10,7 +10,6 @@ const { io } = require('../config/socket');
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
-    console.log(req.body)
     try {
         const bookingData = req.body;
 
