@@ -160,6 +160,8 @@ const BookingAdd: React.FC = () => {
     const id = useParams();
     const [workType, setWorkType] = useState<string>('');
     const [role, setRole] = useState<string>('');
+    const [cashInHand, setCashInHand] = useState<number>(0);
+
     const [trappedLocation, setTrappedLocation] = useState<string>('');
     const [PayableAmount, setPayableAmount] = useState<number>(0);
     const [totalDriverDistence, setTotalDriverDistence] = useState<number | null>(null);
@@ -717,10 +719,29 @@ const BookingAdd: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+
+        if (workType === 'RSAWork' && selectedCompany ) {
+            if (selectedCompany.creditLimitAmount < cashInHand) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Exceeds credit limit amount',
+                    text: `Cash in hand (${cashInHand}) exceeds the company's credit limit (${selectedCompany.creditLimitAmount}).`,
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+                return; // stop form submission
+            }
+        }
+    
+       
         console.log("started submiting")
         if (validate()) {
             console.log("started submiting")
-            // -----------------------------------------
+           
             const data = {
                 workType: workType,
                 pickupDate: pickupDate,
