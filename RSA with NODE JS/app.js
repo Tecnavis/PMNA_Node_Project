@@ -34,7 +34,8 @@ const { app, server } = require('./config/socket.js');
 connectDB()
 
 app.use(cors({
-  origin: '*'
+  origin:'*'
+
 }))
 
 // view engine setup
