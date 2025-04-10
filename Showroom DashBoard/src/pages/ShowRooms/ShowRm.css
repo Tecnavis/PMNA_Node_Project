@@ -1,0 +1,119 @@
+/* ShowRm.css */
+.header-floating {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000; /* Ensures the header stays on top */
+  background-color: white; /* Optional: Add background color for better visibility */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Optional: Add shadow for a floating effect */
+  padding: 10px 20px;
+}
+/* Container Styles */
+.showrm-container {
+  /* background: linear-gradient(135deg, rgba(232, 199, 193, 0.8), rgba(255, 223, 186, 0.8)); */
+
+  font-family: 'Roboto', sans-serif;
+  padding: 1rem 1rem;
+}
+
+/* Tab Navigation */
+.tabs-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+  margin-top: 2rem;
+  
+
+}
+
+.tab-button {
+  background-color: transparent;
+  padding: 10px 20px;
+  border: 2px solid transparent;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.tab-button:hover {
+  border-color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);}
+
+.tab-button.active {
+  border-color: #f44336;
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.2);
+}
+
+/* Tab Content */
+.tab-content {
+  /* background: linear-gradient(135deg, rgba(232, 199, 193, 0.8), rgba(255, 223, 186, 0.8)); */
+  /* padding: 2rem; */
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+  margin-top: 20px;
+}
+
+.tab-pane {
+  background: linear-gradient(135deg, rgba(253, 252, 251, 0.8), rgba(255, 223, 186, 0.8));
+
+}
+
+/* Select Dropdown */
+.booking-select {
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  width: 200px;
+  /* margin-bottom: 20px; */
+  background-color: #fff;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.booking-select:hover,
+.booking-select:focus {
+  border-color: #f44336;
+}
+
+/* General Styling for the Content */
+.tab-pane {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .tab-button {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .booking-select {
+    width: 200px;
+  }
+}
+/* button {
+  color: white;
+  font-size: 16px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+} */
+
+
+
+

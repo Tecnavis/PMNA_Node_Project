@@ -403,10 +403,10 @@ exports.shoromStaffSignup = async (req, res) => {
 // Login showroom
 exports.loginShowroom = async (req, res) => {
   try {
-    const { userName: username, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!username || !password || !username.trim() || !password.trim()) {
-      return res.status(400).json({ message: 'All fields are required!' });
+    if ([username, password].some(field => !field?.trim())) {
+      return res.status(400).json({ message: 'All fields are required!', success: false });
     }
 
     const isShowroomExist = await Showroom.findOne({
@@ -414,14 +414,14 @@ exports.loginShowroom = async (req, res) => {
     })
 
     if (!isShowroomExist) {
-      return res.status(404).json({ message: 'Showroom not found!' });
+      return res.status(404).json({ message: 'Showroom not found!', success: false });
     }
 
     if (password !== isShowroomExist.password) {
-      return res.status(400).json({ message: 'Invalid credentials, invalid password!' });
+      return res.status(400).json({ message: 'Invalid credentials, invalid password!', success: false });
     }
 
-    return res.status(200).json({ message: 'Login sucessfull' });
+    return res.status(200).json({ message: 'Login sucessfull', success: true, data: isShowroomExist });
   } catch (error) {
     console.error("Error in showroom login:", error);
 
