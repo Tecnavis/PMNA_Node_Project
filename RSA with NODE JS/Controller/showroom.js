@@ -260,22 +260,22 @@ exports.getShowroomStaffs = async (req, res) => {
         $match: { _id: new mongoose.Types.ObjectId(id) }
       },
       {
-        $lookup : {
-          from :'showroomstaffs',
-          localField : '_id',
-          foreignField : 'showroomId',
-          as :'showroomStaff'
+        $lookup: {
+          from: 'showroomstaffs',
+          localField: '_id',
+          foreignField: 'showroomId',
+          as: 'showroomStaff'
         }
       }
     ]
-    
+
     const showroomStaff = await Showroom.aggregate(pipline)
 
     return res.status(200).json({
       success: true,
       message: "Showroom staff retrieved successfully.",
       data: showroomStaff[0].showroomStaff,
-      showroomName : showroomStaff[0].name || ""
+      showroomName: showroomStaff[0].name || ""
     });
 
   } catch (error) {
@@ -362,7 +362,6 @@ exports.verifyOTPAndLogin = async (req, res) => {
   }
 };
 
-
 exports.shoromStaffSignup = async (req, res) => {
   try {
     const { name, phone: phoneNumber, whatsappNumber, designation, showroomId } = req.body;
@@ -400,3 +399,36 @@ exports.shoromStaffSignup = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error. Please try again later." });
   }
 }
+
+// Login showroom
+exports.loginShowroom = async (req, res) => {
+  try {
+    const { userName: username, password } = req.body;
+
+    if (!username || !password || !username.trim() || !password.trim()) {
+      return res.status(400).json({ message: 'All fields are required!' });
+    }
+
+    const isShowroomExist = await Showroom.findOne({
+      username,
+    })
+
+    if (!isShowroomExist) {
+      return res.status(404).json({ message: 'Showroom not found!' });
+    }
+
+    if (password !== isShowroomExist.password) {
+      return res.status(400).json({ message: 'Invalid credentials, invalid password!' });
+    }
+
+    return res.status(200).json({ message: 'Login sucessfull' });
+  } catch (error) {
+    console.error("Error in showroom login:", error);
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({ message: "Internal Server Error. Please try again later." });
+  }
+};

@@ -39,7 +39,6 @@ const Index = () => {
         const token = localStorage.getItem('token');
         const storedRole = localStorage.getItem('role');
         const navigateToLogin = () => navigate('/auth/boxed-signin');
-        setRole(storedRole || '')
         // Define the type of the role object
         interface Role {
             _id: string;
@@ -51,11 +50,14 @@ const Index = () => {
             try {
                 const response = await axios.get<Role[]>(`${backendUrl}/role`); // Define the response type
                 const roles = response.data;
+
                 const userRole = roles.find((r: Role) => r._id === storedRole); // Type of 'r' is Role
+                
                 if (userRole) {
                     localStorage.setItem('role', userRole.name);
+                    setRole(userRole.name)
                 } else {
-                    console.log('Role not found');
+                    setRole('')
                 }
             } catch (error) {
                 console.error('Error fetching roles:', error);
@@ -286,6 +288,10 @@ const Index = () => {
         const dateObj = new Date(dateString);
         return dateObj > currentDate;
     };
+
+    useEffect(() => {
+        console.log(role, 'role')
+    }, [role])
 
     return (
         <div className="container mx-auto p-6 bg-cover bg-center bg-no-repeat">

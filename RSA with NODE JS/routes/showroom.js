@@ -6,6 +6,8 @@ const jwt = require('../Middileware/jwt')
 
 router.post('/',jwt, upload.single('image'), controller.createShowroom);
 router.get('/', controller.getShowrooms);
+// Login Showroom
+router.post('/login', controller.loginShowroom);
 router.get('/showroom-staff', jwt, controller.getAllShowroomStaff)
 router.get('/showroom-staff/:id', jwt, controller.getShowroomStaffs)
 router.get('/filtered', jwt, controller.filterGetShowrooms);
