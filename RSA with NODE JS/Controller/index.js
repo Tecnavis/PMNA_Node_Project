@@ -124,3 +124,85 @@ exports.dashboard = async (req, res) => {
     }
 }
 
+
+exports.showroomDashboard = async (req, res) => {
+
+    const { id } = req.params
+    
+    try {
+
+        // Aggregation for dashboard data(counting document based on the condition)
+        const pipeline = [
+            {
+                $match: {
+                    showroom: id
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    newBookingsShowRoom: {
+                        $sum: {
+                            $cond: [
+                                { $and: [{ $eq: ["$status", "booking added"] }, { $eq: ["$bookingStatus", "ShowRoom Booking"] }] },
+                                1,
+                                0
+                            ]
+                        }
+                    },
+                    newBookingsOther: {
+                        $sum: {
+                            $cond: [
+                                { $and: [{ $eq: ["$status", "booking added"] }, { $ne: ["$bookingStatus", "ShowRoom Booking"] }] },
+                                1,
+                                0
+                            ]
+                        }
+                    },
+                    pendingBookings: {
+                        $sum: {
+                            $cond: [
+                                {
+                                    $in: [
+                                        "$status",
+                                        [
+                                            "called to customer",
+                                            "Order Received",
+                                            "On the way to pickup location",
+                                            "Vehicle Picked",
+                                            "Vehicle Confirmed",
+                                            "To DropOff Location",
+                                            "On the way to dropoff location",
+                                            "Vehicle Dropped"
+                                        ]
+                                    ]
+                                },
+                                1,
+                                0
+                            ]
+                        }
+                    },
+                    completedBookings: {
+                        $sum: {
+                            $cond: [
+                                { $eq: ["$status", "Order Completed"] },
+                                1,
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+
+        ]
+        const newBookings = await Bookings.aggregate(pipeline);
+
+        res.status(201).json({
+            bookingData: newBookings,
+        })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Error fetching dashboard data', error });
+    }
+}
+
