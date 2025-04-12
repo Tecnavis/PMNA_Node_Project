@@ -134,60 +134,48 @@ const routes = [
     //       </Suspense>
     //     ),
     //   },
-       
-   
     {
         path: '/',
         element: <LoginCover />,
         layout: 'blank',
-
     },
     {
         path: '/showrm/qr',
-        element: <QRLogin/>,
+        element: <QRLogin />,
         // layout: 'blank',
-
     },
- 
     {
         path: '/index',
         element: <Index />,
         // layout: 'blank',
     },
-// showroom
-
-
-{
-    path: '/showrm',
-    element: <ShowRm/>,
-    // layout: 'blank',
-
-},
-// {
-//     path: '/showroomstaff ',
-//     element: <ShowroomStaff/>,
-//     layout: 'blank',
-
-// },
-{
-    path: '/addbook',
-    element: <AddBook/>,
-    // layout: 'blank',
-
-},
-{
-    path: '/staff',
-    element: <Staff/>,
-    // layout: 'blank',
-
-},
-// details page
-{
-    path: '/showrm/viewmore/:id',
-    element: <ViewMore/>,
-    // layout: 'blank',
-
-},
+    // showroom
+    {
+        path: '/showrm',
+        element: <ShowRm />,
+        // layout: 'blank',
+    },
+    // {
+    //     path: '/showroomstaff ',
+    //     element: <ShowroomStaff/>,
+    //     layout: 'blank',
+    // },
+    {
+        path: '/addbook',
+        element: <AddBook />,
+        // layout: 'blank',
+    },
+    {
+        path: '/staff',
+        element: <Staff />,
+        // layout: 'blank',
+    },
+    // details page
+    {
+        path: '/showrm/viewmore/:id',
+        element: <ViewMore />,
+        // layout: 'blank',
+    },
     // analytics page
     {
         path: '/analytics',
@@ -202,7 +190,6 @@ const routes = [
         path: '/cashreport',
         element: <CashReport />,
         // layout: 'blank',
-
     },
     // crypto page
     {
@@ -251,7 +238,6 @@ const routes = [
         path: '/invoiceReport/',
         element: <InvoiceReport />,
     },
-    
     {
         path: '/apps/invoice/add',
         element: <Add />,
@@ -461,64 +447,64 @@ const routes = [
         path: '/datatables/column-chooser',
         element: <ColumnChooser />,
     },
-   
+
     //Booking pages
 
-   
-  
-  
-    
-   
+
+
+
+
+
     // {
     //     path: "/bookings/newbooking/viewmore/:id",
     //     element: <ViewMore />,
     // },
- 
 
 
-// service
+
+    // service
 
 
-// Reports Page
-// General
-{
-    path: '/general/expense',
-    element: <ExpenseSummery />,
-},
-{
-    path: '/general/sales',
-    element: <SalesSummery />,
-},
-// Financial
-{
-    path: '/financial/balance',
-    element: <BalanceSheet />,
-},
-{
-    path: '/financial/ledger',
-    element: <Ledger />,
-},
-{
-    path: '/financial/profit',
-    element: <ProfitLoss />,
-},
-// Receivable
-{
-    path: '/receivable/comcusoutstanding',
-    element: <ComCusOutstanding />,
-},
-{
-    path: '/receivable/comcuswise',
-    element: <ComCusWise />,
-},
-{
-    path: '/receivable/invoicewise',
-    element: <InvoiceWiseSheet />,
-},
-{
-    path: '/receivable/payment',
-    element: <PaymentReceived />,
-},
+    // Reports Page
+    // General
+    {
+        path: '/general/expense',
+        element: <ExpenseSummery />,
+    },
+    {
+        path: '/general/sales',
+        element: <SalesSummery />,
+    },
+    // Financial
+    {
+        path: '/financial/balance',
+        element: <BalanceSheet />,
+    },
+    {
+        path: '/financial/ledger',
+        element: <Ledger />,
+    },
+    {
+        path: '/financial/profit',
+        element: <ProfitLoss />,
+    },
+    // Receivable
+    {
+        path: '/receivable/comcusoutstanding',
+        element: <ComCusOutstanding />,
+    },
+    {
+        path: '/receivable/comcuswise',
+        element: <ComCusWise />,
+    },
+    {
+        path: '/receivable/invoicewise',
+        element: <InvoiceWiseSheet />,
+    },
+    {
+        path: '/receivable/payment',
+        element: <PaymentReceived />,
+    },
 
 
     {

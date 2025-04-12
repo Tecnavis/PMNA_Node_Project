@@ -52,7 +52,7 @@ const Index = () => {
                 const roles = response.data;
 
                 const userRole = roles.find((r: Role) => r._id === storedRole); // Type of 'r' is Role
-                
+
                 if (userRole) {
                     localStorage.setItem('role', userRole.name);
                     setRole(userRole.name)
@@ -359,7 +359,7 @@ const Index = () => {
                                                 </span>
                                             )
                                         }
-                                        {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (
+                                        {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (
                                             <button
                                                 className="bg-pink-500 text-white rounded-md py-2 px-3"
                                                 onClick={() => handleDismissRecord(record)}
