@@ -14,7 +14,7 @@ interface Booking {
   serviceType: string;
   phoneNumber: string;
   status: string;
-  createdBy?: string; 
+  createdBy?: string;
 }
 
 const BookingsShowRoom: React.FC = () => {
@@ -29,8 +29,8 @@ const BookingsShowRoom: React.FC = () => {
         const db = getFirestore();
         if (showroomId) {
           const statusConditions = [
-            
-             
+
+
 
             'booking added',
             'called to customer',
@@ -38,7 +38,7 @@ const BookingsShowRoom: React.FC = () => {
             'On the way to pickup location',
             'Vehicle Picked',
             'Vehicle Confirmed',
-        
+
             'On the way to dropoff location',
             'Vehicle Dropped',
             'Cancelled',
@@ -62,7 +62,7 @@ const BookingsShowRoom: React.FC = () => {
               serviceType: booking.serviceType,
               phoneNumber: booking.phoneNumber,
               status: booking.status,
-              createdBy:booking.createdBy
+              createdBy: booking.createdBy
             });
           });
           setBookings(bookingsData);
@@ -78,7 +78,7 @@ const BookingsShowRoom: React.FC = () => {
   }, [showroomId, uid]);
 
   return (
-    <div style={{ padding: '30px', overflowX: 'auto', fontFamily: 'Arial, sans-serif'}}>
+    <div style={{ padding: '30px', overflowX: 'auto', fontFamily: 'Arial, sans-serif' }}>
       <style>
         {`
           .loading-spinner {
@@ -133,20 +133,20 @@ const BookingsShowRoom: React.FC = () => {
       </style>
 
       <h2
-  style={{
-    textAlign: 'center',
-    marginBottom: '20px',
-    fontSize: '32px', // Slightly larger font size for emphasis
-    color: '#2c3e50', // Darker color for better readability
-    fontWeight: '600', // Slightly bolder text for better prominence
-    letterSpacing: '1px', // Add some spacing between letters for a more elegant look
-    textTransform: 'uppercase', // Makes the text stand out more
-    lineHeight: '1.4', // More comfortable line height
-    fontFamily: "'Roboto', sans-serif", // Use a modern sans-serif font
-  }}
->
-  Bookings
-</h2>
+        style={{
+          textAlign: 'center',
+          marginBottom: '20px',
+          fontSize: '32px', // Slightly larger font size for emphasis
+          color: '#2c3e50', // Darker color for better readability
+          fontWeight: '600', // Slightly bolder text for better prominence
+          letterSpacing: '1px', // Add some spacing between letters for a more elegant look
+          textTransform: 'uppercase', // Makes the text stand out more
+          lineHeight: '1.4', // More comfortable line height
+          fontFamily: "'Roboto', sans-serif", // Use a modern sans-serif font
+        }}
+      >
+        Bookings
+      </h2>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
         <thead>
@@ -160,24 +160,24 @@ const BookingsShowRoom: React.FC = () => {
         </thead>
         <tbody>
           {bookings.map((booking) => (
-             <tr key={booking.id} className="table-row">
-             <td className="table-cell">{booking.dateTime}</td>
-   <td className="table-cell">
-   <Link 
-     to={`/showrm/viewmore/${booking.id}`} 
-     style={{ color: "#007bff", textDecoration: "underline", cursor: "pointer" }}
-   >
-     {booking.fileNumber}
-   </Link>
- </td>                     <td className="table-cell">{booking.customerName}</td>
-             <td className="table-cell">{booking.phoneNumber}</td>
-             <td className="table-cell" style={{ backgroundColor: 'orange' }}>
-               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                 <p>{booking.status}</p>  {booking.createdBy === 'showroomStaff' && (
-        <IconUser /> 
-        )}
+            <tr key={booking.id} className="table-row">
+              <td className="table-cell">{booking.dateTime}</td>
+              <td className="table-cell">
+                <Link
+                  to={`/showrm/viewmore/${booking.id}`}
+                  style={{ color: "#007bff", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  {booking.fileNumber}
+                </Link>
+              </td>                     <td className="table-cell">{booking.customerName}</td>
+              <td className="table-cell">{booking.phoneNumber}</td>
+              <td className="table-cell" style={{ backgroundColor: 'orange' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <p>{booking.status}</p>  {booking.createdBy === 'showroomStaff' && (
+                    <IconUser />
+                  )}
                 </div>
-              
+
               </td>
             </tr>
           ))}

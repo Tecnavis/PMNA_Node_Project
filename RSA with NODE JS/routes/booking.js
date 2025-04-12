@@ -73,4 +73,10 @@ router.post('/upload', upload.single('image'), controller.uploadImage);
 // Route for settle driver balalance salary
 router.patch('/settle-driver-balance-salary', jwt, controller.updateBalanceSalary);
 
+// Route for add booking for showroom dashboard
+router.post('/showroom/add-booking',jwt, controller.addBookingForShowroom)
+
+// Route for add booking for showroom dashboard
+router.get('/showroom/bookings',jwt, controller.getBookingsForShowroom)
+
 module.exports = router;
