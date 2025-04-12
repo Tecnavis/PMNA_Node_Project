@@ -337,20 +337,6 @@ exports.getAllBookings = async (req, res) => {
             query.driver = new mongoose.Types.ObjectId(driverId);
         }
 
-        // If showroom as query then fetch showroom bookings
-        if (showroom) {
-            query.showroom = new mongoose.Types.ObjectId(showroom);
-        }
-
-        // If serviceCategory as query then fetch serviceCategory base fetching
-        if (serviceCategory) {
-            query.serviceCategory = serviceCategory
-        }
-        // If serviceCategory as query then fetch serviceCategory base fetching
-        if (notInStatus) {
-            query.status.$ne = notInStatus
-        }
-
         // If driverId as query then fetch drivers bookings
         if (verified) {
             query.verified = verified
@@ -1504,7 +1490,7 @@ exports.getBookingsForShowroom = async (req, res) => {
                 // }
             }
         };
-
+        console.log(query)
         res.status(200).json(response);
 
     } catch (error) {
