@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { IoCarSportOutline } from "react-icons/io5";
+import { AiTwotoneCar } from "react-icons/ai";
 import { BsBuildings } from "react-icons/bs";
 import { HiOutlineWrenchScrewdriver } from "react-icons/hi2";
-import { IoCalendarOutline } from "react-icons/io5";
 import { PiHourglassMediumDuotone } from "react-icons/pi";
-import { IoCheckmarkCircleOutline } from "react-icons/io5";
+import { IoMdCheckmarkCircleOutline } from "react-icons/io";
+import { BsCalendar2Check } from "react-icons/bs";
 
 
 import ServiceCenter from './ServiceCenter/ServiceCenter';
@@ -44,7 +44,7 @@ const tabConfig = {
   },
   bodyParts: {
     label: 'Body Shops',
-    icon: <IoCarSportOutline />,
+    icon: <AiTwotoneCar />,
     components: {
       bookings: <BodyShopes />,
       pendingBookings: <PendingBodyBookings />,
@@ -63,9 +63,9 @@ const tabConfig = {
 };
 
 const subTabLabels = {
-  bookings: { label: 'Bookings', icon: <IoCalendarOutline /> },
+  bookings: { label: 'Bookings', icon: <BsCalendar2Check /> },
   pendingBookings: { label: 'Pending', icon: <PiHourglassMediumDuotone /> },
-  completedBookings: { label: 'Completed', icon: <IoCheckmarkCircleOutline /> },
+  completedBookings: { label: 'Completed', icon: <IoMdCheckmarkCircleOutline /> },
 };
 
 const ShowRm: React.FC = () => {
@@ -131,13 +131,7 @@ const ShowRm: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           {/* Status Bar */}
           <div
-            className="h-1 w-full"
-            style={{
-              backgroundColor:
-                selectedOption === 'bookings' ? COLORS.primary :
-                  selectedOption === 'pendingBookings' ? COLORS.accent :
-                    COLORS.secondary
-            }}
+            className="h-1 w-full bg-gray-200"
           />
 
           {/* Animated Content */}

@@ -75,6 +75,19 @@ export interface AddBookingResponse {
     booking: IBooking;
 }
 
+export interface AllBookingResponse {
+    data: {
+        bookings: IBooking[];
+        pagination: {
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+        };
+    }
+    success: boolean;
+}
+
 export interface AddNewBookingFormData {
     fileNumber: string;
     customerName: string;
