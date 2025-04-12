@@ -68,6 +68,12 @@ const Header: React.FC = () => {
               Home
             </Link>
             <Link
+              to="/showrm"
+              className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
+            >
+              Booking
+            </Link>
+            <Link
               to="/staff"
               className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
             >

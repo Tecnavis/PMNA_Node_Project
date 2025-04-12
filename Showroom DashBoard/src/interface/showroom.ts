@@ -4,6 +4,7 @@ export interface IServiceOption {
 }
 
 export interface IShowroom {
+    _id: string;
     name: string;
     showroomId?: string;
     description?: string;

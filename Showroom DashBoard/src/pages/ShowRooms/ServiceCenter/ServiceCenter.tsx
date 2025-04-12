@@ -1,21 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, getDocs, query, where, doc, getDoc, updateDoc } from 'firebase/firestore';
-// import { IoPersonOutline } from "react-icons/io5";
 import IconUser from '../../../components/Icon/IconUser';
 import { Link } from 'react-router-dom';
+import { getBookings } from '../../../service/booking';
+import { statusConditions } from './PendingBookings';
+import { IBooking } from '../../../interface/booking';
+import { dateFormate, formattedTime } from '../../../utils/dateUtils'
 
 // Define the Booking and Staff types
-interface Booking {
-  id: string;
-  dateTime: string;
-  fileNumber: string;
-  customerName: string;
-  serviceType: string;
-  phoneNumber: string;
-  status: string;
-  createdBy?: string; 
-}
-
 interface Staff {
   id: string;
   name: string;
@@ -25,77 +16,25 @@ interface Staff {
 
 const ServiceCenter: React.FC = () => {
   // const IoPersonOutline = require('react-icons/io5')
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<IBooking[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]); // State to hold staff data
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
   const showroomId = localStorage.getItem('showroomId');
   const uid = import.meta.env.VITE_REACT_APP_UID;
-  console.log(bookings,'this is the staff')
-  console.log("showroomId",showroomId)
+
 
   // Fetch bookings and staff data from Firestore
   useEffect(() => {
     const fetchBookingsAndStaff = async () => {
       try {
-        const db = getFirestore();
         if (showroomId) {
-          // Fetch the showroom document
-          const showroomDocRef = doc(db, `user/${uid}/showroom/${showroomId}`);
-          const showroomDoc = await getDoc(showroomDocRef);
-    
-          if (showroomDoc.exists()) {
-            const showroomData = showroomDoc.data();
-    
-            // Fetch staff members from the showroom data
-            const staffData: Staff[] = showroomData.staff.map((staffMember: any) => ({
-              id: staffMember.phoneNumber, // Assuming phone number is unique
-              name: staffMember.name,
-              phoneNumber: staffMember.phoneNumber,
-            }));
-    
-            setStaff(staffData);
-    
-            // Fetch Bookings
-            const statusConditions = [
-            
-             
-
-              'booking added',
-              'called to customer',
-              'Order Received',
-              'On the way to pickup location',
-              'Vehicle Picked',
-              'Vehicle Confirmed',
-          
-              'On the way to dropoff location',
-              'Vehicle Dropped',
-              'Cancelled',
-            ];
-    
-            const bookingQuery = query(
-              collection(db, `user/${uid}/bookings`),
-              where('serviceCategory', '==', 'Service Center'),
-              where('showroomId', '==', showroomId),
-              where('status', 'in', statusConditions)
-            );
-    
-            const bookingSnapshot = await getDocs(bookingQuery);
-            const bookingsData: Booking[] = [];
-            bookingSnapshot.forEach((doc) => {
-              const booking = doc.data();
-              // const formattedDateTime = new Date(booking.dateTime).toLocaleDateString('en-GB');
-              bookingsData.push({
-                id: doc.id,
-                dateTime: booking.dateTime,
-                fileNumber: booking.fileNumber,
-                customerName: booking.customerName,
-                serviceType: booking.serviceType,
-                phoneNumber: booking.phoneNumber,
-                status: booking.status,
-                createdBy: booking.createdBy
-              });
-            });
-            setBookings(bookingsData);
+          const data = await getBookings({
+            status: statusConditions,
+            serviceCategory: 'Service Center',
+            showroom: showroomId
+          })
+          if (data) {
+            // setBookings(data.booking);
           } else {
             console.error('Showroom document does not exist');
           }
@@ -106,14 +45,14 @@ const ServiceCenter: React.FC = () => {
         console.error('Error fetching bookings and staff:', error);
       }
     };
-    
+
 
     fetchBookingsAndStaff();
   }, [showroomId, uid]);
 
-  
+
   return (
-    <div style={{ padding: '30px', overflowX: 'auto', fontFamily: 'Arial, sans-serif'}}>
+    <div style={{ padding: '30px', overflowX: 'auto', fontFamily: 'Arial, sans-serif' }}>
       <style>
         {`
           .loading-spinner {
@@ -168,20 +107,20 @@ const ServiceCenter: React.FC = () => {
       </style>
 
       <h2
-  style={{
-    textAlign: 'center',
-    marginBottom: '20px',
-    fontSize: '32px', // Slightly larger font size for emphasis
-    color: '#2c3e50', // Darker color for better readability
-    fontWeight: '600', // Slightly bolder text for better prominence
-    letterSpacing: '1px', // Add some spacing between letters for a more elegant look
-    textTransform: 'uppercase', // Makes the text stand out more
-    lineHeight: '1.4', // More comfortable line height
-    fontFamily: "'Roboto', sans-serif", // Use a modern sans-serif font
-  }}
->
-  Bookings
-</h2>
+        style={{
+          textAlign: 'center',
+          marginBottom: '20px',
+          fontSize: '32px', // Slightly larger font size for emphasis
+          color: '#2c3e50', // Darker color for better readability
+          fontWeight: '600', // Slightly bolder text for better prominence
+          letterSpacing: '1px', // Add some spacing between letters for a more elegant look
+          textTransform: 'uppercase', // Makes the text stand out more
+          lineHeight: '1.4', // More comfortable line height
+          fontFamily: "'Roboto', sans-serif", // Use a modern sans-serif font
+        }}
+      >
+        Bookings
+      </h2>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
         <thead>
@@ -193,33 +132,33 @@ const ServiceCenter: React.FC = () => {
             <th className="table-cell">Status</th>
           </tr>
         </thead>
-      <tbody>
-               {bookings.map((booking) => (
-                  <tr key={booking.id} className="table-row">
-                  <td className="table-cell">{booking.dateTime}</td>
-       <td className="table-cell">
-       <Link 
-         to={`/showrm/viewmore/${booking.id}`} 
-         style={{ color: "#007bff", textDecoration: "underline", cursor: "pointer" }}
-       >
-         {booking.fileNumber}
-       </Link>
-     </td>                     <td className="table-cell">{booking.customerName}</td>
-             <td className="table-cell">{booking.phoneNumber}</td>
-             <td className="table-cell" style={{ backgroundColor: 'orange' }}>
-               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                 <p>{booking.status}</p>  {booking.createdBy === 'showroomStaff' && (
-        <IconUser /> 
-        )}
+        <tbody>
+          {bookings?.map((booking) => (
+            <tr key={booking._id} className="table-row">
+              <td className="table-cell">
+                {`${dateFormate('' + booking?.createdAt)}, ${formattedTime('' + booking?.createdAt)}`}
+              </td>
+              <td className="table-cell">
+                <Link
+                  to={`/showrm/viewmore/${booking._id}`}
+                  style={{ color: "#007bff", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  {booking.fileNumber}
+                </Link>
+              </td>
+              <td className="table-cell">{booking.customerName}</td>
+              <td className="table-cell">{booking.mob1 || booking.mob2}</td>
+              <td className="table-cell" style={{ backgroundColor: 'orange' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <p>{booking.status}</p>  {booking.createdBy === 'showroomStaff' && (
+                    <IconUser />
+                  )}
                 </div>
-              
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-
-     
     </div>
   );
 };
