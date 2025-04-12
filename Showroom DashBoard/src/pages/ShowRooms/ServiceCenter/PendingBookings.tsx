@@ -3,7 +3,17 @@ import { getFirestore, collection, getDocs, query, where } from 'firebase/firest
 // import { IoPersonOutline } from "react-icons/io5";
 import IconUser from '../../../components/Icon/IconUser';
 import { Link } from 'react-router-dom';
-
+export const statusConditions = [
+  'booking added',
+  'called to customer',
+  'Order Received',
+  'On the way to pickup location',
+  'Vehicle Picked',
+  'Vehicle Confirmed',
+  'On the way to dropoff location',
+  'Vehicle Dropped',
+  'Cancelled',
+];
 // Define the Booking type
 interface Booking {
   id: string;
@@ -28,23 +38,6 @@ const PendingBookings: React.FC = () => {
         const showroomId = localStorage.getItem('user/${uid}/showroomId');
         
         if (showroomId) {
-          const statusConditions = [
-            
-             
-
-            'booking added',
-            'called to customer',
-            'Order Received',
-            'On the way to pickup location',
-            'Vehicle Picked',
-            'Vehicle Confirmed',
-        
-            'On the way to dropoff location',
-            'Vehicle Dropped',
-          
-            'Cancelled',
-          ];
-
           const q = query(
             collection(db, `user/${uid}/bookings`),
             where('serviceCategory', '==', 'Service Center'),

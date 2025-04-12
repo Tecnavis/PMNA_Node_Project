@@ -15,7 +15,7 @@ router.get('/filtered', jwt, controller.filterGetShowrooms);
 router.post('/staff-send-otp', jwt, controller.sendOtpForShowroomStaff);
 // OTP verify and login
 router.post('/staff-verify-login', jwt, controller.verifyOTPAndLogin);
-router.post('/staff-signup', jwt, controller.shoromStaffSignup);
+router.post('/staff-signup', jwt, controller.showroomStaffSignup);
 
 router.put('/:id',jwt, upload.single('image'), controller.updateShowroom);
 router.get('/:id',jwt, controller.getShowroomById);

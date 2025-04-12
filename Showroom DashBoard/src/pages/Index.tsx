@@ -3,13 +3,21 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { IRootState } from '../store';
 import ReactApexChart from 'react-apexcharts';
+import { axiosInstance, BASE_URL } from '../config/axiosConfig';
+import sweetAlert from '../components/sweetAlert';
+
+interface BookingReportResProps {
+    newBookingsShowRoom: number,
+    newBookingsOther: number,
+    pendingBookings: number,
+    completedBookings: number
+
+}
 
 const Index = () => {
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass === 'rtl');
-    // const db = getFirestore();
     const showroomId = localStorage.getItem('showroomId') || '';
-    const uid = import.meta.env.VITE_REACT_APP_UID;
 
 
     const [loading, setLoading] = useState(true);
@@ -18,121 +26,115 @@ const Index = () => {
         options: { /* Initial chart options */ }
     });
 
+    const fetchBookings = async () => {
+        try {
+            setLoading(true);
+
+            const res = await axiosInstance.get(`${BASE_URL}/showroom-dashboard/${showroomId}`);
+            const responseData = res.data;
+
+            if (!('bookingData' in responseData)) {
+                throw new Error('Unexpected response format');
+            }
+
+            const { bookingData } = responseData as { bookingData: BookingReportResProps };
+
+            setSalesByCategory({
+                series: [bookingData.newBookingsShowRoom || 0, bookingData.newBookingsOther || 0, bookingData.pendingBookings || 0, bookingData.completedBookings || 0],
+                options: {
+                    chart: {
+                        type: 'donut',
+                        height: 460,
+                        fontFamily: 'Nunito, sans-serif',
+                    },
+                    dataLabels: {
+                        enabled: false,
+                    },
+                    stroke: {
+                        show: true,
+                        width: 25,
+                        colors: isDark ? '#0e1726' : '#fff',
+                    },
+                    colors: isDark ? ['#5c1ac3', '#e2a03f', '#e7515a', '#3182ce'] : ['#e2a03f', '#5c1ac3', '#e7515a', '#3182ce'],
+                    legend: {
+                        position: 'bottom',
+                        horizontalAlign: 'center',
+                        fontSize: '14px',
+                        markers: {
+                            width: 10,
+                            height: 10,
+                            offsetX: -2,
+                        },
+                        height: 50,
+                        offsetY: 20,
+                    },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                size: '65%',
+                                background: 'transparent',
+                                labels: {
+                                    show: true,
+                                    name: {
+                                        show: true,
+                                        fontSize: '29px',
+                                        offsetY: -10,
+                                    },
+                                    value: {
+                                        show: true,
+                                        fontSize: '26px',
+                                        color: isDark ? '#bfc9d4' : undefined,
+                                        offsetY: 16,
+                                        formatter: (val: any) => {
+                                            return val;
+                                        },
+                                    },
+                                    total: {
+                                        show: true,
+                                        label: 'Total',
+                                        color: '#888ea8',
+                                        fontSize: '29px',
+                                        formatter: (w: any) => {
+                                            return w.globals.seriesTotals.reduce(function (a: any, b: any) {
+                                                return a + b;
+                                            }, 0);
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    labels: ['ShowRoom Booking', 'New Bookings', 'Pending Bookings', 'Completed Bookings'],
+                    states: {
+                        hover: {
+                            filter: {
+                                type: 'none',
+                                value: 0.15,
+                            },
+                        },
+                        active: {
+                            filter: {
+                                type: 'none',
+                                value: 0.15,
+                            },
+                        },
+                    },
+                }
+            });
+        } catch (error: any) {
+            console.error("Error fetching bookings:", error);
+            sweetAlert({
+                title: "Error",
+                message: error?.response?.data?.message || error.message || "Failed to fetch booking data",
+                type: "error"
+            });
+        } finally {
+            setLoading(false);
+        }
+
+
+    };
     useEffect(() => {
-        const fetchBookings = () => {
-            // const q = query(
-            //     collection(db, `user/${uid}/bookings`),
-            //     where('showroomId', '==', showroomId),
-            //     //  where('status', '==', 'Order Completed') // Add this where clause
-            // );
-
-            // const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            //     const bookings = querySnapshot.docs.map((doc) => doc.data());
-
-            //     const newBookingsShowRoom = bookings.filter(booking => booking.bookingStatus === 'ShowRoom Booking').length;
-            //     console.log("newBookingsShowRoom", bookings)
-            //     const newBookingsOther = bookings.filter(booking => booking.status === 'booking added' && booking.bookingStatus !== 'ShowRoom Booking').length;
-            //     const pendingBookings = bookings.filter(booking => [
-            //         'called to customer',
-            //         'Order Received',
-            //         'On the way to pickup location',
-            //         'Vehicle Picked',
-            //         'Vehicle Confirmed',
-            //         'To DropOff Location',
-            //         'On the way to dropoff location',
-            //         'Vehicle Dropped'
-            //     ].includes(booking.status)).length;
-            //     const completedBookings = bookings.filter(booking => booking.status === 'Order Completed').length;
-
-
-            //     setSalesByCategory({
-            //         series: [newBookingsShowRoom, newBookingsOther, pendingBookings, completedBookings],
-            //         options: {
-            //             chart: {
-            //                 type: 'donut',
-            //                 height: 460,
-            //                 fontFamily: 'Nunito, sans-serif',
-            //             },
-            //             dataLabels: {
-            //                 enabled: false,
-            //             },
-            //             stroke: {
-            //                 show: true,
-            //                 width: 25,
-            //                 colors: isDark ? '#0e1726' : '#fff',
-            //             },
-            //             colors: isDark ? ['#5c1ac3', '#e2a03f', '#e7515a', '#3182ce'] : ['#e2a03f', '#5c1ac3', '#e7515a', '#3182ce'],
-            //             legend: {
-            //                 position: 'bottom',
-            //                 horizontalAlign: 'center',
-            //                 fontSize: '14px',
-            //                 markers: {
-            //                     width: 10,
-            //                     height: 10,
-            //                     offsetX: -2,
-            //                 },
-            //                 height: 50,
-            //                 offsetY: 20,
-            //             },
-            //             plotOptions: {
-            //                 pie: {
-            //                     donut: {
-            //                         size: '65%',
-            //                         background: 'transparent',
-            //                         labels: {
-            //                             show: true,
-            //                             name: {
-            //                                 show: true,
-            //                                 fontSize: '29px',
-            //                                 offsetY: -10,
-            //                             },
-            //                             value: {
-            //                                 show: true,
-            //                                 fontSize: '26px',
-            //                                 color: isDark ? '#bfc9d4' : undefined,
-            //                                 offsetY: 16,
-            //                                 formatter: (val: any) => {
-            //                                     return val;
-            //                                 },
-            //                             },
-            //                             total: {
-            //                                 show: true,
-            //                                 label: 'Total',
-            //                                 color: '#888ea8',
-            //                                 fontSize: '29px',
-            //                                 formatter: (w: any) => {
-            //                                     return w.globals.seriesTotals.reduce(function (a: any, b: any) {
-            //                                         return a + b;
-            //                                     }, 0);
-            //                                 },
-            //                             },
-            //                         },
-            //                     },
-            //                 },
-            //             },
-            //             labels: ['Other New Bookings', 'Pending Bookings', 'Completed Bookings'],
-            //             states: {
-            //                 hover: {
-            //                     filter: {
-            //                         type: 'none',
-            //                         value: 0.15,
-            //                     },
-            //                 },
-            //                 active: {
-            //                     filter: {
-            //                         type: 'none',
-            //                         value: 0.15,
-            //                     },
-            //                 },
-            //             },
-            //         }
-            //     });
-            //     setLoading(false);
-            // });
-
-            // return () => unsubscribe();
-        };
-
         fetchBookings();
     }, [isDark]);
 

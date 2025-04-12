@@ -1,170 +1,92 @@
-import React, { useEffect, useState, ChangeEvent } from 'react';
-import { addDoc, collection,  getDoc, doc, Timestamp } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore'; // Import getFirestore
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
-import Header from '../../components/Layouts/Header';
-
-interface FormData {
-    fileNumber: string;
-    customerName: string;
-    phoneNumber: string;
-    serviceCategory: string;
-    vehicleNumber: string;
-    comments: string;
-   
-}
+import { getShowroomById } from '../../service/showroom';
+import { IShowroom } from '../../interface/showroom';
+import { useForm } from "react-hook-form";
+import { AddBookingResponse, AddNewBookingFormData } from '../../interface/booking';
+import { addNewBooking } from '../../service/booking';
+import sweetAlert from '../../components/sweetAlert';
 
 const AddBook: React.FC = () => {
-    const showroomId = localStorage.getItem('showroomId');
-    console.log("first", showroomId);
-  const [currentDateTime, setCurrentDateTime] = useState<string>("");
-
-    const [formData, setFormData] = useState<FormData>({
-        fileNumber: '',
-        customerName: '',
-        phoneNumber: '',
-        serviceCategory: '',
-        vehicleNumber: '',
-        comments: '',
-      
-    });
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const uid = import.meta.env.VITE_REACT_APP_UID;
-    const db = getFirestore();
+    const [bookingId, setBookingId] = useState<string>(uuid().substring(0, 4));
+    const [showroomData, setShowroomData] = useState<IShowroom | null>(null);
+    const [currentDateTime, setCurrentDateTime] = useState<string>("");
+
+    const showroomId = localStorage.getItem('showroomId') || '';
+
     const navigate = useNavigate();
-    const [bookingId, setBookingId] = useState<string>('');
-    const [showroomData, setShowroomData] = useState<any>(null);
+
+    const {
+        handleSubmit,
+        formState: { errors },
+        register,
+        setValue
+    } = useForm<AddNewBookingFormData>({
+        defaultValues: {
+            fileNumber: '',
+            customerName: '',
+            phoneNumber: '',
+            serviceCategory: '',
+            vehicleNumber: '',
+            comments: '',
+            showroom: '',
+        },
+    });
+
+    const fetchShowroomData = async () => {
+        try {
+            const data: IShowroom = await getShowroomById(showroomId)
+
+            if (data) {
+                setShowroomData(data);
+                if (bookingId) {
+                    const generatedFileNumber = `${data.showroomId}-${bookingId}`;
+                    setValue("fileNumber", generatedFileNumber);
+                    setValue("showroom", data._id);
+                }
+            } else {
+                console.log('Showroom document does not exist');
+            }
+        } catch (error) {
+            console.error('Error fetching showroom data:', error);
+        }
+    };
 
     useEffect(() => {
-        const newBookingId = uuid().substring(0, 4);
-        setBookingId(newBookingId);
+        fetchShowroomData();
+    }, [showroomId]);
+
+    useEffect(() => {
+        const updateDateTime = () => {
+            const now = new Date();
+            setCurrentDateTime(now.toLocaleString("en-GB", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true
+            }));
+        };
+
+        updateDateTime();
+        const interval = setInterval(updateDateTime, 1000);
+
+        return () => clearInterval(interval);
     }, []);
 
-    useEffect(() => {
-        const fetchShowroomData = async () => {
-            try {
-                const showroomDocRef = doc(db, `user/${uid}/showroom`, showroomId!);
-                const showroomDocSnap = await getDoc(showroomDocRef);
-                if (showroomDocSnap.exists()) {
-                    const data = showroomDocSnap.data();
-                    console.log('Showroom Data:', data);
-                    setShowroomData(data);
-
-                    if (data.showroomId) {
-                        const updatedFileNumber = `${data.showroomId}${bookingId}`;
-                        console.log("updatedFileNumber",updatedFileNumber)
-                        setFormData(prevFormData => ({
-                            ...prevFormData,
-                            fileNumber: updatedFileNumber,
-                        }));
-                        console.log('Updated File Number:', updatedFileNumber);
-                    }
-                } else {
-                    console.log('Showroom document does not exist');
-                }
-            } catch (error) {
-                console.error('Error fetching showroom data:', error);
-            }
-        };
-
-        fetchShowroomData();
-    }, [showroomId, db, bookingId, uid]);
-
-    const handleInputChange = (field: keyof FormData, value: string) => {
-        setFormData(prevFormData => ({
-            ...prevFormData,
-            [field]: value,
-        }));
-    };
-
-    const formatDate = (date: Date): string => {
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
-            const year = date.getFullYear();
-            const hours = date.getHours();
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            const seconds = date.getSeconds().toString().padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            const formattedHours = (hours % 12 || 12).toString().padStart(2, '0');
-    
-            return `${day}/${month}/${year}, ${formattedHours}:${minutes}:${seconds} ${ampm}`;
-        };
-
-        useEffect(() => {
-            const updateDateTime = () => {
-              const now = new Date();
-              setCurrentDateTime(now.toLocaleString("en-GB", { 
-                weekday: "long", 
-                year: "numeric", 
-                month: "long", 
-                day: "2-digit", 
-                hour: "2-digit", 
-                minute: "2-digit", 
-                second: "2-digit",
-                hour12: true 
-              }));
-            };
-        
-            updateDateTime();
-            const interval = setInterval(updateDateTime, 1000);
-            
-            return () => clearInterval(interval);
-          }, []);
-
-    const validateForm = (): boolean => {
-        const { customerName, phoneNumber, serviceCategory, vehicleNumber } = formData;
-        return !!(customerName && phoneNumber && serviceCategory && vehicleNumber);
-    };
-
-    const handleSubmit = async () => {
-        if (!validateForm()) {
-            setError('Please fill in all required fields.');
-            return;
-        }
-    
+    const handleAddBooking = async (formData: AddNewBookingFormData) => {
         setLoading(true);
         setError(null);
-    
         try {
-    
-            // Create the dropoffLocation object
-            const dropoffLocation = {
-                lat: showroomData?.locationLatLng?.lat || 0,  // Use fallback if lat is undefined
-                lng: showroomData?.locationLatLng?.lng || 0,  // Use fallback if lng is undefined
-                name: showroomData?.Location || 'Default Showroom Name', // Adjusted to use showroom name
-            };
-    
-            const docRef = await addDoc(collection(db, `user/${uid}/bookings`), {
-                ...formData,
-                showroomId: showroomId,
-                dateTime: formatDate(new Date()), // Ensure correct date format
-                createdAt: Timestamp.now(),
-                bookingStatus: 'ShowRoom Booking',
-                bookingEdit: true,
-
-                status: 'booking added',
-                bookingId: bookingId,
-                // company: 'rsa',
-                createdBy:'showroom',
-                dropoffLocation: dropoffLocation,
-                showroomLocation: dropoffLocation.name,
-            });
-    
-            console.log('Document added successfully with ID:', docRef.id);
-    
-            // Reset form data
-            setFormData({
-                fileNumber: '',
-                customerName: '',
-                phoneNumber: '',
-                vehicleNumber: '',
-                serviceCategory: '',
-                comments: '',
-            });
-    
+            const res: AddBookingResponse = await addNewBooking(formData) as AddBookingResponse
+            sweetAlert({ title: 'Booking added', message: res.message })
             navigate('/showrm');
         } catch (error) {
             console.error('Error adding document: ', error);
@@ -173,31 +95,38 @@ const AddBook: React.FC = () => {
             setLoading(false);
         }
     };
-  
-    return (
-   
-          
-            
-            <div style={{ padding: '1.5rem', flex: 1, marginTop: '1rem', margin: '2rem auto', maxWidth: '800px', boxShadow: '0 0 15px rgba(0, 0, 0, 0.2)', borderRadius: '10px', backgroundColor: 'rgba(246, 213, 211, 0.2)' }}>
-                             <h5 className="font-semibold text-lg p-4" style={{ marginBottom: '1rem', borderBottom: '1px solid #ddd', paddingBottom: '1rem' }}>Add Bookings</h5>
-                <div style={{ padding: '1rem' }}><h2 className="text-center text-lg font-medium text-gray-600  italic">
-  {currentDateTime}
-</h2>
-                    {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
-                    <div className="mb-4" style={{ marginBottom: '20px', fontFamily: 'Arial, sans-serif', color: '#333', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '5px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
-                        <strong style={{ fontWeight: 'bold', color: '#007bff', fontSize: '16px' }}>Booking ID: </strong>
-                        <span style={{ fontSize: '16px', color: '#333' }}>{bookingId}</span>
-                    </div>
 
-                    <div className="mt-4 flex items-center" style={{ marginBottom: '1rem' }}>
-                        <label htmlFor="fileNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>File Number</label>
+    return (
+        <form
+            onSubmit={handleSubmit(handleAddBooking)}
+            className="p-6 flex-1 mt-4 mx-auto my-8 max-w-[800px] rounded-[10px] panel "
+        >
+            <div className='flex items-center justify-between border-b border-gray-300 pb-2 mb-5'>
+                <h2 className="font-semibold text-gray-900 text-xl">Add Booking</h2>
+                <p className="mt-1 text-sm/6 text-gray-600">
+                    {currentDateTime}
+                </p>
+            </div>
+            <div
+                style={{ padding: '1rem' }}>
+                {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
+                <div
+                    className="mb-5 font-sans text-[#333] p-2.5 bg-[#f9f9f9] rounded shadow-[0_2px_4px_rgba(0,0,0,0.1)]"
+                >
+                    <span className='font-semibold text-sm text-blue-500'>Booking ID : </span>
+                    <span style={{ fontSize: '16px', color: '#333' }}>{bookingId}</span>
+                </div>
+                <div className="mt-4 flex items-center" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="fileNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>File Number</label>
+                    <div className='w-full flex flex-col items-start justify-start'>
                         <input
                             id="fileNumber"
                             type="text"
-                            name="fileNumber"
+                            {...register("fileNumber", {
+                                required: "FileNumber name is required",
+                            })}
                             className="form-input flex-1"
                             placeholder="Enter File Number"
-                            value={formData.fileNumber}
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
@@ -207,17 +136,20 @@ const AddBook: React.FC = () => {
                                 outline: 'none',
                                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                             }}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('fileNumber', e.target.value)}
                             readOnly
                         />
+                        {errors.fileNumber && (
+                            <p style={{ color: "red" }}>{errors.fileNumber.message}</p>
+                        )}
                     </div>
-                    <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                        <label htmlFor="serviceCategory" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Vehicle Section</label>
+                </div>
+                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="serviceCategory" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Vehicle Section</label>
+                    <div className='w-full flex flex-col items-start justify-start'>
                         <select
                             id="serviceCategory"
-                            name="serviceCategory"
                             className="form-select flex-1"
-                            value={formData.serviceCategory}
+                            {...register("serviceCategory", { required: "Please select a service category" })}
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
@@ -227,7 +159,6 @@ const AddBook: React.FC = () => {
                                 outline: 'none',
                                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                             }}
-                            onChange={(e: ChangeEvent<HTMLSelectElement>) => handleInputChange('serviceCategory', e.target.value)}
                         >
                             <option value="">Select Service Section</option>
                             <option value="Service Center">Service Center</option>
@@ -235,16 +166,27 @@ const AddBook: React.FC = () => {
                             <option value="ShowRooms">ShowRooms</option>
 
                         </select>
+                        {errors.serviceCategory && (
+                            <p className="text-red-500 text-center ">{errors.serviceCategory.message}</p>
+                        )}
                     </div>
-                    <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                        <label htmlFor="customerName" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Customer Name</label>
+                </div>
+                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="customerName" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Customer Name</label>
+                    <div className='w-full flex flex-col items-start justify-start'>
                         <input
                             id="customerName"
                             type="text"
-                            name="customerName"
                             className="form-input flex-1"
                             placeholder="Enter Customer Name"
-                            value={formData.customerName}
+                            {...register("customerName", {
+                                required: "Customer name is required",
+                                minLength: { value: 3, message: "Minimum 3 characters" },
+                                pattern: {
+                                    value: /^[a-zA-Z ]+$/,
+                                    message: "Only alphabets and spaces allowed",
+                                },
+                            })}
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
@@ -254,18 +196,27 @@ const AddBook: React.FC = () => {
                                 outline: 'none',
                                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                             }}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('customerName', e.target.value)}
                         />
+                        {errors.customerName && (
+                            <p className="text-red-500 ">{errors.customerName.message}</p>
+                        )}
                     </div>
-                    <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                        <label htmlFor="phoneNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Phone Number</label>
+                </div>
+                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="phoneNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Phone Number</label>
+                    <div className='w-full flex flex-col items-start justify-start'>
                         <input
                             id="phoneNumber"
                             type="text"
-                            name="phoneNumber"
                             className="form-input flex-1"
                             placeholder="Enter Phone Number"
-                            value={formData.phoneNumber}
+                            {...register("phoneNumber", {
+                                required: "Phone number is required",
+                                pattern: {
+                                    value: /^[0-9]{10}$/,
+                                    message: "Phone number must be 10 digits"
+                                }
+                            })}
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
@@ -275,18 +226,27 @@ const AddBook: React.FC = () => {
                                 outline: 'none',
                                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                             }}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('phoneNumber', e.target.value)}
                         />
+                        {errors.phoneNumber && (
+                            <p className="text-red-500 text-center ">{errors.phoneNumber.message}</p>
+                        )}
                     </div>
-                    <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                        <label htmlFor="vehicleNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Vehicle Number</label>
+                </div>
+                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="vehicleNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Vehicle Number</label>
+                    <div className='w-full flex flex-col items-start justify-start'>
                         <input
                             id="vehicleNumber"
                             type="text"
-                            name="vehicleNumber"
                             className="form-input flex-1"
                             placeholder="Enter Vehicle Number"
-                            value={formData.vehicleNumber}
+                            {...register("vehicleNumber", {
+                                required: "Vehicle number is required",
+                                pattern: {
+                                    value: /^[A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{4}$/,
+                                    message: "Enter a valid vehicle number (e.g. MH12AB1234)"
+                                }
+                            })}
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
@@ -296,55 +256,66 @@ const AddBook: React.FC = () => {
                                 outline: 'none',
                                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                             }}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('vehicleNumber', e.target.value)}
                         />
-                    </div>
-                    
-                    <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                        <label htmlFor="comments" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Comments</label>
-                        <textarea
-                            id="comments"
-                            name="comments"
-                            className="form-textarea flex-1"
-                            placeholder="Enter Comments"
-                            value={formData.comments}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
-                            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => handleInputChange('comments', e.target.value)}
-                        />
-                    </div>
-
-                    <div className="mt-4 flex justify-center" style={{ marginTop: '1rem' }}>
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={loading}
-                            style={{
-                                backgroundColor: '#007bff',
-                                color: '#fff',
-                                padding: '0.75rem 1.5rem',
-                                border: 'none',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
-                        >
-                            {loading ? 'Submitting...' : 'Submit'}
-                        </button>
+                        {errors.vehicleNumber && (
+                            <p className="text-red-500 text-center ">{errors.vehicleNumber.message}</p>
+                        )}
                     </div>
                 </div>
+                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="comments" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Comments</label>
+                    <div className='w-full flex flex-col items-start justify-start'>
+                        <textarea
+                            id="comments"
+                            className="form-textarea flex-1"
+                            placeholder="Enter Comments"
+                            {...register("comments", {
+                                required: "Comments are required",
+                                minLength: {
+                                    value: 5,
+                                    message: "Comment should be at least 5 characters"
+                                },
+                                maxLength: {
+                                    value: 500,
+                                    message: "Comment can't exceed 500 characters"
+                                },
+                                validate: value => value.trim().length > 0 || "Comment cannot be empty or whitespace"
+                            })}
+                            style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                border: '1px solid #ccc',
+                                borderRadius: '5px',
+                                fontSize: '1rem',
+                                outline: 'none',
+                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                            }}
+                        />
+                        {errors.comments && (
+                            <p className="text-red-500 text-center ">{errors.comments.message}</p>
+                        )}
+                    </div>
+                </div>
+                <div className="mt-4 flex justify-center" style={{ marginTop: '1rem' }}>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        style={{
+                            backgroundColor: '#007bff',
+                            color: '#fff',
+                            padding: '0.75rem 1.5rem',
+                            border: 'none',
+                            borderRadius: '5px',
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                        }}
+                    >
+                        {loading ? 'Submitting...' : 'Submit'}
+                    </button>
+                </div>
             </div>
-    
+        </form>
     );
 };
-
 export default AddBook;
-// ------------------------------------

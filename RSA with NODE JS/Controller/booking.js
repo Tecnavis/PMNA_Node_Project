@@ -82,6 +82,56 @@ exports.createBooking = async (req, res) => {
     }
 };
 
+// Controller to create a booking for showroom dashboard
+exports.addBookingForShowroom = async (req, res) => {
+    try {
+        const bookingData = req.body;
+
+        // Handle the case where 'company' is an empty string
+        if (!bookingData.company || bookingData.company === "") {
+            bookingData.company = null; // Or you can delete the field entirely if required
+        }
+
+        const newBooking = new Booking(bookingData);
+        await newBooking.save();
+
+        res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
+
+        // Populate and emit separately to improve response time
+        process.nextTick(async () => {
+            try {
+                const populatedBooking = await Booking.findById(newBooking._id)
+                    .populate('baselocation company driver provider')
+                    .lean();
+
+                if (populatedBooking) {
+                    io.emit("newChanges", {
+                        type: 'newBooking',
+                        bookingId: newBooking._id,
+                        newBooking: populatedBooking,
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to populate and emit:", err.message);
+            }
+        });
+    } catch (error) {
+        if (error.name === "ValidationError") {
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                errors: error.errors,
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "An internal server error occurred",
+            error: error.message,
+        });
+    }
+}
+
 // Controller to create a booking
 exports.createBookingNoAuth = async (req, res) => {
     try {
@@ -269,7 +319,7 @@ exports.getAllBookings = async (req, res) => {
             driverId,
             providerId,
             companyId,
-            verified
+            verified,
         } = req.query;
 
         // Convert page and limit to integers
@@ -285,6 +335,20 @@ exports.getAllBookings = async (req, res) => {
         // If driverId as query then fetch drivers bookings
         if (driverId) {
             query.driver = new mongoose.Types.ObjectId(driverId);
+        }
+
+        // If showroom as query then fetch showroom bookings
+        if (showroom) {
+            query.showroom = new mongoose.Types.ObjectId(showroom);
+        }
+
+        // If serviceCategory as query then fetch serviceCategory base fetching
+        if (serviceCategory) {
+            query.serviceCategory = serviceCategory
+        }
+        // If serviceCategory as query then fetch serviceCategory base fetching
+        if (notInStatus) {
+            query.status.$ne = notInStatus
         }
 
         // If driverId as query then fetch drivers bookings
@@ -338,7 +402,7 @@ exports.getAllBookings = async (req, res) => {
                 $lte: endOfDay
             };
         }
-
+        console.log("the query =>", query)
         // Pagination and sorting by createdAt in descending order
         const total = await Booking.countDocuments(query);
         const bookings = await Booking.find(query)
@@ -1309,3 +1373,146 @@ exports.updateBalanceSalary = async (req, res) => {
         })
     }
 }
+
+// Controller for get booking for showroom dashboard 
+exports.getBookingsForShowroom = async (req, res) => {
+    try {
+        const {
+            showroom,
+            status,
+            serviceType,
+            serviceCategory,
+            startDate,
+            endDate,
+            search,
+            page = 1,
+            limit = 10,
+            staffId
+        } = req.query;
+
+        // Validate required showroom
+        if (!showroom || !mongoose.Types.ObjectId.isValid(showroom)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid showroom is required'
+            });
+        }
+
+        // Build base query
+        const query = {
+            showroom: new mongoose.Types.ObjectId(showroom)
+        };
+
+        // Add status filter if provided
+        if (status) {
+            if (Array.isArray(status)) {
+                query.status = { $in: status };
+            } else {
+                query.status = status;
+            }
+        }
+
+        // Add service category filter
+        if (serviceCategory) {
+            query.serviceCategory = serviceCategory;
+        }
+
+        // Search functionality
+        if (search) {
+            const searchRegex = new RegExp(search, 'i');
+            query.$or = [
+                { fileNumber: searchRegex },
+                { customerName: searchRegex },
+                { customerVehicleNumber: searchRegex },
+                { mob1: searchRegex }
+            ];
+        }
+
+        // Staff-specific filter (if staffId is provided)
+        if (staffId && mongoose.Types.ObjectId.isValid(staffId)) {
+            const staff = await ShowroomStaff.findById(staffId);
+            if (!staff) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Staff member not found'
+                });
+            }
+        }
+
+        // Convert page and limit to numbers
+        const pageNum = parseInt(page, 10);
+        const limitNum = parseInt(limit, 10);
+
+        // Population configuration
+        const populationOptions = [
+            { path: 'showroom', select: 'name location phone' },
+            // { path: 'serviceType', select: 'name serviceCategory' },
+            // { path: 'driver', select: 'name phone vehicleNumber' },
+            // { path: 'provider', select: 'name phone' },
+            // { path: 'baselocation', select: 'name location' }
+        ];
+
+        // Execute query with pagination
+        const [total, bookings] = await Promise.all([
+            Booking.countDocuments(query),
+            Booking.find(query)
+                .populate(populationOptions)
+                .sort({ createdAt: -1 })
+                .skip((pageNum - 1) * limitNum)
+                .limit(limitNum)
+                .lean()
+        ]);
+
+        // Calculate summary statistics
+        // const stats = await Booking.aggregate([
+        //     { $match: query },
+        //     {
+        //         $group: {
+        //             _id: null,
+        //             totalBookings: { $sum: 1 },
+        //             totalRevenue: { $sum: "$receivedAmount" },
+        //             pendingBookings: {
+        //                 $sum: {
+        //                     $cond: [{ $eq: ["$status", "pending"] }, 1, 0]
+        //                 }
+        //             },
+        //             completedBookings: {
+        //                 $sum: {
+        //                     $cond: [{ $eq: ["$status", "completed"] }, 1, 0]
+        //                 }
+        //             }
+        //         }
+        //     }
+        // ]);
+
+        // Format response
+        const response = {
+            success: true,
+            data: {
+                bookings,
+                pagination: {
+                    total,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(total / limitNum)
+                },
+                // stats: stats[0] || {
+                //     totalBookings: 0,
+                //     totalRevenue: 0,
+                //     pendingBookings: 0,
+                //     completedBookings: 0
+                // }
+            }
+        };
+
+        res.status(200).json(response);
+
+    } catch (error) {
+        console.error('Error in getBookingsForShowroom:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while fetching showroom bookings',
+            error: error.message
+        });
+    }
+};

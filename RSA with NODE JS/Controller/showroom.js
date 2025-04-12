@@ -362,7 +362,7 @@ exports.verifyOTPAndLogin = async (req, res) => {
   }
 };
 
-exports.shoromStaffSignup = async (req, res) => {
+exports.showroomStaffSignup = async (req, res) => {
   try {
     const { name, phone: phoneNumber, whatsappNumber, designation, showroomId } = req.body;
     console.log("body", req.body)
