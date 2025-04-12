@@ -1,7 +1,7 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance as axios } from "../config/axiosConfig";
 import { BASE_URL } from "../config/axiosConfig";
-import { AddBookingResponse, AddNewBookingFormData } from '../interface/booking'
+import { AddBookingResponse, AddNewBookingFormData, AllBookingResponse } from '../interface/booking'
 import { handleApiError } from "../utils/errorHandler";
 
 
@@ -21,9 +21,9 @@ export const addNewBooking = async (formData: AddNewBookingFormData): Promise<Ad
 };
 
 // API service for get all bookings
-export const getBookings = async (formData: any): Promise<AddBookingResponse> => {
+export const getBookings = async (formData: any): Promise<AllBookingResponse> => {
     try {
-        const response: AxiosResponse<AddBookingResponse> = await axios.get(
+        const response: AxiosResponse<AllBookingResponse> = await axios.get(
             `${BASE_URL}/booking/showroom/bookings`,
             {
                 params: formData
