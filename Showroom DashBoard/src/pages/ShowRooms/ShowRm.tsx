@@ -76,7 +76,7 @@ const ShowRm: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen panel"
       style={{ backgroundColor: COLORS.background }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -131,11 +131,11 @@ const ShowRm: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           {/* Status Bar */}
           <div
-            className="h-1 w-full bg-gray-200"
+            className="h-1 w-full bg-gray-200 shadow-md"
           />
 
           {/* Animated Content */}
-          <div className="p-6">
+          <div className="p-6 shadow-md">
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${activeTab}-${selectedOption}`}
