@@ -20,6 +20,7 @@ import QRLogin from '../pages/Authentication/QRLogin';
 import InvoiceReport from '../pages/Report/InvoiceReport';
 import Staff from '../pages/Staffs/Staff';
 import ViewMore from '../pages/Details/ViewMore';
+import ReportIndex from '../pages/Report/ReportIndex';
 
 const Index = lazy(() => import('../pages/Index'));
 const Analytics = lazy(() => import('../pages/Analytics'));
@@ -138,6 +139,10 @@ const routes = [
         path: '/',
         element: <LoginCover />,
         layout: 'blank',
+    },
+    {
+        path: '/report',
+        element: <ReportIndex />,
     },
     {
         path: '/showrm/qr',

@@ -1,4 +1,5 @@
 const Showroom = require('../Model/showroom');
+const Booking = require('../Model/booking');
 const ShowroomStaff = require('../Model/showroomStaff');
 const bcrypt = require('bcrypt');
 const { generateShowRoomLink } = require('../utils/generateLink');
@@ -430,5 +431,141 @@ exports.loginShowroom = async (req, res) => {
     }
 
     return res.status(500).json({ message: "Internal Server Error. Please try again later." });
+  }
+};
+
+exports.showroomDashBoardReport = async (req, res) => {
+  const { month, year, serviceCategory, showroomId } = req.query;
+
+  try {
+    // Validate showroomId first
+    if (!showroomId) {
+      return res.status(400).json({
+        success: false,
+        message: "Showroom ID is required"
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(showroomId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Showroom ID format"
+      });
+    }
+
+    const showroomObjectId = new mongoose.Types.ObjectId(showroomId);
+
+    // Initialize query object with showroom filter
+    let query = {
+      showroom: showroomObjectId
+    };
+
+    // Date filtering logic
+    if (year) {
+      const yearNum = parseInt(year);
+      if (month) {
+        // Specific month and year provided
+        const monthNum = parseInt(month);
+        const startDate = new Date(Date.UTC(yearNum, monthNum - 1, 1));
+        const endDate = new Date(Date.UTC(yearNum, monthNum, 0, 23, 59, 59, 999));
+        query.createdAt = { $gte: startDate, $lte: endDate };
+      } else {
+        // Only year provided - get whole year
+        const startDate = new Date(Date.UTC(yearNum, 0, 1));
+        const endDate = new Date(Date.UTC(yearNum, 11, 31, 23, 59, 59, 999));
+        query.createdAt = { $gte: startDate, $lte: endDate };
+      }
+    }
+
+    // Service category filter
+    if (serviceCategory) {
+      query.serviceCategory = serviceCategory;
+    }
+
+    // Get raw booking data
+    const bookings = await Booking.find(query)
+      .sort({ createdAt: 1 })
+      .lean();
+
+    // Aggregation pipelines
+    const monthlyTotalsPipeline = [
+      { $match: query },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" }
+          },
+          monthName: { $first: { $dateToString: { format: "%B", date: "$createdAt" } } },
+          monthlyTotal: { $sum: "$totalAmount" },
+          monthlyBalance: { $sum: "$receivedAmount" },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ];
+
+    const overallTotalsPipeline = [
+      { $match: query },
+      {
+        $group: {
+          _id: null,
+          wholeTotal: { $sum: "$totalAmount" },
+          wholeBalance: { $sum: "$receivedAmount" },
+          totalCount: { $sum: 1 }
+        }
+      }
+    ];
+
+    const lifetimeTotalsPipeline = [
+      { $match: { showroom: showroomObjectId } },
+      {
+        $group: {
+          _id: null,
+          lifetimeTotal: { $sum: "$totalAmount" },
+          lifetimeBalance: { $sum: "$receivedAmount" },
+          lifetimeCount: { $sum: 1 }
+        }
+      }
+    ];
+
+    // Execute all aggregations in parallel
+    const [monthlyTotals, overallTotals, lifetimeTotals] = await Promise.all([
+      Booking.aggregate(monthlyTotalsPipeline),
+      Booking.aggregate(overallTotalsPipeline),
+      Booking.aggregate(lifetimeTotalsPipeline)
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      filter: {
+        showroom: showroomId,
+        serviceCategory: serviceCategory || 'All',
+        timePeriod: month
+          ? `${month}/${year}`
+          : year
+            ? `Year ${year}`
+            : 'All time'
+      },
+      bookings,
+      monthlyTotals,
+      overallTotals: overallTotals[0] || { wholeTotal: 0, wholeBalance: 0, totalCount: 0 },
+      lifetimeTotals: lifetimeTotals[0] || { lifetimeTotal: 0, lifetimeBalance: 0, lifetimeCount: 0 }
+    });
+
+  } catch (error) {
+    console.error("Error in showroom dashboard report:", error);
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ID format provided"
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error. Please try again later."
+    });
   }
 };
