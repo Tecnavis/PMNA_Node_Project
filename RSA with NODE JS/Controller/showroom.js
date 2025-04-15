@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const { generateShowRoomLink } = require('../utils/generateLink');
 const { sendOtp, verifyOtp } = require('../services/otpService');
 const { default: mongoose } = require('mongoose');
+const jwt = require('jsonwebtoken')
 
 // Create a showroom
 exports.createShowroom = async (req, res) => {
@@ -327,9 +328,9 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
 };
 
 // verify otp and login 
-exports.verifyOTPAndLogin = async (req, res) => {
+exports.staffLogin = async (req, res) => {
   try {
-    const { phoneNumber, otp } = req.body;
+    const { phoneNumber } = req.body;
 
     // Check if staff exists
     const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
@@ -338,24 +339,15 @@ exports.verifyOTPAndLogin = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: staff._id }, process.env.JWT_SECRET);
-
-    // generate OTP
-    const otpRespose = await verifyOtp('+91', phoneNumber, otp)
-    if (!otpRespose.success) {
-      return res.status(400).json({
-        success: false,
-        message: otpRespose.message
-      })
-    }
+    const token = jwt.sign({ id: showroomStaff._id }, process.env.JWT_SECRET);
 
     // Include role and name in the response
     res.status(200).json({
       token,
       role: "Staff",
-      name: staff.name,
+      name: showroomStaff.name,
       success: true,
-      message: "OTP sended successfully"
+      message: "Successfully logged"
     });
   } catch (err) {
     console.error(err.message);
@@ -518,7 +510,7 @@ exports.showroomDashBoardReport = async (req, res) => {
     ];
 
     const lifetimeTotalsPipeline = [
-      { $match: { showroom: showroomObjectId } },
+      { $match: { showroom: showroomObjectId, serviceCategory } },
       {
         $group: {
           _id: null,
