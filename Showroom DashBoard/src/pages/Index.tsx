@@ -6,12 +6,17 @@ import ReactApexChart from 'react-apexcharts';
 import { axiosInstance, BASE_URL } from '../config/axiosConfig';
 import sweetAlert from '../components/sweetAlert';
 
-interface BookingReportResProps {
-    newBookingsShowRoom: number,
-    newBookingsOther: number,
-    pendingBookings: number,
-    completedBookings: number
 
+
+interface BookingStats {
+    totalBookings: number;
+    newBookingsOther: number;
+    pendingBookings: number;
+    completedBookings: number;
+}
+
+interface BookingReportResponse {
+    bookingData: BookingStats[]; // Not an array
 }
 
 const Index = () => {
@@ -30,17 +35,24 @@ const Index = () => {
         try {
             setLoading(true);
 
-            const res = await axiosInstance.get(`${BASE_URL}/showroom-dashboard/${showroomId}`);
-            const responseData = res.data;
+            const res = await axiosInstance.get(
+                `${BASE_URL}/showroom-dashboard/${showroomId}`
+            );
 
-            if (!('bookingData' in responseData)) {
-                throw new Error('Unexpected response format');
+            // Runtime type checking
+            if (!res.data?.bookingData?.[0]) {
+                throw new Error('Invalid response format');
             }
 
-            const { bookingData } = responseData as { bookingData: BookingReportResProps };
+            const stats: BookingStats = res.data.bookingData[0];
 
             setSalesByCategory({
-                series: [bookingData.newBookingsShowRoom || 0, bookingData.newBookingsOther || 0, bookingData.pendingBookings || 0, bookingData.completedBookings || 0],
+                series: [
+                    stats.totalBookings,
+                    stats.newBookingsOther,
+                    stats.pendingBookings,
+                    stats.completedBookings
+                ],
                 options: {
                     chart: {
                         type: 'donut',

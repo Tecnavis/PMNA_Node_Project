@@ -1,5 +1,6 @@
 var Bookings = require('../Model/booking')
 var TaxInsurance = require('../Model/taxInsurance')
+const mongoose = require('mongoose');
 
 exports.dashboard = async (req, res) => {
     try {
@@ -128,32 +129,23 @@ exports.dashboard = async (req, res) => {
 exports.showroomDashboard = async (req, res) => {
 
     const { id } = req.params
-    
+    const showroomId = new mongoose.Types.ObjectId(id)
     try {
-
         // Aggregation for dashboard data(counting document based on the condition)
         const pipeline = [
             {
                 $match: {
-                    showroom: id
+                    showroom: showroomId
                 }
             },
             {
                 $group: {
                     _id: null,
-                    newBookingsShowRoom: {
-                        $sum: {
-                            $cond: [
-                                { $and: [{ $eq: ["$status", "booking added"] }, { $eq: ["$bookingStatus", "ShowRoom Booking"] }] },
-                                1,
-                                0
-                            ]
-                        }
-                    },
+                    totalBookings: { $sum: 1 },
                     newBookingsOther: {
                         $sum: {
                             $cond: [
-                                { $and: [{ $eq: ["$status", "booking added"] }, { $ne: ["$bookingStatus", "ShowRoom Booking"] }] },
+                                { $and: [{ $eq: ["$status", "booking added"] }] },
                                 1,
                                 0
                             ]

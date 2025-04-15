@@ -1,49 +1,59 @@
 const twilioClient = require('../utils/twilioClient');
+const OtpModel = require('../Model/otp');
+const { generateOtp } = require('../utils/generateOtp');
 
 // Send OTP to user phonenumber 
 exports.sendOtp = async (countryCode = '+91', phoneNumber) => {
     try {
-        console.log(`Sending OTP to: ${countryCode}${phoneNumber}`);
+        const otp = generateOtp();
+        const toPhone = `${countryCode}${phoneNumber}`;
 
-        const otpResponse = await twilioClient.verify.v2
-            .services(process.env.TWILIO_SERVICE_SID)
-            .verifications.create({
-                to: `${countryCode}${phoneNumber}`,
-                channel: 'sms'
-            });
+        await OtpModel.findOneAndUpdate(
+            { phoneNumber: toPhone },
+            { otp },
+            { upsert: true, new: true }
+        );
 
-        console.log("Twilio Response:", otpResponse);
+        // Send SMS via Twilio
+        const response = await twilioClient.messages.create({
+            body: `Your OTP is ${otp}`,
+            from: process.env.TWLIO_NUMBER,
+            to: toPhone,
+        });
+
+        console.log("Twilio Response:", response);
 
         return {
             message: "OTP sent successfully",
-            otp: otpResponse,
+            otp: response,
             success: true,
-        }
+        };
     } catch (error) {
-        console.log('error sending otp', error.message);
+        console.error("Error sending OTP:", error.message);
         return {
             message: error.message,
             success: false,
-        }
+        };
     }
-}
-
+};
 // Verify user OTP 
 exports.verifyOtp = async (countryCode = '+91', phoneNumber, otp) => {
     try {
-        console.log(`Verifying OTP for: ${countryCode}${phoneNumber}`);
+        const toPhone = `${countryCode}${phoneNumber}`;
+        const record = await OtpModel.findOne({ phoneNumber: toPhone, otp });
 
-        const verificationResponse = await twilioClient.verify.v2 // ✅ Use v2
-            .services(process.env.TWILIO_SERVICE_SID)
-            .verificationChecks.create({
-                to: `${countryCode}${phoneNumber}`,
-                code: otp
-            });
+        if (!record) {
+            return {
+                message: "Invalid or expired OTP",
+                success: false,
+            };
+        }
 
-        console.log("OTP Verification Response:", verificationResponse);
+        await OtpModel.deleteOne({ _id: record._id });
+
         return {
             message: "OTP verified successfully",
-            otp: verificationResponse,
+            otp: record,
             success: true,
         };
     } catch (error) {
