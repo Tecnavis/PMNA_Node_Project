@@ -181,7 +181,7 @@ const Bookings: React.FC = () => {
     const fetchBookings = async (searchTerm = '', page = 1, limit = 10) => {
         try {
             const response = await axios.get(`${backendUrl}/booking`, {
-                params: { search: searchTerm, page, limit },
+                params: { search: searchTerm, page, limit , status: 'Order Completed' },
             });
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
