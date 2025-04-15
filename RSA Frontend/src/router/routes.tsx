@@ -361,21 +361,18 @@ const routes = [
         element: <AppBokk />,
     },
 
-    // analytics page
-    // {
-    //     path: '/analytics',
-    //     element: <Analytics />,
-    // },
-    // finance page
-    // {
-    //     path: '/finance',
-    //     element: <Finance />,
-    // },
-    // crypto page
-    // {
-    //     path: '/crypto',
-    //     element: <Crypto />,
-    // },
+    {
+        path: '/analytics',
+        element: <Analytics />,
+    },
+    {
+        path: '/finance',
+        element: <Finance />,
+    },
+    {
+        path: '/crypto',
+        element: <Crypto />,
+    },
     {
         path: '/apps/todolist',
         element: <Todolist />,

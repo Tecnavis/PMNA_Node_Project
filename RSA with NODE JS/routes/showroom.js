@@ -10,6 +10,8 @@ router.get('/', controller.getShowrooms);
 router.post('/login', controller.loginShowroom);
 router.get('/showroom-staff', jwt, controller.getAllShowroomStaff)
 router.get('/showroom-staff/:id', controller.getShowroomStaffs)
+router.get('/report',jwt, controller.showroomDashBoardReport);
+
 router.get('/filtered', jwt, controller.filterGetShowrooms);
 // OTP send for verification
 router.post('/staff-send-otp', jwt, controller.sendOtpForShowroomStaff);
