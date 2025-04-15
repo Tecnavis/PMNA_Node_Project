@@ -5,7 +5,6 @@ const router = express.Router();
 const controller = require('../Controller/staff');
 const jwt = require('../Middileware/jwt');
 
-  
 
 // Create staff route with image upload
 router.post('/',jwt,upload.single('image'), controller.createStaff);

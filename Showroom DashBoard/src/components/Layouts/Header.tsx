@@ -92,7 +92,7 @@ const Header: React.FC = () => {
               Add Booking
             </Link>
             <Link
-              to="/cashreport"
+              to="/report"
               className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
             >
               Cash Report
