@@ -61,7 +61,7 @@ const Showroom: React.FC = () => {
     const [filteredShowrooms, setFilteredShowrooms] = useState<Showroom[]>([]);
     const [showroom, setShowroom] = useState<Showroom | null>(null);
     const [modal5, setModal5] = useState(false);
-    const [modal, setModal] = useState(true);
+    const [modal, setModal] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [search, setSearch] = useState('');
     const [isModalVisible, setModalVisible] = useState<boolean>(false);
@@ -376,7 +376,7 @@ const Showroom: React.FC = () => {
                                                     <button
                                                         onClick={() => {
                                                             setModalOpen(true)
-                                                            setUrl(items.showroomLink)
+                                                            setUrl(`http://localhost:5173/showroom/showroom-details?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
                                                         }}
                                                         style={{
                                                             backgroundColor: '#007bff',
