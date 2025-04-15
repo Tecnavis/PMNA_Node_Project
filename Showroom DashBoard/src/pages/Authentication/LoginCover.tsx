@@ -13,8 +13,8 @@ type FormValues = {
 };
 
 
-const LoginCover: React.FC = () => {
-    
+const LoginCover: React.FC = () => {    
+
     const navigate = useNavigate();
 
     const {
@@ -44,7 +44,7 @@ const LoginCover: React.FC = () => {
                     type: "success",
                 });
 
-                navigate("/index")
+                setTimeout(() => navigate("/index"), 1500);
             }
         } catch (error: any) {
             console.error("Login error:", error);
