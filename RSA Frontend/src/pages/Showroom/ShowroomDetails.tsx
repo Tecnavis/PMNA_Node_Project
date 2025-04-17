@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './showroomAdd.module.css';
 import Swal from 'sweetalert2';
-import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
+import { axiosInstance, BASE_URL, VITE_STAFF_DASHBOARD_URL } from '../../config/axiosConfig';
 
 interface ShowRoomDetailsType {
     id: string;
@@ -206,7 +206,7 @@ const ShowRoomDetails: React.FC = () => {
                 timer: 3000,
                 padding: '10px 20px',
             });
-            handleNavigation()
+            navigate(VITE_STAFF_DASHBOARD_URL);
         } catch (error) {
             Swal.fire({
                 icon: 'error',
