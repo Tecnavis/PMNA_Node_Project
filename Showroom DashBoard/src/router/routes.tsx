@@ -21,6 +21,7 @@ import InvoiceReport from '../pages/Report/InvoiceReport';
 import Staff from '../pages/Staffs/Staff';
 import ViewMore from '../pages/Details/ViewMore';
 import ReportIndex from '../pages/Report/ReportIndex';
+import Home from '../pages/Home/Home';
 
 const Index = lazy(() => import('../pages/Index'));
 const Analytics = lazy(() => import('../pages/Analytics'));
@@ -173,6 +174,11 @@ const routes = [
     {
         path: '/staff',
         element: <Staff />,
+        // layout: 'blank',
+    },
+    {
+        path: '/home',
+        element: <Home />,
         // layout: 'blank',
     },
     // details page

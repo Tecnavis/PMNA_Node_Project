@@ -289,6 +289,41 @@ exports.getShowroomStaffs = async (req, res) => {
     });
   }
 };
+// DELETE Showroom Staff by ID or phoneNumber
+exports.deleteShowroomStaff = async (req, res) => {
+  try {
+    const { showroomId, staffId } = req.params;
+
+    // Log the staffId to the console
+    console.log(`Attempting to delete staff member with ID: ${staffId} from showroom with ID: ${showroomId}`);
+
+    // Attempt to delete the staff member using the ID and showroomId
+    const deletedStaff = await ShowroomStaff.findOneAndDelete({
+      _id: staffId,
+      showroomId: showroomId,  // Ensure that the staff is associated with the correct showroom
+    });
+
+    if (!deletedStaff) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Staff member deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting staff:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete staff member',
+      error: error.message,
+    });
+  }
+};
+
 
 // send otp for staff 
 exports.sendOtpForShowroomStaff = async (req, res) => {
@@ -392,6 +427,59 @@ exports.showroomStaffSignup = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error. Please try again later." });
   }
 }
+// Add new staff member
+exports.addStaffMember = async (req, res) => {
+  try {
+    const { name, phoneNumber, whatsappNumber, designation, showroomId } = req.body;
+
+    if (!name || !phoneNumber || !whatsappNumber || !designation || !showroomId) {
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
+    const newStaff = new ShowroomStaff({
+      name,
+      phoneNumber: phoneNumber,
+      whatsappNumber,
+      designation,
+      showroomId,
+    });
+
+    await newStaff.save();
+
+    res.status(201).json({ success: true, data: newStaff, message: 'Staff added successfully' });
+  } catch (error) {
+    console.error('Error adding staff:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+// PUT /showroom/update-staff/:staffId
+exports.updateStaffMember = async (req, res) => {
+  try {
+    const { staffId } = req.params;
+    const { name, phoneNumber, whatsappNumber, designation } = req.body;
+
+    // Validate required fields
+    if (!name || !phoneNumber || !whatsappNumber || !designation) {
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
+    // Find and update the staff member
+    const updatedStaff = await ShowroomStaff.findByIdAndUpdate(
+      staffId,
+      { name, phoneNumber, whatsappNumber, designation },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStaff) {
+      return res.status(404).json({ success: false, message: 'Staff member not found' });
+    }
+
+    res.status(200).json({ success: true, data: updatedStaff, message: 'Staff updated successfully' });
+  } catch (error) {
+    console.error('Error updating staff:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
 
 // Login showroom
 exports.loginShowroom = async (req, res) => {

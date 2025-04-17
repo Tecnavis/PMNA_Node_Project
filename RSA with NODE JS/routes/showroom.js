@@ -18,9 +18,13 @@ router.post('/staff-send-otp', jwt, controller.sendOtpForShowroomStaff);
 // OTP verify and login
 router.post('/staff-signin', jwt, controller.staffLogin);
 router.post('/staff-signup', jwt, controller.showroomStaffSignup);
+router.post('/add-staff',  controller.addStaffMember);
+router.put('/update-staff/:staffId',  controller.updateStaffMember);
 
+// PUT /showroom/update-staff/:staffId
 router.put('/:id',jwt, upload.single('image'), controller.updateShowroom);
 router.get('/:id',jwt, controller.getShowroomById);
+router.delete('/:showroomId/staff-delete/:staffId',  controller.deleteShowroomStaff);
 router.delete('/:id',jwt, controller.deleteShowroom);
 
 module.exports = router;
