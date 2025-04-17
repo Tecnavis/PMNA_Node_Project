@@ -62,7 +62,7 @@ const Header: React.FC = () => {
         <div className="flex items-center space-x-4">  {/* Adjusted space-x to space them closer */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link
-              to="/showrm"
+              to="/home"
               className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
             >
               Home
@@ -173,7 +173,7 @@ const Header: React.FC = () => {
           <ul className="flex flex-col space-y-2 px-6 py-4">
             <li>
               <Link
-                to="/showrm"
+                to="/home"
                 className="block text-lg font-medium text-gray-800 hover:bg-gray-100 transition-all duration-200 rounded-md px-4 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
