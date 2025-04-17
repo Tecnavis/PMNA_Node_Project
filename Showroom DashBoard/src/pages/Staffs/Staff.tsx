@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 interface Staff {
-  id: string;
+  _id: string;
   name: string;
   phoneNumber: string;
 }
@@ -10,58 +10,44 @@ interface Staff {
 const Staff: React.FC = () => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
-  const showroomId = localStorage.getItem("showroomId");
-  const uid = import.meta.env.VITE_REACT_APP_UID;
+  const showroomId = localStorage.getItem('showroomId') || '';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+console.log("showroomId",showroomId)
+
+console.log("backendUrl",backendUrl)
 
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const db = getFirestore();
-        if (showroomId) {
-          const showroomDocRef = doc(db, `user/${uid}/showroom/${showroomId}`);
-          const showroomDoc = await getDoc(showroomDocRef);
-
-          if (showroomDoc.exists()) {
-            const showroomData = showroomDoc.data();
-            const staffData: Staff[] = showroomData.staff.map((staffMember: any) => ({
-              id: staffMember.phoneNumber,
-              name: staffMember.name,
-              phoneNumber: staffMember.phoneNumber,
-            }));
-
-            setStaff(staffData);
-          } else {
-            console.error("Showroom document does not exist");
+        const response = await axios.get(
+          `${backendUrl}/showroom/showroom-staff/${showroomId}`,
+          {
+          
           }
-        } else {
-          console.error("showroomId is not available");
+        );
+        if (response.data.success) {
+          setStaff(response.data.data);
         }
       } catch (error) {
         console.error("Error fetching staff:", error);
       }
     };
 
-    fetchStaff();
-  }, [showroomId, uid]);
+    if (showroomId) {
+      fetchStaff();
+    }
+  }, [showroomId]);
 
   const deleteStaffMember = async (phoneNumber: string) => {
+    setLoading((prev) => ({ ...prev, [phoneNumber]: true }));
     try {
-      setLoading((prev) => ({ ...prev, [phoneNumber]: true }));
+      // Call your delete API here (assuming you have it)
+      // await axios.delete(`${yourDeleteApiUrl}/${phoneNumber}`);
 
-      const db = getFirestore();
-      const showroomDocRef = doc(db, `user/${uid}/showroom/${showroomId}`);
-      const showroomDocSnapshot = await getDoc(showroomDocRef);
-      if (!showroomDocSnapshot.exists()) {
-        console.error("Showroom does not exist");
-        return;
-      }
-
-      const showroomData = showroomDocSnapshot.data();
-      const updatedStaff = showroomData.staff.filter((member: any) => member.phoneNumber !== phoneNumber);
-
-      await updateDoc(showroomDocRef, { staff: updatedStaff });
-      setStaff(updatedStaff);
-      console.log("Staff member deleted successfully");
+      // After deletion, update state locally (for demo purpose)
+      setStaff((prevStaff) =>
+        prevStaff.filter((member) => member.phoneNumber !== phoneNumber)
+      );
     } catch (error) {
       console.error("Error deleting staff member:", error);
     } finally {
