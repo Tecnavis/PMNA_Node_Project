@@ -2,9 +2,12 @@ const Booking = require('../Model/booking');
 const Driver = require('../Model/driver'); // Import your Driver model
 const Provider = require('../Model/provider'); // Import your Provider model
 const Company = require('../Model/company'); // Import your Provider model
+const Showroom = require('../Model/showroom'); // Import your Provider model
+const ShowroomStaff = require('../Model/showroomStaff'); // Import your Provider model
 const mongoose = require('mongoose');
 const Vehicle = require('../Model/vehicle');
 const { io } = require('../config/socket');
+const { capitalizeFirstLetter } = require('../utils/dateUtils');
 
 
 
@@ -40,6 +43,9 @@ exports.createBooking = async (req, res) => {
             }
 
             bookingData.vehicleNumber = selectedVehicle.vehicleNumber || ""
+            bookingData.bookedBy = req?.user?._id || req?.user?.id
+            bookingData.bookedByModel = "Admin"
+
         }
 
         const newBooking = new Booking(bookingData);
@@ -82,20 +88,35 @@ exports.createBooking = async (req, res) => {
     }
 };
 
-// Controller to create a booking for showroom dashboard
+// Controller to create a booking for showroom and showroom staff dashboard
 exports.addBookingForShowroom = async (req, res) => {
     try {
-        const bookingData = req.body;
+        let bookingData = req.body;
 
-        // Handle the case where 'company' is an empty string
-        if (!bookingData.company || bookingData.company === "") {
-            bookingData.company = null; // Or you can delete the field entirely if required
+        const showroomData = await Showroom.findById(bookingData.showroom).lean();
+
+        if (!showroomData) {
+            return res.status(404).json({
+                message: 'Showroom not found. Please try another showroom.',
+                success: false,
+            })
         }
 
-        const newBooking = new Booking(bookingData);
-        await newBooking.save();
+        const enrichedBookingData = {
+            ...bookingData,
+            dropoffLocation: showroomData.location,
+            dropoffLatitudeAndLongitude: showroomData.latitudeAndLongitude,
+            bookedBy: req.user._id || req.user.id,
+            bookedByModel: capitalizeFirstLetter(bookingData.bookingStatus) || 'Showroom'
+        };
 
-        res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
+        const newBooking = await Booking.create(enrichedBookingData);
+
+
+        res.status(201).json({
+            message: 'Booking created successfully',
+            booking: newBooking
+        });
 
         // Populate and emit separately to improve response time
         process.nextTick(async () => {
@@ -1432,10 +1453,6 @@ exports.getBookingsForShowroom = async (req, res) => {
         // Population configuration
         const populationOptions = [
             { path: 'showroom', select: 'name location phone' },
-            // { path: 'serviceType', select: 'name serviceCategory' },
-            // { path: 'driver', select: 'name phone vehicleNumber' },
-            // { path: 'provider', select: 'name phone' },
-            // { path: 'baselocation', select: 'name location' }
         ];
 
         // Execute query with pagination
@@ -1448,28 +1465,6 @@ exports.getBookingsForShowroom = async (req, res) => {
                 .limit(limitNum)
                 .lean()
         ]);
-
-        // Calculate summary statistics
-        // const stats = await Booking.aggregate([
-        //     { $match: query },
-        //     {
-        //         $group: {
-        //             _id: null,
-        //             totalBookings: { $sum: 1 },
-        //             totalRevenue: { $sum: "$receivedAmount" },
-        //             pendingBookings: {
-        //                 $sum: {
-        //                     $cond: [{ $eq: ["$status", "pending"] }, 1, 0]
-        //                 }
-        //             },
-        //             completedBookings: {
-        //                 $sum: {
-        //                     $cond: [{ $eq: ["$status", "completed"] }, 1, 0]
-        //                 }
-        //             }
-        //         }
-        //     }
-        // ]);
 
         // Format response
         const response = {
@@ -1499,6 +1494,98 @@ exports.getBookingsForShowroom = async (req, res) => {
             success: false,
             message: 'Server error while fetching showroom bookings',
             error: error.message
+        });
+    }
+};
+
+exports.getBookingsForShowroomStaff = async (req, res) => {
+    try {
+        const { status, search, page = 1, limit = 10 } = req.query;
+        const staffId = new mongoose.Types.ObjectId(req.user.id);
+
+        // Build query with proper status handling
+        const query = { bookedBy: staffId };
+
+        // Handle status (array or single value)
+        if (status) {
+            if (Array.isArray(status)) {
+                query.status = { $ne: "Order Completed" };
+            } else {
+                query.status = status;
+            }
+        }
+
+        // Handle search
+        if (search) {
+            const searchRegex = new RegExp(search, 'i');
+            query.$or = [
+                { fileNumber: searchRegex },
+                { customerName: searchRegex },
+                { customerVehicleNumber: searchRegex },
+                { mob1: searchRegex }
+            ];
+        }
+
+        console.log("Final query:", JSON.stringify(query, null, 2));
+
+        // Execute queries
+        const [total, bookings] = await Promise.all([
+            Booking.countDocuments(query),
+            Booking.find(query)
+                .populate({
+                    path: 'showroom',
+                    select: 'name location phone',
+                    options: { lean: true }
+                })
+                .sort({ createdAt: -1 })
+                .skip((parseInt(page, 10) - 1) * parseInt(limit, 10))
+                .limit(parseInt(limit, 10))
+                .lean()
+                .exec()
+        ]);
+
+        // Populate bookedBy
+        const populatedBookings = await Promise.all(
+            bookings.map(async (booking) => {
+                if (booking.bookedBy && booking.bookedByModel) {
+                    try {
+                        const model = mongoose.model(booking.bookedByModel);
+                        booking.bookedBy = await model.findById(booking.bookedBy)
+                            .select('name')
+                            .lean()
+                            .exec();
+                    } catch (err) {
+                        console.error(`Population error: ${err.message}`);
+                        booking.bookedBy = { name: 'Unknown' };
+                    }
+                }
+                return booking;
+            })
+        );
+
+        // Format response
+        res.status(200).json({
+            success: true,
+            data: {
+                bookings: populatedBookings,
+                pagination: {
+                    total,
+                    page: parseInt(page, 10),
+                    limit: parseInt(limit, 10),
+                    totalPages: Math.ceil(total / parseInt(limit, 10))
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in getBookingsForShowroomStaff:', error);
+        const statusCode = error.name === 'ValidationError' ? 400 : 500;
+        res.status(statusCode).json({
+            success: false,
+            message: 'Error processing bookings request',
+            error: process.env.NODE_ENV === 'development'
+                ? error.message
+                : 'Internal server error'
         });
     }
 };

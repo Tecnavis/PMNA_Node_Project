@@ -232,6 +232,7 @@ exports.verifyOTP = async (req, res) => {
 
     res.status(200).json({
       token,
+      driverId: driver._id,
       message: "login successfully",
       success: true
     });

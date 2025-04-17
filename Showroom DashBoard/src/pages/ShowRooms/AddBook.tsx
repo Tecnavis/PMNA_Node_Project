@@ -29,9 +29,9 @@ const AddBook: React.FC = () => {
         defaultValues: {
             fileNumber: '',
             customerName: '',
-            phoneNumber: '',
+            mob1: '',
             serviceCategory: '',
-            vehicleNumber: '',
+            customerVehicleNumber: '',
             comments: '',
             showroom: '',
         },
@@ -82,10 +82,18 @@ const AddBook: React.FC = () => {
     }, []);
 
     const handleAddBooking = async (formData: AddNewBookingFormData) => {
+
         setLoading(true);
         setError(null);
+
+        let data: AddNewBookingFormData = {
+            ...formData,
+            createdBy: showroomId,
+            bookingStatus: 'showroom'
+        }
+
         try {
-            const res: AddBookingResponse = await addNewBooking(formData) as AddBookingResponse
+            const res: AddBookingResponse = await addNewBooking(data) as AddBookingResponse
             sweetAlert({ title: 'Booking added', message: res.message })
             navigate('/showrm');
         } catch (error) {
@@ -99,85 +107,85 @@ const AddBook: React.FC = () => {
     return (
         <form
             onSubmit={handleSubmit(handleAddBooking)}
-            className="p-6 flex-1 mt-4 mx-auto my-8 max-w-[800px] rounded-[10px] panel "
+            className="bg-white rounded-xl shadow-md p-6 mx-auto max-w-4xl w-full my-8"
         >
-            <div className='flex items-center justify-between border-b border-gray-300 pb-2 mb-5'>
-                <h2 className="font-semibold text-gray-900 text-xl">Add Booking</h2>
-                <p className="mt-1 text-sm/6 text-gray-600">
+            {/* Header Section */}
+            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 pb-4 mb-6'>
+                <h2 className="text-2xl font-bold text-gray-800">Add Booking</h2>
+                <p className="text-sm text-gray-500 mt-2 sm:mt-0">
                     {currentDateTime}
                 </p>
             </div>
-            <div
-                style={{ padding: '1rem' }}>
-                {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
-                <div
-                    className="mb-5 font-sans text-[#333] p-2.5 bg-[#f9f9f9] rounded shadow-[0_2px_4px_rgba(0,0,0,0.1)]"
-                >
-                    <span className='font-semibold text-sm text-blue-500'>Booking ID : </span>
-                    <span style={{ fontSize: '16px', color: '#333' }}>{bookingId}</span>
+
+            {/* Error Message */}
+            {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-md mb-6 text-sm">
+                    {error}
                 </div>
-                <div className="mt-4 flex items-center" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="fileNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>File Number</label>
-                    <div className='w-full flex flex-col items-start justify-start'>
+            )}
+
+            {/* Booking ID */}
+            <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                <span className='font-medium text-blue-600 text-sm'>Booking ID: </span>
+                <span className="font-semibold text-gray-700">{bookingId}</span>
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-6">
+                {/* File Number */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <label htmlFor="fileNumber" className="md:col-span-1 font-medium text-gray-700 pt-2">
+                        File Number
+                    </label>
+                    <div className="md:col-span-3">
                         <input
                             id="fileNumber"
                             type="text"
                             {...register("fileNumber", {
                                 required: "FileNumber name is required",
                             })}
-                            className="form-input flex-1"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             placeholder="Enter File Number"
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
                             readOnly
                         />
                         {errors.fileNumber && (
-                            <p style={{ color: "red" }}>{errors.fileNumber.message}</p>
+                            <p className="mt-1 text-sm text-red-600">{errors.fileNumber.message}</p>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="serviceCategory" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Vehicle Section</label>
-                    <div className='w-full flex flex-col items-start justify-start'>
+
+                {/* Vehicle Section */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <label htmlFor="serviceCategory" className="md:col-span-1 font-medium text-gray-700 pt-2">
+                        Vehicle Section
+                    </label>
+                    <div className="md:col-span-3">
                         <select
                             id="serviceCategory"
-                            className="form-select flex-1"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             {...register("serviceCategory", { required: "Please select a service category" })}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
                         >
                             <option value="">Select Service Section</option>
-                            <option value="Service Center">Service Center</option>
-                            <option value="Body Shop">Body Shopes</option>
-                            <option value="ShowRooms">ShowRooms</option>
-
+                            <option value="serviceCenter">Service Center</option>
+                            <option value="accident">Body Shops</option>
+                            <option value="showroom">Showrooms</option>
                         </select>
                         {errors.serviceCategory && (
-                            <p className="text-red-500 text-center ">{errors.serviceCategory.message}</p>
+                            <p className="mt-1 text-sm text-red-600">{errors.serviceCategory.message}</p>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="customerName" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Customer Name</label>
-                    <div className='w-full flex flex-col items-start justify-start'>
+
+                {/* Customer Name */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <label htmlFor="customerName" className="md:col-span-1 font-medium text-gray-700 pt-2">
+                        Customer Name
+                    </label>
+                    <div className="md:col-span-3">
                         <input
                             id="customerName"
                             type="text"
-                            className="form-input flex-1"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             placeholder="Enter Customer Name"
                             {...register("customerName", {
                                 required: "Customer name is required",
@@ -187,87 +195,73 @@ const AddBook: React.FC = () => {
                                     message: "Only alphabets and spaces allowed",
                                 },
                             })}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
                         />
                         {errors.customerName && (
-                            <p className="text-red-500 ">{errors.customerName.message}</p>
+                            <p className="mt-1 text-sm text-red-600">{errors.customerName.message}</p>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="phoneNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Phone Number</label>
-                    <div className='w-full flex flex-col items-start justify-start'>
+
+                {/* Phone Number */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <label htmlFor="mob1" className="md:col-span-1 font-medium text-gray-700 pt-2">
+                        Phone Number
+                    </label>
+                    <div className="md:col-span-3">
                         <input
-                            id="phoneNumber"
-                            type="text"
-                            className="form-input flex-1"
+                            id="mob1"
+                            type="tel"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             placeholder="Enter Phone Number"
-                            {...register("phoneNumber", {
+                            {...register("mob1", {
                                 required: "Phone number is required",
                                 pattern: {
                                     value: /^[0-9]{10}$/,
                                     message: "Phone number must be 10 digits"
                                 }
                             })}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
                         />
-                        {errors.phoneNumber && (
-                            <p className="text-red-500 text-center ">{errors.phoneNumber.message}</p>
+                        {errors.mob1 && (
+                            <p className="mt-1 text-sm text-red-600">{errors.mob1.message}</p>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="vehicleNumber" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Vehicle Number</label>
-                    <div className='w-full flex flex-col items-start justify-start'>
+
+                {/* Vehicle Number */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <label htmlFor="customerVehicleNumber" className="md:col-span-1 font-medium text-gray-700 pt-2">
+                        Vehicle Number
+                    </label>
+                    <div className="md:col-span-3">
                         <input
-                            id="vehicleNumber"
+                            id="customerVehicleNumber"
                             type="text"
-                            className="form-input flex-1"
-                            placeholder="Enter Vehicle Number"
-                            {...register("vehicleNumber", {
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            placeholder="Enter Vehicle Number (e.g. MH12AB1234)"
+                            {...register("customerVehicleNumber", {
                                 required: "Vehicle number is required",
                                 pattern: {
                                     value: /^[A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{4}$/,
                                     message: "Enter a valid vehicle number (e.g. MH12AB1234)"
                                 }
                             })}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
                         />
-                        {errors.vehicleNumber && (
-                            <p className="text-red-500 text-center ">{errors.vehicleNumber.message}</p>
+                        {errors.customerVehicleNumber && (
+                            <p className="mt-1 text-sm text-red-600">{errors.customerVehicleNumber.message}</p>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="comments" className="w-1/3 mb-0" style={{ marginRight: '1rem' }}>Comments</label>
-                    <div className='w-full flex flex-col items-start justify-start'>
+
+                {/* Comments */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                    <label htmlFor="comments" className="md:col-span-1 font-medium text-gray-700 pt-2">
+                        Comments
+                    </label>
+                    <div className="md:col-span-3">
                         <textarea
                             id="comments"
-                            className="form-textarea flex-1"
+                            rows={4}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             placeholder="Enter Comments"
                             {...register("comments", {
                                 required: "Comments are required",
@@ -281,37 +275,30 @@ const AddBook: React.FC = () => {
                                 },
                                 validate: value => value.trim().length > 0 || "Comment cannot be empty or whitespace"
                             })}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                border: '1px solid #ccc',
-                                borderRadius: '5px',
-                                fontSize: '1rem',
-                                outline: 'none',
-                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                            }}
                         />
                         {errors.comments && (
-                            <p className="text-red-500 text-center ">{errors.comments.message}</p>
+                            <p className="mt-1 text-sm text-red-600">{errors.comments.message}</p>
                         )}
                     </div>
                 </div>
-                <div className="mt-4 flex justify-center" style={{ marginTop: '1rem' }}>
+
+                {/* Submit Button */}
+                <div className="pt-4">
                     <button
                         type="submit"
                         disabled={loading}
-                        style={{
-                            backgroundColor: '#007bff',
-                            color: '#fff',
-                            padding: '0.75rem 1.5rem',
-                            border: 'none',
-                            borderRadius: '5px',
-                            fontSize: '1rem',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                        }}
+                        className={`w-full sm:w-auto px-6 py-3 rounded-lg font-medium text-white transition-all ${loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                            } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
                     >
-                        {loading ? 'Submitting...' : 'Submit'}
+                        {loading ? (
+                            <span className="flex items-center justify-center">
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Submitting...
+                            </span>
+                        ) : 'Submit'}
                     </button>
                 </div>
             </div>

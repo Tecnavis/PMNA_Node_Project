@@ -11,6 +11,7 @@ router.post('/login', controller.loginShowroom);
 router.get('/showroom-staff', jwt, controller.getAllShowroomStaff)
 router.get('/showroom-staff/:id', controller.getShowroomStaffs)
 router.get('/report',jwt, controller.showroomDashBoardReport);
+router.get('/showroom-staff-profile',jwt, controller.getStaffProfile);
 
 router.get('/filtered', jwt, controller.filterGetShowrooms);
 // OTP send for verification
@@ -20,6 +21,8 @@ router.post('/staff-signin', jwt, controller.staffLogin);
 router.post('/staff-signup', jwt, controller.showroomStaffSignup);
 router.post('/add-staff',  controller.addStaffMember);
 router.put('/update-staff/:staffId',  controller.updateStaffMember);
+
+
 
 // PUT /showroom/update-staff/:staffId
 router.put('/:id',jwt, upload.single('image'), controller.updateShowroom);

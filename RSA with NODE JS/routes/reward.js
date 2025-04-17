@@ -5,10 +5,12 @@ const upload = require('../config/multer');
 const jwt = require('../Middileware/jwt')
 
 // Routes
-router.post('/',jwt, upload.single('image'), controller.createReward);
-router.get('/',jwt, controller.getAllRewards);
-router.get('/:id',jwt, controller.getRewardById);
-router.put('/:id',jwt,upload.single('image'), controller.updateReward);
-router.delete('/:id',jwt, controller.deleteReward);
+router.post('/', jwt, upload.single('image'), controller.createReward)
+    .get('/', jwt, controller.getAllRewards)
+    .get('/redeem-reward', jwt, controller.redeemForShowroomStaff)
+    .get('/redemtions', jwt, controller.getAllredemationsBaseUserType)
+    .get('/:id', jwt, controller.getRewardById)
+    .put('/:id', jwt, upload.single('image'), controller.updateReward)
+    .delete('/:id', jwt, controller.deleteReward)
 
 module.exports = router;
