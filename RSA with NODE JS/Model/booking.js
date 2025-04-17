@@ -22,7 +22,7 @@ const bookingSchema = new mongoose.Schema({
     brandName: { type: String },
     comments: { type: String },
     customerVehicleNumber: { type: String },
-    status: { type: String },
+    status: { type: String, default: 'Booking Added' },
     driver: { type: mongoose.Schema.Types.ObjectId, ref: 'Driver' },
     provider: { type: mongoose.Schema.Types.ObjectId, ref: 'Provider' },
     afterExpenseForProvider: { type: Number },
@@ -39,7 +39,11 @@ const bookingSchema = new mongoose.Schema({
     adjustmentValue: { type: Number },
     amountWithoutInsurance: { type: Number },
     createdBy: { type: String },
-    bookedBy: { type: String },
+    bookedByModel: {
+        type: String,
+        enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff']
+    },
+    bookedBy: { type: mongoose.Schema.Types.ObjectId, refPath: 'bookedByModel' },
     pickupDate: { type: Date },
     pickupTime: { type: Date },
     dropoffTime: { type: Date },
@@ -67,6 +71,7 @@ const bookingSchema = new mongoose.Schema({
     receivedUser: { type: String }, // New props
     dummyDriverName: { type: String }, // New props
     dummyProviderName: { type: String }, // New props
+    bookingStatus: { type: String }, // New props
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' } // New props
 
 }, { timestamps: true });

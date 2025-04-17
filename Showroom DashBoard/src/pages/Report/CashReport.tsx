@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { AiTwotoneCar } from "react-icons/ai";
@@ -63,7 +63,7 @@ const CashReport: React.FC = () => {
   const [activeTab, setActiveTab] = useState<keyof typeof tabConfig>('serviceCenter');
   const [selectedOption, setSelectedOption] = useState<keyof typeof subTabLabels>('bookings');
 
-  const ActiveComponent = tabConfig[activeTab].components[selectedOption];
+  const ActiveComponent = tabConfig[activeTab].components[selectedOption as keyof typeof tabConfig['serviceCenter']['components']];
 
   return (
     <div

@@ -91,9 +91,11 @@ export interface AllBookingResponse {
 export interface AddNewBookingFormData {
     fileNumber: string;
     customerName: string;
-    phoneNumber: string;
+    mob1: string;
     serviceCategory: string;
-    vehicleNumber: string;
+    customerVehicleNumber: string;
     comments: string;
     showroom: string;
+    createdBy: string;
+    bookingStatus: string;
 }
