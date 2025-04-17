@@ -45,14 +45,14 @@ const ServiceCenter: React.FC = () => {
       bookings={bookings}
       isLoading={isLoading}
       title="Bookings"
-      page={page}
-      pageSize={pageSize}
-      totalRecords={totalRecords}
-      onPageChange={setPage}
-      onPageSizeChange={(size) => {
-        setPageSize(size);
-        setPage(1);
-      }}
+      // page={page}
+      // pageSize={pageSize}
+      // totalRecords={totalRecords}
+      // onPageChange={setPage}
+      // onPageSizeChange={(size) => {
+      //   setPageSize(size);
+      //   setPage(1);
+      // }}
     />
   );
 };

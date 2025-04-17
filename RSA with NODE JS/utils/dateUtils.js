@@ -13,9 +13,14 @@ exports.getMonthDateRange = (month, year) => {
         month = todayDate.getMonth() + 1;
         year = todayDate.getFullYear()
     }
-    const startDate = new Date(year, month - 1, 1);             
+    const startDate = new Date(year, month - 1, 1);
 
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);  
-    
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
     return { startDate, endDate };
+}
+
+exports.capitalizeFirstLetter = (str) => {
+    if (!str) return str; 
+    return str.charAt(0).toUpperCase() + str.slice(1);
 }
