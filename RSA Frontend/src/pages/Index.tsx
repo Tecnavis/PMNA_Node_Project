@@ -310,10 +310,8 @@ const Index = () => {
                 <div className="grid xl:grid-cols-1 gap-6 mb-6">
                     <div className="grid xl:grid-cols-4 gap-6 mb-6">
                         <div className={`panel bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6 ${blink ? 'animate-pulse' : ''}`}>
-                            <Link to="/bookings/newbooking" className="block">
                                 <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
                                 <p className="text-2xl">{salesByCategory.series[0]}</p>
-                            </Link>
                         </div>
                         <div className="panel bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg shadow-lg p-6">
                             <h5 className="font-semibold text-lg mb-3">New Bookings</h5>

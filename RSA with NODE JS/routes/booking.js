@@ -6,7 +6,7 @@ const upload = require('../config/multer');
 
 
 // Route to create a new booking
-router.post('/', controller.createBooking);
+router.post('/', jwt, controller.createBooking);
 
 //Route for getting approved bookings
 router.post('/no-auth', controller.createBookingNoAuth);
@@ -26,11 +26,28 @@ router.get('/getordercompleted', jwt, controller.getOrderCompletedBookings);
 // Route to distribute received amount
 router.patch('/distribute-amount', jwt, controller.distributeReceivedAmount);
 
+// Route for add booking for showroom dashboard
+router.get('/showroom/bookings', jwt, controller.getBookingsForShowroom)
+
+// Route for getting booking for showroom staff base on stats
+router.get('/showroom-staff/bookings', jwt, controller.getBookingsForShowroomStaff)
+
+// Rotute for upload image
+router.post('/upload', jwt, upload.single('image'), controller.uploadImage);
+
+
+
+// Route for settle driver balalance salary
+router.patch('/settle-driver-balance-salary', jwt, controller.updateBalanceSalary);
+
+// Route for add booking for showroom dashboard
+router.post('/showroom/add-booking', jwt, controller.addBookingForShowroom)
+
 // Route to get booking by id
-router.get('/:id', controller.getBookingById);
+router.get('/:id', jwt, controller.getBookingById);
 
 // Route to update booking
-router.put('/:id', upload.array('images', 6), controller.updateBooking);
+router.put('/:id', jwt, upload.array('images', 6), controller.updateBooking);
 
 // Route to delete booking
 // router.delete('/:id',jwt,controller.deleteBooking);
@@ -67,16 +84,5 @@ router.patch('/sattle-amount/:id', jwt, controller.settleAmount);
 
 //Route to approve booking
 router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
-// Rotute for upload image
-router.post('/upload', upload.single('image'), controller.uploadImage);
-
-// Route for settle driver balalance salary
-router.patch('/settle-driver-balance-salary', jwt, controller.updateBalanceSalary);
-
-// Route for add booking for showroom dashboard
-router.post('/showroom/add-booking',jwt, controller.addBookingForShowroom)
-
-// Route for add booking for showroom dashboard
-router.get('/showroom/bookings',jwt, controller.getBookingsForShowroom)
 
 module.exports = router;
