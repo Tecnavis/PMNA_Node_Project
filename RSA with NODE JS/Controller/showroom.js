@@ -231,6 +231,27 @@ exports.deleteShowroom = async (req, res) => {
   }
 };
 
+// Get  Staff
+exports.getStaffProfile = async (req, res) => {
+  try {
+    const staffId = new mongoose.Types.ObjectId(req.user.id)
+    const showroomStaff = await ShowroomStaff.findById(staffId).populate('showroomId'); // Populating showroom details
+
+    return res.status(200).json({
+      success: true,
+      message: "Showroom staff retrieved successfully.",
+      data: showroomStaff
+    });
+
+  } catch (error) {
+    console.log("Error fetching showroom staff:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve showroom staff.",
+      error: error.message
+    });
+  }
+};
 // Get All Showroom Staff
 exports.getAllShowroomStaff = async (req, res) => {
   try {
@@ -330,12 +351,24 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
 // verify otp and login 
 exports.staffLogin = async (req, res) => {
   try {
-    const { phoneNumber } = req.body;
+    const { phoneNumber, showroom } = req.body;
+    console.log("here", req.body)
+    const showroomId = new mongoose.Types.ObjectId(showroom)
 
     // Check if staff exists
     const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
     if (!showroomStaff) {
       return res.status(400).json({ message: "Invalid credentials", success: false });
+    }
+
+    if (!showroom) {
+      return res.status(400).json({ message: "Showroom details is required", success: false });
+    }
+
+    const IsShowroomExist = await Showroom.findById(showroomId);
+
+    if (!IsShowroomExist) {
+      return res.status(404).json({ message: "Showroom not found", success: false });
     }
 
     // Generate JWT token
