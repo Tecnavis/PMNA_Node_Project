@@ -8,6 +8,7 @@ import { axiosInstance as axios, BASE_URL } from '../../config/axiosConfig';
 import { AllBookingResponse, IBooking } from '../../interface/booking';
 import { getBookings } from '../../service/booking';
 import { statusConditions } from './status';
+import { formatCamelCase } from '../../utils/textFormate';
 
 const Bookings: React.FC = () => {
 
@@ -95,35 +96,9 @@ const Bookings: React.FC = () => {
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber : 'N/A'}</td>
                                         <td>{items.mob1 || "N/A"}</td>
                                         <td>
-                                            {items.provider ? (
-                                                <>
-                                                    {items.provider.name || "No Name"}
-                                                    <p style={{ color: '#9a9a9a' }}>{items.provider.phone || "N/A"}</p>
-                                                </>
-                                            ) : items.driver ? (
-                                                <>
-                                                    {items.driver.name || "No Name"}
-                                                    <p style={{ color: '#9a9a9a' }}>{items.driver.phone || "N/A"}</p>
-                                                </>
-                                            ) : items.dummyDriverName ? (
-                                                <>
-                                                    {items.dummyDriverName}
-                                                    <p style={{ color: '#9a9a9a' }}>No Phone</p>
-                                                </>
-                                            ) : items.dummyProviderName ? (
-                                                <>
-                                                    {items.dummyProviderName}
-                                                    <p style={{ color: '#9a9a9a' }}>No Phone</p>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    Not Found
-                                                    <p style={{ color: '#9a9a9a' }}>N/A</p>
-                                                </>
-                                            )}
+                                            {formatCamelCase(items.serviceCategory || '')}
                                         </td>
-
-                                        <td>{items.bookedBy?.name || "N/A"}</td>
+                                        <td>{items.createdBy?.name || "N/A"}</td>
                                     </tr>
                                 );
                             })}

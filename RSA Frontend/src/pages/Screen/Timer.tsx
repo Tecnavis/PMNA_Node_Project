@@ -10,7 +10,6 @@ const blinkBackground = keyframes`
     100% { background-color: #f8f9fa; }
 `;
 
-// Styling for the timer container
 const TimerContainer = styled.div`
     display: flex;
     align-items: center;
@@ -23,17 +22,16 @@ const TimerContainer = styled.div`
     color: #333;
     font-size: 16px;
     font-weight: bold;
-    width: 200px;
+    min-width: 100px;
 `;
 
-// Styling for the timer text, which blinks if time is up
-const TimerText = styled.span<{ isBlinking: boolean }>`
+const TimerText = styled.span<{ $isBlinking: boolean }>`
     display: inline-block;
     font-size: 16px;
-    color: ${({ isBlinking }) => (isBlinking ? '#fff' : '#e67e22')};
-    background-color: ${({ isBlinking }) => (isBlinking ? '#e74c3c' : '#f8f9fa')};
-    ${({ isBlinking }) =>
-        isBlinking &&
+    color: ${({ $isBlinking }) => ($isBlinking ? '#fff' : '#e67e22')};
+    background-color: ${({ $isBlinking }) => ($isBlinking ? '#e74c3c' : 'transparent')};
+    ${({ $isBlinking }) =>
+        $isBlinking &&
         css`
             animation: ${blinkBackground} 1s infinite;
             padding: 2px 4px;
@@ -47,72 +45,77 @@ interface TimerProps {
     onTimeUp: () => void;
 }
 
-const Timer: React.FC<TimerProps> = ({ pickupDistance, onTimeUp }) => {
-    const [elapsedTime, setElapsedTime] = useState(0);
+const Timer: React.FC<TimerProps> = ({ pickupDistance = '0', onTimeUp }) => {
+    const [remainingTime, setRemainingTime] = useState(0);
     const [isTimeUp, setIsTimeUp] = useState(false);
-    const audioRef = useRef<HTMLAudioElement>(null); // Reference for the audio element
+    const [totalPickupTime, setTotalPickupTime] = useState(0);
+    const audioRef = useRef<HTMLAudioElement>(null);
 
+    // Calculate pickup time based on distance
     const calculatePickupTime = (distance: string) => {
         const km = parseFloat(distance) || 0;
-        const speedKmPerMin = 1;
+        const speedKmPerMin = 1; // 1 km per minute (60 km/h)
         return Math.ceil(km / speedKmPerMin) + 15; // Add 15 min buffer
     };
 
     useEffect(() => {
+        // Calculate total time needed when distance changes
+        const time = calculatePickupTime(pickupDistance) * 60 * 1000;
+        setTotalPickupTime(time);
+        setRemainingTime(time);
+        
         const storedStartTime = localStorage.getItem('pickupStartTime');
-        let startTime = storedStartTime ? parseInt(storedStartTime) : Date.now(); // Default to current time
+        const startTime = storedStartTime ? parseInt(storedStartTime) : Date.now();
 
         if (!storedStartTime) {
             localStorage.setItem('pickupStartTime', startTime.toString());
         }
 
-        // Calculate the time needed to complete the pickup
-        const totalPickupTime = calculatePickupTime(pickupDistance || '0') * 60 * 1000;
-
-        const updateTimer = () => {
+        const timerInterval = setInterval(() => {
             const currentTime = Date.now();
-            const timeElapsed = currentTime - startTime; // No longer null
+            const timeElapsed = currentTime - startTime;
+            const timeRemaining = Math.max(0, time - timeElapsed);
 
-            if (timeElapsed >= totalPickupTime) {
+            if (timeRemaining <= 0) {
                 setIsTimeUp(true);
-                onTimeUp(); // Trigger time up action
-            } else {
-                setElapsedTime(timeElapsed);
+                onTimeUp();
+                clearInterval(timerInterval);
             }
-        };
+            setRemainingTime(timeRemaining);
+        }, 1000);
 
-        const timerInterval = setInterval(updateTimer, 1000);
-
-        return () => {
-            clearInterval(timerInterval);
-        };
+        return () => clearInterval(timerInterval);
     }, [pickupDistance, onTimeUp]);
 
-    // Play alert sound when time is up
     useEffect(() => {
         if (isTimeUp && audioRef.current) {
-            audioRef.current.play();
+            audioRef.current.play().catch(e => console.error("Audio playback failed:", e));
         }
     }, [isTimeUp]);
 
-    // Convert milliseconds to minutes and seconds for display
+    // Format time as HHH:MM (hours:minutes)
     const formatTime = (time: number) => {
         const totalSeconds = Math.floor(time / 1000);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        
+        // Format as HHH:MM (padded with leading zeros)
+        return `${hours.toString().padStart(3, '0')}:${minutes.toString().padStart(2, '0')}`;
     };
 
     return (
         <div>
             <TimerContainer>
-                <TimerText isBlinking={isTimeUp}>
-                    {isTimeUp ? 'Time Up!' : formatTime(elapsedTime)}
+                <TimerText $isBlinking={isTimeUp}>
+                    {isTimeUp ? 'Time Up!' : formatTime(remainingTime)}
                 </TimerText>
             </TimerContainer>
-
-            {/* Audio element for the alert sound */}
-            <audio ref={audioRef} src="\public\short-beep-countdown-81121.mp3" preload="auto" />
+            
+            <audio 
+                ref={audioRef} 
+                src="/short-beep-countdown-81121.mp3"
+                preload="auto" 
+            />
         </div>
     );
 };

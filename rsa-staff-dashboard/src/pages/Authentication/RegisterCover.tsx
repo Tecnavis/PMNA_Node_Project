@@ -192,6 +192,7 @@ const RegisterCover = () => {
             localStorage.setItem('token', res.data.token)
             localStorage.setItem('role', res.data.role)
             localStorage.setItem('showroomIcon', showRoomDetails.image)
+            localStorage.setItem('showroomId', showRoomDetails.id)
             localStorage.setItem('name', res.data.name)
 
             navigate('/bookings')

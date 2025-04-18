@@ -387,7 +387,7 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
 exports.staffLogin = async (req, res) => {
   try {
     const { phoneNumber, showroom } = req.body;
-    console.log("here", req.body)
+    
     const showroomId = new mongoose.Types.ObjectId(showroom)
 
     // Check if staff exists
