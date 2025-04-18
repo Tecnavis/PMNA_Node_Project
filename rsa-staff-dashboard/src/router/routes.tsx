@@ -145,7 +145,7 @@ const routes = [
     },
     {
         path: '/',
-        element: <Dashboard />,
+        element: <Booking />,
     },
     {
         path: '/bookings',

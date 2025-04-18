@@ -28,7 +28,7 @@ axiosInstance.interceptors.response.use(
     (error: AxiosError) => {
         if (error.response?.status === 401) {
             const navigate = useNavigate();
-            navigate('/auth/boxed-signin'); // Redirect to login if unauthorized
+            navigate('/auth/cover-register'); // Redirect to login if unauthorized
         }
         return Promise.reject(error);
     }

@@ -8,7 +8,7 @@ router.get('/', function (req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
-router.get('/dashboard', jwt, controller.dashboard)
+router.get('/dashboard',  controller.dashboard)
 router.get('/showroom-dashboard/:id', jwt, controller.showroomDashboard)
 
 module.exports = router;
