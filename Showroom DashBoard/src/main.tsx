@@ -6,7 +6,6 @@ import { Provider } from 'react-redux';
 
 import router from './router/index';
 import store from './store/index';
-import Context  from './context/firebaseContext';
 import './tailwind.css';
 import './i18n';
 
@@ -14,9 +13,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
         <Suspense>
             <Provider store={store}>
-                <Context>
-                        <RouterProvider router={router} />
-                </Context>
+                <RouterProvider router={router} />
             </Provider>
         </Suspense>
     </React.StrictMode>
