@@ -18,12 +18,12 @@ import Feedbacks from '../Feedback/Feedback';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
-interface SocketData {
-    type: 'udpdate' | 'newBooking';
+export interface SocketData {
+    type: 'update' | 'newBooking';
     bookingId: string;
     status?: string;
-    newBooking?: Booking;
-    updatedBooking?: Booking;
+    newBooking: Booking;
+    updatedBooking: Booking;
 }
 
 enum Tabs {

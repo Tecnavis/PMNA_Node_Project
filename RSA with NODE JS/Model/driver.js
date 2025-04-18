@@ -66,9 +66,12 @@ const driverSchema = new mongoose.Schema({
       },
     },
   ],
-  currentLocation :{
-    type :String,
+  currentLocation: {
+    type: String,
     trim: true,
+  },
+  currentBookingStatus: {
+    type: String,
   }
 });
 

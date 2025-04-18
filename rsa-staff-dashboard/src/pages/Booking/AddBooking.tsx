@@ -94,7 +94,7 @@ const AddBook: React.FC = () => {
         try {
             const res: AddBookingResponse = await addNewBooking(data) as AddBookingResponse
             sweetAlert({ title: 'Booking added', message: res.message })
-            navigate('/showrm');
+            navigate('/bookings');
         } catch (error) {
             console.error('Error adding document: ', error);
             setError('Failed to add booking. Please try again.');
