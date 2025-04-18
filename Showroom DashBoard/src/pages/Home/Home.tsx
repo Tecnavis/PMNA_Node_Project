@@ -10,6 +10,8 @@ import CompletedBookingsSC from '../ShowRooms/ServiceCenter/CompletedBookings';
 import CompletedBodyBookings from '../ShowRooms/BodyShopes/CompletedBodyBookings';
 import CompleteShowRoom from '../ShowRooms/ShowRoom/CompleteShowRoom';
 import Completed from '../ShowRooms/ServiceCenter/Completed';
+import CompletedBody from '../ShowRooms/BodyShopes/CompletedBody';
+import CompletedShowRoom from '../ShowRooms/ShowRoom/CompletedShowroom';
 
 const tabConfig = {
   serviceCenter: {
@@ -20,12 +22,12 @@ const tabConfig = {
   bodyParts: {
     label: 'Body Shops',
     icon: <AiTwotoneCar />,
-    completed: <CompletedBodyBookings />,
+    completed: <CompletedBody />,
   },
   showRooms: {
     label: 'Showrooms',
     icon: <BsBuildings />,
-    completed: <CompleteShowRoom />,
+    completed: <CompletedShowRoom />,
   },
 };
 
