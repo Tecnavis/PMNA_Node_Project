@@ -15,9 +15,6 @@ interface BookingStats {
     completedBookings: number;
 }
 
-interface BookingReportResponse {
-    bookingData: BookingStats[]; // Not an array
-}
 
 const Index = () => {
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
@@ -168,10 +165,8 @@ const Index = () => {
                 <div className="grid xl:grid-cols-1 gap-6 mb-6">
                     <div className="grid xl:grid-cols-4 gap-6 mb-6">
                         <div className={`panel bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6 `}>
-                            <Link to="/addbook" className="block">
-                                <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
-                                <p className="text-2xl">{salesByCategory.series[0]}</p>
-                            </Link>
+                            <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
+                            <p className="text-2xl">{salesByCategory.series[0]}</p>
                         </div>
                         <div className="panel bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg shadow-lg p-6">
                             <Link to="/addbook" className="block">

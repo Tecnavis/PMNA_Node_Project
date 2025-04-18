@@ -29,7 +29,7 @@ exports.sendOtp = async (countryCode = '+91', phoneNumber) => {
             success: true,
         };
     } catch (error) {
-        console.error("Error sending OTP:", error.message);
+        console.error("Error sending OTP:", error);
         return {
             message: error.message,
             success: false,
