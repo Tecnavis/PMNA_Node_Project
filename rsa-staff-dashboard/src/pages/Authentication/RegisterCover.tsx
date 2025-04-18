@@ -121,10 +121,6 @@ const RegisterCover = () => {
         });
     };
 
-    const handleNavigation = () => {
-        navigate('/bookings');
-    };
-
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
@@ -197,7 +193,7 @@ const RegisterCover = () => {
             localStorage.setItem('role', res.data.role)
             localStorage.setItem('showroomIcon', showRoomDetails.image)
 
-            navigate('/users/profile')
+            navigate('/bookings')
         } catch (error) {
             Swal.fire({
                 icon: 'error',
@@ -210,6 +206,24 @@ const RegisterCover = () => {
             });
         }
     };
+
+    useEffect(() => {
+        if (!showRoomDetails?.id) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Please scan Showroom QR then login.',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                width: '100%',
+                customClass: {
+                    popup: 'swal-popup',
+                    title: 'swal-title'
+                },
+            });
+        }
+    }, [showRoomDetails?.id]);
 
     return (
         <div className="relative min-h-screen">
@@ -244,6 +258,10 @@ const RegisterCover = () => {
                                         src={`${BASE_URL}/images/${showRoomDetails.image}`}
                                         alt="Showroom"
                                         className="w-full  rounded-md shadow-lg border-4  object-fill"
+                                        onError={(e) => {
+                                            e.currentTarget.onerror = null;
+                                            e.currentTarget.src = 'https://via.placeholder.com/445x300?text=Showroom+Image';
+                                        }}
                                     />
                                 </div>
 
