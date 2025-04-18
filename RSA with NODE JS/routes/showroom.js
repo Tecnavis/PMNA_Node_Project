@@ -14,11 +14,9 @@ router.get('/report',jwt, controller.showroomDashBoardReport);
 router.get('/showroom-staff-profile',jwt, controller.getStaffProfile);
 
 router.get('/filtered', jwt, controller.filterGetShowrooms);
-// OTP send for verification
-router.post('/staff-send-otp', jwt, controller.sendOtpForShowroomStaff);
-// OTP verify and login
-router.post('/staff-signin', jwt, controller.staffLogin);
-router.post('/staff-signup', jwt, controller.showroomStaffSignup);
+
+router.post('/staff-signin',  controller.staffLogin);
+router.post('/staff-signup',  controller.showroomStaffSignup);
 router.post('/add-staff',  controller.addStaffMember);
 router.put('/update-staff/:staffId',  controller.updateStaffMember);
 
