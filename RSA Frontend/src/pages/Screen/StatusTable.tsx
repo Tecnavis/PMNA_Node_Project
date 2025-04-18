@@ -2,55 +2,64 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { useNavigate } from 'react-router-dom';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import Index from './Index';
-import Timer from './Timer'; // Import Timer component
+import Timer from './Timer';
 import axios from 'axios';
+import { BASE_URL } from '../../config/axiosConfig';
+import { Booking } from '../Bookings/OpenBooking';
+import { formattedTime, dateFormate } from '../../utils/dateUtils';
+import { connectSocket, disconnectSocket } from '../../utils/socket';
+import { SocketData } from '../Status/Status';
+import { Socket } from 'socket.io-client';
 
-// Define keyframes for animations
+// Animations
 const fadeIn = keyframes`
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-`;
-const HighlightedTableData = styled.td`
-    padding: 20px;
-    font-size: 1.1rem;
-    text-align: center;
-    border: 2px solid #4CAF50; /* Bold green border */
-    border-radius: 10px; /* Rounded corners */
-    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.2); /* Stronger shadow */
-    background: linear-gradient(135deg, #e0ffe0, #f9f9f9); /* Gradient background */
-    color: #333; /* Darker text for readability */
-    font-weight: bold; /* Bold text */
-    transition: transform 0.2s, box-shadow 0.2s; /* Smooth hover effects */
-
-    &:hover {
-        transform: scale(1.05); /* Slight zoom on hover */
-        box-shadow: 6px 6px 15px rgba(0, 0, 0, 0.3); /* Stronger shadow on hover */
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 `;
 
-const FlexContainer = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Adds space between the status and timer */
+const pulse = keyframes`
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 `;
 
-const PickedTimeText = styled.span`
-    font-size: 0.9rem;     
-    color: #555;           
-    font-weight: 500;      
-`;
-// Styled-components for layout and styling
+// Styled Components
 const Container = styled.div`
     position: relative;
     padding: 20px;
-    background-color: #f0f4f7;
+    background-color: #f8f9fa;
     min-height: 100vh;
+    color: #333;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+`;
+
+const Title = styled.h1`
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    text-align: center;
+    margin: 20px 0;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+`;
+
+const SectionTitle = styled.h2`
+    font-size: 1.8rem;
+    color: #3498db;
+    margin: 30px 0 15px;
+    padding: 10px 20px;
+    background: linear-gradient(90deg, rgba(52,152,219,0.1) 0%, rgba(52,152,219,0) 100%);
+    border-left: 5px solid #3498db;
+`;
+
+const TableContainer = styled.div`
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 40px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
 `;
 
 const Table = styled.table`
@@ -60,17 +69,35 @@ const Table = styled.table`
 `;
 
 const TableHeader = styled.th`
-    background-color: #f39c12;
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
     color: white;
     padding: 15px;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 `;
 
-const TableRow = styled.tr<{ highlight?: boolean }>`
-    background-color: ${(props) => (props.highlight ? 'lightblue' : 'white')};
+const TableRow = styled.tr<{ highlight?: boolean; urgent?: boolean }>`
+    background-color: ${(props) =>
+        props.highlight ? 'rgba(52, 152, 219, 0.1)' :
+            props.urgent ? 'rgba(255, 165, 0, 0.1)' :
+                'transparent'};
+    border-bottom: 1px solid #e0e0e0;
+    
     &:nth-child(even) {
-        background-color: #f2f2f2;
+        background-color: ${(props) =>
+        props.highlight ? 'rgba(52, 152, 219, 0.15)' :
+            props.urgent ? 'rgba(255, 165, 0, 0.15)' :
+                '#f9f9f9'};
+    }
+    
+    &:hover {
+        background-color: ${(props) =>
+        props.highlight ? 'rgba(52, 152, 219, 0.2)' :
+            props.urgent ? 'rgba(255, 165, 0, 0.2)' :
+                '#f5f5f5'};
     }
 `;
 
@@ -78,134 +105,160 @@ const TableData = styled.td`
     padding: 15px;
     font-size: 1rem;
     text-align: left;
-    border-bottom: 1px solid #ddd;
-`;
-
-const Title = styled.h1`
-    font-size: 2.5rem;
-    font-weight: 700;
     color: #333;
-    text-align: center;
-    margin-bottom: 20px;
 `;
 
+const HighlightedTableData = styled(TableData)`
+    font-weight: bold;
+    color: #3498db;
+    background: rgba(52, 152, 219, 0.1);
+    border-left: 3px solid #3498db;
+    border-right: 3px solid #3498db;
+    text-align: center;
+`;
+
+const TimeBadge = styled.div`
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 15px;
+    background: #e3f2fd;
+    color: #1976d2;
+    font-weight: 500;
+    margin: 2px 0;
+    font-size: 0.9rem;
+`;
+
+const FlexContainer = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+`;
 
 const StatusBadge = styled.span<{ status: string }>`
-    padding: 4px 15px;
-    border-radius: 25px;
+    padding: 5px 12px;
+    border-radius: 20px;
     font-weight: bold;
     text-align: center;
     color: white;
+    font-size: 0.9rem;
     background-color: ${(props) => {
         switch (props.status) {
-            case 'Booking added':
-                return '#3498db';
-            case 'called to customer':
-                return '#2980b9';
-            case 'Order Received':
-                return '#d4ac0d';
-            case 'On the way to pickup location':
-                return '#16a085';
-            case 'Vehicle Confirmed':
-                return '#8e44ad';
-            case 'Vehicle Picked':
-                return '#e67e22';
-            case 'Cancelled':
-                return 'red';
-            case 'To DropOff Location':
-                return '#d35400';
-            case 'On the way to dropoff location':
-                return '#c0392b';
-            case 'Vehicle Dropped':
-                return '#f1c40f';
-            case 'Order Completed':
-                return '#2ecc71';
-            case 'Rejected':
-                return '#e74c3c';
-            default:
-                return '#f39c12';
+            case 'Booking added': return '#3498db';
+            case 'called to customer': return '#2980b9';
+            case 'Order Received': return '#d4ac0d';
+            case 'On the way to pickup location': return '#16a085';
+            case 'Vehicle Confirmed': return '#8e44ad';
+            case 'Vehicle Picked': return '#e67e22';
+            case 'Cancelled': return '#e74c3c';
+            case 'To DropOff Location': return '#d35400';
+            case 'On the way to dropoff location': return '#c0392b';
+            case 'Vehicle Dropped': return '#f1c40f';
+            case 'Order Completed': return '#2ecc71';
+            case 'Rejected': return '#e74c3c';
+            default: return '#7f8c8d';
         }
     }};
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    
     &:hover {
-        transform: scale(1.05);
-        background-color: ${(props) => {
-        switch (props.status) {
-            case 'Rejected':
-                return '#c0392b';
-            case 'Order Completed':
-                return '#2ecc71';
-            case 'pending':
-                return '#e67e22';
-            default:
-                return '#e67e22';
-        }
-    }};
+        transform: scale(1.03);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
-    animation: ${fadeIn} 1.5s ease-in-out;
-    letter-spacing: 1px;
+    
+    ${props => props.status === 'On the way to pickup location' && css`
+        animation: ${pulse} 2s infinite;
+    `}
 `;
 
-interface BookingRecord {
-    id: string;
-    dateTime?: string;
-    status?: string;
-    bookingStatus?: string;
-    fileNumber?: string;
-    driver?: string;
-    vehicleNumber?: string;
-    selectedDriver?: string;
-    pickupDistance?: string;
-    pickedTime: Date | null | undefined;
-    droppedTime: Date | null | undefined;
-}
+const BlinkingStatusBadge = styled(StatusBadge)`
+    animation: ${pulse} 1s infinite;
+`;
+
+const ScrollContainer = styled.div`
+    height: 500px;
+    overflow: auto;
+    border-radius: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #3498db #f1f1f1;
+    
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+        background-color: #3498db;
+        border-radius: 6px;
+    }
+`;
 
 const StatusTable = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const [recordsData, setRecordsData] = useState<BookingRecord[]>([]);
-    const [drivers, setDrivers] = useState<{ [key: string]: any }>({});
-    const [searchQuery, setSearchQuery] = useState('');
+    const [ongoingBookings, setOngoingBookings] = useState<Booking[]>([]);
+    const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
     const [scrollDirection, setScrollDirection] = useState<'up' | 'down'>('down');
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [socket, setSocket] = useState<Socket | null>(null);
+    const [update, setUdate] = useState<boolean>(false);
+
+
 
     useEffect(() => {
-        dispatch(setPageTitle('Status'));
+        dispatch(setPageTitle('Driver Status Dashboard'));
 
         const fetchBookings = async () => {
-            const ongoingBookings = await axios.get()
-            setRecordsData([]);
+            try {
+                const [ongoingResponse, completedResponse] = await Promise.all([
+                    axios.get(`${BASE_URL}/booking/status-based`, {
+                        params: { status: 'OngoingBookings', limit: 100000 }
+                    }),
+                    axios.get(`${BASE_URL}/booking/status-based`, {
+                        params: { status: 'Order Completed', limit: 100000 }
+                    })
+                ]);
+
+                setOngoingBookings(ongoingResponse.data.bookings);
+                setCompletedBookings(completedResponse.data.bookings);
+            } catch (error) {
+                console.error('Error fetching bookings:', error);
+            }
         };
 
-        fetchBookings(); // Initial fetch
+        fetchBookings();
+        const intervalId = setInterval(fetchBookings, 30000); // Refresh every 30 seconds
 
-    }, []);
+        return () => clearInterval(intervalId);
+    }, [dispatch]);
 
     const startScrolling = () => {
-        if (scrollIntervalRef.current) return; // Prevent multiple intervals
+        if (scrollIntervalRef.current || !tableContainerRef.current) return;
+
         scrollIntervalRef.current = setInterval(() => {
             if (tableContainerRef.current) {
                 const { scrollTop, scrollHeight, clientHeight } = tableContainerRef.current;
-
-                console.log({ scrollTop, scrollHeight, clientHeight });
 
                 if (scrollDirection === 'down') {
                     if (scrollTop + clientHeight >= scrollHeight - 1) {
                         setScrollDirection('up');
                     } else {
-                        tableContainerRef.current.scrollBy({ top: 10 });
+                        tableContainerRef.current.scrollBy({ top: 2, behavior: 'smooth' });
                     }
                 } else {
                     if (scrollTop <= 1) {
                         setScrollDirection('down');
                     } else {
-                        tableContainerRef.current.scrollBy({ top: -10 });
+                        tableContainerRef.current.scrollBy({ top: -2, behavior: 'smooth' });
                     }
                 }
             }
-        }, 300); // Adjust speed as needed
+        }, 50);
     };
 
     const stopScrolling = () => {
@@ -217,166 +270,210 @@ const StatusTable = () => {
 
     useEffect(() => {
         startScrolling();
-        return stopScrolling; // Cleanup on component unmount
+        return stopScrolling;
     }, [scrollDirection]);
 
+    const calculatePickupTime = (pickupDistance: string) => {
+        const distance = parseFloat(pickupDistance) || 0;
+        const speedKmPerMin = 1; // 1 km per minute
+        const timeInMinutes = distance / speedKmPerMin;
+        return Math.ceil(timeInMinutes) + 15; // Add 15 minutes buffer
+    };
 
-    const filteredRecordsData = recordsData
-        .filter((record) =>
-            Object.values(record).some((value) =>
-                value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
-            )
-        )
-        .filter((record) => record.status !== 'Approved'); // Exclude "Approved" status
+    const isUrgent = (record: Booking) => {
+        if (record.status !== 'On the way to pickup location') return false;
 
-    const sortedRecordsData = filteredRecordsData.slice().sort((a, b) => {
-        const dateA = new Date(a.dateTime || '');
-        const dateB = new Date(b.dateTime || '');
-        return dateB.getTime() - dateA.getTime();
-    });
+        const now = new Date();
+        const calculatedTime = calculatePickupTime("" + record.totalDistence || "0");
+        const startTime = new Date(record.pickupTime || now);
+        const endTime = new Date(startTime.getTime() + calculatedTime * 60000);
 
-    const completedBookings = sortedRecordsData.filter((record) => record.status === 'Order Completed');
-    const ongoingBookings = sortedRecordsData.filter((record) => record.status !== 'Order Completed');
-    const formatTimestamp = (timestamp: Date | null | undefined): string => {
-        if (!timestamp) return "";
+        return now >= endTime;
+    };
 
-        // Convert Firestore timestamp to JavaScript Date object
-        const date = timestamp
+    const updateBookingInState = (
+        bookings: Booking[],
+        bookingId: string,
+        updatedBooking: Booking
+    ): Booking[] => {
+        return bookings.map(booking =>
+            booking._id === bookingId ? updatedBooking : booking
+        );
+    };
 
-        // Define the options for formatting
-        const options: Intl.DateTimeFormatOptions = {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true, // 12-hour format with AM/PM
+    useEffect(() => {
+        const socketInstance = connectSocket("test@example.com");
+        setSocket(socketInstance);
+
+        const handleNewChanges = async (data: SocketData) => {
+            try {
+                if (!data?.type) return;
+
+                if (data.type === 'update' && data.status === 'Order Completed') {
+                    // Remove from ongoing bookings
+                    setOngoingBookings(prev =>
+                        prev.filter(booking => booking._id !== data.bookingId)
+                    );
+
+                    // @ts-ignore
+                    setCompletedBookings(prev => [...prev, data.updatedBooking as Booking]);
+                    setUdate(true)
+                }
+
+                else if (data.type === 'newBooking') {
+
+                    // @ts-ignore
+                    setOngoingBookings(prev => [...prev, data.newBooking as Booking]);
+                    setUdate(false)
+                }
+
+                else if (data.type === 'update') {
+
+                    const response = await axios.get(`/booking/${data.bookingId}`);
+                    const updatedBooking = response.data;
+
+                    if (updatedBooking.status === 'Order Completed') {
+                        setCompletedBookings(prev =>
+                            updateBookingInState(prev, data.bookingId, updatedBooking)
+                        );
+                    } else {
+                        setOngoingBookings(prev =>
+                            updateBookingInState(prev, data.bookingId, updatedBooking)
+                        );
+                    }
+                    setUdate(false)
+                }
+
+            } catch (err) {
+                console.error("Socket event error:", err);
+            }
         };
 
-        // Use Intl.DateTimeFormat for proper formatting
-        return new Intl.DateTimeFormat('en-IN', options).format(date);
-    };
+        socketInstance.on("newChanges", handleNewChanges);
+
+        return () => {
+            socketInstance.off("newChanges", handleNewChanges);
+            disconnectSocket();
+        };
+    }, []);
 
 
-    const calculatePickupTime = (pickupDistance: string) => {
-        console.log("Pickup distance input:", pickupDistance);
-
-        const speedKmPerMin = 60 / 60; // 1 km per minute
-        console.log("Speed in km per minute:", speedKmPerMin);
-
-        const distance = parseFloat(pickupDistance);
-        console.log("Parsed pickup distance (in km):", distance);
-
-        const timeInMinutes = distance / speedKmPerMin;
-        console.log("Calculated time to reach (in minutes):", timeInMinutes);
-
-        const totalTimeInMinutes = Math.ceil(timeInMinutes) + 15; // Add 15 minutes buffer
-        console.log("Total time with 15-minute buffer (in minutes):", totalTimeInMinutes);
-
-        return totalTimeInMinutes;
-    };
-
-
-    const shouldBlink = (record: BookingRecord) => {
-        const now = new Date();
-        const calculatedTime = calculatePickupTime(record.pickupDistance || "0");
-        const startTime = new Date(record.dateTime || now);
-        const endTime = new Date(startTime.getTime() + calculatedTime * 60000); // Add the calculated time in milliseconds
-
-        return now >= endTime && record.status === "On the way to pickup location";
-    };
     return (
-        <Container style={{ padding: '40px' }}>
-            <Title>Driver Status</Title>
-            <Index />
-            <div
-                ref={tableContainerRef}
-                onMouseEnter={stopScrolling}
-                onMouseLeave={startScrolling}
-                style={{
-                    height: '600px',
-                    overflow: 'auto',
-                    border: '.5px solid black',
-                }}
-                className='mb-10'
-            >
+        <Container>
+            <Title>BOOKING STATUS</Title>
 
+            <Index update={update} />
 
+            <SectionTitle>ONGOING BOOKINGS</SectionTitle>
+            <TableContainer>
+                <ScrollContainer
+                    ref={tableContainerRef}
+                    onMouseEnter={stopScrolling}
+                    onMouseLeave={startScrolling}
+                >
+                    <Table>
+                        <thead>
+                            <tr>
+                                <TableHeader>Date & Time</TableHeader>
+                                <TableHeader>File Number</TableHeader>
+                                <TableHeader>Driver</TableHeader>
+                                <TableHeader>Vehicle</TableHeader>
+                                <TableHeader>Pickup Time</TableHeader>
+                                <TableHeader>Dropoff Time</TableHeader>
+                                <TableHeader>Status</TableHeader>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {ongoingBookings.map((record) => (
+                                <TableRow
+                                    key={record._id}
+                                    highlight={record?.bookingStatus === 'showroom'}
+                                    urgent={isUrgent(record)}
+                                >
+                                    <TableData>
+                                        <TimeBadge>{dateFormate("" + record.createdAt)}</TimeBadge>
+                                        <TimeBadge>{formattedTime("" + record.createdAt)}</TimeBadge>
+                                    </TableData>
+                                    <TableData>{record.fileNumber}</TableData>
+                                    <TableData>{record.driver?.name || 'N/A'}</TableData>
+                                    <TableData>{record.customerVehicleNumber}</TableData>
+                                    <HighlightedTableData>
+                                        {record.pickupDate ? (
+                                            <>
+                                                <div>{dateFormate("" + record.pickupDate)}</div>
+                                                <div>{formattedTime("" + record.pickupDate)}</div>
+                                            </>
+                                        ) : 'N/A'}
+                                    </HighlightedTableData>
+                                    <HighlightedTableData>
+                                        {record.dropoffTime ? formattedTime("" + record.dropoffTime) : 'N/A'}
+                                    </HighlightedTableData>
+                                    <TableData>
+                                        <FlexContainer>
+                                            {isUrgent(record) ? (
+                                                <BlinkingStatusBadge status={record.status || 'Unknown'}>
+                                                    {record.status}
+                                                </BlinkingStatusBadge>
+                                            ) : (
+                                                <StatusBadge status={record.status || 'Unknown'}>
+                                                    {record.status}
+                                                </StatusBadge>
+                                            )}
+                                            {record.status === 'On the way to pickup location' && (
+                                                <Timer
+                                                    pickupDistance={"" + record.totalDistence}
+                                                    onTimeUp={() => console.log('Time is up!')}
+                                                />
+                                            )}
+                                        </FlexContainer>
+                                    </TableData>
+                                </TableRow>
+                            ))}
+                        </tbody>
+                    </Table>
+                </ScrollContainer>
+            </TableContainer>
+
+            <SectionTitle>COMPLETED BOOKINGS</SectionTitle>
+            <TableContainer>
                 <Table>
-                    <thead style={{ position: 'sticky', top: 0, backgroundColor: 'white' }}>
+                    <thead>
                         <tr>
                             <TableHeader>Date & Time</TableHeader>
                             <TableHeader>File Number</TableHeader>
-                            <TableHeader>Driver Name</TableHeader>
-                            <TableHeader>Vehicle Number</TableHeader>
-                            <TableHeader>Picked Time</TableHeader>
-                            <TableHeader>Dropped Time</TableHeader>
-
+                            <TableHeader>Driver</TableHeader>
+                            <TableHeader>Vehicle</TableHeader>
+                            <TableHeader>Pickup Time</TableHeader>
+                            <TableHeader>Dropoff Time</TableHeader>
                             <TableHeader>Status</TableHeader>
                         </tr>
                     </thead>
                     <tbody>
-                        {ongoingBookings.map((record) => (
-                            <TableRow key={record.id} highlight={record.bookingStatus === 'ShowRoom Booking'}>
-                                <TableData>{record.dateTime}</TableData>
-                                <TableData>{record.fileNumber}</TableData>
-                                <TableData>{record.driver}</TableData>
-                                <TableData>{record.vehicleNumber}</TableData>
-                                <HighlightedTableData>{formatTimestamp(record?.pickedTime)}</HighlightedTableData>
-                                <HighlightedTableData>{formatTimestamp(record?.droppedTime)}</HighlightedTableData>
+                        {completedBookings.map((record) => (
+                            <TableRow key={record._id}>
                                 <TableData>
-                                    <FlexContainer>
-                                        <StatusBadge
-                                            className={shouldBlink(record) ? 'blinking' : ''}
-                                            status={record.status || 'Unknown'}
-                                        >
-                                            {record.status}
-                                        </StatusBadge>
-                                        {record.status === 'On the way to pickup location' && (
-                                            <Timer pickupDistance={record.pickupDistance} onTimeUp={() => console.log('Time is up!')} />
-                                        )}
-                                    </FlexContainer>
+                                    <TimeBadge>{dateFormate("" + record.createdAt)}</TimeBadge>
+                                    <TimeBadge>{formattedTime("" + record.createdAt)}</TimeBadge>
+                                </TableData>
+                                <TableData>{record.fileNumber}</TableData>
+                                <TableData>{record.driver?.name || 'N/A'}</TableData>
+                                <TableData>{record.customerVehicleNumber}</TableData>
+                                <HighlightedTableData>
+                                    {record.pickupTime ? formattedTime("" + record.pickupTime) : 'N/A'}
+                                </HighlightedTableData>
+                                <HighlightedTableData>
+                                    {record.dropoffTime ? formattedTime("" + record.dropoffTime) : 'N/A'}
+                                </HighlightedTableData>
+                                <TableData>
+                                    <StatusBadge status={record.status || 'Completed'}>
+                                        {record.status || 'Completed'}
+                                    </StatusBadge>
                                 </TableData>
                             </TableRow>
                         ))}
                     </tbody>
                 </Table>
-            </div>
-            <Title>Order Completed</Title>
-            <Table>
-                <thead>
-                    <tr>
-                        <TableHeader>Date & Time</TableHeader>
-                        <TableHeader>fileNumber</TableHeader>
-                        <TableHeader>Driver Name</TableHeader>
-                        <TableHeader>Vehicle Number</TableHeader>
-                        <TableHeader>Picked Time</TableHeader>
-                        <TableHeader>Dropped Time</TableHeader>
-                        <TableHeader>Status</TableHeader>
-                    </tr>
-                </thead>
-                <tbody>
-                    {completedBookings.map((record) => (
-                        <TableRow key={record.id}>
-                            <TableData>{record.dateTime}</TableData>
-                            <TableData>{record.fileNumber}</TableData>
-                            <TableData>{record.driver}</TableData>
-                            <TableData>{record.vehicleNumber}</TableData>
-                            <HighlightedTableData>{formatTimestamp(record?.pickedTime)}</HighlightedTableData>
-                            <HighlightedTableData>{formatTimestamp(record?.droppedTime)}</HighlightedTableData>
-                            <TableData>
-                                <StatusBadge
-                                    style={{ display: "flex" }}
-
-                                    status={record.status || 'Completed'}>
-                                    {record.status || 'Completed'}
-                                </StatusBadge>
-                            </TableData>
-                        </TableRow>
-                    ))}
-                </tbody>
-            </Table>
+            </TableContainer>
         </Container>
     );
 };
