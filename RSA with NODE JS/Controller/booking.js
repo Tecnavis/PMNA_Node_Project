@@ -43,7 +43,7 @@ exports.createBooking = async (req, res) => {
             }
 
             bookingData.vehicleNumber = selectedVehicle.vehicleNumber || ""
-            bookingData.bookedBy = req?.user?._id || req?.user?.id
+            bookingData.createdBy = req.user._id || req.user.id,
             bookingData.bookedByModel = "Admin"
 
         }
@@ -106,7 +106,8 @@ exports.addBookingForShowroom = async (req, res) => {
             ...bookingData,
             dropoffLocation: showroomData.location,
             dropoffLatitudeAndLongitude: showroomData.latitudeAndLongitude,
-            bookedBy: req.user._id || req.user.id,
+            bookedBy: "Showroom",
+            createdBy: req.user._id || req.user.id,
             bookedByModel: capitalizeFirstLetter(bookingData.bookingStatus) || 'Showroom'
         };
 
@@ -282,7 +283,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
                     { fileNumber: searchRegex },
                     { mob1: searchRegex },
                     { customerVehicleNumber: searchRegex },
-                    { bookedBy: searchRegex },
+                    { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
                     { provider: { $in: matchingProviders.map(p => p._id) } },
                 ];
@@ -394,7 +395,7 @@ exports.getAllBookings = async (req, res) => {
                 { fileNumber: searchRegex },
                 { mob1: searchRegex },
                 { customerVehicleNumber: searchRegex },
-                { bookedBy: searchRegex },
+                { bookedByModel: searchRegex },
                 { driver: { $in: matchingDrivers.map(d => d._id) } },
                 { provider: { $in: matchingProviders.map(p => p._id) } },
             ];
@@ -1103,7 +1104,7 @@ exports.getApprovedBookings = async (req, res) => {
                     { customerName: searchRegex }, // Replaced fileNumber with customerName
                     { mob1: searchRegex },
                     { customerVehicleNumber: searchRegex },
-                    { bookedBy: searchRegex },
+                    { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
                     { provider: { $in: matchingProviders.map(p => p._id) } },
                 ];
@@ -1169,7 +1170,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
                 { mob1: searchRegex },
                 { customerVehicleNumber: searchRegex },
                 { customerName: searchRegex },
-                { bookedBy: searchRegex },
+                { bookedByModel: searchRegex },
                 { driver: { $in: matchingDrivers.map(d => d._id) } },
             ];
         } else {
@@ -1504,7 +1505,7 @@ exports.getBookingsForShowroomStaff = async (req, res) => {
         const staffId = new mongoose.Types.ObjectId(req.user.id);
 
         // Build query with proper status handling
-        const query = { bookedBy: staffId };
+        const query = { createdBy: staffId };
 
         // Handle status (array or single value)
         if (status) {
@@ -1547,16 +1548,16 @@ exports.getBookingsForShowroomStaff = async (req, res) => {
         // Populate bookedBy
         const populatedBookings = await Promise.all(
             bookings.map(async (booking) => {
-                if (booking.bookedBy && booking.bookedByModel) {
+                if (booking.createdBy && booking.bookedByModel) {
                     try {
                         const model = mongoose.model(booking.bookedByModel);
-                        booking.bookedBy = await model.findById(booking.bookedBy)
+                        booking.createdBy = await model.findById(booking.createdBy)
                             .select('name')
                             .lean()
                             .exec();
                     } catch (err) {
                         console.error(`Population error: ${err.message}`);
-                        booking.bookedBy = { name: 'Unknown' };
+                        booking.createdBy = { name: 'Unknown' };
                     }
                 }
                 return booking;

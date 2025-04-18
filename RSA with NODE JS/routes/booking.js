@@ -15,7 +15,7 @@ router.post('/no-auth', controller.createBookingNoAuth);
 router.get('/approvedbookings', jwt, controller.getApprovedBookings);
 
 //Route to get all bookings base on status
-router.get('/status-based', jwt, controller.getAllBookingsBasedOnStatus);
+router.get('/status-based', controller.getAllBookingsBasedOnStatus);
 
 // Route to get booking
 router.get('/', jwt, controller.getAllBookings);
@@ -44,7 +44,7 @@ router.patch('/settle-driver-balance-salary', jwt, controller.updateBalanceSalar
 router.post('/showroom/add-booking', jwt, controller.addBookingForShowroom)
 
 // Route to get booking by id
-router.get('/:id', jwt, controller.getBookingById);
+router.get('/:id', controller.getBookingById);
 
 // Route to update booking
 router.put('/:id', jwt, upload.array('images', 6), controller.updateBooking);

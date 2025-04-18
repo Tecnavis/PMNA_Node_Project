@@ -16,6 +16,7 @@ export interface Booking {
     _id: string;
     workType: string;
     dummyProviderName?: string;
+    bookingStatus: string;
     dummyDriverName?: string;
     customerVehicleNumber: string;
     bookedBy: string;

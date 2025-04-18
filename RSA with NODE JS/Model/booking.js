@@ -38,12 +38,12 @@ const bookingSchema = new mongoose.Schema({
     insuranceAmount: { type: Number },
     adjustmentValue: { type: Number },
     amountWithoutInsurance: { type: Number },
-    createdBy: { type: String },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, refPath: 'bookedByModel' },
     bookedByModel: {
         type: String,
         enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff']
     },
-    bookedBy: { type: mongoose.Schema.Types.ObjectId, refPath: 'bookedByModel' },
+    bookedBy: { type: String},
     pickupDate: { type: Date },
     pickupTime: { type: Date },
     dropoffTime: { type: Date },

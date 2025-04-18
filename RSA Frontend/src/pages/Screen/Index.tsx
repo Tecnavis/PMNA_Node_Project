@@ -7,7 +7,7 @@ import './Index.css';
 import axios from 'axios';
 import { BASE_URL } from '../../config/axiosConfig';
 
-const Index = () => {
+const Index = ({ update }: { update: boolean }) => {
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
     const [loading, setLoading] = useState(true);
     const [salesByCategory, setSalesByCategory] = useState({
