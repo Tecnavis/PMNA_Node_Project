@@ -72,6 +72,12 @@ const bookingSchema = new mongoose.Schema({
     dummyDriverName: { type: String }, // New props
     dummyProviderName: { type: String }, // New props
     bookingStatus: { type: String }, // New props
+    cancelStatus: { type: String }, // New props
+    cancelReason: { type: String }, // New props
+    cancelKm: { type: String }, // New props
+    cancelImage: {
+        type: String, // Path to the uploaded image
+      },
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' } // New props
 
 }, { timestamps: true });
