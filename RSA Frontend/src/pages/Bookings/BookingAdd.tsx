@@ -273,6 +273,8 @@ const BookingAdd: React.FC = () => {
     const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedId = e.target.value;
         const company = companies.find((comp) => comp?._id === selectedId) || null;
+        const companyName = companies.find((comp) => comp?.name === selectedId) || null;
+
         setSelectedCompany(company);
 
     };
@@ -776,6 +778,8 @@ const BookingAdd: React.FC = () => {
                 mob1: mob1,
                 mob2: mob2,
                 customerVehicleNumber: customerVehicleNumber,
+                companyName: selectedCompany?.name ?? '',
+
                 vehicleType: selectedVehicleType,
                 brandName: brandName,
                 comments: comments,
