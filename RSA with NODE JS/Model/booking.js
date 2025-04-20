@@ -72,6 +72,8 @@ const bookingSchema = new mongoose.Schema({
     dummyDriverName: { type: String }, // New props
     dummyProviderName: { type: String }, // New props
     bookingStatus: { type: String }, // New props
+    companyName: { type: String }, // New props
+
     cancelStatus: { type: String }, // New props
     cancelReason: { type: String }, // New props
     cancelKm: { type: String }, // New props
