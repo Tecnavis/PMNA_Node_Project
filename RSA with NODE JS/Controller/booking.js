@@ -44,7 +44,7 @@ exports.createBooking = async (req, res) => {
 
             bookingData.vehicleNumber = selectedVehicle.vehicleNumber || ""
             bookingData.createdBy = req.user._id || req.user.id,
-            bookingData.bookedByModel = "Admin"
+                bookingData.bookedByModel = "Admin"
 
         }
 
@@ -335,6 +335,8 @@ exports.getAllBookings = async (req, res) => {
             startDate,
             endDate,
             endingDate,
+            forDriverReport,
+            forStaffReport,
             page = 1,
             limit = 10,
             status = '',
@@ -342,6 +344,7 @@ exports.getAllBookings = async (req, res) => {
             providerId,
             companyId,
             verified,
+            staffId
         } = req.query;
 
         // Convert page and limit to integers
@@ -351,7 +354,11 @@ exports.getAllBookings = async (req, res) => {
         const query = {};
 
         if (status) {
-            query.status = { $ne: status }
+            if (Array.isArray(status)) {
+                query.status = { $nin: status }
+            } else {
+                query.status = { $ne: status }
+            }
         }
 
         // If driverId as query then fetch drivers bookings
@@ -372,6 +379,11 @@ exports.getAllBookings = async (req, res) => {
         // If providerId as query then fetch company bookings
         if (companyId) {
             query.company = new mongoose.Types.ObjectId(companyId);
+            query.workType = 'RSAWork'
+        }
+
+        if(staffId){
+            query.receivedUser = new mongoose.Types.ObjectId(staffId)
         }
 
         // Handle search
@@ -410,7 +422,9 @@ exports.getAllBookings = async (req, res) => {
                 $lte: endOfDay
             };
         }
-        console.log("the query =>", query)
+
+        console.log(query)
+
         // Pagination and sorting by createdAt in descending order
         const total = await Booking.countDocuments(query);
         const bookings = await Booking.find(query)
@@ -420,6 +434,7 @@ exports.getAllBookings = async (req, res) => {
             .populate('company')
             .populate('driver')
             .populate('provider')
+            .populate('receivedUser')
             .skip((page - 1) * limit)
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
@@ -432,7 +447,12 @@ exports.getAllBookings = async (req, res) => {
 
         // Aggregate data for total amounts
         const aggregationResult = await Booking.aggregate([
-            { $match: query },
+            {
+                $match: {
+                    ...query,
+                    ...((forDriverReport !== undefined || forStaffReport !== undefined) && { cashPending: false })
+                }
+            },
             {
                 $group: {
                     _id: null,
@@ -506,11 +526,6 @@ exports.updateBooking = async (req, res) => {
             booking.status = 'Booking Added'
         }
 
-        // Handle the case where 'company' is an empty string in update
-        if (!updatedData.company || updatedData.company === "") {
-            updatedData.company = null; // Or you can delete the field entirely if required
-        }
-
         // Check if the body contains 'driver' and handle 'provider' if it exists
         if (updatedData.driver) {
             const booking = await Booking.findById(id); // Fetch the existing booking to check for the provider
@@ -558,6 +573,11 @@ exports.updateBooking = async (req, res) => {
                 });
             }
             updatedData.transferedSalary = newTransferedSalary
+        }
+
+        if (updatedData.invoiceNumber) {
+            booking.invoiceNumber = updatedData.invoiceNumber
+            // booking.invoiceStatus = 
         }
 
         const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
@@ -711,10 +731,7 @@ exports.removePickupImages = async (req, res) => {
 
 // add pickup images
 exports.addPickupImages = async (req, res) => {
-    console.log("first");
-
     const { id } = req.params;
-    console.log("id", req.params);
 
     try {
         // Find the booking document by ID
@@ -1176,8 +1193,17 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
         } else {
 
             if (status === "Order Completed") {
-                query.status = "Order Completed";
-                query.cashPending = false;
+
+                query.$and = [
+                    { status: "Order Completed" },
+                    {
+                        $or: [
+                            { cashPending: false },
+                            { cashPending: { $exists: false } }
+                        ]
+                    }
+                ];
+
             } else if (status === "OngoingBookings") {
                 query.status = {
                     $in: [
@@ -1190,12 +1216,16 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
                         "To DropOff Location",
                         "On the way to dropoff location",
                         "Vehicle Dropped",
-                        "Booking Added"
+                        "Booking Added",
+                        "Rejected"
                     ]
                 };
-                query.cashPending = false;
+                query.$or = [
+                    { cashPending: false },
+                    { cashPending: { $exists: false } }
+                ];
             } else if (status === "CashPendingBookings") {
-                query.cashPending = true;
+                query.cashPending = true
             }
         }
 
@@ -1290,13 +1320,14 @@ exports.distributeReceivedAmount = async (req, res) => {
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
 
+        const userId = req.user_id || req.user?.id;
+        
         // Fetch bookings from DB where receivedUser is NOT "Staff" and balance > 0
         const bookings = await Booking.find({
             _id: { $in: bookingIds },
-            receivedUser: { $ne: "Staff" },
             $expr: { $gt: ["$totalAmount", { $ifNull: ["$receivedAmount", 0] }] }
-        }).sort({ dateTime: -1 }); // Sort by latest date first
-
+        }).sort({ createdAt: -1 }); // Sort by latest date first
+        
         // Update bookings by distributing receivedAmount
         for (const booking of bookings) {
             if (remainingAmount <= 0) break; // Stop if amount is fully distributed
@@ -1304,12 +1335,14 @@ exports.distributeReceivedAmount = async (req, res) => {
             const bookingBalance = booking.totalAmount - (booking.receivedAmount || 0);
             if (bookingBalance > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
+
                 booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
                 remainingAmount -= appliedAmount;
+
+                booking.receivedUser = new mongoose.Types.ObjectId(userId);
                 selectedBookingIds.push(booking._id);
 
                 await booking.save(); // Save updated booking to DB
-                console.log('updated data', booking.receivedAmount, booking.totalAmount)
             }
         }
 

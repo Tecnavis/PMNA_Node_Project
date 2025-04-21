@@ -14,11 +14,13 @@ import { Booking } from '../../Bookings/Bookings';
 import IconPhone from '../../../components/Icon/IconPhone';
 import IconEye from '../../../components/Icon/IconEye';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
-import { BASE_URL } from '../../../config/axiosConfig';
+import { axiosInstance, BASE_URL } from '../../../config/axiosConfig';
 import { Company } from '../../Bookings/BookingAdd';
 import IconPrinter from '../../../components/Icon/IconPrinter';
 import { createStyles, Table } from '@mantine/core';
 import { handlePrint } from '../../../utils/PrintInvoice';
+import { NON_COMPLETED_STATUS } from '../../../constants/status';
+import { ROLES } from '../../../constants/roles';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -39,11 +41,18 @@ const CompanyReport = () => {
         overallAmount: 0,
         balanceAmountToCollect: 0
     })
-    const [startDate, setStartDate] = useState<string>('2025-03-01')
-    const [endingDate, setEndingDate] = useState<string>('2025-03-31')
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+
+    const [startDate, setStartDate] = useState<string>(`${year}-${month}-01`);
+    const [endingDate, setEndingDate] = useState<string>(`${year}-${month}-${String(lastDay).padStart(2, '0')}`);
+
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [initialRecords, setInitialRecords] = useState(bookings);
     const [inputValues, setInputValues] = useState<Record<string, number>>({});
+    const [invoiceValues, setInvoiceValues] = useState<Record<string, number>>({});
     const [totalBalance, setTotalBalance] = useState<string, number>(0);
     const [search, setSearch] = useState('');
     const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());
@@ -87,7 +96,7 @@ const CompanyReport = () => {
     // getting provder 
     const getCompany = async () => {
         try {
-            const response = await axios.get(`${backendUrl}/company/${id}`);
+            const response = await axiosInstance.get(`${backendUrl}/company/${id}`);
             setCompany(response.data);
         } catch (error) {
             console.error("API Error: ", error);
@@ -98,7 +107,7 @@ const CompanyReport = () => {
         if (!id) return;
         setIsLoading(true);
         try {
-            const response = await axios.get(`${backendUrl}/booking`, {
+            const response = await axiosInstance.get(`${backendUrl}/booking`, {
                 params: {
                     companyId: id,
                     startDate,
@@ -106,7 +115,7 @@ const CompanyReport = () => {
                     search,
                     page,
                     limit: pageSize,
-                    status: "Order Completed"
+                    status: NON_COMPLETED_STATUS
                 }
             });
             const data = response.data;
@@ -132,6 +141,14 @@ const CompanyReport = () => {
 
     const updateInputValues = (bookingId: string, value: number) => {
         setInputValues((prev) => ({
+            ...prev,
+            [bookingId]: value,
+        }));
+    };
+
+    const updateIvoiceValues = (bookingId: string, value: number) => {
+        console.log("reaced", value)
+        setInvoiceValues((prev) => ({
             ...prev,
             [bookingId]: value,
         }));
@@ -166,7 +183,7 @@ const CompanyReport = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const res = await axios.patch(`${BASE_URL}/booking/update-approve/${record._id}`);
+                    const res = await axiosInstance.patch(`${BASE_URL}/booking/update-approve/${record._id}`);
                     fetchBookings(); // Refresh the bookings list
                     Swal.fire('Approved!', 'The booking has been approved.', 'success');
                 } catch (error) {
@@ -311,42 +328,46 @@ const CompanyReport = () => {
                     return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
                 } else {
                     return (<>
-                        <input
-                            type="text"
-                            value={inputValues[booking._id] || ""}
-                            onChange={(e) => updateInputValues(booking._id, +e.target.value)}
-                            style={{
-                                border: '1px solid #d1d5db',
-                                borderRadius: '0.25rem',
-                                padding: '0.25rem 0.5rem',
-                                marginRight: '0.5rem',
-                            }}
-                            disabled={booking.approve}
-                            min="0"
-                        />
-                        <button
-                            onClick={() => booking.status ? null : handleUpdateAmount(booking._id)}
-                            disabled={booking.approve || loadingStates[booking._id]}
-                            style={{
-                                backgroundColor:
-                                    Number(
-                                        calculateBalance(
-                                            parseFloat(booking.totalAmount?.toString() || '0'),
-                                            inputValues[booking._id] || booking.receivedAmount || '0',
-                                            booking.receivedUser
-                                        )
-                                    ) === 0
-                                        ? '#28a745' // Green for zero balance
-                                        : '#dc3545', // Red for non-zero balance
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.25rem',
-                                padding: '0.3rem',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            {loadingStates[booking._id] ? 'Loading...' : 'OK'}
-                        </button >
+                        {
+                            [ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) ? <>
+                                <input
+                                    type="text"
+                                    value={inputValues[booking._id] || 0}
+                                    onChange={(e) => updateInputValues(booking._id, +e.target.value)}
+                                    style={{
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '0.25rem',
+                                        padding: '0.25rem 0.5rem',
+                                        marginRight: '0.5rem',
+                                    }}
+                                    disabled={booking.approve}
+                                    min="0"
+                                />
+                                <button
+                                    onClick={() => handleUpdateAmount(booking._id)}
+                                    disabled={booking.approve || loadingStates[booking._id]}
+                                    style={{
+                                        backgroundColor:
+                                            Number(
+                                                calculateBalance(
+                                                    parseFloat(booking.totalAmount?.toString() || '0'),
+                                                    inputValues[booking._id] || booking.receivedAmount || '0',
+                                                    booking.receivedUser
+                                                )
+                                            ) === 0
+                                                ? '#28a745' // Green for zero balance
+                                                : '#dc3545', // Red for non-zero balance
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '0.25rem',
+                                        padding: '0.3rem',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    {loadingStates[booking._id] ? 'Loading...' : 'OK'}
+                                </button >
+                            </> : <input type="text" className="text-center" value={inputValues[booking._id]} readOnly />
+                        }
                     </>)
                 }
             }
@@ -375,38 +396,37 @@ const CompanyReport = () => {
             render: (booking: Booking) => {
                 return booking._id !== 'total' && (
                     <div className='flex items-center justify-center gap-1'>
-                        <input
-                            type="text"
-                            style={{
-                                border: '1px solid #d1d5db',
-                                borderRadius: '0.25rem',
-                                padding: '0.25rem 0.5rem',
-                                marginRight: '0.5rem',
-                            }}
-                            disabled={booking.approve}
-                            min="0"
-                        />
-                        <button
-                            style={{
-                                backgroundColor:
-                                    Number(
-                                        calculateBalance(
-                                            parseFloat(booking.totalAmount?.toString() || '0'),
-                                            inputValues[booking._id] || booking.receivedAmount || '0',
-                                            booking.receivedUser
-                                        )
-                                    ) === 0
-                                        ? '#28a745' // Green for zero balance
-                                        : '#dc3545', // Red for non-zero balance
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.25rem',
-                                padding: '0.3rem',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            {loadingStates[booking._id] ? 'Loading...' : 'Add'}
-                        </button>
+                        {
+                            [ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER, ROLES.accountant].includes(role) ? <>
+                                <input
+                                    type="text"
+                                    value={invoiceValues[booking._id] || ''}
+                                    onChange={(e) => updateIvoiceValues(booking._id, e.target.value)}
+                                    style={{
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '0.25rem',
+                                        padding: '0.25rem 0.5rem',
+                                        marginRight: '0.5rem',
+                                    }}
+                                    disabled={booking.approve}
+                                    min="0"
+                                />
+                                <button
+                                    style={{
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '0.25rem',
+                                        padding: '0.3rem',
+                                        cursor: 'pointer',
+                                    }}
+                                    className='bg-green-500'
+                                    onClick={() => handleUpdateInvoiceNumber(booking._id)}
+                                >
+                                    {loadingStates[booking._id] ? 'Loading...' : 'Add'}
+                                </button>
+                            </>
+                                : <input type="text" className="text-center" value={invoiceValues[booking._id] || ''} readOnly />
+                        }
                     </div>
                 );
             },
@@ -492,10 +512,9 @@ const CompanyReport = () => {
 
     const handleUpdateAmount = async (id: string) => {
         const receivedAmount = inputValues[id]
+
         if (!receivedAmount) return;
-        if (bookings[id].receivedAmount === 0) {
-            Swal.fire('Error!', 'Full amount receved successfully.', 'error');
-        }
+
         try {
             const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { receivedAmount });
             fetchBookings();
@@ -506,16 +525,35 @@ const CompanyReport = () => {
         }
     }
 
+    const handleUpdateInvoiceNumber = async (id: string) => {
+        const invoiceNumber = invoiceValues[id]
+
+        if (!invoiceNumber) return;
+
+        try {
+            const res = await axios.put(`${BASE_URL}/booking/${id}`, { invoiceNumber });
+            fetchBookings();
+            Swal.fire('Invoice!', 'Invoice number udated.', 'success');
+        } catch (error) {
+            console.error('Error updatebalnce amount:', error);
+            Swal.fire('Error!', 'Failed to update Invoice number udated.', 'error');
+        }
+    }
+
     useEffect(() => {
         const updatedValues: Record<string, number> = {};
         bookings.forEach((booking) => {
-            updatedValues[booking._id] = calculateBalance(
-                parseFloat(booking.totalAmount?.toString() || "0"),
-                booking.receivedAmount,
-                booking.receivedUser
-            );
+            updatedValues[booking._id] = booking.receivedAmount;
         });
+
         setInputValues(updatedValues);
+
+        const updatedValuesInvoice: Record<string, number> = {};
+        bookings.forEach((booking) => {
+            updatedValuesInvoice[booking._id] = booking.invoiceNumber || '';
+        });
+        setInvoiceValues(updatedValuesInvoice);
+
     }, [bookings]);
 
     useEffect(() => {
