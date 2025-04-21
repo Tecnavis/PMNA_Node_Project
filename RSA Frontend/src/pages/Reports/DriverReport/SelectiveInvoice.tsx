@@ -68,7 +68,7 @@ const SelectiveShowroomInvoice = () => {
     // Calculate total balance amount
     const totalBalanceAmount = booking
         .filter((b: any) => b.workType !== 'RSAWork' && !b.cashPending)
-        .reduce((total: any, booking: any) => total + Number(booking.receivedAmount), 0);
+        .reduce((total: any, booking: any) => total + Number(booking.totalAmount - booking.receivedAmount), 0);
 
 
     const columnsForDriver = [
