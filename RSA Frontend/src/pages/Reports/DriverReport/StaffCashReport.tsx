@@ -434,6 +434,9 @@ const Profile = () => {
     };
 
     const updateDateRange = (month: string, year: number) => {
+        if(month === 'All Months'){
+            month = 1
+        }
         const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
 
         // Start date: First day of the selected month

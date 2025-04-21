@@ -421,7 +421,10 @@ const DriverCashCollectionsReport = () => {
         updateDateRange(selectedMonth, year);
     };
 
-    const updateDateRange = (month: string, year: number) => {
+    const updateDateRange = (month: string = 1, year: number) => {
+        if(month === 'All Months'){
+            month = 1
+        }
         const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
 
         // Start date: First day of the selected month
@@ -473,12 +476,12 @@ const DriverCashCollectionsReport = () => {
         // Iterate over selected bookings (Map values)
         selectedBookings.forEach((booking) => {
             if (booking && booking.status === "Order Completed" && !booking.cashPending && booking.workType !== 'RSAWork') {
-                console.log(booking.status  ,booking.cashPending ,booking.workType )
+                console.log(booking.status, booking.cashPending, booking.workType)
                 // If receivedUser is "Staff", amount should be 0
                 const amountToUse = booking.totalAmount;
                 const receivedAmount = booking.receivedAmount;
                 const balance = amountToUse - receivedAmount;
-                
+
                 totalBalances += isNaN(balance) ? 0 : balance;
             };
         });
