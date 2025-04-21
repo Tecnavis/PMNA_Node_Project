@@ -74,7 +74,7 @@ const bookingSchema = new mongoose.Schema({
     bookingStatus: { type: String }, // New props
     companyName: { type: String }, // New props
 
-    cancelStatus: { type: String }, // New props
+    cancelStatus: { type: Boolean }, // New props
     cancelReason: { type: String }, // New props
     cancelKm: { type: String }, // New props
     cancelImage: {
