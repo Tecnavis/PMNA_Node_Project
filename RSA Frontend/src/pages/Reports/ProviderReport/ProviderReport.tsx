@@ -44,10 +44,10 @@ const ProviderReport = () => {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
     const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
-    
+
     const [startDate, setStartDate] = useState<string>(`${year}-${month}-01`);
     const [endingDate, setEndingDate] = useState<string>(`${year}-${month}-${String(lastDay).padStart(2, '0')}`);
-    
+
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [initialRecords, setInitialRecords] = useState(bookings);
     const [inputValues, setInputValues] = useState<Record<string, number>>({});
@@ -395,22 +395,27 @@ const ProviderReport = () => {
         updateDateRange(selectedMonth, year);
     };
 
-    const updateDateRange = (month: string = 1, year: number) => {
-        if(month === 'All Months'){
-            month = 1
+    const updateDateRange = (month: string = '1', year: number) => {
+        if (month === 'All Months') {
+            const today = new Date();
+            const twoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // Jan 1st, two years ago
+
+            setStartDate(twoYearsAgo.toISOString().slice(0, 10)); // YYYY-MM-DD
+            setEndingDate(today.toISOString().slice(0, 10)); // today
+        } else {
+            const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert to 0-index
+
+            // Start of selected month
+            const firstDay = new Date(year, monthIndex, 1);
+
+            // End of selected month
+            const lastDay = new Date(year, monthIndex + 1, 0);
+
+            setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
+            setEndingDate(lastDay.toISOString().slice(0, 10));
         }
-        const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
-
-        // Start date: First day of the selected month
-        const firstDay = new Date(year, monthIndex, 1);
-
-        // End date: Last day of the selected month
-        const lastDay = new Date(year, monthIndex + 1, 0);
-
-        // Ensure proper formatting to "YYYY-MM-DD"
-        setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
-        setEndingDate(lastDay.toISOString().slice(0, 10));
     };
+
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {
@@ -465,7 +470,7 @@ const ProviderReport = () => {
                 if (!booking) return;
                 bookingIds.push(booking._id)
             })
-            
+
             const res = await axios.patch(`${BASE_URL}/booking/distribute-amount`, {
                 receivedAmount: balanceForApplay,
                 driverId: id,
