@@ -53,23 +53,23 @@ const ShowroomCashCollectionsReport = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const isRtl = useSelector((state: any) => state.themeConfig.rtlClass) === 'rtl';
-// ----------------------------------
-    const [selectedMonth, setSelectedMonth] = useState<string>(
-        new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date())
-    );
-    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-    const [filterData, setFilterData] = useState<FilterData>({
-        totalCollectedAmount: 0,
-        overallAmount: 0,
-        balanceAmountToCollect: 0
-    })
-    const [startDate, setStartDate] = useState<string>('2025-03-01')
-    const [endingDate, setEndingDate] = useState<string>('2025-03-31')
-  
-    const printRef = useRef<HTMLDivElement>(null);
-    const role = localStorage.getItem('role') || '';
+  // ----------------------------------
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date())
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [filterData, setFilterData] = useState<FilterData>({
+    totalCollectedAmount: 0,
+    overallAmount: 0,
+    balanceAmountToCollect: 0
+  })
+  const [startDate, setStartDate] = useState<string>('2025-03-01')
+  const [endingDate, setEndingDate] = useState<string>('2025-03-31')
 
-// -----------------------------------
+  const printRef = useRef<HTMLDivElement>(null);
+  const role = localStorage.getItem('role') || '';
+
+  // -----------------------------------
   // Set token for API requests
   const gettingToken = () => {
     const token = localStorage.getItem('token');
@@ -109,8 +109,8 @@ const ShowroomCashCollectionsReport = () => {
       console.error("Error fetching bookings for showroom:", error);
     }
   };
-  
-  
+
+
 
   useEffect(() => {
     gettingToken();
@@ -123,7 +123,7 @@ const ShowroomCashCollectionsReport = () => {
       fetchBookings();
     }
   }, [showroom, startDate, endingDate, page, search, pageSize]);
-  
+
 
   useEffect(() => {
     dispatch(setPageTitle('Showroom Cash Collection Report'));
@@ -150,7 +150,7 @@ const ShowroomCashCollectionsReport = () => {
   const cols = [
     {
       accessor: '_id',
-      title: '#',
+      title: 'Select',
       render: (_: Booking, index: number) => index + 1
     },
     {
@@ -232,14 +232,14 @@ const ShowroomCashCollectionsReport = () => {
   const handleMonth = (month: string) => {
     setSelectedMonth(month);
     updateDateRange(month, selectedYear);
-};
+  };
 
-const handleYear = (year: number) => {
+  const handleYear = (year: number) => {
     setSelectedYear(year);
     updateDateRange(selectedMonth, year);
-};
+  };
 
-const updateDateRange = (month: string, year: number) => {
+  const updateDateRange = (month = "January", year: number) => {
     const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
 
     // Start date: First day of the selected month
@@ -251,7 +251,7 @@ const updateDateRange = (month: string, year: number) => {
     // Ensure proper formatting to "YYYY-MM-DD"
     setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
     setEndingDate(lastDay.toISOString().slice(0, 10));
-};
+  };
 
   return (
     <div>
@@ -294,109 +294,109 @@ const updateDateRange = (month: string, year: number) => {
           </div>
         </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-5 my-2 ">
-                           <div className="panel">
-                               <div className="mb-5 flex justify-between">
-                                   <h5 className="font-semibold text-lg dark:text-white-light">Filter Monthly Report</h5>
-                                   <div className='flex justify-end'>
-                                       <div className="inline-flex mb-5 mr-2">
-                                           <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedMonth}</button>
-                                           <div className="dropdown">
-                                               <Dropdown
-                                                   placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
-                                                   btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
-                                                   button={<span className="sr-only">Filter by Month:</span>}
-                                               >
-                                                   <ul className="!min-w-[170px]">
-                                                       {
-                                                           MONTHS.map((month: string, index: number) => (
-                                                               <li
-                                                                   key={index}
-                                                               >
-                                                                   <button
-                                                                       onClick={() => handleMonth(month)}
-                                                                       type="button"
-                                                                   >
-                                                                       {month}
-                                                                   </button>
-                                                               </li>
-                                                           ))
-                                                       }
-                                                   </ul>
-                                               </Dropdown>
-                                           </div>
-                                       </div>
-                                       <div className="inline-flex mb-5 dropdown">
-                                           <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedYear}</button>
-                                           <Dropdown
-                                               placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
-                                               btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
-                                               button={<span className="sr-only">All Years</span>}
-                                           >
-                                               <ul className="!min-w-[170px]">
-                                                   <li><button type="button">All Years</button></li>
-                                                   {
-                                                       YEARS_FOR_FILTER.map((year: number, index: number) => (
-                                                           <li key={index}>
-                                                               <button
-                                                                   type="button"
-                                                                   onClick={() => handleYear(year)}
-                                                               >
-                                                                   {year}
-                                                               </button>
-                                                           </li>
-                                                       ))
-                                                   }
-                                               </ul>
-                                           </Dropdown>
-                                       </div>
-                                   </div>
-                               </div>
-                               <div className="space-y-4" ref={printRef}>
-                                   <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                       <div className="flex items-center justify-between p-4 py-4">
-                                           <div className="grid place-content-center w-9 h-9 rounded-md bg-secondary-light dark:bg-secondary text-secondary dark:text-secondary-light">
-                                               <IconShoppingBag />
-                                           </div>
-                                           <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                               <h6 className="text-white-dark text-base  dark:text-white-dark">
-                                                   Total Collected Amount in {selectedMonth}
-                                                   <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.totalCollectedAmount}</span>
-                                               </h6>
-                                           </div>
-                                       </div>
-                                   </div>
-                                   <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                       <div className="flex items-center justify-between p-4 py-4">
-                                           <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
-                                               <IconTag />
-                                           </div>
-                                           <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                               <h6 className="text-white-dark text-base dark:text-white-dark">
-                                                   Balance Amount To Collect in {selectedMonth}
-                                                   <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
-                                               </h6>
-                                           </div>
-                                       </div>
-                                   </div>
-                                   {
-                                       (selectedMonth && selectedMonth !== 'All Months') && <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                           <div className="flex items-center justify-between p-4 py-4">
-                                               <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
-                                                   <IconCreditCard />
-                                               </div>
-                                               <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                                   <h6 className="text-white-dark text-base dark:text-white-dark">
-                                                       Overall Amount in {selectedMonth}
-                                                       <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.overallAmount}</span>
-                                                   </h6>
-                                               </div>
-                                           </div>
-                                       </div>
-                                   }
-                               </div>
-                           </div>
-                       </div>
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-5 my-2 ">
+          <div className="panel">
+            <div className="mb-5 flex justify-between">
+              <h5 className="font-semibold text-lg dark:text-white-light">Filter Monthly Report</h5>
+              <div className='flex justify-end'>
+                <div className="inline-flex mb-5 mr-2">
+                  <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedMonth}</button>
+                  <div className="dropdown">
+                    <Dropdown
+                      placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                      btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
+                      button={<span className="sr-only">Filter by Month:</span>}
+                    >
+                      <ul className="!min-w-[170px]">
+                        {
+                          MONTHS.map((month: string, index: number) => (
+                            <li
+                              key={index}
+                            >
+                              <button
+                                onClick={() => handleMonth(month)}
+                                type="button"
+                              >
+                                {month}
+                              </button>
+                            </li>
+                          ))
+                        }
+                      </ul>
+                    </Dropdown>
+                  </div>
+                </div>
+                <div className="inline-flex mb-5 dropdown">
+                  <button className="btn btn-outline-primary ltr:rounded-r-none rtl:rounded-l-none">{selectedYear}</button>
+                  <Dropdown
+                    placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
+                    btnClassName="btn btn-outline-primary ltr:rounded-l-none rtl:rounded-r-none dropdown-toggle before:border-[5px] before:border-l-transparent before:border-r-transparent before:border-t-inherit before:border-b-0 before:inline-block hover:before:border-t-white-light h-full"
+                    button={<span className="sr-only">All Years</span>}
+                  >
+                    <ul className="!min-w-[170px]">
+                      <li><button type="button">All Years</button></li>
+                      {
+                        YEARS_FOR_FILTER.map((year: number, index: number) => (
+                          <li key={index}>
+                            <button
+                              type="button"
+                              onClick={() => handleYear(year)}
+                            >
+                              {year}
+                            </button>
+                          </li>
+                        ))
+                      }
+                    </ul>
+                  </Dropdown>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4" ref={printRef}>
+              <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                <div className="flex items-center justify-between p-4 py-4">
+                  <div className="grid place-content-center w-9 h-9 rounded-md bg-secondary-light dark:bg-secondary text-secondary dark:text-secondary-light">
+                    <IconShoppingBag />
+                  </div>
+                  <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                    <h6 className="text-white-dark text-base  dark:text-white-dark">
+                      Total Collected Amount in {selectedMonth}
+                      <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.totalCollectedAmount}</span>
+                    </h6>
+                  </div>
+                </div>
+              </div>
+              <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                <div className="flex items-center justify-between p-4 py-4">
+                  <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
+                    <IconTag />
+                  </div>
+                  <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                    <h6 className="text-white-dark text-base dark:text-white-dark">
+                      Balance Amount To Collect in {selectedMonth}
+                      <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
+                    </h6>
+                  </div>
+                </div>
+              </div>
+              {
+                (selectedMonth && selectedMonth !== 'All Months') && <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                  <div className="flex items-center justify-between p-4 py-4">
+                    <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
+                      <IconCreditCard />
+                    </div>
+                    <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                      <h6 className="text-white-dark text-base dark:text-white-dark">
+                        Overall Amount in {selectedMonth}
+                        <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.overallAmount}</span>
+                      </h6>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
 
         {/* Report Table */}
         <div className="panel mt-6">

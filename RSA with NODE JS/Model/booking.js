@@ -43,7 +43,7 @@ const bookingSchema = new mongoose.Schema({
         type: String,
         enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff']
     },
-    bookedBy: { type: String},
+    bookedBy: { type: String },
     pickupDate: { type: Date },
     pickupTime: { type: Date },
     dropoffTime: { type: Date },
@@ -66,9 +66,9 @@ const bookingSchema = new mongoose.Schema({
     verified: { type: Boolean },
     feedbackCheck: { type: Boolean },
     accountantVerified: { type: Boolean },
-    cashPending: { type: Boolean, default: false },// New props
+    cashPending: { type: Boolean },// New props
     approve: { type: Boolean, default: false },// New props
-    receivedUser: { type: String }, // New props
+    receivedUser: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' }, // New props
     dummyDriverName: { type: String }, // New props
     dummyProviderName: { type: String }, // New props
     bookingStatus: { type: String }, // New props
@@ -77,9 +77,11 @@ const bookingSchema = new mongoose.Schema({
     cancelStatus: { type: String }, // New props
     cancelReason: { type: String }, // New props
     cancelKm: { type: String }, // New props
+    invoiceNumber: { type: String }, // New props
+    invoiceStatus: { type: Boolean }, // New props
     cancelImage: {
         type: String, // Path to the uploaded image
-      },
+    },
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' } // New props
 
 }, { timestamps: true });
