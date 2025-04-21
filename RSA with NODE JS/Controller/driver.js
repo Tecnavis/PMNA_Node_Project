@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const Driver = require('../Model/driver');
 const Leaves = require('../Model/leaves');
 const Booking = require('../Model/booking');
-const { sendOtp, verifyOtp } = require('../services/otpService')
+const { sendOtp, verifyOtp } = require('../services/otpService');
+const { updateDriverFinancials } = require('../services/driverService');
 
 
 exports.createDriver = async (req, res) => {
@@ -12,9 +13,6 @@ exports.createDriver = async (req, res) => {
     const { name, idNumber, phone, personalPhoneNumber, password, vehicle } = req.body;
 
     const parsedVehicleDetails = typeof vehicle === 'string' ? JSON.parse(vehicle) : vehicle
-
-
-
 
     const vehicleData = Array.isArray(parsedVehicleDetails)
       ? parsedVehicleDetails.map(v => ({
@@ -46,7 +44,10 @@ exports.createDriver = async (req, res) => {
 exports.getDrivers = async (req, res) => {
   try {
     const drivers = await Driver.find().populate('vehicle.serviceType').lean();
+
     const driverIds = drivers.map(driver => driver._id);
+
+    await Promise.all(driverIds.map(driverId => updateDriverFinancials(driverId)));
 
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -115,8 +116,13 @@ exports.filtergetDrivers = async (req, res) => {
 exports.getDriverById = async (req, res) => {
   try {
     const driver = await Driver.findById(req.params.id)
-      .populate('vehicle.serviceType')
-      .populate('')
+      .populate('vehicle.serviceType');
+
+    // calulating net total amount in hand ans totla salary
+    updateDriverFinancials(driver._id)
+
+    await driver.save()
+
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
     res.json(driver);
   } catch (error) {

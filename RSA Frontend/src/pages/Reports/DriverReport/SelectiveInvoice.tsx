@@ -61,9 +61,14 @@ const SelectiveShowroomInvoice = () => {
     };
 
     // Calculate total payable amount
-    const totalPayableAmount = booking.reduce((total: any, booking: any) => total + (Number(booking.totalAmount) || 0), 0);
+    const totalPayableAmount = booking
+        .filter((b: any) => b.workType !== 'RSAWork' && !b.cashPending)
+        .reduce((total: number, b: any) => total + (Number(b.totalAmount) || 0), 0);
+
     // Calculate total balance amount
-    const totalBalanceAmount = booking.reduce((total: any, booking: any) => total + Number(booking.receivedAmount), 0);
+    const totalBalanceAmount = booking
+        .filter((b: any) => b.workType !== 'RSAWork' && !b.cashPending)
+        .reduce((total: any, booking: any) => total + Number(booking.receivedAmount), 0);
 
 
     const columnsForDriver = [
@@ -154,7 +159,7 @@ const SelectiveShowroomInvoice = () => {
                         </thead>
                         <tbody>
                             {booking?.map((booking: any, index: number) => (
-                                <tr key={booking?.id}>
+                                <tr key={booking?._id}>
                                     {columns.map((column) => (
                                         <td key={column.key} className={column.class || ''}>
                                             {column.key === 'id' && index + 1}
@@ -165,10 +170,13 @@ const SelectiveShowroomInvoice = () => {
                                             {column.key === 'Vehicle Number' && role === 'company' && (booking.customerVehicleNumber || "N/A")}
                                             {column.key === 'fileNumber' && (booking?.fileNumber || "N/A")}
                                             {column.key === 'amountOfBooking' && (booking?.totalAmount || 0)}
-                                            {column.key === 'payableAmount' && role === 'driver' && (booking?.totalAmount || 0)}
-                                            {column.key === 'receivedAmount' && (booking?.receivedAmount || 0)}
+                                            {column.key === 'payableAmount' && role === 'driver' && (booking.workType === 'RSAWork' ? 'Company Work' : booking?.totalAmount || 0)}
+                                            {column.key === 'receivedAmount' &&
+                                                (booking.workType === 'RSAWork' ? 0 : (booking?.receivedAmount || 0))
+                                            }
                                             {column.key === 'balanceSalary' &&
-                                                (booking?.totalAmount || 0) - (booking?.receivedAmount || 0)}
+                                                (booking.workType === 'RSAWork' ? 0 : (booking?.totalAmount || 0) - (booking?.receivedAmount || 0))
+                                            }
                                         </td>
                                     ))}
                                 </tr>
