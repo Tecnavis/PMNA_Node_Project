@@ -21,6 +21,7 @@ import { handlePrint } from '../../../utils/PrintInvoice';
 import { Dialog, Transition } from '@headlessui/react';
 import { dateFormate } from '../../../utils/dateUtils';
 import { ROLES } from '../../../constants/roles';
+import { NON_COMPLETED_STATUS } from '../../../constants/status';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -43,8 +44,14 @@ const DriverCashCollectionsReport = () => {
         overallAmount: 0,
         balanceAmountToCollect: 0
     })
-    const [startDate, setStartDate] = useState<string>('')
-    const [endingDate, setEndingDate] = useState<string>('')
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+
+    const [startDate, setStartDate] = useState<string>(`${year}-${month}-01`);
+    const [endingDate, setEndingDate] = useState<string>(`${year}-${month}-${String(lastDay).padStart(2, '0')}`);
+
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [initialRecords, setInitialRecords] = useState(bookings);
     const [inputValues, setInputValues] = useState<Record<string, number>>({});
@@ -80,6 +87,9 @@ const DriverCashCollectionsReport = () => {
     const getDriver = async () => {
         try {
             const response = await axios.get(`${backendUrl}/driver/${id}`);
+
+            console.log(response.data)
+
             serDriver(response.data);
         } catch (error) {
             console.error("API Error: ", error);
@@ -89,6 +99,7 @@ const DriverCashCollectionsReport = () => {
     //Fetch booking related driverID
     const fetchBookings = async () => {
         setIsLoading(true);
+        const forDriverReport = true
         try {
             const response = await axios.get(`${backendUrl}/booking`, {
                 params: {
@@ -97,8 +108,9 @@ const DriverCashCollectionsReport = () => {
                     endingDate,
                     search,
                     page,
+                    forDriverReport,
                     limit: pageSize,
-                    status: "Order Completed"
+                    status: NON_COMPLETED_STATUS
                 }
             });
 
@@ -280,18 +292,20 @@ const DriverCashCollectionsReport = () => {
             render: (booking: Booking) => {
                 if (booking._id === 'total') {
                     return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
+                } if (booking.cashPending) {
+                    return <span className='ml-5 text-center'>0</span>
                 } else if (booking.totalAmount == booking.receivedAmount) {
                     return <div className='text-center flex item-center  justify-center'>{booking.receivedAmount}</div>
                 } else {
                     return (<td key={booking._id} >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className=' flex justify-center text-center'>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className=' flex justify-center text-center items-center'>
                             {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                                <span className={`flex justify-center text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
+                                <span className={`flex justify-center text-center  ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
                             ) : (
                                 <>
                                     <input
                                         type="text"
-                                        value={inputValues[booking._id] || ""}
+                                        value={inputValues[booking._id] || 0}
                                         onChange={(e) => updateInputValues(booking._id, +e.target.value)}
                                         style={{
                                             border: '1px solid #d1d5db',
@@ -343,6 +357,11 @@ const DriverCashCollectionsReport = () => {
                                 filterData.balanceAmountToCollect || 0
                             }
                         </div>
+                    );
+                }
+                if (booking.cashPending) {
+                    return (
+                        <div className='text-center'>0</div>
                     );
                 }
 
@@ -452,14 +471,15 @@ const DriverCashCollectionsReport = () => {
         let totalBalances = 0;
         // Iterate over selected bookings (Map values)
         selectedBookings.forEach((booking) => {
-            if (!booking) return;
-
-            // If receivedUser is "Staff", amount should be 0
-            const amountToUse = booking.receivedUser === "Staff" ? 0 : booking.totalAmount;
-            const receivedAmount = booking.receivedUser === "Staff" ? 0 : booking.receivedAmount;
-            const balance = amountToUse - receivedAmount;
-
-            totalBalances += isNaN(balance) ? 0 : balance;
+            if (booking && booking.status === "Order Completed" && !booking.cashPending && booking.workType !== 'RSAWork') {
+                console.log(booking.status  ,booking.cashPending ,booking.workType )
+                // If receivedUser is "Staff", amount should be 0
+                const amountToUse = booking.totalAmount;
+                const receivedAmount = booking.receivedAmount;
+                const balance = amountToUse - receivedAmount;
+                
+                totalBalances += isNaN(balance) ? 0 : balance;
+            };
         });
 
         setTotalSelectedBalance(totalBalances.toFixed(2));
@@ -476,7 +496,7 @@ const DriverCashCollectionsReport = () => {
             const res = await axios.patch(`${BASE_URL}/booking/distribute-amount`, {
                 receivedAmount: balanceForApplay,
                 driverId: id,
-                bookingIds
+                bookingIds,
             })
             fetchBookings();
             setSelectedBookings(new Map());
@@ -490,11 +510,7 @@ const DriverCashCollectionsReport = () => {
     useEffect(() => {
         const updatedValues: Record<string, number> = {};
         bookings.forEach((booking) => {
-            updatedValues[booking._id] = calculateBalance(
-                parseFloat(booking.totalAmount?.toString() || "0"),
-                booking.receivedAmount,
-                booking.receivedUser
-            );
+            updatedValues[booking._id] = booking.receivedAmount;
         });
         setInputValues(updatedValues);
     }, [bookings]);

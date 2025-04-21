@@ -40,8 +40,14 @@ const ProviderReport = () => {
         overallAmount: 0,
         balanceAmountToCollect: 0
     })
-    const [startDate, setStartDate] = useState<string>('2025-03-01')
-    const [endingDate, setEndingDate] = useState<string>('2025-03-31')
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    
+    const [startDate, setStartDate] = useState<string>(`${year}-${month}-01`);
+    const [endingDate, setEndingDate] = useState<string>(`${year}-${month}-${String(lastDay).padStart(2, '0')}`);
+    
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [initialRecords, setInitialRecords] = useState(bookings);
     const [inputValues, setInputValues] = useState<Record<string, number>>({});

@@ -8,7 +8,7 @@ import IconUser from '../../../components/Icon/IconUser';
 import BookingsTable from '../BookingsTable';
 
 export const statusConditions = [
-  'booking added',
+  'Booking Added',
   'called to customer',
   'Order Received',
   'On the way to pickup location',
@@ -19,7 +19,7 @@ export const statusConditions = [
   'Cancelled',
 ];
 export const pendingStatusConditions = [
-  'booking added',
+  'Booking Added',
   'Contacted Customer',
   'Vehicle Picked',
   'Vehicle Confirmed',
