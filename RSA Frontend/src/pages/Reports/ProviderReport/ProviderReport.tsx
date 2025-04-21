@@ -395,7 +395,10 @@ const ProviderReport = () => {
         updateDateRange(selectedMonth, year);
     };
 
-    const updateDateRange = (month: string, year: number) => {
+    const updateDateRange = (month: string = 1, year: number) => {
+        if(month === 'All Months'){
+            month = 1
+        }
         const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
 
         // Start date: First day of the selected month

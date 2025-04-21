@@ -2,7 +2,7 @@
 const Staff = require('../Model/staff');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { ClientSession } = require('mongodb');
+const { calculateNetTotalAmountInHand } = require('../services/staffService');
 
 // Create Staff
 exports.createStaff = async (req, res) => {
@@ -29,7 +29,17 @@ exports.createStaff = async (req, res) => {
 exports.getAllStaff = async (req, res) => {
   try {
     const staff = await Staff.find().populate('role');
-    res.status(200).json(staff);
+
+    const staffWithAmount = await Promise.all(
+      staff.map(async (st) => {
+        const netAmount = await calculateNetTotalAmountInHand(st._id);
+        st.cashInHand = netAmount;
+        await st.save();
+        return st;
+      })
+    );
+
+    res.status(200).json(staffWithAmount);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -39,8 +49,11 @@ exports.getAllStaff = async (req, res) => {
 exports.getStaffById = async (req, res) => {
   try {
     const id = req.params.id !== "id" ? req.params.id : req.user.id;
-    
+
     const staff = await Staff.findById(id).populate('role');
+
+    calculateNetTotalAmountInHand(staff._id)
+
     if (!staff) return res.status(404).json({ message: 'Staff not found' });
     res.status(200).json(staff);
   } catch (error) {
@@ -64,7 +77,17 @@ exports.filterGetStaffs = async (req, res) => {
     }
 
     const staffs = await Staff.find(filter);
-    res.json(staffs);
+
+    const staffWithAmount = await Promise.all(
+      staffs.map(async (st) => {
+        const netAmount = await calculateNetTotalAmountInHand(st._id);
+        st.cashInHand = netAmount;
+        await st.save();
+        return st;
+      })
+    );
+
+    res.json(staffWithAmount);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
