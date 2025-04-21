@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
@@ -21,6 +21,9 @@ import { createStyles, Table } from '@mantine/core';
 import { handlePrint } from '../../../utils/PrintInvoice';
 import { NON_COMPLETED_STATUS } from '../../../constants/status';
 import { ROLES } from '../../../constants/roles';
+import { Dialog, Transition } from '@headlessui/react';
+import { dateFormate } from '../../../utils/dateUtils';
+
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -56,6 +59,10 @@ const CompanyReport = () => {
     const [totalBalance, setTotalBalance] = useState<string, number>(0);
     const [search, setSearch] = useState('');
     const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());
+    const [modal2, setModal2] = useState(false);
+    const [totalSelectedBalance, setTotalSelectedBalance] = useState<string>('0.00');
+    const [balanceForApplay, setBalanceForApplay] = useState<string | null>(null);
+
     //Pagination states 
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -77,6 +84,28 @@ const CompanyReport = () => {
             navigate('/auth/boxed-signin');
         }
     };
+
+    //distribute the received balance amount
+    const distributeReceivedAmount = async () => {
+        try {
+            const bookingIds = []
+            selectedBookings.forEach((booking) => {
+                if (!booking) return;
+                bookingIds.push(booking._id)
+            })
+            const res = await axios.patch(`${BASE_URL}/booking/distribute-amount`, {
+                receivedAmount: balanceForApplay,
+                driverId: id,
+                bookingIds,
+            })
+            fetchBookings();
+            setSelectedBookings(new Map());
+            setModal2(false)
+            setBalanceForApplay('')
+        } catch (error) {
+            console.log(error.message, 'error in distribute received amount')
+        }
+    }
 
     const useStyles = createStyles((theme) => ({
         disabledRow: {
@@ -202,6 +231,9 @@ const CompanyReport = () => {
             // Select all
             const allIds = new Map(bookings.map((booking) => [booking._id, booking]));
             setSelectedBookings(allIds);
+            if (![ROLES.VERIFIER].includes(role)) {
+                setModal2(true)
+            }
         }
     };
 
@@ -485,7 +517,10 @@ const CompanyReport = () => {
         updateDateRange(selectedMonth, year);
     };
 
-    const updateDateRange = (month: string, year: number) => {
+    const updateDateRange = (month: string = 1, year: number) => {
+        if (month === 'All Months') {
+            month = 1
+        }
         const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
 
         // Start date: First day of the selected month
@@ -564,6 +599,31 @@ const CompanyReport = () => {
     useEffect(() => {
         fetchBookings();
     }, [page, pageSize, id, startDate, endingDate, search]);
+
+    // Calculate the total selected bookings
+    const calculateTotalSelectedBalance = () => {
+        let totalBalances = 0;
+        // Iterate over selected bookings (Map values)
+        selectedBookings.forEach((booking) => {
+            if (booking && booking.status === "Order Completed" && !booking.cashPending && booking.workType !== 'RSAWork') {
+                console.log(booking.status, booking.cashPending, booking.workType)
+                // If receivedUser is "Staff", amount should be 0
+                const amountToUse = booking.totalAmount;
+                const receivedAmount = booking.receivedAmount;
+                const balance = amountToUse - receivedAmount;
+
+                totalBalances += isNaN(balance) ? 0 : balance;
+            };
+        });
+
+        setTotalSelectedBalance(totalBalances.toFixed(2));
+    };
+
+    useEffect(() => {
+        if (selectedBookings.size > 0) {
+            calculateTotalSelectedBalance();
+        }
+    }, [selectedBookings]);
 
     return (
         <div>
@@ -754,6 +814,67 @@ const CompanyReport = () => {
                                     : [])
                             ]}
                         />
+                        {/* Modal for balance applay  */}
+                        <div className="mb-5">
+                            <Transition appear show={modal2} as={Fragment}>
+                                <Dialog as="div" open={modal2} onClose={() => {
+                                    setModal2(false)
+                                    setSelectedBookings(new Map());
+                                }}>
+                                    <Transition.Child
+                                        as={Fragment}
+                                        enter="ease-out duration-300"
+                                        enterFrom="opacity-0"
+                                        enterTo="opacity-100"
+                                        leave="ease-in duration-200"
+                                        leaveFrom="opacity-100"
+                                        leaveTo="opacity-0"
+                                    >
+                                        <div className="fixed inset-0" />
+                                    </Transition.Child>
+                                    <div className="fixed inset-0 bg-[black]/60 z-[999] overflow-y-auto">
+                                        <div className="flex items-center justify-center min-h-screen px-4">
+                                            <Transition.Child
+                                                as={Fragment}
+                                                enter="ease-out duration-300"
+                                                enterFrom="opacity-0 scale-95"
+                                                enterTo="opacity-100 scale-100"
+                                                leave="ease-in duration-200"
+                                                leaveFrom="opacity-100 scale-100"
+                                                leaveTo="opacity-0 scale-95"
+                                            >
+                                                <Dialog.Panel as="div" className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-md my-8 text-black dark:text-white-dark">
+                                                    <div className="flex bg-[#fbfbfb] dark:bg-[#121c2c] items-center justify-between px-5 py-3">
+                                                        <button type="button" className="text-white-dark hover:text-dark" onClick={() => setModal2(false)}>
+                                                        </button>
+                                                    </div>
+                                                    <div className="p-5 text-center">
+                                                        <p className=''>
+                                                            Total Balance : {totalSelectedBalance}
+                                                        </p>
+                                                        <p className=''>
+                                                            Amount Received On : {dateFormate(new Date() + '')}
+                                                        </p>
+                                                        <div className="flex justify-end items-center mt-8 flex-col gap-1 w-full">
+                                                            <input
+                                                                type="number"
+                                                                className='w-full rounded-md py-2 px-3 border-gray-400 outline-1 outline-gray-300'
+                                                                placeholder='Enter amount...'
+                                                                value={balanceForApplay}
+                                                                onChange={(e) => setBalanceForApplay((pre) => e.target.value)}
+                                                            />
+                                                            <button type="button" className="btn btn-primary w-full" onClick={distributeReceivedAmount}>
+                                                                Apply amount
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </Dialog.Panel>
+                                            </Transition.Child>
+                                        </div>
+                                    </div>
+                                </Dialog>
+                            </Transition>
+                        </div>
                     </div>
                 </div>
             </div>

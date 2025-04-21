@@ -34,8 +34,10 @@ const { app, server } = require('./config/socket.js');
 connectDB()
 
 app.use(cors({
-  origin:'*'
-
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], 
+  allowedHeaders: ['*'],
+  exposedHeaders: ['Content-Type', 'Authorization'], 
 }))
 
 // view engine setup
@@ -83,10 +85,10 @@ app.use(function (err, req, res, next) {
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
   // render the error page
-  
+
   console.log(err)
   return res.status(err.status || 500).json({
-    message : err.message
+    message: err.message
   })
 });
 
