@@ -421,22 +421,27 @@ const DriverCashCollectionsReport = () => {
         updateDateRange(selectedMonth, year);
     };
 
-    const updateDateRange = (month: string = 1, year: number) => {
-        if(month === 'All Months'){
-            month = 1
+    const updateDateRange = (month: string = '1', year: number) => {
+        if (month === 'All Months') {
+            const today = new Date();
+            const twoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // Jan 1st, two years ago
+    
+            setStartDate(twoYearsAgo.toISOString().slice(0, 10)); // YYYY-MM-DD
+            setEndingDate(today.toISOString().slice(0, 10)); // today
+        } else {
+            const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert to 0-index
+    
+            // Start of selected month
+            const firstDay = new Date(year, monthIndex, 1);
+    
+            // End of selected month
+            const lastDay = new Date(year, monthIndex + 1, 0);
+    
+            setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
+            setEndingDate(lastDay.toISOString().slice(0, 10));
         }
-        const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
-
-        // Start date: First day of the selected month
-        const firstDay = new Date(year, monthIndex, 1);
-
-        // End date: Last day of the selected month
-        const lastDay = new Date(year, monthIndex + 1, 0);
-
-        // Ensure proper formatting to "YYYY-MM-DD"
-        setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
-        setEndingDate(lastDay.toISOString().slice(0, 10));
     };
+    
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {

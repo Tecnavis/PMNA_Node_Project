@@ -52,7 +52,8 @@ exports.getStaffById = async (req, res) => {
 
     const staff = await Staff.findById(id).populate('role');
 
-    calculateNetTotalAmountInHand(staff._id)
+    const netAmount = await calculateNetTotalAmountInHand(staff._id);
+    staff.cashInHand = netAmount;
 
     if (!staff) return res.status(404).json({ message: 'Staff not found' });
     res.status(200).json(staff);
