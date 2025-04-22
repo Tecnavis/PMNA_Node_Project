@@ -1317,7 +1317,7 @@ exports.updateBookingApproved = async (req, res) => {
 
 //Controller for distribute received amount
 exports.distributeReceivedAmount = async (req, res) => {
-    const { receivedAmount, driverId, bookingIds } = req.body
+    const { receivedAmount, driverId, bookingIds,workType } = req.body
     try {
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
@@ -1327,6 +1327,7 @@ exports.distributeReceivedAmount = async (req, res) => {
         // Fetch bookings from DB where receivedUser is NOT "Staff" and balance > 0
         const bookings = await Booking.find({
             _id: { $in: bookingIds },
+            workType: { $ne: 'RSAWork' }, // 👈 Exclude RSAWork bookings
             $expr: { $gt: ["$totalAmount", { $ifNull: ["$receivedAmount", 0] }] }
         }).sort({ createdAt: -1 }); // Sort by latest date first
 
