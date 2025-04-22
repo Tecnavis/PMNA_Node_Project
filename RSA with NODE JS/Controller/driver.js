@@ -47,7 +47,14 @@ exports.getDrivers = async (req, res) => {
 
     const driverIds = drivers.map(driver => driver._id);
 
-    await Promise.all(driverIds.map(driverId => updateDriverFinancials(driverId)));
+    await Promise.all(
+      drivers.map(driver =>
+        updateDriverFinancials(
+          driver._id,
+          drivers.filter(d => String(d._id) === String(driver._id))[0].advance || 0
+        )
+      )
+    );
 
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -106,6 +113,16 @@ exports.filtergetDrivers = async (req, res) => {
     }
 
     const drivers = await Driver.find(filter).populate('vehicle.serviceType');
+
+    await Promise.all(
+      drivers.map(driver =>
+        updateDriverFinancials(
+          driver._id,
+          drivers.filter(d => String(d._id) === String(driver._id))[0].advance || 0
+        )
+      )
+    );
+
     res.json(drivers);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -119,7 +136,7 @@ exports.getDriverById = async (req, res) => {
       .populate('vehicle.serviceType');
 
     // calulating net total amount in hand ans totla salary
-    updateDriverFinancials(driver._id)
+    updateDriverFinancials(driver._id, driver.advance)
 
     await driver.save()
 
