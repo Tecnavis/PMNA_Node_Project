@@ -2,6 +2,7 @@ const Driver = require('../Model/driver');
 const Booking = require('../Model/booking');
 
 async function calculateNetTotalAmountInHand(driverId) {
+    console.log("working", driverId)
     const result = await Booking.aggregate([
         {
             $match: {
@@ -14,10 +15,15 @@ async function calculateNetTotalAmountInHand(driverId) {
         {
             $group: {
                 _id: null,
-                netTotalAmount: { $sum: '$totalAmount' }
+                netTotalAmount: {
+                    $sum: {
+                        $subtract: ['$totalAmount', '$receivedAmount']
+                    }
+                }
             }
         }
     ]);
+    console.log(result)
     return result[0]?.netTotalAmount || 0;
 }
 
@@ -38,7 +44,7 @@ async function calculateTotalSalary(driverId) {
             }
         }
     ]);
-    
+
     return result[0]?.totalSalary || 0;
 }
 
