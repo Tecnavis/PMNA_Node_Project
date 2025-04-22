@@ -57,7 +57,7 @@ export const colsForAdvance = [
         accessor: 'transferdSalary',
         render: (advanceDetails: AdvanceData) =>
             advanceDetails?.transferdSalary?.length
-                ? advanceDetails.transferdSalary.join(', ')
+                ? advanceDetails.transferdSalary.map(salary => `₹${salary}`).join(', ')
                 : 'N/A'
     },
     {
@@ -65,7 +65,7 @@ export const colsForAdvance = [
         accessor: 'driverSalary',
         render: (advanceDetails: AdvanceData) =>
             advanceDetails?.driverSalary?.length
-                ? advanceDetails.driverSalary.join(', ')
+                ?advanceDetails.driverSalary.map(salary => `₹${salary}`).join(', ')
                 : 'N/A'
     },
     {
@@ -73,7 +73,7 @@ export const colsForAdvance = [
         accessor: 'balanceSalary',
         render: (advanceDetails: AdvanceData) =>
             advanceDetails?.balanceSalary?.length
-                ? advanceDetails.balanceSalary.join(', ')
+                ? advanceDetails.balanceSalary.map(salary => `₹${salary}`).join(', ')
                 : 'N/A'
     },
     {
