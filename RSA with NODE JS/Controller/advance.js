@@ -51,7 +51,7 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc) => {
 
     const bookings = await Booking.find({
         driver: driverObjectId,
-        status: 'Order Completed',
+        verified: true,
     });
     if(!bookings.length || bookings.length === 0){
         return 
