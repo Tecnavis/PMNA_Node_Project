@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -23,6 +23,9 @@ const SelectTruckPage: React.FC<SelectTruckPageProps> = ({ itemId, driverVehicle
 
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(true); // State to manage modal visibility
+// ----------------------------------------------
+const [showDropdown, setShowDropdown] = useState(false);
+const [otherVehicles, setOtherVehicles] = useState<string[]>([]);
 
   const defaultTrucks = [
     { vehicleNumber: "KL01A1234", bg: "bg-gray-200" },
@@ -50,7 +53,22 @@ const SelectTruckPage: React.FC<SelectTruckPageProps> = ({ itemId, driverVehicle
   };
   
   
-
+  useEffect(() => {
+    const fetchBooking = async () => {
+      if (!itemId) return;
+      try {
+        const response = await axios.get(`${backendUrl}/booking/${itemId}`);
+        const booking = response.data;
+        if (booking?.vehicleNumber) {
+          setSelectedVehicle(booking.vehicleNumber);
+        }
+      } catch (error) {
+        console.error("Error fetching booking:", error);
+      }
+    };
+  
+    fetchBooking();
+  }, [itemId, backendUrl]);
   const handleContinue = async () => {
     if (!selectedVehicle) {
       Swal.fire({
@@ -76,7 +94,19 @@ const SelectTruckPage: React.FC<SelectTruckPageProps> = ({ itemId, driverVehicle
   };
 
   if (!isModalOpen) return null; // Don't render if modal is closed
-
+  const handleOthersClick = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/vehicle/`);
+      const vehicles = response.data?.data || [];
+  
+      const vehicleNumbers = vehicles.map((v: any) => v.serviceVehicle); // assuming `serviceVehicle` is the vehicle number
+      setOtherVehicles(vehicleNumbers);
+      setShowDropdown(true); // show the dropdown
+    } catch (error) {
+      console.error("Error fetching other vehicles:", error);
+    }
+  };
+  
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white flex flex-col items-center p-4 md:p-6 max-w-sm mx-auto rounded-lg shadow-lg">
@@ -109,6 +139,27 @@ const SelectTruckPage: React.FC<SelectTruckPageProps> = ({ itemId, driverVehicle
             </div>
           ))}
         </div>
+        <button
+  onClick={handleOthersClick}
+  className="mt-4 w-full bg-gray-200 text-gray-800 py-3 rounded-md font-semibold text-base shadow hover:bg-red-100 hover:text-red-600 transition-colors border-2 border-gray-300 hover:border-red-500"
+>
+  Others
+</button>
+
+{showDropdown && (
+  <select
+    onChange={(e) => setSelectedVehicle(e.target.value)}
+    value={selectedVehicle || ""}
+    className="mt-2 w-full border border-gray-300 rounded-md p-2 text-gray-700"
+  >
+    <option value="">Select a vehicle</option>
+    {otherVehicles.map((vehicle, idx) => (
+      <option key={idx} value={vehicle}>
+        {vehicle}
+      </option>
+    ))}
+  </select>
+)}
 
         <button
           onClick={handleContinue}
