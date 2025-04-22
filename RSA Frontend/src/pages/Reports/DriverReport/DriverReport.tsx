@@ -293,9 +293,10 @@ const DriverCashCollectionsReport = () => {
                 if (booking._id === 'total') {
                     return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
                 } if (booking.cashPending) {
-                    return <span className='ml-5 text-center'>0</span>
+                    return <span className='ml-5 text-center text-red-500'>Cash is pending...
+</span>
                 } else if (booking.totalAmount == booking.receivedAmount) {
-                    return <div className='text-center flex item-center  justify-center'>{booking.receivedAmount}</div>
+                    return <div className='text-center flex item-center  justify-center  bg-yellow-100 p-2 rounded'>{booking.receivedAmount}</div>
                 } else {
                     return (<td key={booking._id} >
                         <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className=' flex justify-center text-center items-center'>
