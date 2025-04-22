@@ -159,45 +159,7 @@ const Profile = () => {
         }));
     };
 
-    const handleApproveClick = async (record: Booking) => {
-        // Check if receivedAmount is not zero
-        if (calculateBalance(
-            parseFloat(record.totalAmount?.toString() || '0'),
-            record.receivedAmount || 0,
-            record.receivedUser
-        ) !== 0) {
-            Swal.fire({
-                title: 'Balance Amount Not Zero',
-                text: 'The balance amount needs to be zero before approving this booking.',
-                icon: 'error',
-                confirmButtonColor: '#3085d6',
-                confirmButtonText: 'OK',
-            });
-            return; // Stop further execution
-        }
-
-        // Proceed with approval if receivedAmount is zero
-        Swal.fire({
-            title: 'Are you sure?',
-            text: 'Do you want to approve this booking?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, approve it!',
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    const res = await axios.patch(`${BASE_URL}/booking/update-approve/${record._id}`);
-                    fetchBookings(); // Refresh the bookings list
-                    Swal.fire('Approved!', 'The booking has been approved.', 'success');
-                } catch (error) {
-                    console.error('Error approving booking:', error);
-                    Swal.fire('Error!', 'Failed to approve the booking.', 'error');
-                }
-            }
-        });
-    };
+  
 
     const handleSelectAll = () => {
         if (selectedBookings.size === bookings.length) {
@@ -207,7 +169,7 @@ const Profile = () => {
             // Select all
             const allIds = new Map(
                 bookings
-                    .filter(booking => !booking.approved)
+                    
                     .map((booking) => [booking._id, booking])
             );
             setSelectedBookings(new Map(allIds));
@@ -299,7 +261,7 @@ const Profile = () => {
         },
         {
             accessor: 'totalAmount',
-            title: 'Payable Amount By Customer',
+            title: 'Payable Amount By Staff',
             render: (record: Booking) => {
                 if (record._id === 'total') {
                     return null
@@ -310,7 +272,7 @@ const Profile = () => {
         },
         {
             accessor: 'receivedAmount',
-            title: 'Amount Received From The Customer',
+            title: 'Amount Received From The Staff',
             render: (booking: Booking) => {
                 if (booking._id === 'total') {
                     return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
@@ -390,28 +352,7 @@ const Profile = () => {
                 );
             }
         },
-        {
-            accessor: 'approve',
-            title: 'Approve',
-            className: 'text-center',
-            headerClassName: 'text-center',
-            render: (record: Booking) => {
-                if (record._id === 'total') {
-                    return ""
-                } else {
-                    return record._id !== 'total' && record.workType !== 'RSAWork' ? (
-                        <button
-                            onClick={() => handleApproveClick(record)}
-                            className={`${record.accountantVerified ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.accountantVerified ? 'bg-green-300' : 'bg-red-300'
-                                } ${record.accountantVerified ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
-                            disabled={record.accountantVerified}
-                        >
-                            {record.accountantVerified ? 'Approved' : 'Approve'}
-                        </button>
-                    ) : <div className='text-green-500'>Company Work</div>
-                }
-            }
-        },
+      
         {
             accessor: 'viewmore',
             title: 'View More',

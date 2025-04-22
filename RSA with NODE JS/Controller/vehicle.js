@@ -31,39 +31,40 @@ exports.createVehicle = async (req, res) => {
 // Read Vehicles (Get all vehicles)
 exports.getAllVehicle = async (req, res) => {
     try {
-
-        let { search, page = 1, limit = 10 } = req.query;
-
-        page = parseInt(page, 10) || 1;
-        limit = parseInt(limit, 10);
-        const skip = (page - 1) * limit;
-
-        let query = {};
-
-        if (search.trim()) {
-            query = {
-                $or: [
-                    { vehicleName: { $regex: search, $options: "i" } },
-                    { serviceVehicle: { $regex: search, $options: "i" } },
-                ],
-            };
-        }
-
-        const [vehicles, total] = await Promise.all([
-            Vehicle.find(query).skip(skip).limit(limit),
-            Vehicle.countDocuments(query),
-        ]);
-
-        res.status(200).json({
-            data: vehicles,
-            page,
-            limit,
-            total: await Vehicle.countDocuments(query),
-        });
+      let { search = "", page = 1, limit = 10 } = req.query;
+  
+      page = parseInt(page, 10) || 1;
+      limit = parseInt(limit, 10);
+      const skip = (page - 1) * limit;
+  
+      let query = {};
+  
+      if (search.trim()) {
+        query = {
+          $or: [
+            { vehicleName: { $regex: search, $options: "i" } },
+            { serviceVehicle: { $regex: search, $options: "i" } },
+          ],
+        };
+      }
+  
+      const [vehicles, total] = await Promise.all([
+        Vehicle.find(query).skip(skip).limit(limit),
+        Vehicle.countDocuments(query),
+      ]);
+  
+      res.status(200).json({
+        data: vehicles,
+        page,
+        limit,
+        total,
+      });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+      console.error("Error in getAllVehicle:", error);
+      res.status(500).json({ message: error.message });
     }
-};
+  };
+  
 
 // Read vechicle by ID
 exports.getVehicleById = async (req, res) => {
