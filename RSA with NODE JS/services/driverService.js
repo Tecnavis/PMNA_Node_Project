@@ -48,19 +48,20 @@ async function calculateTotalSalary(driverId) {
     return result[0]?.totalSalary || 0;
 }
 
-async function updateDriverFinancials(driverId) {
+async function updateDriverFinancials(driverId, advance = 0) {
     const netTotalAmount = await calculateNetTotalAmountInHand(driverId);
     const totalSalary = await calculateTotalSalary(driverId);
 
+    const finalCashInHand = netTotalAmount + advance
     const updatedDriver = await Driver.findByIdAndUpdate(
         driverId,
         {
-            cashInHand: netTotalAmount,
+            cashInHand: finalCashInHand,
             driverSalary: totalSalary,
         },
         { new: true }
     );
-
+    console.log(updatedDriver.cashInHand)
     return updatedDriver;
 }
 
