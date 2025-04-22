@@ -164,7 +164,8 @@ const AdvancePayment: React.FC = () => {
             }
             return 0
         }, 0)
-        setInHandAmount(totalSalary + inHandAmountForSelectedDriver[0]?.advance || 0)
+        
+        setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand || 0)
     }, [selectedDriver])
 
     return (
