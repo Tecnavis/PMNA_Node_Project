@@ -24,6 +24,7 @@ exports.createReceivedDetails = async (req, res) => {
         const bookings = await Booking.find({
             status: 'Order Completed',
             driver,
+            workType : 'PaymentWork',
             $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
         }).sort({ createdAt: 1 })
         console.log("booking", bookings.length)
