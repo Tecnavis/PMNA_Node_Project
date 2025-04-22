@@ -22,6 +22,22 @@ const AdvanceSchema = new mongoose.Schema({
     remark: {
         type: String,
         required: true
+    },
+    filesNumbers: {
+        type: [String],
+        default: []
+    },
+    driverSalary: {
+        type: [Number],
+        default: []
+    },
+    balanceSalary: {
+        type: [Number],
+        default: []
+    },
+    transferdSalary: {
+        type: [Number],
+        default: []
     }
 }, { timestamps: true });
 
