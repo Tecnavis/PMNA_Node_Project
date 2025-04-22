@@ -17,6 +17,7 @@ export interface Company {
     name: string;
     idNumber: string;
     creditLimitAmount: number;
+    cashInHand: number;
     phone: string;
     personalPhoneNumber: string;
     password: string;

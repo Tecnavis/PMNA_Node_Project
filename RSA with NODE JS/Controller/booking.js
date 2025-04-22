@@ -336,6 +336,7 @@ exports.getAllBookings = async (req, res) => {
             endDate,
             endingDate,
             forDriverReport,
+            forCompanyReport,
             forStaffReport,
             page = 1,
             limit = 10,
@@ -382,7 +383,7 @@ exports.getAllBookings = async (req, res) => {
             query.workType = 'RSAWork'
         }
 
-        if(staffId){
+        if (staffId) {
             query.receivedUser = new mongoose.Types.ObjectId(staffId)
         }
 
@@ -450,7 +451,8 @@ exports.getAllBookings = async (req, res) => {
             {
                 $match: {
                     ...query,
-                    ...((forDriverReport !== undefined || forStaffReport !== undefined) && { cashPending: false })
+                    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
+                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' })
                 }
             },
             {
@@ -1321,14 +1323,14 @@ exports.distributeReceivedAmount = async (req, res) => {
         const selectedBookingIds = [];
 
         const userId = req.user_id || req.user?.id;
-        
+
         // Fetch bookings from DB where receivedUser is NOT "Staff" and balance > 0
         const bookings = await Booking.find({
             _id: { $in: bookingIds },
             workType: { $ne: 'RSAWork' }, // 👈 Exclude RSAWork bookings
             $expr: { $gt: ["$totalAmount", { $ifNull: ["$receivedAmount", 0] }] }
-        }).sort({ createdAt: -1 });
-        
+        }).sort({ createdAt: -1 }); // Sort by latest date first
+
         // Update bookings by distributing receivedAmount
         for (const booking of bookings) {
             if (remainingAmount <= 0) break; // Stop if amount is fully distributed

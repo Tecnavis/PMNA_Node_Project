@@ -1,5 +1,6 @@
 // controllers/company.controller.js
 const Company = require('../Model/company');
+const { calculateNetTotalAmountInHand } = require('../services/companyService');
 
 exports.createCompany = async (req, res) => {
   try {
@@ -9,14 +10,14 @@ exports.createCompany = async (req, res) => {
     const parsedVehicleDetails = typeof vehicle === 'string' ? JSON.parse(vehicle) : vehicle
 
     const vehicleData = Array.isArray(parsedVehicleDetails)
-    ? parsedVehicleDetails.map(v => ({
-          serviceType: v.id, // Map 'id' to 'serviceType'
-          basicAmount: v.basicAmount,
-          kmForBasicAmount: v.kmForBasicAmount,
-          overRideCharge: v.overRideCharge,
-          vehicleNumber: v.vehicleNumber,
+      ? parsedVehicleDetails.map(v => ({
+        serviceType: v.id, // Map 'id' to 'serviceType'
+        basicAmount: v.basicAmount,
+        kmForBasicAmount: v.kmForBasicAmount,
+        overRideCharge: v.overRideCharge,
+        vehicleNumber: v.vehicleNumber,
       }))
-    : [];
+      : [];
 
     const company = new Company({
       name,
@@ -39,7 +40,17 @@ exports.createCompany = async (req, res) => {
 exports.getCompanies = async (req, res) => {
   try {
     const companies = await Company.find().populate('vehicle.serviceType');
-    res.json(companies);
+
+    const staffWithAmount = await Promise.all(
+      companies.map(async (st) => {
+        const netAmount = await calculateNetTotalAmountInHand(st._id);
+        st.cashInHand = netAmount;
+        await st.save();
+        return st;
+      })
+    );
+
+    res.json(staffWithAmount);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -48,7 +59,13 @@ exports.getCompanies = async (req, res) => {
 exports.getCompanyById = async (req, res) => {
   try {
     const company = await Company.findById(req.params.id).populate('vehicle.serviceType');
+
+    const netAmount = await calculateNetTotalAmountInHand(company._id);
+    company.cashInHand = netAmount;
+    await company.save();
+    
     if (!company) return res.status(404).json({ error: 'Company not found' });
+
     res.json(company);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -69,12 +86,12 @@ exports.updateCompany = async (req, res) => {
     // Prepare vehicle data
     const vehicleData = Array.isArray(parsedVehicle)
       ? parsedVehicle.map(v => ({
-          serviceType: v.id || v.serviceType, // Handle both creation and update cases
-          basicAmount: v.basicAmount,
-          kmForBasicAmount: v.kmForBasicAmount,
-          overRideCharge: v.overRideCharge,
-          vehicleNumber: v.vehicleNumber,
-        }))
+        serviceType: v.id || v.serviceType, // Handle both creation and update cases
+        basicAmount: v.basicAmount,
+        kmForBasicAmount: v.kmForBasicAmount,
+        overRideCharge: v.overRideCharge,
+        vehicleNumber: v.vehicleNumber,
+      }))
       : company.vehicle; // Retain the existing vehicle data if none provided
 
     // Update company fields
@@ -123,7 +140,17 @@ exports.filtergetCompanies = async (req, res) => {
     }
 
     const company = await Company.find(filter).populate('vehicle.serviceType');
-    res.json(company);
+
+    const staffWithAmount = await Promise.all(
+      company.map(async (st) => {
+        const netAmount = await calculateNetTotalAmountInHand(st._id);
+        st.cashInHand = netAmount;
+        await st.save();
+        return st;
+      })
+    );
+
+    res.json(staffWithAmount);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
