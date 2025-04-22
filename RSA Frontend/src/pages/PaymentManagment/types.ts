@@ -9,6 +9,10 @@ export interface AdvanceData {
     type: string;
     createdAt: string,
     updatedAt: string
+    filesNumbers: string[],
+    driverSalary: number[],
+    balanceSalary: number[],
+    transferdSalary: number[]
 }
 
 export interface ReceivedDetails {

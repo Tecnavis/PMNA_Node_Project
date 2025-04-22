@@ -39,10 +39,42 @@ export const AdvanceDetailsTableColumn = [
 
 export const colsForAdvance = [
     {
-        title: "INITIAL ADVANCE",
+        title: "DATE AND TIME",
         accessor: 'addedAdvance',
         render: (advanceDetails: AdvanceData) =>
-            `₹${advanceDetails?.addedAdvance}`
+            `${dateFormate(advanceDetails?.createdAt)} , ${formattedTime(advanceDetails?.createdAt)}`
+    },
+    {
+        title: "File NUMBERS",
+        accessor: 'filesNumbers',
+        render: (advanceDetails: AdvanceData) =>
+            advanceDetails?.filesNumbers?.length
+                ? advanceDetails.filesNumbers.join(', ')
+                : 'N/A'
+    },
+    {
+        title: "Transferred Salary",
+        accessor: 'transferdSalary',
+        render: (advanceDetails: AdvanceData) =>
+            advanceDetails?.transferdSalary?.length
+                ? advanceDetails.transferdSalary.map(salary => `₹${salary}`).join(', ')
+                : 'N/A'
+    },
+    {
+        title: "Driver Salary",
+        accessor: 'driverSalary',
+        render: (advanceDetails: AdvanceData) =>
+            advanceDetails?.driverSalary?.length
+                ?advanceDetails.driverSalary.map(salary => `₹${salary}`).join(', ')
+                : 'N/A'
+    },
+    {
+        title: "Balance Salary",
+        accessor: 'balanceSalary',
+        render: (advanceDetails: AdvanceData) =>
+            advanceDetails?.balanceSalary?.length
+                ? advanceDetails.balanceSalary.map(salary => `₹${salary}`).join(', ')
+                : 'N/A'
     },
     {
         title: "CURRENT ADVANCE",
@@ -97,37 +129,37 @@ export const CashCollectionDetailsTableColumn = [
     {
         title: "DATE AND TIME",
         accessor: 'createdAt',
-        render: (cashCollection:ReceivedDetails) =>
+        render: (cashCollection: ReceivedDetails) =>
             `${dateFormate(cashCollection?.createdAt as unknown as string)} at ${formattedTime(cashCollection?.createdAt as unknown as string)}`
     },
     {
         title: "DRIVER NAME",
         accessor: 'driver.name',
-        render: (booking:ReceivedDetails) => (booking.driver?.name || "N/A")
+        render: (booking: ReceivedDetails) => (booking.driver?.name || "N/A")
     },
     {
         title: "FILE NUMBER",
         accessor: 'fileNumber',
-        render: (booking:ReceivedDetails) => (booking.fileNumber || "N/A")
+        render: (booking: ReceivedDetails) => (booking.fileNumber || "N/A")
     },
     {
         title: "INITIAL TOTAL AMOUNT IN HAND",
         accessor: 'driver.cashInHand',
-        render: (cashCollection:ReceivedDetails) => `₹${cashCollection?.currentNetAmount || 0}`
+        render: (cashCollection: ReceivedDetails) => `₹${cashCollection?.currentNetAmount || 0}`
     },
     {
         title: "BOOKING AMOUNT",
         accessor: 'totalAmount',
-        render: (cashCollection:ReceivedDetails) => `₹${cashCollection?.amount || 0}`
+        render: (cashCollection: ReceivedDetails) => `₹${cashCollection?.amount || 0}`
     },
     {
         title: "COLLECTED AMOUNT",
         accessor: 'receivedAmount',
-        render: (cashCollection:ReceivedDetails) => `₹${cashCollection?.receivedAmount || 0}`
+        render: (cashCollection: ReceivedDetails) => `₹${cashCollection?.receivedAmount || 0}`
     },
     {
         title: "BALANCE",
         accessor: 'balance',
-        render: (cashCollection:ReceivedDetails) => cashCollection.balance
+        render: (cashCollection: ReceivedDetails) => cashCollection.balance
     },
 ];

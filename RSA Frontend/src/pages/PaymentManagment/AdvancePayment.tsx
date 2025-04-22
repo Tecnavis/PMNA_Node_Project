@@ -47,6 +47,9 @@ const AdvancePayment: React.FC = () => {
         try {
             const response = await axios.get(`${BASE_URL}/driver`);
             setDrivers(response.data);
+            if (drivers.length) {
+                updateNetTotalAmount(response.data)
+            }
         } catch (error) {
             console.error('Error fetching drivers:', error);
         }
@@ -89,6 +92,7 @@ const AdvancePayment: React.FC = () => {
             fetchAdvancePayment()
             setRemark('')
             setAmount('')
+            fetchDrivers()
         } catch (error) {
 
         }
@@ -156,9 +160,20 @@ const AdvancePayment: React.FC = () => {
         fetchReceivedData()
     }, [])
 
+    const updateNetTotalAmount = (driver?: Driver[]) => {
+        if (driver?.length) {
+            const inHandAmountForSelectedDriver = driver.filter((d) => d._id === selectedDriver)
+            console.log('inHandAmountForSelectedDriver',inHandAmountForSelectedDriver[0]?.cashInHand)
+            setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand)
+        } else {
+
+            const inHandAmountForSelectedDriver = drivers.filter((driver) => driver._id === selectedDriver)
+            setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand)
+        }
+    }
+
     useEffect(() => {
-        const inHandAmountForSelectedDriver = drivers.filter((driver) => driver._id === selectedDriver)
-        setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand + inHandAmountForSelectedDriver[0]?.advance)
+        updateNetTotalAmount()
     }, [selectedDriver])
 
     return (
