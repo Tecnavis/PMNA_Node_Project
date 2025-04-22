@@ -158,13 +158,7 @@ const AdvancePayment: React.FC = () => {
 
     useEffect(() => {
         const inHandAmountForSelectedDriver = drivers.filter((driver) => driver._id === selectedDriver)
-        const totalSalary = bookings.reduce((acc, booking: Booking) => {
-            if (booking?.driver?._id === selectedDriver) {
-                return (acc + ((booking?.driverSalary || 0) - (booking.transferedSalary || 0)))
-            }
-            return 0
-        }, 0)
-        setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand || 0)
+        setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand + inHandAmountForSelectedDriver[0]?.advance)
     }, [selectedDriver])
 
     return (
