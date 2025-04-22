@@ -37,7 +37,7 @@ exports.createNewAdvance = async (req, res) => {
         
         await settleBookingsWithAdvance(driverId, newAdvanceDoc);
 
-        res.status(200).json({ message: 'Advance saved and settlement done.' });
+        res.status(200).json({ message: 'Advance saved and settlement done.' , driver});
 
     } catch (error) {
         console.log(error)
@@ -74,6 +74,7 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc) => {
     }
 
     advanceDoc.advance = remainingAdvance;
+    advanceDoc.cashInHand += remainingAdvance;
     await advanceDoc.save();
 
     await Driver.findByIdAndUpdate(driverId, { advance: remainingAdvance });
