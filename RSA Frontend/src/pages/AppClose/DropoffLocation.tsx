@@ -167,14 +167,36 @@ const DropoffUploadPage = () => {
             }
 
             if (bookingData?.workType === 'PaymentWork') {
-                await axios.put(`${backendUrl}/booking/${itemId}`, {
-                    ...formData,
-                    status: 'Vehicle Dropped',
+                // Show modal with "Paid" and "Not Paid"
+                const result = await Swal.fire({
+                    title: 'Payment Status',
+                    text: 'Has the customer paid?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Paid',
+                    cancelButtonText: 'Not Paid',
+                    reverseButtons: true,
                 });
-                navigate(`/paymentSettlement?itemId=${itemId}`);
+    
+                if (result.isConfirmed) {
+                    // If "Paid" is clicked
+                    await axios.put(`${backendUrl}/booking/${itemId}`, {
+                        cashPending: false,
+                        status: 'Vehicle Dropped',                    });
+                    navigate(`/paymentSettlement?itemId=${itemId}`);
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    // If "Not Paid" is clicked
+                    await axios.put(`${backendUrl}/booking/${itemId}`, {
+                        cashPending: true,
+        status: 'Order Completed',
+    });
+    Swal.fire('Info', 'Marked as not paid. No settlement page opened.', 'info')
+    .then(() => {
+        navigate('/bookings'); // Navigate after user sees the info alert
+    });                }
+    
             } else if (bookingData?.workType === 'RSAWork') {
                 await axios.put(`${backendUrl}/booking/${itemId}`, {
-                    ...formData,
                     status: 'Order Completed',
                 });
                 navigate('/bookings');
