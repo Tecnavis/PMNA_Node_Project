@@ -33,6 +33,7 @@ const { app, server } = require('./config/socket.js');
 
 connectDB()
 
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], 
