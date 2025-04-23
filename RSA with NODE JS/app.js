@@ -27,6 +27,7 @@ var advanceRouter = require('./routes/advance')
 var cashReceivedDetails = require('./routes/cashReceivedDetails')
 var attendanceRouter = require('./routes/attendance')
 var pmnrRouter = require('./routes/pmnrReport')
+var expenseRouter = require('./routes/expense')
 
 const cors = require('cors')
 const { app, server } = require('./config/socket.js');
@@ -72,6 +73,7 @@ app.use('/advance-payment', advanceRouter);
 app.use('/cash-received-details', cashReceivedDetails);
 app.use('/attendance', attendanceRouter);
 app.use('/pmnr', pmnrRouter);
+app.use('/expense', expenseRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

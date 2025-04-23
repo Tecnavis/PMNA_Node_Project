@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const Vehicle = require('../Model/vehicle');
 const { io } = require('../config/socket');
 const { capitalizeFirstLetter } = require('../utils/dateUtils');
+const NotificationService = require('../services/notification.service');
 
 
 
@@ -20,6 +21,9 @@ exports.createBooking = async (req, res) => {
         if (!bookingData.company || bookingData.company === "") {
             bookingData.company = null; // Or you can delete the field entirely if required
         }
+
+        let source = null;
+
         if (bookingData.dummyEntity.id === 'dummy') {
             if (bookingData.dummyEntity.name === 'Dummy Driver') {
                 bookingData.dummyDriverName = bookingData.dummyEntity.name
@@ -27,20 +31,17 @@ exports.createBooking = async (req, res) => {
                 bookingData.dummyProviderName = bookingData.dummyEntity.name
             }
         } else {
-            
+
             const getVehicleForService = (vehicles, serviceType) => {
-                console.log(vehicles, serviceType)
                 return vehicles.find(
                     (item) => item.serviceType.toString() === serviceType.toString()
                 );
             };
 
-            let source = null;
-
             if (bookingData.driver) {
                 source = await Driver.findById(bookingData.driver);
                 if (!source) return res.status(404).json({ message: "Driver not found" });
-                
+
             } else {
                 source = await Provider.findById(bookingData.provider);
                 if (!source) return res.status(404).json({ message: "Provider not found" });
@@ -59,6 +60,16 @@ exports.createBooking = async (req, res) => {
 
         const newBooking = new Booking(bookingData);
         await newBooking.save();
+
+        if (bookingData.provider) {
+
+        } else if (bookingData.driver) {
+            await NotificationService.sendNotification({
+                token: source.fcmToken,
+                title: "New Booking Notification",
+                body: 'A new booking has been assigned to you.',
+            })
+        }
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
 
