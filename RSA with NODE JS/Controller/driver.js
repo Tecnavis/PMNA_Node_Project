@@ -14,8 +14,7 @@ exports.createDriver = async (req, res) => {
 
     const parsedVehicleDetails = typeof vehicle === 'string' ? JSON.parse(vehicle) : vehicle
 
-    const trimmedName = name.trim().toLowerCase();
-    const nameIsExist = await Driver.findOne({ name: trimmedName });
+    const nameIsExist = await Driver.findOne({ $or: [{ phone }, { personalPhoneNumber }] });
 
     if (nameIsExist) {
       return res.status(400).json({
