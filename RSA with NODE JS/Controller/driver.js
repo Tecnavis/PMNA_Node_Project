@@ -185,7 +185,7 @@ exports.updateDriver = async (req, res) => {
     driver.image = req.file ? req.file.filename : driver.image;
     driver.vehicle = vehicleData;
     driver.currentLocation = currentLocation || driver.currentLocation;
-    driver.currentLocation = fcmToken || driver.fcmToken;
+    driver.fcmToken = fcmToken || driver.fcmToken;
 
     await driver.save();
     res.status(200).json(driver);
