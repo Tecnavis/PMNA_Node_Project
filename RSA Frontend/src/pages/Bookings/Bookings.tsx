@@ -19,6 +19,9 @@ import { GrPrevious } from 'react-icons/gr';
 import { GrNext } from 'react-icons/gr';
 import TrackModal from "../Bookings/TrackModal"; // Adjust the path as needed
 import { CLOUD_IMAGE } from '../../constants/status';
+import { TbCalendarCancel } from "react-icons/tb";
+import ReusableModal from '../../components/modal';
+
 
 interface Company {
     _id: string;
@@ -50,6 +53,9 @@ interface Company {
 export interface Booking {
     invoiceNumber: string;
     receivedUser: string,// new prop
+    cancelReason: string,// new prop
+    cancelImage: string,// new prop
+    cancelKm: string,// new prop
     vehicleNumber: string,// new prop
     dummyDriverName: string,// new prop
     dummyProviderName: string,// new prop
@@ -151,22 +157,33 @@ const Bookings: React.FC = () => {
     const [companies, setCompanies] = useState<Company[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [company, setCompany] = useState<Company | null>(null);
-    const [modal5, setModal5] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
+    const [modal5, setModal5] = useState<boolean>(false);
+    const [isVisible, setIsVisible] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
-    const [trackModalOpen, setTrackModalOpen] = useState(false);
+    const [trackModalOpen, setTrackModalOpen] = useState<boolean>(false);
+    const [cancelModalOpen, setCancelModalOpen] = useState<boolean>(false);
     const [selectedItemId, setSelectedItemId] = useState<string | undefined>(undefined);
+    const [selectedBooking, setSelectedBooking] = useState<Booking | undefined>(undefined);
+    const [cancelFormData, setCancelFormData] = useState({
+        enterdKm: 0,
+        kmImage: '',
+        totalDriverDistance: 0,
+        totalDriverSalary: 0,
+        Totalkm: 0,
+        amountForCustomer: 0,
+        cancelReason: '',
+    });
+
 
     const handlePageChange = (page: any) => {
         setCurrentPage(page);
-        fetchBookings('', page); // Pass the current page
+        fetchBookings('', page);
     };
 
     const navigate = useNavigate();
 
     // checking the token
-
     const gettingToken = () => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -179,7 +196,6 @@ const Bookings: React.FC = () => {
     };
 
     // getting all bookings
-
     const fetchBookings = async (searchTerm = '', page = 1, limit = 10) => {
         try {
             const response = await axios.get(`${backendUrl}/booking`, {
@@ -204,29 +220,99 @@ const Bookings: React.FC = () => {
         }
     };
 
-    // deleting company
-
+    // Handle track modal open
     const handleTrack = (itemId: string) => {
-        console.log("Tracking itemId:", itemId);
         setSelectedItemId(itemId);  // Store itemId in state
         setTrackModalOpen(true);
     };
 
-    // getting company by id in modal
-
-    const handleOpen = async (id: any) => {
-        setModal5(true);
-        const response = await axios.get(`${backendUrl}/booking/${id}`);
-        const data = response.data;
-        console.log(data.image);
-        setCompany(data);
-    };
+    // handle cancel and settle booking
+    const handleCancel = (booking: Booking) => {
+        setSelectedItemId(booking._id);
+        setCancelFormData({
+            enterdKm: +booking.cancelKm || 0,
+            kmImage: booking.cancelImage,
+            totalDriverDistance: booking.totalDriverDistence || 0,
+            totalDriverSalary: booking.driverSalary || 0,
+            Totalkm: booking.totalDistence || 0,
+            amountForCustomer: booking.totalAmount || 0,
+            cancelReason: booking.cancelReason || ''
+        })
+        setCancelModalOpen(true)
+    }
 
     useEffect(() => {
         gettingToken();
         fetchCompanies();
         fetchBookings();
     }, []);
+
+    const calculateTotalDriverSalary = (
+        totalDriverDistance: number,
+        basicSalaryKM: string,
+        salaryPerKM: string,
+        salary: string
+    ): number => {
+        const salaryNumber = parseFloat(salary);
+        let totalSalary;
+
+        if (totalDriverDistance > parseFloat(basicSalaryKM)) {
+            totalSalary = salaryNumber + (totalDriverDistance - parseFloat(basicSalaryKM)) * parseFloat(salaryPerKM);
+        } else {
+            totalSalary = salaryNumber; // Base salary if distance is within the basic range
+        }
+
+        // setTotalDriverSalary(totalSalary); // Update the state
+        return totalSalary; // Return the calculated value
+    };
+
+    const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setCancelFormData({ ...cancelFormData, [name]: value });
+
+        // When totalDriverDistance changes, recalculate the salary
+        // if (name === 'totalDriverDistance') {
+        //     const totalDistance = parseFloat(value);
+
+        //     if (selectedBooking) {
+        //         const driverData = selectedBooking.driver;
+        //         const serviceType = selectedBooking.serviceType;
+
+        //         // Ensure serviceType is defined before proceeding
+        //         if (!serviceType) {
+        //             console.error("Service type is undefined");
+        //             return;
+        //         }
+
+        //         if (driverData) {
+        //             const { basicSalaryKm, salaryPerKm, basicSalaries } = driverData;
+
+        //             if (basicSalaryKm && salaryPerKm && basicSalaries) {
+        //                 const basicSalaryKM = basicSalaryKm[serviceType];
+        //                 const salaryPerKM = salaryPerKm[serviceType];
+        //                 const salary = basicSalaries[serviceType];
+
+        //                 // Ensure all values are valid before calculating
+        //                 if (basicSalaryKM && salaryPerKM && salary) {
+        //                     const calculatedSalary = calculateTotalDriverSalary(
+        //                         totalDistance,
+        //                         basicSalaryKM,
+        //                         salaryPerKM,
+        //                         salary
+        //                     );
+
+        //                     setCancelFormData({
+        //                         ...cancelFormData,
+        //                         totalDriverSalary: calculatedSalary.toFixed(2),
+        //                     });
+        //                 } else {
+        //                     console.error("Missing salary data for service type");
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+    };
 
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
@@ -303,9 +389,9 @@ const Bookings: React.FC = () => {
                                 if (items.status === 'Rejected') {
                                     fileNumberColor = '#ef4444'; // If the status is Rejected, color it red
                                 }
-                                // if (items.cancelStatus) {
-                                //     fileNumberColor = '#a855f7'; // If the status is Rejected, color it red
-                                // }
+                                if (items.cancelStatus) {
+                                    fileNumberColor = '#a855f7'; // If the status is Rejected, color it red
+                                }
 
                                 return (
                                     <tr key={index}>
@@ -372,16 +458,6 @@ const Bookings: React.FC = () => {
                                                         </button>
                                                     </Tippy>
                                                 </li>
-                                                {/* {
-                                                    items.cancelStatus ? 
-                                                    <button>Settle Cancel Bookings</button>
-                                                    : <TrackModal
-                                                            open={trackModalOpen}
-                                                            onClose={() => setTrackModalOpen(false)}
-                                                            itemId={selectedItemId} // Pass the selected item ID
-                                                        />
-                                                } */}
-
                                                 <li>
                                                     <Tippy content="Change Location">
                                                         <button type="button">
