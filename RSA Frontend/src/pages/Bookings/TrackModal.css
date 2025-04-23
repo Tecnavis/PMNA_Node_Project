@@ -1,0 +1,25 @@
+/* TrackModal.css */
+.noUi-pips .noUi-marker {
+    background-color: red !important;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  /* Change handle color */
+  .noUi-handle {
+    background-color: red !important;
+    border: 2px solid white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+  }
+  .noUi-target {
+    pointer-events: none; /* Prevents manual sliding */
+    opacity: 0.7; /* Optional: Make it look disabled */
+  }
+  

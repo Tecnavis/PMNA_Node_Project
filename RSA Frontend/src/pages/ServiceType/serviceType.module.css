@@ -1,0 +1,133 @@
+.formInput[type="number"]::-webkit-outer-spin-button,
+.formInput[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* For Firefox */
+.formInput[type="number"] {
+  -moz-appearance: textfield;
+}
+.tableContainer {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .tableHeader {
+    background-color: #3b82f680;
+    color: #5a5a5a;
+    text-align: left;
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .tableRow {
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .tableCell {
+    padding: 12px;
+    font-size: 14px;
+    color: #333;
+  }
+  
+  .tableActions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .editButton,
+  .deleteButton,
+  .addButton {
+    padding: 6px 12px;
+    font-size: 14px;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .editButton {
+    background-color: #2835a7;
+  }
+
+  .addButton {
+    background-color: #28a745;
+  }
+  .addButton:hover {
+    background-color: #1a692d;
+  }
+  
+  .editButton:hover {
+    background-color: #2b2188;
+  }
+  
+  .deleteButton {
+    background-color: #dc3545;
+  }
+  
+  .deleteButton:hover {
+    background-color: #c82333;
+  }
+  
+  /* Mobile Responsive */
+  @media (max-width: 768px) {
+    .tableHeader {
+      display: none; /* Hide table headers on small screens */
+    }
+  
+    .tableRow {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 15px;
+      border-bottom: none;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      background-color: #f8f9fa;
+      padding: 10px;
+    }
+  
+    .tableCell {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      font-size: 14px;
+      border-bottom: 1px solid #ddd;
+    }
+  
+    .tableCell:last-child {
+      border-bottom: none;
+    }
+  
+    .tableCell::before {
+      content: attr(data-label);
+      flex: 1;
+      font-weight: bold;
+      text-transform: capitalize;
+      color: #004085;
+    }
+  
+    .tableCell span {
+      flex: 2;
+      text-align: right;
+    }
+  
+    .tableActions {
+      justify-content: flex-end;
+      margin-top: 10px;
+      gap: 10px;
+    }
+  
+    .editButton,
+    .deleteButton {
+      width: 48%;
+    }
+  }
+  
