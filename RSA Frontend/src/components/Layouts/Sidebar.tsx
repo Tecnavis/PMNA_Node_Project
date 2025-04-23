@@ -32,7 +32,7 @@ import IconMenuUsers from '../Icon/Menu/IconMenuUsers';
 import IconMenuPages from '../Icon/Menu/IconMenuPages';
 import IconMenuAuthentication from '../Icon/Menu/IconMenuAuthentication';
 import IconMenuDocumentation from '../Icon/Menu/IconMenuDocumentation';
-import { TbReport } from "react-icons/tb";
+import { TbCurrencyDollar, TbReport } from "react-icons/tb";
 import IconServer from '../Icon/IconServer';
 import { MdShareLocation } from 'react-icons/md';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
@@ -310,6 +310,34 @@ const Sidebar = () => {
                                             )}
                                             <li>
                                                 <NavLink to="/staffreport">{t('Staff Report')}</NavLink>
+                                            </li>
+
+                                        </ul>
+                                    </AnimateHeight>
+                                </li>
+                            )}
+                             {/* Expence */}
+                             {![ROLES.CALL_EXECUTIVE].includes(role) && (
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'expences' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('expences')}>
+                                        <div className="flex items-center">
+                                            <TbCurrencyDollar className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Expences')}</span>
+                                        </div>
+
+                                        <div className={currentMenu !== 'expences' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
+
+                                    <AnimateHeight duration={300} height={currentMenu === 'expences' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            <li>
+                                                <NavLink to="/otherexpences">{t('Other Expences')}</NavLink>
+                                            </li>
+                                         
+                                            <li>
+                                                <NavLink to="/dieselexpences">{t('Diesel Expence')}</NavLink>
                                             </li>
 
                                         </ul>

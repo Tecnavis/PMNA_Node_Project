@@ -31,7 +31,7 @@ interface FilterData {
     balanceAmountToCollect: number
 }
 
-const DriverCashCollectionsReport = () => {
+const Expence = () => {
 
     const [driver, serDriver] = useState<Driver | null>(null);
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -556,7 +556,7 @@ const DriverCashCollectionsReport = () => {
         <div>
             <div className="pt-5">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 w-full">
-                    {/* DriverCashCollectionsReport Section */}
+                    {/* Expence Section */}
                     <div className="panel w-full">
                         <div className="flex items-center justify-between mb-5">
                             <h5 className="font-semibold text-lg dark:text-white-light">Expence Report</h5>
@@ -807,4 +807,4 @@ const DriverCashCollectionsReport = () => {
     );
 };
 
-export default DriverCashCollectionsReport;
+export default Expence;
