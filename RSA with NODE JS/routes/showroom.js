@@ -5,6 +5,7 @@ const upload = require('../config/multer'); // Assuming multer setup is exported
 const jwt = require('../Middileware/jwt')
 
 router.post('/create',jwt, upload.single('image'), controller.createShowroom);
+router.post('/',jwt, upload.single('image'), controller.createShowroom);
 router.get('/', controller.getShowrooms);
 // Login Showroom
 router.post('/login', controller.loginShowroom);

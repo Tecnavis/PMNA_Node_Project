@@ -14,6 +14,15 @@ exports.createDriver = async (req, res) => {
 
     const parsedVehicleDetails = typeof vehicle === 'string' ? JSON.parse(vehicle) : vehicle
 
+    const nameIsExist = await Driver.findOne({ $or: [{ phone }, { personalPhoneNumber }] });
+
+    if (nameIsExist) {
+      return res.status(400).json({
+        message: "Driver already exists in the database.",
+        success: false,
+      });
+    }
+
     const vehicleData = Array.isArray(parsedVehicleDetails)
       ? parsedVehicleDetails.map(v => ({
         serviceType: v.id, // Map 'id' to 'serviceType'
