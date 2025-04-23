@@ -838,7 +838,7 @@ const MultipleTables = () => {
                                             <button type="button" className="btn btn-primary px-2 py-1 text-xs" onClick={() => navigate(`/dcpreport/driverreport/salaryreport/${driver._id}`)}>
                                                 Salary
                                             </button>
-                                            <button type="button" className="btn btn-danger px-2 py-1 text-xs">
+                                            <button type="button" className="btn btn-danger px-2 py-1 text-xs" onClick={() => navigate(`/dcpreport/expence/${driver._id}`)}>
                                                 Expense
                                             </button>
                                         </div>
