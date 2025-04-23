@@ -27,6 +27,7 @@ class NotificationService {
 
         try {
             const response = await messaging.send(message);
+            console.log(response)
             return { success: true, messageId: response };
         } catch (error) {
             throw error;
