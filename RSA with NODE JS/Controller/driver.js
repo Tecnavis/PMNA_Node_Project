@@ -158,7 +158,7 @@ exports.getDriverById = async (req, res) => {
 
 exports.updateDriver = async (req, res) => {
   try {
-    const { name, idNumber, phone, personalPhoneNumber, password, vehicle, currentLocation } = req.body;
+    const { name, idNumber, phone, personalPhoneNumber, password, vehicle, currentLocation, fcmToken } = req.body;
 
     const driver = await Driver.findById(req.params.id);
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
@@ -185,6 +185,7 @@ exports.updateDriver = async (req, res) => {
     driver.image = req.file ? req.file.filename : driver.image;
     driver.vehicle = vehicleData;
     driver.currentLocation = currentLocation || driver.currentLocation;
+    driver.currentLocation = fcmToken || driver.fcmToken;
 
     await driver.save();
     res.status(200).json(driver);
