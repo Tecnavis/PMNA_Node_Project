@@ -10,6 +10,7 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import axios from 'axios';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPencil from '../../components/Icon/IconPencil';
+import { CLOUD_IMAGE } from '../../constants/status';
 interface EditData {
     id?: string;
     name?: string;
@@ -336,7 +337,7 @@ const UserAdd: React.FC = () => {
                 setPhone(response.data.phone || '');
                 setUserName(response.data.userName || '');
                 setAddress(response.data.address || '');
-                setImagePreview(`${backendUrl}/images/${response.data.image}` || '');
+                setImagePreview(`${CLOUD_IMAGE}${response.data.image}` || '');
                 setPassword(response.data.password || '');
                 setConfirmPassword(response.data.password || '');
             } catch (error) {

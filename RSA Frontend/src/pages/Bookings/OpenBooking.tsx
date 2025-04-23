@@ -11,6 +11,7 @@ import { styled } from '@mui/material/styles';
 import BookingNotes from './BookingNotes';
 import { dateFormate, formattedTime } from '../../utils/dateUtils';
 import FeedbackModal from './FeedbackModal';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 export interface Booking {
     _id: string;
@@ -206,14 +207,14 @@ const Preview = () => {
                 return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
             });
 
-            const urls = files?.map((file: any) => `${backendUrl}/images/${file.name}`);
+            const urls = files?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
 
             const dropoffFiles = response.data.dropoffImages?.map((filename: any) => {
                 const blob = new Blob(); // Simulate a file blob (replace this if you receive actual blobs)
                 return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
             });
 
-            const dropoffUrls = dropoffFiles?.map((file: any) => `${backendUrl}/images/${file.name}`);
+            const dropoffUrls = dropoffFiles?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
             setDropoffImageUrls(dropoffUrls);
             setPickuptImageUrls(urls);
         } catch (error) {
@@ -227,7 +228,7 @@ const Preview = () => {
             return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
         });
 
-        const urls = files?.map((file: any) => `${backendUrl}/images/${file.name}`);
+        const urls = files?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
         setPickuptImageUrls(urls);
 
         const dropoffFiles = dropoffImages?.map((filename: any) => {
@@ -235,7 +236,7 @@ const Preview = () => {
             return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
         });
 
-        const dropoffUrls = dropoffFiles?.map((file: any) => `${backendUrl}/images/${file.name}`);
+        const dropoffUrls = dropoffFiles?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
         setDropoffImageUrls(dropoffUrls);
     }, []);
 
