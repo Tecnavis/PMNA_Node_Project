@@ -11,6 +11,7 @@ import ShowroomCreate from './ShowroomCreateModal';
 import { GiPathDistance } from 'react-icons/gi';
 import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import IconPlus from '../../components/Icon/IconPlus';
+import { Booking } from './Bookings';
 
 export interface Company {
     _id: string;
@@ -162,6 +163,7 @@ const BookingAdd: React.FC = () => {
     const [workType, setWorkType] = useState<string>('');
     const [role, setRole] = useState<string>('');
     const [cashInHand, setCashInHand] = useState<number>(0);
+    const [driverLoader, setDriverLoader] = useState<boolean>(false);
 
     const [trappedLocation, setTrappedLocation] = useState<string>('');
     const [PayableAmount, setPayableAmount] = useState<number>(0);
@@ -206,6 +208,7 @@ const BookingAdd: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [modal2, setModal2] = useState(false);
+    const [showBtn, setShowBtn] = useState(false);
     const [serviceCategory, setServiceCategory] = useState<string>('');
     const [accidentOption, setAccidentOption] = useState<string>('');
     const [insuranceAmount, setInsuranceAmount] = useState<string>('');
@@ -213,7 +216,6 @@ const BookingAdd: React.FC = () => {
     const [baseLat, baseLng] = selectedBaseLocation?.latitudeAndLongitude ? selectedBaseLocation?.latitudeAndLongitude.split(',') : [null, null];
     const [showroomLat, showroomLng] = selectedShowroom?.latitudeAndLongitude ? selectedShowroom?.latitudeAndLongitude.split(',') : [null, null];
     const uid = id.id;
-
     //ref for states 
     const workTypeRef = useRef<HTMLInputElement>(null);
     const totalDistanceRef = useRef<HTMLInputElement>(null);
@@ -235,6 +237,10 @@ const BookingAdd: React.FC = () => {
     const selectedShowroomRef = useRef<any>(null);
 
     // check the page for token and redirect
+
+    useEffect(() => {
+        console.log('totalAmount', totalAmount)
+    }, [totalAmount]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -440,7 +446,6 @@ const BookingAdd: React.FC = () => {
         const selectedService = serviceTypes.find((item) => item?._id === serviceTypeId);
 
         setSelectedEntity(null);
-
         if (selectedService) {
             setSelectedServiceType(selectedService);
             fetchAndFilterDrivers(serviceTypeId);
@@ -450,14 +455,17 @@ const BookingAdd: React.FC = () => {
 
     // Fetch drivers and apply filter
     const fetchAndFilterDrivers = async (serviceTypeId: any) => {
+        setDriverLoader(true)
         try {
             const response = await axios.get(`${backendUrl}/driver`);
             const allDrivers = response.data;
-            console.log("drover", allDrivers)
+
             const filteredDrivers = allDrivers.filter((driver: any) => driver.vehicle.some((vehicle: any) => vehicle.serviceType?._id === serviceTypeId?._id));
             setDrivers(filteredDrivers);
         } catch (error) {
             console.error('Error fetching drivers:', error);
+        } finally {
+            setDriverLoader(false)
         }
     };
 
@@ -624,7 +632,9 @@ const BookingAdd: React.FC = () => {
         } else if (adjustmentValue > totalAmount) {
             // If the adjustmentValue is greater than totalAmount, set the adjustmentAmount to adjustmentValue
             setTotalAmount(adjustmentValue);
-            setAdjustmentValue(null)
+            console.log(totalAmount, adjustmentValue)
+            // setAdjustmentValue(null)
+            setShowBtn(false)
         } else {
             // If the adjustmentValue is less than totalAmount, ask for confirmation
             setConfirmationVisible(true);
@@ -938,7 +948,7 @@ const BookingAdd: React.FC = () => {
                 if (data.adjustmentValue) {
                     setTotalAmount(data.adjustmentValue || '');
                 } else {
-                    setTotalAmount(data.totalAmount || '');
+                    setTotalAmount(data.totalAmount || 0);
                 }
                 setTotalDriverDistence(data.totalDriverDistence || '');
                 setDriverSalary(data.driverSalary || '');
@@ -965,10 +975,9 @@ const BookingAdd: React.FC = () => {
         e.preventDefault();
 
         if (validate()) {
-            const data = {
+            const data: any = {
                 workType: workType,
                 pickupDate: pickupDate,
-                company: selectedCompany?._id ?? '',
                 fileNumber: fileNumber,
                 location: location,
                 latitudeAndLongitude: latitudeAndLongitude,
@@ -1004,6 +1013,10 @@ const BookingAdd: React.FC = () => {
                 comments: comments,
                 bookedBy: `RSA-${role} `,
             };
+
+            if (selectedCompany?._id) {
+                data.company = selectedCompany._id;
+            }
 
             setLoading(true);
 
@@ -1184,6 +1197,12 @@ const BookingAdd: React.FC = () => {
             fetchAndFilterProviders(selectedServiceType);
         }
     }, [selectedServiceType]); // Add selectedServiceType to dependencies
+
+    useEffect(() => {
+        if (adjustmentValue) {
+            setShowBtn(true)
+        }
+    }, [adjustmentValue])
 
     return (
         <div>
@@ -1487,14 +1506,22 @@ const BookingAdd: React.FC = () => {
                                         type="button"
                                         className={`btn w-full mt-2 ${selectedEntity ? 'btn-success' : 'btn-primary'}`}
                                         onClick={openDriverModal}
+                                        disabled={driverLoader}
                                     >
-                                        {selectedEntity && selectedEntity.name ? (
+                                        {driverLoader ? (
+                                            <div role="status">
+                                            <svg aria-hidden="true" className="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+                                                <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
+                                            </svg>
+                                            <span className="sr-only">Loading...</span>
+                                        </div>
+                                        ) : selectedEntity && selectedEntity.name ? (
                                             <p ref={selectedEndityRef}>{selectedEntity.name}</p>
                                         ) : (
                                             <p>Select Driver</p>
                                         )}
                                     </button>
-
                                 </div>
                                 {errors.selectedEntity && <p className="text-red-500">{errors.selectedEntity}</p>}
                             </div>
@@ -1612,7 +1639,7 @@ const BookingAdd: React.FC = () => {
                                 onChange={(e) => setAdjustmentValue(e.target.value ? parseFloat(e.target.value) : null)}
                             />
                             {
-                                adjustmentValue && <button type="button" className="btn btn-success" onClick={handleAdjustment}>
+                                showBtn && <button type="button" className="btn btn-success" onClick={handleAdjustment}>
                                     Apply
                                 </button>
                             }

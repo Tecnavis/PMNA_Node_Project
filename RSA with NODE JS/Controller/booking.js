@@ -27,24 +27,33 @@ exports.createBooking = async (req, res) => {
                 bookingData.dummyProviderName = bookingData.dummyEntity.name
             }
         } else {
-            // Fetch driver details
-            const driver = await Driver.findById(bookingData.driver);
-            if (!driver) {
-                return res.status(404).json({ message: "Driver not found" });
+            
+            const getVehicleForService = (vehicles, serviceType) => {
+                console.log(vehicles, serviceType)
+                return vehicles.find(
+                    (item) => item.serviceType.toString() === serviceType.toString()
+                );
+            };
+
+            let source = null;
+
+            if (bookingData.driver) {
+                source = await Driver.findById(bookingData.driver);
+                if (!source) return res.status(404).json({ message: "Driver not found" });
+                
+            } else {
+                source = await Provider.findById(bookingData.provider);
+                if (!source) return res.status(404).json({ message: "Provider not found" });
             }
 
-            // Find the selected vehicle for the driver
-            const selectedVehicle = driver.vehicle.find(
-                (item) => item.serviceType.toString() === bookingData.serviceType.toString()
-            );
-
+            const selectedVehicle = getVehicleForService(bookingData.driver ? source.vehicle : source.serviceDetails, bookingData.serviceType);
             if (!selectedVehicle) {
                 return res.status(404).json({ message: "Vehicle not found for the selected service type" });
             }
 
-            bookingData.vehicleNumber = selectedVehicle.vehicleNumber || ""
-            bookingData.createdBy = req.user._id || req.user.id,
-                bookingData.bookedByModel = "Admin"
+            bookingData.vehicleNumber = selectedVehicle.vehicleNumber || "";
+            bookingData.createdBy = req.user._id || req.user.id;
+            bookingData.bookedByModel = "Admin";
 
         }
 
