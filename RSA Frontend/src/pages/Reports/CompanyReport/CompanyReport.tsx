@@ -19,7 +19,7 @@ import { Company } from '../../Bookings/BookingAdd';
 import IconPrinter from '../../../components/Icon/IconPrinter';
 import { createStyles, Table } from '@mantine/core';
 import { handlePrint } from '../../../utils/PrintInvoice';
-import { NON_COMPLETED_STATUS } from '../../../constants/status';
+import { CLOUD_IMAGE, NON_COMPLETED_STATUS } from '../../../constants/status';
 import { ROLES } from '../../../constants/roles';
 import { Dialog, Transition } from '@headlessui/react';
 import { dateFormate } from '../../../utils/dateUtils';
@@ -643,7 +643,7 @@ const CompanyReport = () => {
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src={`${backendUrl}/images/${company?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
+                                <img src={`${CLOUD_IMAGE}${company?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
                                 <p className="font-semibold text-primary text-xl">{company?.name}</p>
                                 <span className="whitespace-nowrap" dir="ltr">
                                     {company?.idNumber}

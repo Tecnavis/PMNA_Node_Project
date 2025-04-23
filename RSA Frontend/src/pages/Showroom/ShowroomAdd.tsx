@@ -7,6 +7,7 @@ import axios, { AxiosError } from 'axios';
 import Select, { ActionMeta, SingleValue } from 'react-select';
 import statesData from './states-and-districts.json';
 import styles from './showroomAdd.module.css';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 const ShowroomAdd: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -174,7 +175,7 @@ const ShowroomAdd: React.FC = () => {
                 setPhone(data.phone || '');
                 setPassword(data.password || '');
                 setConfirmPassword(data.password || '');
-                setImagePreview(`${backendUrl}/images/${data.image}` || '');
+                setImagePreview(`${CLOUD_IMAGE}${data.image}` || '');
                 setShowroomId(data.showroomId || '');
                 setDescription(data.description || '');
                 setLocation(data.location || '');
