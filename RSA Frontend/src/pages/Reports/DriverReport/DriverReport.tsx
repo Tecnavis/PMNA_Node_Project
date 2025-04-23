@@ -21,7 +21,7 @@ import { handlePrint } from '../../../utils/PrintInvoice';
 import { Dialog, Transition } from '@headlessui/react';
 import { dateFormate } from '../../../utils/dateUtils';
 import { ROLES } from '../../../constants/roles';
-import { NON_COMPLETED_STATUS } from '../../../constants/status';
+import { CLOUD_IMAGE, NON_COMPLETED_STATUS } from '../../../constants/status';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -563,7 +563,7 @@ const DriverCashCollectionsReport = () => {
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src={`${backendUrl}/images/${driver?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
+                                <img src={`${CLOUD_IMAGE}/${driver?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
                                 <p className="font-semibold text-primary text-xl">{driver?.name}</p>
                                 <span className="whitespace-nowrap" dir="ltr">
                                     {driver?.idNumber}

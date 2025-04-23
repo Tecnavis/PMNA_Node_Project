@@ -3,6 +3,7 @@ import React, { useState, useEffect, ChangeEvent } from "react";
 import { FiUploadCloud } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { CLOUD_IMAGE } from "../../constants/status";
 
 interface Booking {
   _id?: string;
@@ -114,7 +115,7 @@ const CombinedDeliveryUploadPage = () => {
           if (data.pickupImages && data.pickupImages.length > 0) {
             // Build the full URL for each image
             const imageUrls = data.pickupImages.map(
-              (img) => `${backendUrl}/images/${img}`
+              (img) => `${CLOUD_IMAGE}${img}`
             );
             setPreviews([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
           }

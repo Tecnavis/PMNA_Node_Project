@@ -7,6 +7,7 @@ import axios from 'axios';
 import { Link, useNavigate } from "react-router-dom";
 import type { VehicleRecord } from "./VehicleCompliance";
 import { formatToInputDate } from "../../utils/dateUtils";
+import { CLOUD_IMAGE } from "../../constants/status";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -277,7 +278,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
                         />
                         {formSubmitted && errors.insurancePaper && <span className='text-red-500 text-xs' >{errors.insurancePaper}</span>}
                         {
-                            isEditMode && <Link to={`${backendUrl}/images/${insurancePaper || ""}`} className='text-blue-600'>View Insurance Paper</Link>
+                            isEditMode && <Link to={`${CLOUD_IMAGE}${insurancePaper || ""}`} className='text-blue-600'>View Insurance Paper</Link>
                         }
                     </div>
                     <div>
@@ -289,7 +290,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
                         />
                         {formSubmitted && errors.taxPaper && <span className='text-red-500 text-xs' >{errors.taxPaper}</span>}
                         {
-                            isEditMode && <Link to={`${backendUrl}/images/${taxPaper || ""}`} className='text-blue-600'>View Existing Tax Paper</Link>
+                            isEditMode && <Link to={`${CLOUD_IMAGE}${taxPaper || ""}`} className='text-blue-600'>View Existing Tax Paper</Link>
                         }
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '25px' }}>

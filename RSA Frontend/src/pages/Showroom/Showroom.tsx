@@ -19,6 +19,7 @@ import { FaQrcode } from 'react-icons/fa';
 import A4Page from '../../components/A4Page';
 import ShowroomStaffModal from './ShowroomStaffModal';
 import IconUsersGroup from '../../components/Icon/IconUsersGroup';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 
 
@@ -178,7 +179,7 @@ const Showroom: React.FC = () => {
                         <tr>
                             <td>
                                 <div class="w-14 h-14 rounded-full overflow-hidden">
-                                    <img src="${item.image ? `${backendUrl}/images/${item.image}` : defaultImage}" class="w-full h-full object-cover" alt="Profile" />
+                                    <img src="${item.image ? `${CLOUD_IMAGE}${item.image}` : defaultImage}" class="w-full h-full object-cover" alt="Profile" />
                                 </div>
                             </td>
                             <td>${item.name.charAt(0).toUpperCase() + item.name.slice(1)}</td>
@@ -344,7 +345,7 @@ const Showroom: React.FC = () => {
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
                                             <img
-                                                src={items.image ? `${backendUrl}/images/${items.image}` : defaultImage}
+                                                src={items.image ? `${CLOUD_IMAGE}${items.image}` : defaultImage}
                                                 className="w-full h-full object-cover"
                                                 alt="Profile"
                                             />
@@ -477,7 +478,7 @@ const Showroom: React.FC = () => {
                                                                 height: '100px',
                                                                 borderRadius: '50%',
                                                             }}
-                                                            src={showroom?.image ? `${backendUrl}/images/${showroom.image}` : defaultImage}
+                                                            src={showroom?.image ? `${CLOUD_IMAGE}${showroom.image}` : defaultImage}
                                                             alt="Showroom"
                                                         />
                                                     </div>
