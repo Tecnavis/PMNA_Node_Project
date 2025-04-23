@@ -5,6 +5,7 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 interface Staff {
   _id: string;
@@ -115,7 +116,7 @@ const StaffReport = () => {
                     {staff.image && (
                       <img
                         className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover"
-                        src={`${backendUrl}/images/${staff.image}`}
+                        src={`${CLOUD_IMAGE}${staff.image}`}
                         alt=""
                       />
                     )}

@@ -53,6 +53,15 @@ exports.createShowroom = async (req, res) => {
       district
     })
 
+    const phoneIsExist = await Showroom.findOne({ $or: [{ phone }, { mobile }] });
+
+    if (phoneIsExist) {
+      return res.status(400).json({
+        message: "Phone number already exists in the showroom.",
+        success: false,
+      });
+    }
+
     const showroom = new Showroom({
       name,
       showroomId,
@@ -387,7 +396,7 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
 exports.staffLogin = async (req, res) => {
   try {
     const { phoneNumber, showroom } = req.body;
-    
+
     const showroomId = new mongoose.Types.ObjectId(showroom)
 
     // Check if staff exists

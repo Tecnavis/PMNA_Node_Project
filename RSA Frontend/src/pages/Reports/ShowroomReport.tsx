@@ -5,6 +5,7 @@ import { setPageTitle } from '../../store/themeConfigSlice';
 import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 interface Showroom {
   _id: string;
@@ -120,7 +121,7 @@ const ShowroomReport = () => {
                     {showroom.image && (
                       <img
                         className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover"
-                        src={`${backendUrl}/images/${showroom.image}`}
+                        src={`${CLOUD_IMAGE}${showroom.image}`}
                         alt=""
                       />
                     )}

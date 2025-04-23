@@ -10,6 +10,7 @@ import IconTag from '../../../components/Icon/IconTag';
 import IconCreditCard from '../../../components/Icon/IconCreditCard';
 import IconPhone from '../../../components/Icon/IconPhone';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
+import { CLOUD_IMAGE } from '../../../constants/status';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -266,7 +267,7 @@ const ShowroomCashCollectionsReport = () => {
             </div>
             <div className="mb-5 flex flex-col justify-center items-center">
               <img
-                src={`${backendUrl}/images/${showroom?.image}`}
+                src={`${CLOUD_IMAGE}${showroom?.image}`}
                 alt="Showroom"
                 className="w-24 h-24 rounded-full object-cover mb-5 border-2"
               />
