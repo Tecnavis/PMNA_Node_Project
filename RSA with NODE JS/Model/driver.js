@@ -72,6 +72,9 @@ const driverSchema = new mongoose.Schema({
   },
   currentBookingStatus: {
     type: String,
+  },
+  fcmToken: {
+    type: String
   }
 });
 
