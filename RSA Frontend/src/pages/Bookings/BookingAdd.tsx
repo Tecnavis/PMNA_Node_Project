@@ -480,22 +480,44 @@ const BookingAdd: React.FC = () => {
         // calulating the payable and expence amount (payment work)
 
         if (!selectedCompany) {
-            const kilometerLessed = parseFloat(totalDistance) - (selectedServiceType?.firstKilometer || 0);
-            const lessedAmt = kilometerLessed * (selectedServiceType?.additionalAmount || 0);
-            const PayableAmount = lessedAmt + (selectedServiceType?.firstKilometerAmount || 0);
-            const totalExpence = parseFloat(totalDistance) * (selectedServiceType?.expensePerKm || 0);
-            const afterExpence = PayableAmount - totalExpence;
-            setPayableAmount(PayableAmount);
-            setAfterExpence(afterExpence);
+
+            const baseKm = selectedServiceType?.firstKilometer || 0;
+            const distance = parseFloat(totalDistance);
+
+            const kilometerLessed = distance > baseKm ? distance - baseKm : baseKm;
+            if (distance > baseKm) {
+
+                const lessedAmt = kilometerLessed * (selectedServiceType?.additionalAmount || 0);
+                const PayableAmount = lessedAmt + (selectedServiceType?.firstKilometerAmount || 0);
+                const totalExpence = parseFloat(totalDistance) * (selectedServiceType?.expensePerKm || 0);
+                const afterExpence = PayableAmount - totalExpence;
+                setPayableAmount(PayableAmount);
+                setAfterExpence(afterExpence);
+
+            } else {
+                setPayableAmount(selectedServiceType?.firstKilometerAmount || 0);
+                setAfterExpence(selectedServiceType?.expensePerKm || 0);
+            }
         } else {
             const getServiceType = selectedCompany.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType?._id === selectedServiceType?._id);
-            const kilometerLessed = parseFloat(totalDistance) - (getServiceType?.kmForBasicAmount || 0);
-            const lessedAmt = kilometerLessed * (getServiceType?.overRideCharge || 0);
-            const PayableAmount = lessedAmt + (getServiceType?.basicAmount || 0);
-            const totalExpence = parseFloat(totalDistance) * (selectedServiceType?.expensePerKm || 0);
-            const afterExpence = PayableAmount - totalExpence;
-            setPayableAmount(PayableAmount);
-            setAfterExpence(afterExpence);
+
+            const baseKm = getServiceType?.kmForBasicAmount || 0;
+            const distance = parseFloat(totalDistance);
+
+            const kilometerLessed = distance > baseKm ? distance - baseKm : baseKm;
+            if (distance > baseKm) {
+                const lessedAmt = kilometerLessed * (getServiceType?.overRideCharge || 0);
+                const PayableAmount = lessedAmt + (getServiceType?.basicAmount || 0);
+                const totalExpence = parseFloat(totalDistance) * (selectedServiceType?.expensePerKm || 0);
+                const afterExpence = PayableAmount - totalExpence;
+                setPayableAmount(PayableAmount);
+                setAfterExpence(afterExpence);
+            } else {
+
+                setPayableAmount(getServiceType?.basicAmount || 0);
+                setAfterExpence(selectedServiceType?.expensePerKm || 0);
+            }
+
         }
     };
 
@@ -567,8 +589,6 @@ const BookingAdd: React.FC = () => {
                 setTotalAmount(0); // Set to 0 if no payableAmount is available
             }
         }
-
-
     }, [selectedEntity, insuranceAmount]);
 
     // handling the selected vehicle type
@@ -604,6 +624,7 @@ const BookingAdd: React.FC = () => {
         } else if (adjustmentValue > totalAmount) {
             // If the adjustmentValue is greater than totalAmount, set the adjustmentAmount to adjustmentValue
             setTotalAmount(adjustmentValue);
+            setAdjustmentValue(null)
         } else {
             // If the adjustmentValue is less than totalAmount, ask for confirmation
             setConfirmationVisible(true);
@@ -724,7 +745,7 @@ const BookingAdd: React.FC = () => {
         e.preventDefault();
 
 
-        if (workType === 'RSAWork' && selectedCompany ) {
+        if (workType === 'RSAWork' && selectedCompany) {
             if (selectedCompany.creditLimitAmount < cashInHand) {
                 Swal.fire({
                     icon: 'warning',
@@ -739,12 +760,12 @@ const BookingAdd: React.FC = () => {
                 return; // stop form submission
             }
         }
-    
-       
+
+
         console.log("started submiting")
         if (validate()) {
             console.log("started submiting")
-           
+
             const data = {
                 workType: workType,
                 pickupDate: pickupDate,
@@ -786,9 +807,9 @@ const BookingAdd: React.FC = () => {
                 comments: comments,
                 status: 'Booking Added',
                 bookedBy: `RSA-${role}`,
-                dummyEntity : {
-                    name : selectedEntity?.name,
-                    id : selectedEntity?.id
+                dummyEntity: {
+                    name: selectedEntity?.name,
+                    id: selectedEntity?.id
                 }
             };
 
@@ -901,9 +922,9 @@ const BookingAdd: React.FC = () => {
                     setSelectedEntity({ id: data.provider?._id, payableAmount: data.payableAmountForProvider, name: data.provider?.name });
                 } else {
                     setSelectedEntity({
-                        id : 'dummy',
-                        name : data.dummyDriverName || data.dummyProviderName,
-                        payableAmount : data.totalAmount,
+                        id: 'dummy',
+                        name: data.dummyDriverName || data.dummyProviderName,
+                        payableAmount: data.totalAmount,
                     });
                 }
                 setServiceCategory(data.serviceCategory || '');
@@ -1590,9 +1611,11 @@ const BookingAdd: React.FC = () => {
                                 value={adjustmentValue ?? ''}
                                 onChange={(e) => setAdjustmentValue(e.target.value ? parseFloat(e.target.value) : null)}
                             />
-                            <button type="button" className="btn btn-success" onClick={handleAdjustment}>
-                                Apply
-                            </button>
+                            {
+                                adjustmentValue && <button type="button" className="btn btn-success" onClick={handleAdjustment}>
+                                    Apply
+                                </button>
+                            }
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px' }}>
                             <div>
