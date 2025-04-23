@@ -12,6 +12,7 @@ import styles from './vehicledetails.module.css';
 import AddVehicleCompliance from './addVehicleCompliance';
 import { dateFormate } from '../../utils/dateUtils'
 import IconMenuDocumentation from '../../components/Icon/Menu/IconMenuDocumentation';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -228,10 +229,10 @@ const VehicleCompliance: React.FC = () => {
                                     {record.emiDueDismissedBy && <span><br />Dismissed by: {record.emiDueDismissedBy}</span>}
                                 </td>
                                 <td className={styles.tableCell} data-label="Insurance Paper">
-                                    <Link className='text-blue-600' to={`${backendUrl}/images/${record.insurancePaperUrl}`}>View Tax Paper</Link>
+                                    <Link className='text-blue-600' to={`${CLOUD_IMAGE}${record.insurancePaperUrl}`}>View Tax Paper</Link>
                                 </td>
                                 <td className={styles.tableCell} data-label="Total Runned KM">
-                                    <Link to={`${backendUrl}/images/${record.taxPaperUrl}`} className='text-blue-600'>View Insurance Paper</Link>
+                                    <Link to={`${CLOUD_IMAGE}${record.taxPaperUrl}`} className='text-blue-600'>View Insurance Paper</Link>
                                 </td>
                                 <td className={styles.tableActions} data-label="Actions">
                                     <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '50%', justifyContent: 'center' }}>

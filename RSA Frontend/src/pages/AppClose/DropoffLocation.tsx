@@ -3,6 +3,7 @@ import React, { useState, useEffect, ChangeEvent } from 'react';
 import { FiUploadCloud } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 interface Booking {
     _id?: string;
@@ -99,7 +100,7 @@ const DropoffUploadPage = () => {
                     // Assuming your backend returns dropoffImages as an array of filenames
                     if (data.dropoffImages && data.dropoffImages.length > 0) {
                         // Build the full URL for each image
-                        const imageUrls = data.dropoffImages.map((img) => `${backendUrl}/images/${img}`);
+                        const imageUrls = data.dropoffImages.map((img) => `${CLOUD_IMAGE}${img}`);
                         setPreviews([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
                     }
                 })

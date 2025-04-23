@@ -12,6 +12,7 @@ import IconTrashLines from '../../components/Icon/IconTrashLines';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { ROLES } from '../../constants/roles';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 interface Company {
     _id: string;
@@ -808,7 +809,7 @@ const MultipleTables = () => {
                                     title: 'Name',
                                     render: (driver: Driver) => (
                                         <div className="flex items-center w-max">
-                                            <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${backendUrl}/images/${driver.image}`} alt="" />
+                                            <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${CLOUD_IMAGE}${driver.image}`} alt="" />
                                             <div>{driver.name}</div>
                                         </div>
                                     ),
@@ -867,7 +868,7 @@ const MultipleTables = () => {
                                     title: 'Name',
                                     render: (provider: Provider) => (
                                         <div className="flex items-center w-max">
-                                            <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${backendUrl}/images/${provider.image}`} alt="" />
+                                            <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${CLOUD_IMAGE}${provider.image}`} alt="" />
                                             <div>{provider.name}</div>
                                         </div>
                                     ),
@@ -925,7 +926,7 @@ const MultipleTables = () => {
                                 title: 'Name',
                                 render: (company: Company) => (
                                     <div className="flex items-center w-max">
-                                        <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${backendUrl}/images/${company.image}`} alt="" />
+                                        <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${CLOUD_IMAGE}${company.image}`} alt="" />
                                         <div>{company.name}</div>
                                     </div>
                                 ),
