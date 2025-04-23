@@ -18,6 +18,7 @@ import IconMapPin from '../../components/Icon/IconMapPin';
 import { GrPrevious } from 'react-icons/gr';
 import { GrNext } from 'react-icons/gr';
 import TrackModal from "../Bookings/TrackModal"; // Adjust the path as needed
+import { CLOUD_IMAGE } from '../../constants/status';
 
 interface Company {
     _id: string;
@@ -62,6 +63,7 @@ export interface Booking {
     phoneNumber: any;
     pickupTime: string;
     dropoffTime: string;
+    cancelStatus: string;
     cashPending: boolean;
     _id: string;
     workType: string;
@@ -181,7 +183,7 @@ const Bookings: React.FC = () => {
     const fetchBookings = async (searchTerm = '', page = 1, limit = 10) => {
         try {
             const response = await axios.get(`${backendUrl}/booking`, {
-                params: { search: searchTerm, page, limit , status: 'Order Completed' },
+                params: { search: searchTerm, page, limit, status: 'Order Completed' },
             });
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
@@ -266,6 +268,9 @@ const Bookings: React.FC = () => {
 
                     {/* Rejected Bookings */}
                     <div className="bg-red-500 text-white text-center px-3 py-1 rounded shadow">Rejected Bookings</div>
+
+                    {/* Canceled Bookings */}
+                    <div className="bg-purple-500 text-white text-center px-3 py-1 rounded shadow">Canceled Bookings</div>
                 </div>
 
                 <div className="table-responsive mb-5">
@@ -298,6 +303,9 @@ const Bookings: React.FC = () => {
                                 if (items.status === 'Rejected') {
                                     fileNumberColor = '#ef4444'; // If the status is Rejected, color it red
                                 }
+                                // if (items.cancelStatus) {
+                                //     fileNumberColor = '#a855f7'; // If the status is Rejected, color it red
+                                // }
 
                                 return (
                                     <tr key={index}>
@@ -364,11 +372,15 @@ const Bookings: React.FC = () => {
                                                         </button>
                                                     </Tippy>
                                                 </li>
-                                                <TrackModal
-                                                    open={trackModalOpen}
-                                                    onClose={() => setTrackModalOpen(false)}
-                                                    itemId={selectedItemId} // Pass the selected item ID
-                                                />
+                                                {/* {
+                                                    items.cancelStatus ? 
+                                                    <button>Settle Cancel Bookings</button>
+                                                    : <TrackModal
+                                                            open={trackModalOpen}
+                                                            onClose={() => setTrackModalOpen(false)}
+                                                            itemId={selectedItemId} // Pass the selected item ID
+                                                        />
+                                                } */}
 
                                                 <li>
                                                     <Tippy content="Change Location">
@@ -461,7 +473,7 @@ const Bookings: React.FC = () => {
                                                                 height: '100px',
                                                                 borderRadius: '50%',
                                                             }}
-                                                            src={company?.image ? `${backendUrl}/images/${company?.image}` : defaultImage}
+                                                            src={company?.image ? `${CLOUD_IMAGE}${company?.image}` : defaultImage}
                                                             alt=""
                                                         />
                                                     </div>

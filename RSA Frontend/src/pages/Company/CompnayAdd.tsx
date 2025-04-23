@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import axios, { AxiosError } from 'axios';
 import styles from './companyAdd.module.css';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 interface ServiceType {
     _id: string;
@@ -181,7 +182,7 @@ const ProviderAdd: React.FC = () => {
                 setPersonalPhoneNumber(data.personalPhoneNumber || '');
                 setPassword(data.password || '');
                 setConfirmPassword(data.password || '');
-                setImagePreview(`${backendUrl}/images/${data.image}` || '');
+                setImagePreview(`${CLOUD_IMAGE}${data.image}` || '');
 
                 // Transform serviceDetails and set selectedServiceTypes
                 if (data.vehicle?.length) {

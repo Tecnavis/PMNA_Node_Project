@@ -20,6 +20,7 @@ import { handlePrint } from '../../../utils/PrintInvoice';
 import IconPrinter from '../../../components/Icon/IconPrinter';
 import { Dialog, Transition } from '@headlessui/react';
 import { dateFormate } from '../../../utils/dateUtils';
+import { CLOUD_IMAGE } from '../../../constants/status';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -530,7 +531,7 @@ const ProviderReport = () => {
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src={`${backendUrl}/images/${provider?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
+                                <img src={`${CLOUD_IMAGE}${provider?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
                                 <p className="font-semibold text-primary text-xl">{provider?.name}</p>
                                 <span className="whitespace-nowrap" dir="ltr">
                                     {provider?.idNumber}
