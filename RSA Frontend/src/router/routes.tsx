@@ -3,7 +3,9 @@ import { lazy } from 'react';
 const StatusTable = lazy(() => import('../pages/Screen/StatusTable'));
 const PaymentWorkReport = lazy(() => import('../pages/PaymentManagment/PaymentWorkReport'))
 const DriverSalaryReport = lazy(() => import('../pages/Reports/DriverReport/SalaryReport'))
-const Expence = lazy(() => import('../pages/Reports/DriverReport/expence'))
+const DieselExpences = lazy(()=> import ( '../pages/Expences/DieselExpences'))
+const OtherExpences = lazy(()=> import ( '../pages/Expences/OtherExpences'))
+const Expence = lazy(()=> import ( '../pages/Reports/DriverReport/Expence'))
 
 const AdvancePayment = lazy(() => import('../pages/PaymentManagment/AdvancePayment'))
 const ProviderReport = lazy(() => import('../pages/Reports/ProviderReport/ProviderReport'))
@@ -198,6 +200,14 @@ const routes = [
     {
         path: '/dcpreport',
         element: <DCPReprort />,
+    },
+    {
+        path: '/dieselexpences',
+        element: <DieselExpences />,
+    },
+    {
+        path: '/otherexpences',
+        element: <OtherExpences />,
     },
     {
         path: '/dcpreport/driverreport/salaryreport/:id',
