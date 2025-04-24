@@ -76,6 +76,7 @@ exports.udpateExpense = async (req, res) => {
 exports.approve = async (req, res) => {
     try {
         const { id } = req.params;
+        const { status } = req.body;
 
         if (!id) {
             return res.status(400).json({
@@ -88,13 +89,13 @@ exports.approve = async (req, res) => {
 
         const driver = await Driver.findById(expense.driver)
 
-        if (driver.cashInHand >= expense.amount) {
+        // if (driver.cashInHand >= expense.amount) {
             driver.cashInHand -= expense.amount
             await driver.save()
-        }
+        // }
 
         const updatedExpense = await Expense.findByIdAndUpdate(id, {
-            approve: true
+            approve: status
         }, { new: true });
 
         return res.status(201).json({
@@ -110,12 +111,27 @@ exports.approve = async (req, res) => {
 
 exports.getAllExpense = async (req, res) => {
     try {
-        const updatedExpense = await Expense.find().populate('driver')
+        const expense = await Expense.find().populate('driver')
 
         return res.status(201).json({
             message: "All Expenses are fetched successfully",
             success: true,
-            expenseData: updatedExpense
+            expenseData: expense
+        })
+    } catch (error) {
+        console.error(error.message)
+        return res.status(500).json({ message: 'Error fetching expense', error: error.message });
+    }
+}
+
+exports.getAllPendingExpense = async (req, res) => {
+    try {
+        const pendingExpense = await Expense.find({ approve: { $exists: false } }).populate('driver');
+
+        return res.status(201).json({
+            message: "All Expenses are fetched successfully",
+            success: true,
+            expenseData: pendingExpense
         })
     } catch (error) {
         console.error(error.message)

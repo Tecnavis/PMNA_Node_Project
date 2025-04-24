@@ -15,7 +15,6 @@ const expenseSchema = new mongoose.Schema({
     },
     approve: {
         type: Boolean,
-        default: false,
     },
     driver: {
         type: mongoose.Schema.Types.ObjectId,

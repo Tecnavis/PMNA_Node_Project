@@ -43,6 +43,7 @@
         "jspdf": "^3.0.1",
         "lucide-react": "^0.483.0",
         "mantine-datatable": "^1.7.17",
+        "notistack": "^3.0.2",
         "nouislider-react": "^3.4.1",
         "qrcode.react": "^4.2.0",
         "react": "^18.3.1",

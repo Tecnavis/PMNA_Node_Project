@@ -17,6 +17,12 @@ exports.createBooking = async (req, res) => {
     try {
         const bookingData = req.body;
 
+        const isFileNumberExisint = await Booking.findOne({ fileNumber: bookingData.fileNumber })
+
+        if(isFileNumberExisint){
+            return res.status(400).json({ message: "Enter a unique file Number" , success:false});
+        }
+
         // Handle the case where 'company' is an empty string
         if (!bookingData.company || bookingData.company === "") {
             bookingData.company = null; // Or you can delete the field entirely if required
@@ -69,6 +75,7 @@ exports.createBooking = async (req, res) => {
                     token: source.fcmToken,
                     title: "New Booking Notification",
                     body: 'A new booking has been assigned to you.',
+                    sound : 'alert_notification'
                 })
                 if (notificationResult.error === 'Token not registered') {
                     // Option 2: Or you might want to notify admin about the invalid token
@@ -551,7 +558,7 @@ exports.updateBooking = async (req, res) => {
         }
 
         if (booking.status === "Rejected") {
-            booking.status = 'Booking Added'
+            updatedData.status = 'Booking Added'
         }
 
         // Check if the body contains 'driver' and handle 'provider' if it exists
