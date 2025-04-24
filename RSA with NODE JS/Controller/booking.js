@@ -64,11 +64,11 @@ exports.createBooking = async (req, res) => {
         if (bookingData.provider) {
 
         } else if (bookingData.driver) {
-            await NotificationService.sendNotification({
-                token: source.fcmToken,
-                title: "New Booking Notification",
-                body: 'A new booking has been assigned to you.',
-            })
+            // await NotificationService.sendNotification({
+            //     token: source.fcmToken,
+            //     title: "New Booking Notification",
+            //     body: 'A new booking has been assigned to you.',
+            // })
         }
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
@@ -627,26 +627,6 @@ exports.updateBooking = async (req, res) => {
         res.status(500).json({ message: 'Error updating booking', error: error.message });
     }
 };
-
-// Controller to delete a booking by ID
-
-// exports.deleteBooking = async (req, res) => {
-//     const { id } = req.params;
-
-//     try {
-//         const deletedBooking = await Booking.findByIdAndDelete(id);
-
-//         if (!deletedBooking) {
-//             return res.status(404).json({ message: 'Booking not found' });
-//         }
-
-//         res.status(200).json({ message: 'Booking deleted successfully' });
-//     } catch (error) {
-//         console.error('Error deleting booking:', error);
-//         res.status(500).json({ message: 'Error deleting booking', error: error.message });
-//     }
-// };
-
 
 // Controller for updatatin pickup details from admin side 
 exports.updatePickupByAdmin = async (req, res) => {
