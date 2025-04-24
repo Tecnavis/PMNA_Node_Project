@@ -28,6 +28,7 @@ var cashReceivedDetails = require('./routes/cashReceivedDetails')
 var attendanceRouter = require('./routes/attendance')
 var pmnrRouter = require('./routes/pmnrReport')
 var expenseRouter = require('./routes/expense')
+var dieselExpensesRouter = require('./routes/dieselExpense')
 
 const cors = require('cors')
 const { app, server } = require('./config/socket.js');
@@ -64,7 +65,6 @@ app.use('/showroom', showroomRouter);
 app.use('/reward', rewardRouter);
 app.use('/booking', bookingRouter);
 app.use('/leaves', leavesRouter);
-
 app.use('/feedback', feedbackRouter);
 app.use('/vehicle', vehicleRouter);
 app.use('/point', pointRouter);
@@ -74,6 +74,7 @@ app.use('/cash-received-details', cashReceivedDetails);
 app.use('/attendance', attendanceRouter);
 app.use('/pmnr', pmnrRouter);
 app.use('/expense', expenseRouter);
+app.use('/diesel-expenses', dieselExpensesRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -85,8 +86,6 @@ app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
 
   console.log(err)
   return res.status(err.status || 500).json({
