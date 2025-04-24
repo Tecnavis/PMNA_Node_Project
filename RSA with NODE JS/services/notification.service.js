@@ -4,6 +4,11 @@ class NotificationService {
     static async sendNotification(notificationData) {
         const { token, title, body, sound = 'default' } = notificationData;
 
+        if (!token) {
+            console.warn('No FCM token provided');
+            return { success: false, error: 'No token provided' };
+        }
+
         const message = {
             token,
             notification: { title, body },
@@ -27,9 +32,23 @@ class NotificationService {
 
         try {
             const response = await messaging.send(message);
-            console.log(response)
+            console.log('Successfully sent message:', response);
             return { success: true, messageId: response };
         } catch (error) {
+            console.error('Error sending message:', error);
+
+            // Handle specific error cases
+            if (error.code === 'messaging/registration-token-not-registered') {
+                // Token is no longer valid - you should remove it from your database
+                console.warn('FCM token no longer valid:', token);
+                return {
+                    success: false,
+                    error: 'Token not registered',
+                    code: error.code,
+                    invalidToken: token // Flag this token for cleanup
+                };
+            }
+
             throw error;
         }
     }
