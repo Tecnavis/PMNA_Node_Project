@@ -2,8 +2,6 @@ import { useState, useEffect, Fragment } from 'react';
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import Swal from 'sweetalert2';
 import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import Dropdown from '../../components/Dropdown';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../../store';
@@ -1114,19 +1112,6 @@ const Todolist = () => {
                                                 </div>
                                                 <div className="mb-5">
                                                     <label>Description</label>
-                                                    <ReactQuill
-                                                        theme="snow"
-                                                        value={params.description}
-                                                        defaultValue={params.description}
-                                                        onChange={(content, delta, source, editor) => {
-                                                            params.description = content;
-                                                            params.descriptionText = editor.getText();
-                                                            setParams({
-                                                                ...params,
-                                                            });
-                                                        }}
-                                                        style={{ minHeight: '200px' }}
-                                                    />
                                                 </div>
                                                 <div className="ltr:text-right rtl:text-left flex justify-end items-center mt-8">
                                                     <button type="button" className="btn btn-outline-danger" onClick={() => setAddTaskModal(false)}>

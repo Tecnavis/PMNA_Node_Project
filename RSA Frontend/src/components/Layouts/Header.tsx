@@ -635,9 +635,6 @@ const Header = () => {
                                 <NavLink to="/forms/file-upload">{t('file_upload')}</NavLink>
                             </li>
                             <li>
-                                <NavLink to="/forms/quill-editor">{t('quill_editor')}</NavLink>
-                            </li>
-                            <li>
                                 <NavLink to="/forms/markdown-editor">{t('markdown_editor')}</NavLink>
                             </li>
                             <li>
