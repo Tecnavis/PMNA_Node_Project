@@ -64,11 +64,17 @@ exports.createBooking = async (req, res) => {
         if (bookingData.provider) {
 
         } else if (bookingData.driver) {
-            // await NotificationService.sendNotification({
-            //     token: source.fcmToken,
-            //     title: "New Booking Notification",
-            //     body: 'A new booking has been assigned to you.',
-            // })
+            if (source.fcmToken) {
+                const notificationResult = await NotificationService.sendNotification({
+                    token: source.fcmToken,
+                    title: "New Booking Notification",
+                    body: 'A new booking has been assigned to you.',
+                })
+                if (notificationResult.error === 'Token not registered') {
+                    // Option 2: Or you might want to notify admin about the invalid token
+                    console.warn(`Driver ${bookingData.driver} has invalid FCM token`);
+                }
+            }
         }
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
@@ -99,7 +105,7 @@ exports.createBooking = async (req, res) => {
                 errors: error.errors,
             });
         }
-
+        console.log(error)
         res.status(500).json({
             success: false,
             message: "An internal server error occurred",
@@ -1317,7 +1323,7 @@ exports.updateBookingApproved = async (req, res) => {
 
 //Controller for distribute received amount
 exports.distributeReceivedAmount = async (req, res) => {
-    const { receivedAmount, driverId, bookingIds,workType } = req.body
+    const { receivedAmount, driverId, bookingIds, workType } = req.body
     try {
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
