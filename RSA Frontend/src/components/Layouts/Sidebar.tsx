@@ -316,8 +316,8 @@ const Sidebar = () => {
                                     </AnimateHeight>
                                 </li>
                             )}
-                             {/* Expence */}
-                             {![ROLES.CALL_EXECUTIVE].includes(role) && (
+                            {/* Expence */}
+                            {![ROLES.CALL_EXECUTIVE].includes(role) && (
                                 <li className="menu nav-item">
                                     <button type="button" className={`${currentMenu === 'expences' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('expences')}>
                                         <div className="flex items-center">
@@ -335,7 +335,7 @@ const Sidebar = () => {
                                             <li>
                                                 <NavLink to="/otherexpences">{t('Other Expences')}</NavLink>
                                             </li>
-                                         
+                                            
                                             <li>
                                                 <NavLink to="/dieselexpences">{t('Diesel Expence')}</NavLink>
                                             </li>

@@ -8,8 +8,7 @@ exports.createExpense = async (req, res) => {
         if (!expenseId || !driver || !description || !amount) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
-        console.log(expenseId, driver, description, amount)
-        console.log(req.files)
+
         if (!req.files && req.files < 2 || req.files > 3) {
             return res.status(400).json({ message: 'Upload 2 to 3 images only' });
         }
@@ -61,16 +60,17 @@ exports.updateExpense = async (req, res) => {
 exports.toggleApproval = async (req, res) => {
     try {
         const { id } = req.params;
+        const { status } = req.body;
 
         const expense = await DieselExpense.findById(id);
         if (!expense) {
             return res.status(404).json({ message: 'Expense not found' });
         }
 
-        expense.status = true;
+        expense.status = status || expense.status;
         await expense.save();
 
-        return res.status(200).json({ message: `Expense ${status ? 'approved' : 'disapproved'}`, data: expense });
+        return res.status(200).json({ message: `Expense ${expense.status ? 'approved' : 'disapproved'}`, data: expense });
     } catch (error) {
         return res.status(500).json({ message: 'Server Error', error: error.message });
     }

@@ -33,8 +33,9 @@ const dieselExpenseSchema = new mongoose.Schema({
         required: true
     },
     status: {
-        type: Boolean,
-        default: false
+        type: String,
+        enum: ['Pending', 'Approved', 'Rejected'],
+        default: 'Pending'
     }
 }, {
     timestamps: true
