@@ -6,12 +6,13 @@ const upload = require('../config/multer');
 
 
 router.get('/', jwt, expenseController.getAllExpense);
+router.get('/pending', jwt, expenseController.getAllPendingExpense);
 
 router.patch('/:id', jwt, upload.single('image'), expenseController.udpateExpense)
 
 router.post('/:id', jwt, upload.single('image'), expenseController.createExpense)
 
-router.patch('/approve-expense/:id', jwt, expenseController.approve);
+router.patch('/update-expense/:id', jwt, expenseController.approve);
 
 router.get('/get-expense/:id', jwt, expenseController.getExpenseById)
 
