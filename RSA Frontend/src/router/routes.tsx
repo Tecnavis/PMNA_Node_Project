@@ -113,7 +113,6 @@ const CheckBoxRadio = lazy(() => import('../pages/Forms/CheckboxRadio'));
 const Switches = lazy(() => import('../pages/Forms/Switches'));
 const Wizards = lazy(() => import('../pages/Forms/Wizards'));
 const FileUploadPreview = lazy(() => import('../pages/Forms/FileUploadPreview'));
-const QuillEditor = lazy(() => import('../pages/Forms/QuillEditor'));
 const MarkDownEditor = lazy(() => import('../pages/Forms/MarkDownEditor'));
 const DateRangePicker = lazy(() => import('../pages/Forms/DateRangePicker'));
 const Clipboard = lazy(() => import('../pages/Forms/Clipboard'));
@@ -786,10 +785,6 @@ const routes = [
     {
         path: '/forms/file-upload',
         element: <FileUploadPreview />,
-    },
-    {
-        path: '/forms/quill-editor',
-        element: <QuillEditor />,
     },
     {
         path: '/forms/markdown-editor',

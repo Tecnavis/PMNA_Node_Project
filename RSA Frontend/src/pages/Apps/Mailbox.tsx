@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { Disclosure } from '@headlessui/react';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import Dropdown from '../../components/Dropdown';
 import Swal from 'sweetalert2';
 import PerfectScrollbar from 'react-perfect-scrollbar';
@@ -2011,21 +2009,6 @@ const Mailbox = () => {
                                     <input id="title" type="text" className="form-input" placeholder="Enter Subject" defaultValue={params.title} onChange={(e) => changeValue(e)} />
                                 </div>
 
-                                <div className="h-fit">
-                                    <ReactQuill
-                                        theme="snow"
-                                        value={params.description || ''}
-                                        defaultValue={params.description || ''}
-                                        onChange={(content, delta, source, editor) => {
-                                            params.description = content;
-                                            params.displayDescription = editor.getText();
-                                            setParams({
-                                                ...params,
-                                            });
-                                        }}
-                                        style={{ minHeight: '200px' }}
-                                    />
-                                </div>
 
                                 <div>
                                     <input
