@@ -75,6 +75,18 @@ const driverSchema = new mongoose.Schema({
   },
   fcmToken: {
     type: String
+  },
+  balanceAmount: {
+    type: Number,
+    default: 0
+  },
+  dieselExpense: {
+    type: Number,
+    default: 0
+  },
+  expense: {
+    type: Number,
+    default: 0
   }
 });
 
