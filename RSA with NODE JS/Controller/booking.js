@@ -1,9 +1,9 @@
 const Booking = require('../Model/booking');
-const Driver = require('../Model/driver'); // Import your Driver model
-const Provider = require('../Model/provider'); // Import your Provider model
-const Company = require('../Model/company'); // Import your Provider model
-const Showroom = require('../Model/showroom'); // Import your Provider model
-const ShowroomStaff = require('../Model/showroomStaff'); // Import your Provider model
+const Driver = require('../Model/driver');
+const Provider = require('../Model/provider');
+const Company = require('../Model/company');
+const Showroom = require('../Model/showroom');
+const ShowroomStaff = require('../Model/showroomStaff');
 const mongoose = require('mongoose');
 const Vehicle = require('../Model/vehicle');
 const { io } = require('../config/socket');
@@ -19,8 +19,8 @@ exports.createBooking = async (req, res) => {
 
         const isFileNumberExisint = await Booking.findOne({ fileNumber: bookingData.fileNumber })
 
-        if(isFileNumberExisint){
-            return res.status(400).json({ message: "Enter a unique file Number" , success:false});
+        if (isFileNumberExisint) {
+            return res.status(400).json({ message: "Enter a unique file Number", success: false });
         }
 
         // Handle the case where 'company' is an empty string
@@ -75,7 +75,7 @@ exports.createBooking = async (req, res) => {
                     token: source.fcmToken,
                     title: "New Booking Notification",
                     body: 'A new booking has been assigned to you.',
-                    sound : 'alert_notification'
+                    sound: 'alert_notification'
                 })
                 if (notificationResult.error === 'Token not registered') {
                     // Option 2: Or you might want to notify admin about the invalid token
@@ -703,7 +703,7 @@ exports.uploadImage = async (req, res) => {
     const filename = req.file.filename;
     res.status(200).json({ filename });
 };
-// -------------------------------------------------------
+
 // remove the pickup image 
 exports.removePickupImages = async (req, res) => {
     const { id, index } = req.params;
@@ -833,7 +833,6 @@ exports.removeDropoffImages = async (req, res) => {
 // add dropoff images
 exports.addDropoffImages = async (req, res) => {
 
-
     const { id } = req.params;
 
     try {
@@ -880,8 +879,8 @@ exports.addDropoffImages = async (req, res) => {
 
 //Editing filenumber 
 exports.updateFilenumber = async (req, res) => {
-    const { fileNumber } = req.body; // Destructure fileNumber from the request body
-    const { id } = req.params; // Extract id from the request parameters
+    const { fileNumber } = req.body;
+    const { id } = req.params;
 
     try {
         // Find the booking by ID and update the fileNumber
@@ -904,7 +903,6 @@ exports.updateFilenumber = async (req, res) => {
 exports.verifyBooking = async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(id, 'this is id');
 
         // Fetch the booking details
         const booking = await Booking.findById(id);
@@ -1639,3 +1637,60 @@ exports.getBookingsForShowroomStaff = async (req, res) => {
         });
     }
 };
+
+// Controller for cancel booking
+exports.cancelBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const cancelData = req.body;
+
+        if (!cancelData.cancelReason || !cancelData.cancelKm) {
+            return res.status(400).json({
+                message: 'All fields are required.',
+                success: false
+            });
+        }
+
+        if (!req.file && !req.file.filename) {
+            return res.status(400).json({
+                message: 'Please upload image',
+                success: false
+            });
+        }
+
+        const image = req.file.filename
+
+        const booking = await Booking.findById(id);
+
+        if (!booking) {
+            return res.status(404).json({
+                message: 'Booking not found',
+                success: false
+            });
+        }
+
+        if (booking.cancelStatus) {
+            return res.status(409).json({
+                message: 'This booking is already canceled',
+                success: false 
+            });
+        }
+
+        booking.cancelImage = image;
+        booking.cancelStatus = true;
+        booking.cancelReason = cancelData.cancelReason;
+        booking.cancelKm = cancelData.cancelKm;
+
+        await booking.save();
+
+        return res.status(200).json({
+            message: "Booking Canceled.",
+            success: true,
+            booking
+        });
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({ message: "Internal server error" })
+    }
+}
