@@ -11,6 +11,7 @@ import Swal from 'sweetalert2'
 import IconStar from '../../components/Icon/IconStar'
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPencil from '../../components/Icon/IconPencil';
+import { CLOUD_IMAGE } from '../../constants/status'
 
 
 export const REWAR_CATEGORYS = {
@@ -265,7 +266,7 @@ function RewardsItem() {
                   <div className="max-w-[22rem] w-full bg-white shadow-[4px_6px_10px_-3px_#bfc9d4] rounded border border-white-light dark:border-[#1b2e4b] dark:bg-[#191e3a] dark:shadow-none">
                     <div className="py-7 px-6">
                       <div className="-mt-7 mb-7 -mx-6 rounded-tl rounded-tr h-[260px] overflow-hidden">
-                        <img src={`${BASE_URL}/images/${reward.image}`} alt="profile" className="w-full h-full object-cover" />
+                        <img src={`${CLOUD_IMAGE}${reward.image}`} alt="profile" className="w-full h-full object-cover" />
                       </div>
                       <h5 className="text-[#3b3f5c] text-[15px] font-bold mb-4 dark:text-white-light">
                         {reward?.name || ""}
