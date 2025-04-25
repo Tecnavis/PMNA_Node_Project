@@ -35,8 +35,6 @@ router.get('/showroom-staff/bookings', jwt, controller.getBookingsForShowroomSta
 // Rotute for upload image
 router.post('/upload', jwt, upload.single('image'), controller.uploadImage);
 
-
-
 // Route for settle driver balalance salary
 router.patch('/settle-driver-balance-salary', jwt, controller.updateBalanceSalary);
 
@@ -49,8 +47,8 @@ router.get('/:id', controller.getBookingById);
 // Route to update booking
 router.put('/:id', jwt, upload.array('images', 6), controller.updateBooking);
 
-// Route to delete booking
-// router.delete('/:id',jwt,controller.deleteBooking);
+// Route to cancel booking
+router.patch('/cancel/:id', jwt, upload.single('image'), controller.cancelBooking);
 
 //Route to update the pickup and dropoff details
 router.put('/pickupbyadmin/:id', jwt, controller.updatePickupByAdmin);
