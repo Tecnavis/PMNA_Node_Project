@@ -34,6 +34,11 @@ const Index = () => {
         dispatch(setPageTitle('Sales Admin'));
     });
 
+    useEffect(() => {
+        const storedRole = localStorage.getItem('role');
+        setRole(storedRole || '')
+    }, [])
+
     // checking for token 
     useEffect(() => {
         const token = localStorage.getItem('token');
