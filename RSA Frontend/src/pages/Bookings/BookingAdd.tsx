@@ -448,7 +448,7 @@ const BookingAdd: React.FC = () => {
         setSelectedEntity(null);
         if (selectedService) {
             setSelectedServiceType(selectedService);
-            fetchAndFilterDrivers(serviceTypeId);
+            // fetchAndFilterDrivers(serviceTypeId);
             fetchAndFilterProviders(serviceTypeId);
         }
     };
@@ -1191,7 +1191,7 @@ const BookingAdd: React.FC = () => {
         fetchBaselocation();
         fetchShowroom();
         fetchServiceTypes();
-
+        
         if (selectedServiceType) {
             fetchAndFilterDrivers(selectedServiceType);
             fetchAndFilterProviders(selectedServiceType);
