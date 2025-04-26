@@ -21,6 +21,7 @@ import TrackModal from "../Bookings/TrackModal"; // Adjust the path as needed
 import { CLOUD_IMAGE } from '../../constants/status';
 import { TbCalendarCancel } from "react-icons/tb";
 import ReusableModal from '../../components/modal';
+import { APIForCancelApiResponse, updateCancelData } from '../../services/bookingService';
 
 
 interface Company {
@@ -55,7 +56,8 @@ export interface Booking {
     receivedUser: string,// new prop
     cancelReason: string,// new prop
     cancelImage: string,// new prop
-    cancelKm: string,// new prop
+    company: Company | string
+    cancelKm: number,// new prop
     vehicleNumber: string,// new prop
     dummyDriverName: string,// new prop
     dummyProviderName: string,// new prop
@@ -227,16 +229,17 @@ const Bookings: React.FC = () => {
     };
 
     // handle cancel and settle booking
-    const handleCancel = (booking: Booking) => {
-        setSelectedItemId(booking._id);
+    const handleCancel = (booking?: Booking) => {
+        setSelectedBooking(booking)
+        setSelectedItemId(booking?._id || '');
         setCancelFormData({
-            enterdKm: +booking.cancelKm || 0,
-            kmImage: booking.cancelImage,
-            totalDriverDistance: booking.totalDriverDistence || 0,
-            totalDriverSalary: booking.driverSalary || 0,
-            Totalkm: booking.totalDistence || 0,
-            amountForCustomer: booking.totalAmount || 0,
-            cancelReason: booking.cancelReason || ''
+            enterdKm: booking?.cancelKm || 0,
+            kmImage: booking?.cancelImage || '',
+            totalDriverDistance: booking?.totalDriverDistence || 0,
+            totalDriverSalary: booking?.driverSalary || 0,
+            Totalkm: booking?.totalDistence || 0,
+            amountForCustomer: booking?.totalAmount || 0,
+            cancelReason: booking?.cancelReason || ''
         })
         setCancelModalOpen(true)
     }
@@ -247,71 +250,127 @@ const Bookings: React.FC = () => {
         fetchBookings();
     }, []);
 
-    const calculateTotalDriverSalary = (
-        totalDriverDistance: number,
-        basicSalaryKM: string,
-        salaryPerKM: string,
-        salary: string
-    ): number => {
-        const salaryNumber = parseFloat(salary);
-        let totalSalary;
-
-        if (totalDriverDistance > parseFloat(basicSalaryKM)) {
-            totalSalary = salaryNumber + (totalDriverDistance - parseFloat(basicSalaryKM)) * parseFloat(salaryPerKM);
-        } else {
-            totalSalary = salaryNumber; // Base salary if distance is within the basic range
-        }
-
-        // setTotalDriverSalary(totalSalary); // Update the state
-        return totalSalary; // Return the calculated value
-    };
-
     const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setCancelFormData({ ...cancelFormData, [name]: value });
 
         // When totalDriverDistance changes, recalculate the salary
-        // if (name === 'totalDriverDistance') {
-        //     const totalDistance = parseFloat(value);
+        if (name === 'Totalkm') {
+            const totalDistance = parseFloat(value);
 
-        //     if (selectedBooking) {
-        //         const driverData = selectedBooking.driver;
-        //         const serviceType = selectedBooking.serviceType;
+            if (selectedBooking) {
+                const serviceType = selectedBooking.serviceType;
+                // Ensure serviceType is defined before proceeding
+                if (!serviceType) {
+                    console.error("Service type is undefined");
+                    return;
+                }
 
-        //         // Ensure serviceType is defined before proceeding
-        //         if (!serviceType) {
-        //             console.error("Service type is undefined");
-        //             return;
-        //         }
+                if (serviceType) {
+                    // 
+                    let payableAmount
+                    if (!selectedBooking.company) {
 
-        //         if (driverData) {
-        //             const { basicSalaryKm, salaryPerKm, basicSalaries } = driverData;
+                        const baseKm = serviceType?.firstKilometer || 0;
+                        const distance = totalDistance
 
-        //             if (basicSalaryKm && salaryPerKm && basicSalaries) {
-        //                 const basicSalaryKM = basicSalaryKm[serviceType];
-        //                 const salaryPerKM = salaryPerKm[serviceType];
-        //                 const salary = basicSalaries[serviceType];
+                        const kilometerLessed = distance > baseKm ? distance - baseKm : baseKm;
+                        if (distance > baseKm) {
+                            const lessedAmt = kilometerLessed * (serviceType?.additionalAmount || 0);
+                            payableAmount = lessedAmt + (serviceType?.firstKilometerAmount || 0);
+                        } else {
+                            payableAmount = serviceType?.firstKilometerAmount || 0
+                        }
+                    } else {
+                        let getServiceType
 
-        //                 // Ensure all values are valid before calculating
-        //                 if (basicSalaryKM && salaryPerKM && salary) {
-        //                     const calculatedSalary = calculateTotalDriverSalary(
-        //                         totalDistance,
-        //                         basicSalaryKM,
-        //                         salaryPerKM,
-        //                         salary
-        //                     );
+                        if (typeof selectedBooking.company !== 'string') {
+                            getServiceType = selectedBooking.company.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType?._id === serviceType?._id);
+                        }
 
-        //                     setCancelFormData({
-        //                         ...cancelFormData,
-        //                         totalDriverSalary: calculatedSalary.toFixed(2),
-        //                     });
-        //                 } else {
-        //                     console.error("Missing salary data for service type");
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+                        const baseKm = getServiceType?.kmForBasicAmount || 0;
+                        const distance = totalDistance
+
+                        const kilometerLessed = distance > baseKm ? distance - baseKm : baseKm;
+                        if (distance > baseKm) {
+                            const lessedAmt = kilometerLessed * (getServiceType?.overRideCharge || 0);
+                            payableAmount = lessedAmt + (getServiceType?.basicAmount || 0);
+                        } else {
+
+                            payableAmount = getServiceType?.basicAmount || 0
+                        }
+                    }
+                    setCancelFormData((pre) => ({
+                        ...pre,
+                        amountForCustomer: payableAmount ? payableAmount : pre.amountForCustomer,
+                    }));
+                }
+            }
+        } else if (name === 'totalDriverDistance') {
+            const totalDistance = parseFloat(value);
+
+            const serviceType = selectedBooking!.driver!.vehicle.find(
+                (vehi) => vehi.serviceType === selectedBooking?.serviceType._id
+            );
+
+            console.log(serviceType)
+            if (!serviceType) {
+                console.error('No matching service type found');
+                return;
+            }
+
+            const { basicAmount, kmForBasicAmount, overRideCharge } = serviceType;
+
+            const extraDistance = Math.max(0, totalDistance - kmForBasicAmount);
+            const additionalCharge = extraDistance * overRideCharge;
+            const calculatedSalary = basicAmount + additionalCharge;
+
+            setCancelFormData((pre) => ({
+                ...pre,
+                totalDriverSalary: calculatedSalary ? calculatedSalary : pre.totalDriverSalary,
+            }));
+        }
+    };
+
+    const handleUpdateCancelData = async (bookingId: string, cancelData: any): Promise<APIForCancelApiResponse> => {
+        return await updateCancelData(bookingId, cancelData) as APIForCancelApiResponse
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        const confirm = await Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you really want to update this booking?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, update it!',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (confirm.isConfirmed) {
+            const cancelData = {
+                cancelReason: cancelFormData?.cancelReason,
+                totalDriverDistence: cancelFormData.totalDriverDistance,
+                totalDistence: cancelFormData.Totalkm,
+                driverSalary: cancelFormData.totalDriverSalary,
+                totalAmount: cancelFormData.amountForCustomer,
+            };
+
+            const result: APIForCancelApiResponse = await handleUpdateCancelData(selectedBooking?._id || '', cancelData);
+
+            if (result.success) {
+                Swal.fire('Updated!', result.message, 'success');
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
+            setSelectedBooking(undefined)
+            setSelectedItemId(undefined)
+            setCancelModalOpen(false)
+            fetchBookings();
+        }
     };
 
     return (
@@ -465,6 +524,17 @@ const Bookings: React.FC = () => {
                                                         </button>
                                                     </Tippy>
                                                 </li>
+                                                {
+                                                    items.cancelStatus
+                                                    &&
+                                                    <li>
+                                                        <Tippy content="Booking canceled">
+                                                            <button type="button" onClick={() => handleCancel(items)}>
+                                                                <TbCalendarCancel size={24} className="text-danger" />
+                                                            </button>
+                                                        </Tippy>
+                                                    </li>
+                                                }
                                             </ul>
                                         </td>
                                     </tr>
@@ -729,7 +799,103 @@ const Bookings: React.FC = () => {
                     </div>
                 </Dialog>
             </Transition>
+            <ReusableModal
+                isOpen={cancelModalOpen}
+                onClose={() => setCancelModalOpen(false)}
+                title='Canceled Booking'>
+                <form className="space-y-5" onSubmit={handleSubmit}>
+                    <div>
+                        <label htmlFor="ctnEmail">Driver Enterd KM</label>
+                        <input
+                            id="ctnEmail"
+                            type="number"
+                            placeholder="12"
+                            className="form-input"
+                            readOnly
+                            name="km"
+                            value={cancelFormData.enterdKm}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="ctnEmail">Cancel image</label>
+                        <div className="w-full max-h-50 border rounded overflow-hidden">
+                            <img
+                                src={`${CLOUD_IMAGE}${cancelFormData.kmImage}`}
+                                alt="cancel-image"
+                                className="w-auto h-auto object-cover"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="ctnEmail">Total Distance Traveled By the Driver</label>
+                        <input
+                            id="ctnEmail"
+                            type="number"
+                            placeholder="Enter driver kilometers"
+                            className="form-input"
+                            name="totalDriverDistance"
+                            value={cancelFormData.totalDriverDistance}
+                            onChange={handleInputChange}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="ctnEmail">Driver Amount</label>
+                        <input
+                            id="ctnEmail"
+                            type="number"
+                            placeholder="Enter driver amount"
+                            className="form-input"
+                            name="totalDriverS"
+                            value={cancelFormData.totalDriverSalary}
+                            onChange={handleInputChange}
+                        />
 
+                    </div>
+                    <div>
+                        <label htmlFor="ctnEmail">Total Km (Base to Pickup - pickup to dropoff - dropoff to base)</label>
+                        <input
+                            id="ctnEmail"
+                            type="number"
+                            placeholder="Enter company kilometers"
+                            className="form-input"
+                            name="Totalkm"
+                            value={cancelFormData.Totalkm}
+                            onChange={handleInputChange}
+                        />
+
+                    </div>
+                    <div>
+                        <label htmlFor="ctnTextarea">Payable Amount By Customer</label>
+                        <input
+                            id="ctnTextarea"
+                            type='number'
+                            className="form-textarea"
+                            placeholder="Payable amount by customer"
+                            required name='amountForCustom'
+                            value={cancelFormData.amountForCustomer}
+                            onChange={handleInputChange}
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="ctnTextarea">Remark (Cancel Reason)</label>
+                        <input
+                            id="ctnEmail"
+                            type="text"
+                            placeholder="Enter reason for cancellation"
+                            className="form-input"
+                            name="cancelReason"
+                            value={cancelFormData.cancelReason}
+                            onChange={handleInputChange}
+                        />
+                    </div>
+                    <button type="submit" className="btn btn-primary !mt-6">
+                        Submit
+                    </button>
+                </form>
+            </ReusableModal>
+            <TrackModal
+                open={trackModalOpen} onClose={()=>handleTrack(selectedItemId || '')} itemId={selectedItemId}
+            />
         </div>
     );
 };
