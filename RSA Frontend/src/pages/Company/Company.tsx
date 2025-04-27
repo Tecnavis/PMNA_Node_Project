@@ -393,9 +393,9 @@ const company: React.FC = () => {
                                             Discard
                                         </button>
 
-                                        <button type="button" className="btn btn-primary ltr:ml-4 rtl:mr-4">
+                                        {/* <button type="button" className="btn btn-primary ltr:ml-4 rtl:mr-4">
                                             More info
-                                        </button>
+                                        </button> */}
                                     </div>
                                 </Dialog.Panel>
                             </TransitionChild>
