@@ -463,7 +463,6 @@ const ProviderAdd: React.FC = () => {
                                                 <th className="p-2 text-sm">Km for Basic Amount (KM)</th>
                                                 <th className="p-2 text-sm">Basic Amount</th>
                                                 <th className="p-2 text-sm">Override Charge</th>
-                                                <th className="p-2 text-sm">Vehicle Number</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -497,14 +496,14 @@ const ProviderAdd: React.FC = () => {
                                                         />
                                                         {service.overRideCharge === '' && <div className="text-red-500 text-xs mt-1">Please enter the charge</div>}
                                                     </td>
-                                                    <td className="p-2 text-sm">
+                                                    {/* <td className="p-2 text-sm">
                                                         <input
                                                             type="text"
                                                             className={`${styles.formInput} form-input w-full`}
                                                             value={service.vehicleNumber}
                                                             onChange={(e) => handleTableInputChange(service.id, 'vehicleNumber', e.target.value)}
                                                         />
-                                                    </td>
+                                                    </td> */}
                                                 </tr>
                                             ))}
                                         </tbody>
