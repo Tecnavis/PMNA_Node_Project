@@ -227,7 +227,7 @@ const Bookings: React.FC = () => {
         setSelectedItemId(itemId);  // Store itemId in state
         setTrackModalOpen(true);
     };
-
+ 
     // handle cancel and settle booking
     const handleCancel = (booking?: Booking) => {
         setSelectedBooking(booking)
@@ -517,6 +517,11 @@ const Bookings: React.FC = () => {
                                                         </button>
                                                     </Tippy>
                                                 </li>
+                                                <TrackModal
+                                                    open={trackModalOpen}
+                                                    onClose={() => setTrackModalOpen(false)}
+                                                    itemId={selectedItemId} // Pass the selected item ID
+                                                />
                                                 <li>
                                                     <Tippy content="Change Location">
                                                         <button type="button">
@@ -893,9 +898,9 @@ const Bookings: React.FC = () => {
                     </button>
                 </form>
             </ReusableModal>
-            <TrackModal
+            {/* <TrackModal
                 open={trackModalOpen} onClose={()=>handleTrack(selectedItemId || '')} itemId={selectedItemId}
-            />
+            /> */}
         </div>
     );
 };

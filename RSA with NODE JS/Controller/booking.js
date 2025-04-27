@@ -909,7 +909,13 @@ exports.verifyBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-
+  // 🔥 ADD this check here
+  if (booking.cashPending) {
+    return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
+}
+if (booking.pickupImagePending || booking.dropoffImagePending) {
+    return res.status(400).json({ message: 'Image is pending.' });
+}
         // Adjust cash in hand and salary similar to updatePickupByAdmin
         if (booking.workType === "RSAWork") {
             const selectedCompany = booking.company;
