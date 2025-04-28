@@ -46,6 +46,7 @@ const bookingSchema = new mongoose.Schema({
     bookedBy: { type: String },
     pickupDate: { type: Date },
     pickupTime: { type: Date },
+    pickupDistance: { type: String },
     dropoffTime: { type: Date },
     vehicleNumber: { type: String },
     driverSalaryCheck: { type: Boolean },
@@ -79,6 +80,7 @@ const bookingSchema = new mongoose.Schema({
     cancelReason: { type: String }, // New props
     cancelKm: { type: Number }, // New props
     invoiceNumber: { type: String }, // New props
+    pickupDistence: { type: String }, // New props
     invoiceStatus: { type: Boolean }, // New props
     cancelImage: {
         type: String, // Path to the uploaded image
