@@ -25,13 +25,22 @@ const ShowroomModal: React.FC<ShowroomModalProps> = ({ isOpen, onClose }) => {
         const showroomId = uuidv4();
         // Construct the data object
         if (validate()) {
-        const data = {
-            name,
-            description,
-            latitudeAndLongitude,
-            location,
-            showroomId:showroomId
-        };
+            const data = {
+                name,
+                description,
+                latitudeAndLongitude,
+                location,
+                showroomId: showroomId,
+                username: '',
+                password: '',
+                helpline: '',
+                phone: '',
+                mobile: '',
+                state: '',
+                district: '',
+                services: {},  // or send as needed
+            };
+            
 
         try {
             // Make the POST request
