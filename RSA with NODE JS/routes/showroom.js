@@ -11,6 +11,7 @@ router.get('/', controller.getShowrooms);
 router.post('/login', controller.loginShowroom);
 router.get('/showroom-staff', jwt, controller.getAllShowroomStaff)
 router.get('/showroom-staff/:id', controller.getShowroomStaffs)
+router.get('/get-showroom-staff/:id', controller.getShowroomStaffById)
 router.get('/report',jwt, controller.showroomDashBoardReport);
 router.get('/showroom-staff-profile',jwt, controller.getStaffProfile);
 
