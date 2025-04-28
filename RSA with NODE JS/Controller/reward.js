@@ -113,8 +113,7 @@ exports.deleteReward = async (req, res) => {
 };
 
 exports.redeemForShowroomStaff = async (req, res) => {
-  const { id, userType, staffId } = req.query;
-
+  const { id, userType, staffId } = req.query;  
   try {
     const redemption = await redeemForShowroomStaff(id, staffId, userType);
 
