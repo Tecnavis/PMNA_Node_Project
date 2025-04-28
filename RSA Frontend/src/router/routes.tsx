@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import RewardDetails from '../pages/Rewards/RewardDetails';
 
 const StatusTable = lazy(() => import('../pages/Screen/StatusTable'));
 const PaymentWorkReport = lazy(() => import('../pages/PaymentManagment/PaymentWorkReport'))
@@ -352,6 +353,10 @@ const routes = [
     {
         path: '/reward',
         element: <Rewards />,
+    },
+    {
+        path: '/reward-details',
+        element: <RewardDetails />,
     },
     {
         path: '/Status',
