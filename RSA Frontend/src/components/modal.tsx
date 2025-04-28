@@ -57,7 +57,7 @@ const ReusableModal: React.FC<ReusableModalProps> = ({
                                 </button>
                             </div>
 
-                            <div className="p-5 overflow-y-auto max-h-[70vh]">{children}</div>
+                            <div className="p-5 overflow-y-auto max-h-[83vh]">{children}</div>
 
                             {buttons.length > 0 && (
                                 <div className="flex justify-end items-center gap-3 px-5 py-4 border-t dark:border-white/10">
