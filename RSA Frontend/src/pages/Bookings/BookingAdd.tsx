@@ -479,7 +479,7 @@ const BookingAdd: React.FC = () => {
 
             // Sort based on distance (lowest first)
             const sortedDrivers = driversWithDistance.sort((a: any, b: any) => {
-                const distanceA = parseFloat(a.distance); 
+                const distanceA = parseFloat(a.distance);
                 const distanceB = parseFloat(b.distance);
                 if (isNaN(distanceA)) return 1; // if distance not available, send to bottom
                 if (isNaN(distanceB)) return -1;
@@ -608,7 +608,7 @@ const BookingAdd: React.FC = () => {
             setInsuranceAmount(selectedShowroom.insurenceAmount?.toString() || '');
         } else {
             // Reset insuranceAmount if the selected accident option is not 'insurance'
-            setInsuranceAmount('');
+            // setInsuranceAmount('');
         }
     };
 
@@ -828,7 +828,7 @@ const BookingAdd: React.FC = () => {
                 accidentOption: accidentOption,
                 insuranceAmount: insuranceAmount,
                 adjustmentValue: adjustmentValue?.toString() ?? '',
-                amountWithoutInsurence: selectedEntity?.payableAmount?.toString() ?? '',
+                amountWithoutInsurance: selectedEntity?.payableAmount?.toString() ?? '',
                 totalAmount: totalAmount?.toString() ?? '',
                 totalDriverDistence: totalDriverDistence?.toString() ?? '',
                 driverSalary: driverSalary?.toString() ?? '',
@@ -1026,7 +1026,7 @@ const BookingAdd: React.FC = () => {
                 accidentOption: accidentOption,
                 insuranceAmount: insuranceAmount,
                 adjustmentValue: adjustmentValue?.toString() ?? '',
-                amountWithoutInsurence: selectedEntity?.payableAmount?.toString() ?? '',
+                amountWithoutInsurance: selectedEntity?.payableAmount?.toString() ?? '',
                 totalAmount: totalAmount?.toString() ?? '',
                 totalDriverDistence: totalDriverDistence?.toString() ?? '',
                 driverSalary: driverSalary?.toString() ?? '',
@@ -1679,7 +1679,29 @@ const BookingAdd: React.FC = () => {
                                 <p>Total amount without insurance</p> <h4 style={{ fontSize: 'x-large' }}>₹{selectedEntity?.payableAmount || 0}</h4>
                             </div>
                             <div>
-                                <p> Insurence amount</p> <h4 style={{ fontSize: 'x-large' }}>₹{insuranceAmount || 0}</h4>
+                                {
+                                    serviceCategory === 'accident' && (accidentOption === 'both' || accidentOption === 'insurance') ? (
+                                        <>
+                                            <label>Insurance Amount</label>
+                                            <input
+                                                style={{ width: '210px' }}
+                                                id="insuranceAmount"
+                                                type="number"
+                                                onWheel={(e) => e.preventDefault()}
+                                                placeholder="Enter Insurance Amount"
+                                                className="form-input my-0"
+                                                value={insuranceAmount}
+                                                onChange={(e) => setInsuranceAmount(e.target.value)}
+                                            />
+                                            {errors.insuranceAmount && <p className="text-red-500">{errors.insuranceAmount}</p>}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p>Insurance Amount</p>
+                                            <h4 style={{ fontSize: 'x-large' }}>₹{insuranceAmount || 0}</h4>
+                                        </>
+                                    )
+                                }
                             </div>
                             <div>
                                 <p ref={totalAmountRef}>Payable Amount (with insurance)</p> <h4 style={{ fontSize: 'x-large', color: 'blue' }}> ₹{totalAmount !== null ? totalAmount : 0}</h4>
