@@ -691,3 +691,14 @@ exports.showroomDashBoardReport = async (req, res) => {
     });
   }
 };
+
+// get showroomStaff by id 
+exports.getShowroomStaffById = async (req, res) => {
+  try {
+    const showroom = await ShowroomStaff.findById(req.params.id);
+    if (!showroom) return res.status(404).json({ message: 'showroom not found' });
+    res.status(200).json(showroom);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

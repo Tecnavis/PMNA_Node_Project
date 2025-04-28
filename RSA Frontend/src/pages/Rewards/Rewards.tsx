@@ -6,28 +6,21 @@ import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
 import Driver from '../Driver/Driver';
 import IconEye from '../../components/Icon/IconEye';
 import { Showroom } from '../Showroom/Showroom';
+import { ClientRewardDetails } from '../../interface/Rewards';
+import { useNavigate } from 'react-router-dom';
 
 
 type ClientCategory = 'Driver' | 'Showroom' | 'Marketing Executive' | 'ShowroomStaff';
 // Corrected Interfaces
-interface ClientRewardDetails {
-  _id: string;
-  name: string;
-  rewardPoints: number;
-  companyName?: string;
-  bookingPoint?: number;
-  category?: string;
-  staff: Staff[];
-}
 
-interface Staff {
+export interface Staff {
   _id: string;
   name: string;
   phoneNumber: string;
   rewardPoints?: number;
   showroomId?: {
     bookingPoint?: number;
-    _id?: string; 
+    _id?: string;
   };
 }
 
@@ -51,6 +44,8 @@ function Rewards() {
   });
   const [inputValue, setInputValue] = useState("");
   const [nestedAccord, setNestedAccord] = useState("");
+
+  const navigate = useNavigate()
 
   const fetchDrivers = async () => {
     const response = await axiosInstance.get(`${BASE_URL}/driver`)
@@ -371,8 +366,14 @@ function Rewards() {
                                   </>
                                   )
                                 }
-                                <button type="button">Points : {reward.rewardPoints || 0}</button>
-                                <IconEye className='text-purple-500 hover:cursor-pointer m-auto' />
+                                <button type="button">Points : {reward.rewardPoints}</button>
+                                <button
+                                  onClick={() => navigate(`/reward-details?userType=${active2.split(' ')[0]}&id=${reward._id}`, {
+                                    replace: true
+                                  })}
+                                >
+                                  <IconEye className='text-purple-500 hover:cursor-pointer m-auto' />
+                                </button>
                                 {
                                   reward.category === "Showroom" && (<>
                                     <button onClick={() => setNestedAccord(reward.name)}>
