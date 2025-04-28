@@ -365,7 +365,7 @@ const company: React.FC = () => {
                                                                     <th>Basic Amount</th>
                                                                     <th>KM For Basic Amount</th>
                                                                     <th>Over Ride Charge</th>
-                                                                    <th>Vehicle Number</th>
+                                                                    {/* <th>Vehicle Number</th> */}
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
@@ -375,7 +375,7 @@ const company: React.FC = () => {
                                                                         <td>{items.basicAmount}</td>
                                                                         <td>{items.kmForBasicAmount}</td>
                                                                         <td>{items.overRideCharge}</td>
-                                                                        <td>{items.vehicleNumber}</td>
+                                                                        {/* <td>{items.vehicleNumber}</td> */}
                                                                     </tr>
                                                                 ))}
                                                             </tbody>
