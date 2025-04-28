@@ -3,6 +3,24 @@ const Booking = require('../Model/booking');
 const Expense = require('../Model/expense');
 const DieselExpense = require('../Model/dieselExpense');
 
+const getTotalDriverExpense = async (driverId) => {
+    const result = await Expense.aggregate([
+        {
+            $match: {
+                driver: driverId,
+                approve: true
+            }
+        },
+        {
+            $group: {
+                _id: null, 
+                totalExpense: { $sum: '$amount' }
+            }
+        }
+    ]);
+
+    return result[0]?.totalExpense || 0; 
+}
 // Calculating the net total amount in hand 
 async function calculateNetTotalAmountInHand(driverId) {
 
@@ -26,8 +44,8 @@ async function calculateNetTotalAmountInHand(driverId) {
             }
         }
     ]);
-
-    return result[0]?.netTotalAmount || 0;
+    const expenseTotal = await getTotalDriverExpense(driverId)
+    return (result[0]?.netTotalAmount || 0) - expenseTotal;
 }
 // Calculate the driver total salary from verified bookings
 async function calculateTotalSalary(driverId) {
@@ -58,7 +76,7 @@ async function updateDriverFinancials(driverId, advance = 0) {
     const balance = calculateBalanceAmount(netTotalAmount, totalSalary) || 0
     const expense = await calculateMonthlyExpense(driverId);
     const dieselExpense = await calculateMonthlyDieselExpense(driverId);
-    
+
     const finalCashInHand = netTotalAmount + advance
     const updatedDriver = await Driver.findByIdAndUpdate(
         driverId,
