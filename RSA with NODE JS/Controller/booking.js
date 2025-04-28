@@ -729,6 +729,8 @@ exports.removePickupImages = async (req, res) => {
 
         // Remove the image at the specified index
         const removedImage = pickupImages.splice(index, 1);
+ // Check after removal
+ booking.pickupImagePending = pickupImages.length < 3;
 
         // Save the updated booking
         booking.pickupImages = pickupImages;
@@ -737,6 +739,8 @@ exports.removePickupImages = async (req, res) => {
         res.status(200).json({
             message: "Image removed successfully",
             removedImage,
+            pickupImagePending: booking.pickupImagePending,
+
         });
     } catch (error) {
         console.error("Error removing pickup image:", error);
@@ -775,7 +779,12 @@ exports.addPickupImages = async (req, res) => {
 
         // Push new images to the pickupImages array
         booking.pickupImages.push(...newImages);
-
+   // ✅ Set pickupImagePending based on count
+   if (booking.pickupImages.length < 3) {
+    booking.pickupImagePending = true;
+} else {
+    booking.pickupImagePending = false;
+}
         // Save the updated booking
         await booking.save();
 
@@ -783,6 +792,8 @@ exports.addPickupImages = async (req, res) => {
         res.status(200).json({
             message: 'Pickup images added successfully',
             pickupImages: booking.pickupImages,
+            pickupImagePending: booking.pickupImagePending,
+
         });
     } catch (error) {
         console.error('Error in addPickupImages:', error);
@@ -815,6 +826,8 @@ exports.removeDropoffImages = async (req, res) => {
 
         // Remove the image at the specified index
         const removedImage = dropoffImages.splice(index, 1);
+ // Check after removal
+ booking.dropoffImagePending = dropoffImages.length < 3;
 
         // Save the updated booking
         booking.dropoffImages = dropoffImages;
@@ -823,6 +836,8 @@ exports.removeDropoffImages = async (req, res) => {
         res.status(200).json({
             message: "Image removed successfully",
             removedImage,
+            dropoffImagePending: booking.dropoffImagePending,
+
         });
     } catch (error) {
         console.error("Error removing dropoff image:", error);
@@ -862,7 +877,12 @@ exports.addDropoffImages = async (req, res) => {
 
         // Push new images to the pickupImages array
         booking.dropoffImages.push(...newImages);
-
+  // ✅ Set dropoffImagePending based on count
+  if (booking.dropoffImages.length < 3) {
+    booking.dropoffImagePending = true;
+} else {
+    booking.dropoffImagePending = false;
+}
         // Save the updated booking
         await booking.save();
 
@@ -870,6 +890,8 @@ exports.addDropoffImages = async (req, res) => {
         res.status(200).json({
             message: 'Dropoff images added successfully',
             dropoffImages: booking.dropoffImages,
+            dropoffImagePending: booking.dropoffImagePending,
+
         });
     } catch (error) {
         console.error('Error in addDropoffImages:', error);
@@ -909,7 +931,13 @@ exports.verifyBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-
+  // 🔥 ADD this check here
+  if (booking.cashPending) {
+    return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
+}
+if (booking.pickupImagePending || booking.dropoffImagePending) {
+    return res.status(400).json({ message: 'Image is pending.' });
+}
         // Adjust cash in hand and salary similar to updatePickupByAdmin
         if (booking.workType === "RSAWork") {
             const selectedCompany = booking.company;

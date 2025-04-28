@@ -25,6 +25,9 @@ export interface Booking {
     fileNumber: string;
     serviceVehicleNumber: string;
     location: string;
+    cashPending?:boolean;
+    dropoffImagePending?:boolean;
+    pickupImagePending?:boolean;
     company: {
         name: string;
     };
@@ -457,8 +460,33 @@ const Preview = () => {
 
     const verifyBooking = async () => {
         try {
+            if (booking?.cashPending) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Cash is Pending',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+                return; // Stop here, don't verify
+            }
+            if (booking?.pickupImagePending || booking?.dropoffImagePending) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Image is Pending',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+                return;
+            }
+    
+            // If no pending, proceed
             await axios.patch(`${backendUrl}/booking/verifybooking/${id}`);
-
             navigate('/completedbookings');
             Swal.fire({
                 icon: 'success',
@@ -473,6 +501,7 @@ const Preview = () => {
             console.error(error);
         }
     };
+    
 
     // Handling navigation to update
     const handleNavigateToBookingUpdate = (id: any, isMessageTrue: boolean) => {
