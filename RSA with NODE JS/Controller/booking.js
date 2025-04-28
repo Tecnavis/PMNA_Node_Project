@@ -729,8 +729,8 @@ exports.removePickupImages = async (req, res) => {
 
         // Remove the image at the specified index
         const removedImage = pickupImages.splice(index, 1);
- // Check after removal
- booking.pickupImagePending = pickupImages.length < 3;
+        // Check after removal
+        booking.pickupImagePending = pickupImages.length < 3;
 
         // Save the updated booking
         booking.pickupImages = pickupImages;
@@ -779,12 +779,12 @@ exports.addPickupImages = async (req, res) => {
 
         // Push new images to the pickupImages array
         booking.pickupImages.push(...newImages);
-   // ✅ Set pickupImagePending based on count
-   if (booking.pickupImages.length < 3) {
-    booking.pickupImagePending = true;
-} else {
-    booking.pickupImagePending = false;
-}
+        // ✅ Set pickupImagePending based on count
+        if (booking.pickupImages.length < 3) {
+            booking.pickupImagePending = true;
+        } else {
+            booking.pickupImagePending = false;
+        }
         // Save the updated booking
         await booking.save();
 
@@ -826,8 +826,8 @@ exports.removeDropoffImages = async (req, res) => {
 
         // Remove the image at the specified index
         const removedImage = dropoffImages.splice(index, 1);
- // Check after removal
- booking.dropoffImagePending = dropoffImages.length < 3;
+        // Check after removal
+        booking.dropoffImagePending = dropoffImages.length < 3;
 
         // Save the updated booking
         booking.dropoffImages = dropoffImages;
@@ -877,12 +877,12 @@ exports.addDropoffImages = async (req, res) => {
 
         // Push new images to the pickupImages array
         booking.dropoffImages.push(...newImages);
-  // ✅ Set dropoffImagePending based on count
-  if (booking.dropoffImages.length < 3) {
-    booking.dropoffImagePending = true;
-} else {
-    booking.dropoffImagePending = false;
-}
+        // ✅ Set dropoffImagePending based on count
+        if (booking.dropoffImages.length < 3) {
+            booking.dropoffImagePending = true;
+        } else {
+            booking.dropoffImagePending = false;
+        }
         // Save the updated booking
         await booking.save();
 
@@ -931,13 +931,13 @@ exports.verifyBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-  // 🔥 ADD this check here
-  if (booking.cashPending) {
-    return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
-}
-if (booking.pickupImagePending || booking.dropoffImagePending) {
-    return res.status(400).json({ message: 'Image is pending.' });
-}
+        // 🔥 ADD this check here
+        if (booking.cashPending) {
+            return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
+        }
+        if (booking.pickupImagePending || booking.dropoffImagePending) {
+            return res.status(400).json({ message: 'Image is pending.' });
+        }
         // Adjust cash in hand and salary similar to updatePickupByAdmin
         if (booking.workType === "RSAWork") {
             const selectedCompany = booking.company;
@@ -1061,7 +1061,7 @@ exports.postFeedback = async (req, res) => {
         if (booking.driver && mongoose.Types.ObjectId.isValid(booking.driver)) {
             const driverExists = await Driver.findById(booking.driver);
             if (driverExists) {
-                await Driver.findByIdAndUpdate(
+                const updated = await Driver.findByIdAndUpdate(
                     booking.driver,
                     { $inc: { rewardPoints: totalPoints } },
                     { new: true }
@@ -1700,7 +1700,7 @@ exports.cancelBooking = async (req, res) => {
         if (booking.cancelStatus) {
             return res.status(409).json({
                 message: 'This booking is already canceled',
-                success: false 
+                success: false
             });
         }
 
