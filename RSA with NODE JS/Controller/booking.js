@@ -433,7 +433,7 @@ exports.getAllBookings = async (req, res) => {
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
             }
 
-            const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
+            const searchRegex = new RegExp(search, 'i');
             const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
             const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
 
@@ -457,7 +457,7 @@ exports.getAllBookings = async (req, res) => {
             };
         }
 
-        console.log(query)
+        console.dir(query, { depth: null, colors: true })
 
         // Pagination and sorting by createdAt in descending order
         const total = await Booking.countDocuments(query);
@@ -476,7 +476,7 @@ exports.getAllBookings = async (req, res) => {
         const balanceAmount = bookings.reduce((total, booking) => {
             return total + booking.receivedAmount;
         }, 0);
-
+        console.log(total)
         query.workType = { $ne: 'RSAWork' };
 
         // Aggregate data for total amounts
@@ -557,7 +557,7 @@ exports.updateBooking = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        if(updatedData.workType === 'PaymentWork'){
+        if (updatedData.workType === 'PaymentWork') {
             updatedData.company = null
         }
 
@@ -1711,6 +1711,7 @@ exports.cancelBooking = async (req, res) => {
         booking.cancelImage = image;
         booking.cancelStatus = true;
         booking.cancelReason = cancelData.cancelReason;
+        booking.status = "Order Completed"
         booking.cancelKm = cancelData.cancelKm;
 
         await booking.save();

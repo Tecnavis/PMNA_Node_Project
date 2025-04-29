@@ -1,5 +1,6 @@
 const Expense = require('../Model/expense')
-const Driver = require('../Model/driver')
+const Driver = require('../Model/driver');
+const { distributeReceivedAmount } = require('../services/bookingService');
 
 exports.createExpense = async (req, res) => {
     try {
@@ -89,11 +90,13 @@ exports.approve = async (req, res) => {
 
         const driver = await Driver.findById(expense.driver)
 
-        // if (driver.cashInHand >= expense.amount) {
-            driver.cashInHand -= expense.amount
-            await driver.save()
-        // }
-
+        
+        driver.cashInHand -= expense.amount
+        await driver.save()
+        
+        if (expense.amount > 0) {
+            await distributeReceivedAmount(driver._id, expense.amount, "Driver Total Expense.")
+        }
         const updatedExpense = await Expense.findByIdAndUpdate(id, {
             approve: status
         }, { new: true });

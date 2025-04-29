@@ -1,0 +1,16 @@
+{
+  user: 'Admin',
+  action: 'Admin loging',
+  data: { email: 'RSA@gmail.com' },
+  level: 'info',
+  message: 'Admin Logged',
+  timestamp: '2025-04-29T09:10:40.087Z'
+}
+{
+  user: 'Admin',
+  action: 'Admin loging',
+  data: { email: 'RSA@gmail.com' },
+  level: 'info',
+  message: 'Admin Logged',
+  timestamp: '2025-04-29T09:12:08.911Z'
+}
