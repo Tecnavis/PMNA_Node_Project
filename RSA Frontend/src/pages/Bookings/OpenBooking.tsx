@@ -24,6 +24,7 @@ export interface Booking {
     feedbackCheck: boolean;
     fileNumber: string;
     serviceVehicleNumber: string;
+    vehicleNumber:string;
     location: string;
     cashPending?:boolean;
     dropoffImagePending?:boolean;
@@ -877,7 +878,8 @@ const Preview = () => {
                                     {/* Service vehicle number  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Vehicle number</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>-</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.
+vehicleNumber || "N/A"}</td>
                                     </tr>
 
                                     {/*Comments  */}
