@@ -113,7 +113,7 @@ exports.deleteReward = async (req, res) => {
 };
 
 exports.redeemForShowroomStaff = async (req, res) => {
-  const { id, userType, staffId } = req.query;  
+  const { id, userType, staffId } = req.query;
   try {
     const redemption = await redeemForShowroomStaff(id, staffId, userType);
 
@@ -171,9 +171,18 @@ const redeemForShowroomStaff = async (rewardId, staffId, userType) => {
       if (reward.rewardFor !== userType) throw new Error(`This reward is not available for ${userType}`);
       if (reward.stock <= 0) throw new Error('This reward is out of stock');
 
-      const useAblePoints = user.rewardPoints / 2;
+      let useAblePoints = user.rewardPoints
+      if (userType === 'Showroom') {
+        useAblePoints = user.rewardPoints / 2;
+      }
       if (reward.pointsRequired > useAblePoints) {
-        throw new Error(`Insufficient points. You can only use half of your points (${useAblePoints} available)`);
+        if (userType === 'Showroom') {
+
+          throw new Error(`Insufficient points. You can only use half of your points (${useAblePoints} available)`);
+        } else {
+
+          throw new Error(`Insufficient points. Available points (${useAblePoints})`);
+        }
       }
 
       historyRedeem = new Redemption({
