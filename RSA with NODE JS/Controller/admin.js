@@ -2,7 +2,7 @@ const Admin = require('../Model/admin'); // Adjust the path as needed
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-// const logger = require('../utils/logger');
+const logger = require('../utils/logger');
 
 exports.registerAdmin = async (req, res) => {
   try {
@@ -53,11 +53,11 @@ exports.loginAdmin = async (req, res) => {
 
 
     // // Log the action in a structured format
-    // logger.info('Admin Logged', {
-    //   user: 'Admin',
-    //   action: 'Admin loging',
-    //   data: { email }
-    // });
+    logger.info('Admin Logged', {
+      user: 'Admin',
+      action: 'Admin loging',
+      data: { email }
+    });
 
 
     res.status(200).json({ token, message: "Admin logged in successfully" });

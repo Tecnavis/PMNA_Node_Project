@@ -203,6 +203,7 @@ const Bookings: React.FC = () => {
             const response = await axios.get(`${backendUrl}/booking`, {
                 params: { search: searchTerm, page, limit, status: 'Order Completed' },
             });
+            
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
             setCurrentPage(response.data.page);
@@ -227,7 +228,7 @@ const Bookings: React.FC = () => {
         setSelectedItemId(itemId);  // Store itemId in state
         setTrackModalOpen(true);
     };
- 
+
     // handle cancel and settle booking
     const handleCancel = (booking?: Booking) => {
         setSelectedBooking(booking)
@@ -300,9 +301,13 @@ const Bookings: React.FC = () => {
                             payableAmount = getServiceType?.basicAmount || 0
                         }
                     }
+                    if (parseFloat(value) === 0) {
+                        payableAmount = 0
+                    }
+                    
                     setCancelFormData((pre) => ({
                         ...pre,
-                        amountForCustomer: payableAmount ? payableAmount : pre.amountForCustomer,
+                        amountForCustomer: payableAmount,
                     }));
                 }
             }
@@ -313,7 +318,6 @@ const Bookings: React.FC = () => {
                 (vehi) => vehi.serviceType === selectedBooking?.serviceType._id
             );
 
-            console.log(serviceType)
             if (!serviceType) {
                 console.error('No matching service type found');
                 return;
@@ -323,11 +327,15 @@ const Bookings: React.FC = () => {
 
             const extraDistance = Math.max(0, totalDistance - kmForBasicAmount);
             const additionalCharge = extraDistance * overRideCharge;
-            const calculatedSalary = basicAmount + additionalCharge;
+            let calculatedSalary = basicAmount + additionalCharge;
+
+            if (parseFloat(value) === 0) {
+                calculatedSalary = 0
+            }
 
             setCancelFormData((pre) => ({
                 ...pre,
-                totalDriverSalary: calculatedSalary ? calculatedSalary : pre.totalDriverSalary,
+                totalDriverSalary: calculatedSalary,
             }));
         }
     };
@@ -816,7 +824,6 @@ const Bookings: React.FC = () => {
                             type="number"
                             placeholder="12"
                             className="form-input"
-                            readOnly
                             name="km"
                             value={cancelFormData.enterdKm}
                         />
@@ -850,7 +857,7 @@ const Bookings: React.FC = () => {
                             type="number"
                             placeholder="Enter driver amount"
                             className="form-input"
-                            name="totalDriverS"
+                            name="totalDriverSalary"
                             value={cancelFormData.totalDriverSalary}
                             onChange={handleInputChange}
                         />
@@ -876,7 +883,7 @@ const Bookings: React.FC = () => {
                             type='number'
                             className="form-textarea"
                             placeholder="Payable amount by customer"
-                            required name='amountForCustom'
+                            required name='amountForCustomer'
                             value={cancelFormData.amountForCustomer}
                             onChange={handleInputChange}
                         />
