@@ -66,8 +66,8 @@ interface Booking {
 const DropoffUploadPage = () => {
     // --- Delivery Form States ---
     const [fileNumber, setFileNumber] = useState('');
-const [dropoffTime, setDropoffTime] = useState("");
-  const [deliveryTime, setDeliveryTime] = useState("");    const [customerVehicleNumber, setCustomerVehicleNumber] = useState('');
+    const [pickupTime, setPickupTime] = useState('');
+    const [customerVehicleNumber, setCustomerVehicleNumber] = useState('');
     const [mob1, setMob1] = useState('');
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
     const [bookingData, setBookingData] = useState<Booking | null>(null);
@@ -94,7 +94,7 @@ const [dropoffTime, setDropoffTime] = useState("");
 
                     setCustomerVehicleNumber(data.customerVehicleNumber || '');
                     setFileNumber(data.fileNumber || '');
-                    setDropoffTime(data.dropoffTime || '');
+                    setPickupTime(data.pickupTime || '');
                     setMob1(data.mob1 || '');
 
                     // Assuming your backend returns dropoffImages as an array of filenames
@@ -142,7 +142,7 @@ const [dropoffTime, setDropoffTime] = useState("");
 
             // Append fields
             formData.append('fileNumber', fileNumber);
-            formData.append('dropoffTime', dropoffTime);
+            formData.append('pickupTime', pickupTime);
             formData.append('mob1', mob1);
             formData.append('customerVehicleNumber', customerVehicleNumber);
 
@@ -238,31 +238,7 @@ const [dropoffTime, setDropoffTime] = useState("");
                         <label className="block text-sm font-semibold text-gray-700 mb-1">File Number</label>
                         {bookingData?.fileNumber ? <span className="text-danger font-medium">{bookingData.fileNumber}</span> : <span className="text-gray-500 italic">No file number available</span>}
                     </div>
-  {/* Delivery Date + Time */}
-  <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Dropoff Date & Time
-              </label>
-              <input
-                type="date"
-                value={dropoffTime}
-                onChange={(e) => setDropoffTime(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Dropoff Time
-              </label>
-              <input
-                type="time"
-                value={deliveryTime}
-                onChange={(e) => setDeliveryTime(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none"
-              />
-            </div>
-          </div>
+
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">Customer Vehicle Number</label>
                         <input
