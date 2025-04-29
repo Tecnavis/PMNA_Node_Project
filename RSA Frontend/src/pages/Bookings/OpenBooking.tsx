@@ -25,9 +25,9 @@ export interface Booking {
     fileNumber: string;
     serviceVehicleNumber: string;
     location: string;
-    cashPending?:boolean;
-    dropoffImagePending?:boolean;
-    pickupImagePending?:boolean;
+    cashPending?: boolean;
+    dropoffImagePending?: boolean;
+    pickupImagePending?: boolean;
     company: {
         name: string;
     };
@@ -485,7 +485,6 @@ const Preview = () => {
                 });
                 return;
             }
-    
             // If no pending, proceed
             await axios.patch(`${backendUrl}/booking/verifybooking/${id}`);
             navigate('/completedbookings');
@@ -502,8 +501,6 @@ const Preview = () => {
             console.error(error);
         }
     };
-    
-
     // Handling navigation to update
     const handleNavigateToBookingUpdate = (id: any, isMessageTrue: boolean) => {
         // Navigate to Page 2 with the boolean value in the URL
@@ -653,8 +650,8 @@ const Preview = () => {
                                                         }}
                                                     />
                                                     <div className='text-xs'>
-                                                        <span>{formattedTime(booking?.pickupDate as unknown as string)}</span> -
-                                                        <span> {dateFormate(booking?.pickupTime as unknown as string)}</span>
+                                                        <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleDateString()}</span> -
+                                                        <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleTimeString()}</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -685,8 +682,8 @@ const Preview = () => {
                                                         }}
                                                     />
                                                     <div className='text-xs'>
-                                                        <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span> -
-                                                        <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span>
+                                                        <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -
+                                                        <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span> 
                                                     </div>
                                                 </div>
                                             ))}
