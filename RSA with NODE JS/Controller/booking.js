@@ -557,6 +557,10 @@ exports.updateBooking = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
+        if(updatedData.workType === 'PaymentWork'){
+            updatedData.company = null
+        }
+
         if (booking.status === "Rejected") {
             updatedData.status = 'Booking Added'
         }

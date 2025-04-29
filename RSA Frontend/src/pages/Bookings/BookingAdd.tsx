@@ -511,12 +511,10 @@ const BookingAdd: React.FC = () => {
     const openDriverModal = async () => {
         setModal6(true);
         // calulating the payable and expence amount (payment work)
-
         if (!selectedCompany) {
 
             const baseKm = selectedServiceType?.firstKilometer || 0;
             const distance = parseFloat(totalDistance);
-
             const kilometerLessed = distance > baseKm ? distance - baseKm : baseKm;
             if (distance > baseKm) {
 
@@ -524,6 +522,7 @@ const BookingAdd: React.FC = () => {
                 const PayableAmount = lessedAmt + (selectedServiceType?.firstKilometerAmount || 0);
                 const totalExpence = parseFloat(totalDistance) * (selectedServiceType?.expensePerKm || 0);
                 const afterExpence = PayableAmount - totalExpence;
+
                 setPayableAmount(PayableAmount);
                 setAfterExpence(afterExpence);
 
@@ -532,7 +531,12 @@ const BookingAdd: React.FC = () => {
                 setAfterExpence(selectedServiceType?.expensePerKm || 0);
             }
         } else {
-            const getServiceType = selectedCompany.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType?._id === selectedServiceType?._id);
+            let getServiceType = selectedCompany.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType._id === selectedServiceType?._id);
+            
+            if(!getServiceType){
+                // @ts-ignore
+                getServiceType = selectedCompany.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType === selectedServiceType?._id);
+            }
 
             const baseKm = getServiceType?.kmForBasicAmount || 0;
             const distance = parseFloat(totalDistance);
@@ -606,9 +610,9 @@ const BookingAdd: React.FC = () => {
         if (selectedOption === 'insurance' && selectedShowroom) {
             // Set the insuranceAmount of the selected showroom
             setInsuranceAmount(selectedShowroom.insurenceAmount?.toString() || '');
-        } else {
+        } else if(selectedOption === 'readyPayment'){
             // Reset insuranceAmount if the selected accident option is not 'insurance'
-            // setInsuranceAmount('');
+            setInsuranceAmount('');
         }
     };
 
