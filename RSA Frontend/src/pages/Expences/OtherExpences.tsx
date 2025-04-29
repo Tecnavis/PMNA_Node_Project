@@ -305,7 +305,7 @@ const ExpenseApproveUI = () => {
               </Button>
             </div>
             <img
-              src={`/receipts/${currentExpense.image}`} // Replace with your actual image path
+              src={`${CLOUD_IMAGE}${currentExpense.image}`} // Replace with your actual image path
               alt="Expense receipt"
               className="w-full h-32 object-contain rounded border bg-gray-50 cursor-pointer"
               onClick={() => setImageModalOpen(true)}

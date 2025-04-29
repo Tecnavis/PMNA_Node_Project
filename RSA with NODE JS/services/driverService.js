@@ -2,6 +2,7 @@ const Driver = require('../Model/driver');
 const Booking = require('../Model/booking');
 const Expense = require('../Model/expense');
 const DieselExpense = require('../Model/dieselExpense');
+const { distributeReceivedAmount } = require('./bookingService');
 
 const getTotalDriverExpense = async (driverId) => {
     const result = await Expense.aggregate([
@@ -44,8 +45,8 @@ async function calculateNetTotalAmountInHand(driverId) {
             }
         }
     ]);
-    const expenseTotal = await getTotalDriverExpense(driverId)
-    return (result[0]?.netTotalAmount || 0) - expenseTotal;
+    
+    return (result[0]?.netTotalAmount || 0)
 }
 // Calculate the driver total salary from verified bookings
 async function calculateTotalSalary(driverId) {
