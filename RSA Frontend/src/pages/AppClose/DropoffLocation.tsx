@@ -142,7 +142,7 @@ const DropoffUploadPage = () => {
 
             // Append fields
             formData.append('fileNumber', fileNumber);
-            formData.append('pickupTime', pickupTime);
+            formData.append('dropoffTime', pickupTime);
             formData.append('mob1', mob1);
             formData.append('customerVehicleNumber', customerVehicleNumber);
 
