@@ -53,7 +53,7 @@ exports.createShowroom = async (req, res) => {
       district
     })
 
-    const phoneIsExist = await Showroom.findOne({ $or: [{ phone }, { mobile }] });
+    const phoneIsExist = (phone || mobile) ? await Showroom.findOne({ $or: [{ phone }, { mobile }] }) : null;
 
     if (phoneIsExist) {
       return res.status(400).json({
