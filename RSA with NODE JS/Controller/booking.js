@@ -425,26 +425,43 @@ exports.getAllBookings = async (req, res) => {
             search = search.trim();
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
 
-            // If search is a date in dd/mm/yyyy format
+            // Handle date search separately
             if (dateRegex.test(search)) {
                 const [day, month, year] = search.split('/');
                 const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+            } else {
+                // Escape special regex characters
+                const escapedSearch = search.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+                const searchRegex = new RegExp(escapedSearch, 'i');
+
+                // Search conditions array
+                const searchConditions = [
+                    { fileNumber: searchRegex },
+                    { mob1: searchRegex },
+                    { customerVehicleNumber: searchRegex },
+                ];
+
+                // Only search drivers/providers if search is numeric
+                if (/^\d+$/.test(search)) {
+                    const [matchingDrivers, matchingProviders] = await Promise.all([
+                        Driver.find({ phone: searchRegex }).select('_id').lean(),
+                        Provider.find({ phone: searchRegex }).select('_id').lean()
+                    ]);
+
+                    if (matchingDrivers.length > 0) {
+                        searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
+                    }
+                    if (matchingProviders.length > 0) {
+                        searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
+                    }
+                }
+
+                if (searchConditions.length > 0) {
+                    query.$or = searchConditions;
+                }
             }
-
-            const searchRegex = new RegExp(search, 'i');
-            const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
-            const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
-
-            query.$or = [
-                { fileNumber: searchRegex },
-                { mob1: searchRegex },
-                { customerVehicleNumber: searchRegex },
-                { bookedByModel: searchRegex },
-                { driver: { $in: matchingDrivers.map(d => d._id) } },
-                { provider: { $in: matchingProviders.map(p => p._id) } },
-            ];
         }
 
         if (startDate && endingDate) {
@@ -471,12 +488,12 @@ exports.getAllBookings = async (req, res) => {
             .populate('receivedUser')
             .skip((page - 1) * limit)
             .limit(limit)
-            .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
+            .sort({ createdAt: -1 })
+            .lean();
 
         const balanceAmount = bookings.reduce((total, booking) => {
             return total + booking.receivedAmount;
         }, 0);
-        console.log(total)
         query.workType = { $ne: 'RSAWork' };
 
         // Aggregate data for total amounts
@@ -501,7 +518,6 @@ exports.getAllBookings = async (req, res) => {
         const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
         const balanceAmountToCollect = overallAmount - totalCollectedAmount;
-
         return res.status(200).json({
             total,
             page,
@@ -600,7 +616,13 @@ exports.updateBooking = async (req, res) => {
         }
         // Handle uploaded images
         if (req.files && req.files.length > 0) {
-            updatedData.pickupImages = req.files.map(file => file.filename);
+            if(updatedData.dropoffTime){
+                updatedData.dropoffImages = req.files.map(file => file.filename);
+                updatedData.dropoffTime = new Date()
+            }else{
+                updatedData.pickupImages = req.files.map(file => file.filename);
+                updatedData.pickupTime = new Date()
+            }
         }
 
         // update driver transfer amount
