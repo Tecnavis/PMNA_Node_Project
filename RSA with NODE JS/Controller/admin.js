@@ -52,12 +52,12 @@ exports.loginAdmin = async (req, res) => {
     await admin.save();
 
 
-    // // Log the action in a structured format
-    logger.info('Admin Logged', {
-      user: 'Admin',
-      action: 'Admin loging',
-      data: { email }
-    });
+    // Log the action in a structured format
+    // logger.info('Admin Logged', {
+    //   user: 'Admin',
+    //   action: 'Admin loging',
+    //   data: { email }
+    // });
 
 
     res.status(200).json({ token, message: "Admin logged in successfully" });
