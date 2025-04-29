@@ -2,8 +2,23 @@ const Leaves = require('../Model/leaves');
 
 exports.createLeaves = async (req, res) => {
   try {
-    console.log("Received Data:", req.body); // Debugging line
-    console.log("Route Hit: /createLeaves");
+
+    const startOfDay = new Date(req?.body?.leaveDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(req?.body?.leaveDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingLeave = await Leaves.findOne({
+      leaveDate: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (existingLeave) {
+      return res.status(400).json({
+        message: "Driver can only apply for one leave per day",
+        success: false
+      });
+    }
 
     const newLeaves = new Leaves(req.body);
     await newLeaves.save();

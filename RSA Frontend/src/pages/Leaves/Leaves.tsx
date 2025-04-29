@@ -232,8 +232,21 @@ const Leaves: React.FC = () => {
             handleClose();
             setLeaveDate('');
             setDriver('');
-        } catch (error) {
-            console.error('Error saving leave:', error);
+        } catch (error:any) {
+            console.error('Error saving leave:', error.response.data.message);
+            Swal.fire({
+                icon: 'warning',
+                title: error?.response?.data?.message || 'Error saving leave',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            fetchLeaves();
+            handleClose();
+            setLeaveDate('');
+            setDriver('');
         }
     };
 
