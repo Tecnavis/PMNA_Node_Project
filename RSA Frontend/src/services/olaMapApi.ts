@@ -13,18 +13,13 @@ export async function getDistance(currentLat: string, currentLng: string, pickup
         },
     });
 
-    // Log the API response to inspect the structure
-    console.log(`API Response for driver :`, response.data);
-
     const routes = response.data.routes;
     let distance = 'Distance not available';
 
     if (routes?.length > 0) {
-        console.log(`Routes for driver :`, routes); // Log routes to inspect its structure
 
         if (routes[0]?.legs?.length > 0 && routes[0].legs[0]?.readable_distance) {
             distance = routes[0].legs[0].readable_distance; // Use readable_distance
-            console.log(`Driver  pickup distance: ${distance}`);
         } else {
             console.error(`No valid leg data found in the response for driver `);
         }

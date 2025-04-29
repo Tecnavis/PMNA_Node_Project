@@ -3,7 +3,7 @@ const visibleFilter = require('../plugins/visibleFilter');
 
 const bookingSchema = new mongoose.Schema({
     workType: { type: String },
-    fileNumber: { type: String },
+    fileNumber: { type: String, unique: true },
     location: { type: String },
     latitudeAndLongitude: { type: String },
     baselocation: { type: mongoose.Schema.Types.ObjectId, ref: 'BaseLocation' },
@@ -73,8 +73,8 @@ const bookingSchema = new mongoose.Schema({
     dummyProviderName: { type: String }, // New props
     bookingStatus: { type: String }, // New props
     companyName: { type: String }, // New props
-    pickupImagePending: {  type: Boolean },
-    dropoffImagePending: {  type: Boolean},
+    pickupImagePending: { type: Boolean },
+    dropoffImagePending: { type: Boolean },
     cancelStatus: { type: Boolean }, // New props
     cancelReason: { type: String }, // New props
     cancelKm: { type: Number }, // New props

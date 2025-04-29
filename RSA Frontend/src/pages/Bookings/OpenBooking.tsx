@@ -101,6 +101,7 @@ export interface Booking {
     totalDriverDistence?: number; // Optional field
     driverSalary?: number; // Optional field
     accidentOption?: string; // Optional field
+    serviceCategory?: string; // Optional field
     insuranceAmount?: number; // Optional field
     adjustmentValue?: number; // Optional field
     amountWithoutInsurance?: number; // Optional field
@@ -882,6 +883,16 @@ const Preview = () => {
 vehicleNumber || "N/A"}</td>
                                     </tr>
 
+                                    {/*Service Category  */}
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Category</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.serviceCategory || "N/A"}</td>
+                                    </tr>
+                                    {/*Insurance amount  */}
+                                    <tr>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Insurance Amount</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.insuranceAmount || "0"}</td>
+                                    </tr>
                                     {/*Comments  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Comments</td>
