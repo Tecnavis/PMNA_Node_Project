@@ -145,6 +145,7 @@ const DropoffUploadPage = () => {
             formData.append('dropoffTime', pickupTime);
             formData.append('mob1', mob1);
             formData.append('customerVehicleNumber', customerVehicleNumber);
+            formData.append("dropoffImagePending", "false");
 
             // Append images (only if they exist)
             images.forEach((img) => {
@@ -183,7 +184,8 @@ const DropoffUploadPage = () => {
                     // If "Paid" is clicked
                     await axios.put(`${backendUrl}/booking/${itemId}`, {
                         cashPending: false,
-                        status: 'Vehicle Dropped',                    });
+                        status: 'Vehicle Dropped',  
+                    });
                     navigate(`/paymentSettlement?itemId=${itemId}`);
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
                     // If "Not Paid" is clicked
