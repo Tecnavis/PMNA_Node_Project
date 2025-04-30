@@ -683,7 +683,7 @@ const Preview = () => {
                                                     />
                                                     <div className='text-xs'>
                                                         <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -
-                                                        <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span> 
+                                                        <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -910,7 +910,11 @@ const Preview = () => {
                                     {/* Pickup time  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Time</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.pickupTime)}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                            {booking?.pickupTime ?
+                                                new Date(booking.pickupTime).toLocaleDateString() :
+                                                'N/A'}
+                                        </td>
                                     </tr>
                                     {/* Dropoff time  */}
                                     <tr>

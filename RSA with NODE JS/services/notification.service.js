@@ -2,7 +2,7 @@ const { messaging } = require('../config/firebase.config');
 
 class NotificationService {
     static async sendNotification(notificationData) {
-        const { token, title, body, sound = 'default' } = notificationData;
+        const { token, title, body, sound = 'alert' } = notificationData;
 
         if (!token) {
             console.warn('No FCM token provided');
@@ -15,7 +15,7 @@ class NotificationService {
             android: {
                 priority: "high",
                 notification: {
-                    sound,
+                    sound: sound,
                     channelId: "high_importance_channel",
                 },
             },
@@ -23,7 +23,7 @@ class NotificationService {
                 headers: { "apns-priority": "10" },
                 payload: {
                     aps: {
-                        sound,
+                        sound: sound,
                         "content-available": 1,
                     },
                 },
