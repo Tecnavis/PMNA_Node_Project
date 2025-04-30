@@ -621,7 +621,6 @@ exports.updateBooking = async (req, res) => {
                 updatedData.dropoffTime = new Date()
             }else{
                 updatedData.pickupImages = req.files.map(file => file.filename);
-                updatedData.pickupTime = new Date()
             }
         }
 

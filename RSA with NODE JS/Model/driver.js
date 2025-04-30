@@ -87,6 +87,10 @@ const driverSchema = new mongoose.Schema({
   expense: {
     type: Number,
     default: 0
+  },
+  totalExpense: {
+    type: Number,
+    default: 0
   }
 });
 
