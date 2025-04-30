@@ -204,15 +204,17 @@ const NewJobsCard = () => {
                 <p className="text-green-500 font-semibold text-lg">{bookingData.pickupDistance}</p>
                 <p className="text-gray-600 text-sm ml-1">km away to pickup</p>
             </div>
-
             {/* Salary & Payable Amount */}
             <div className="mt-4 text-gray-700 text-sm">
                 <p>
                     <span className="font-semibold">Salary:</span> <span>Rs </span> <span className="text-danger">{bookingData.driverSalary}</span>
                 </p>
+                {bookingData?.workType === 'PaymentWork' && (
+
                 <p>
                     <span className="font-semibold">Payable Amount:</span> Rs <span className="text-success">{bookingData.totalAmount}</span>
                 </p>
+                )}
             </div>
 
             {/* Buttons */}
