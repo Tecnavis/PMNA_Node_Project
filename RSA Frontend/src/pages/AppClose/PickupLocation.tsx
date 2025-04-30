@@ -170,7 +170,8 @@ const CombinedDeliveryUploadPage = () => {
       formData.append("mob1", mob1);
       formData.append("fileNumber", fileNumber);
       formData.append("status", "On the way to dropoff location");
-  
+      formData.append("pickupImagePending", "false");
+
       // Append images (only if they exist)
       images.forEach((img) => {
         if (img) formData.append("images", img);
