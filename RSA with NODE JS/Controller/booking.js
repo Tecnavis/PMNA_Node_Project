@@ -75,7 +75,7 @@ exports.createBooking = async (req, res) => {
                     token: source.fcmToken,
                     title: "New Booking Notification",
                     body: 'A new booking has been assigned to you.',
-                    sound: 'alert_notification'
+                    sound: 'alert'
                 })
                 if (notificationResult.error === 'Token not registered') {
                     // Option 2: Or you might want to notify admin about the invalid token
@@ -618,7 +618,6 @@ exports.updateBooking = async (req, res) => {
         if (req.files && req.files.length > 0) {
             if(updatedData.dropoffTime){
                 updatedData.dropoffImages = req.files.map(file => file.filename);
-                updatedData.dropoffTime = new Date()
             }else{
                 updatedData.pickupImages = req.files.map(file => file.filename);
             }

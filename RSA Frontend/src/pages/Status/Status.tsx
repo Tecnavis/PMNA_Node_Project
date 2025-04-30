@@ -511,7 +511,6 @@ const Status: React.FC = () => {
                         <label className="block">Amount</label>
                         <input
                             type="text"
-                            value={paymentAmount}
                             onChange={handleChangeAmount}
                             className="border p-2 w-full"
                         />
