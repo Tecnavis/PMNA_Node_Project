@@ -76,6 +76,7 @@ async function updateDriverFinancials(driverId, advance = 0) {
 
     const balance = calculateBalanceAmount(netTotalAmount, totalSalary) || 0
     const expense = await calculateMonthlyExpense(driverId);
+    const totalExpense = await calculateTotalExpense(driverId);
     const dieselExpense = await calculateMonthlyDieselExpense(driverId);
 
     const finalCashInHand = netTotalAmount + advance
@@ -86,7 +87,8 @@ async function updateDriverFinancials(driverId, advance = 0) {
             driverSalary: totalSalary,
             balanceAmount: balance,
             dieselExpense,
-            expense
+            expense,
+            totalExpense
         },
         { new: true }
     );
@@ -116,6 +118,32 @@ async function calculateMonthlyExpense(driverId) {
                     $gte: startOfMonth,
                     $lte: endOfMonth
                 }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                monthlyExpense: { $sum: '$amount' }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                monthlyExpense: 1
+            }
+        }
+    ]);
+
+    return result[0]?.monthlyExpense || 0;
+}
+// Calculating the current monthlyExpense
+async function calculateTotalExpense(driverId) {
+
+    const result = await Expense.aggregate([
+        {
+            $match: {
+                driver: driverId,
+                approve: true,
             }
         },
         {
