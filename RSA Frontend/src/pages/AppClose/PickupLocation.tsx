@@ -101,7 +101,7 @@ const CombinedDeliveryUploadPage = () => {
           setFileNumber(data.fileNumber || "");
           setCustomerName(data.customerName || "");
           // setPickupTime(data.pickupTime || "");
-          setDeliveryTime(data.dropoffTime || "");
+          setDeliveryTime(data.pickupTime || "");
           setMob1(data.mob1 || "");
           setCustomerVehicleNumber(data.customerVehicleNumber || "");
           if (data.pickupTime) {
@@ -160,11 +160,13 @@ const CombinedDeliveryUploadPage = () => {
 
       // Append fields
       formData.append("customerName", customerName);
-      formData.append("pickupDate", combinedPickupDate);
+      formData.append("pickupTime", combinedPickupDate);
       formData.append("customerVehicleNumber", customerVehicleNumber);
       formData.append("mob1", mob1);
       formData.append("fileNumber", fileNumber);
       formData.append("status", "On the way to dropoff location");
+      formData.append("pickupImagePending", "false");
+
 
       // Append images (only if they exist)
       images.forEach((img) => {
@@ -247,7 +249,7 @@ const CombinedDeliveryUploadPage = () => {
           <div className="flex gap-2">
             <div className="flex-1">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Delivery Date
+                Pickup Date & Time
               </label>
               <input
                 type="date"
@@ -258,7 +260,7 @@ const CombinedDeliveryUploadPage = () => {
             </div>
             <div className="flex-1">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Delivery Time
+                Pickup Time
               </label>
               <input
                 type="time"
@@ -325,7 +327,7 @@ const CombinedDeliveryUploadPage = () => {
       {/* Title */}
       <h2 className="text-lg font-bold text-gray-900 mb-2">Attach Additional Images (Please upload images for Dashboard, Front, Rear, and Scratches)</h2>
       <p className="text-gray-600 mb-6 text-center">
-        Upload legible pictures of your delivery documentation.
+        Upload legible pictures of your pickup documentation.
       </p>
 
       {/* Image Upload Grid */}
