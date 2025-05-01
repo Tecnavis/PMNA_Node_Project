@@ -94,7 +94,6 @@ const Leaves: React.FC = () => {
                         ? leave.driver
                         : 'Unknown',
             }));
-            
             setLeaves(formattedLeaves);
         } catch (error) {
             console.error('Error fetching leaves:', error);
