@@ -46,11 +46,15 @@ const CompanyReport = () => {
     })
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
-    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
-
+    const monthIndex = now.getMonth(); // 0-indexed
+    const month = String(monthIndex + 1).padStart(2, '0'); // convert to 01–12
+    
+    const lastDay = new Date(year, monthIndex + 1, 0).getDate(); // Get actual last day
+    const paddedLastDay = String(lastDay).padStart(2, '0');
+    
     const [startDate, setStartDate] = useState<string>(`${year}-${month}-01`);
-    const [endingDate, setEndingDate] = useState<string>(`${year}-${month}-${String(lastDay).padStart(2, '0')}`);
+    const [endingDate, setEndingDate] = useState<string>(`${year}-${month}-${paddedLastDay}`);
+    
 
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
     const [initialRecords, setInitialRecords] = useState(bookings);
@@ -593,22 +597,25 @@ const CompanyReport = () => {
         if (month === 'All Months') {
             const today = new Date();
             const twoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // Jan 1st, two years ago
-
+    
             setStartDate(twoYearsAgo.toISOString().slice(0, 10)); // YYYY-MM-DD
             setEndingDate(today.toISOString().slice(0, 10)); // today
         } else {
             const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert to 0-index
-
-            // Start of selected month
-            const firstDay = new Date(year, monthIndex, 1);
-
-            // End of selected month
-            const lastDay = new Date(year, monthIndex + 1, 0);
-
-            setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
-            setEndingDate(lastDay.toISOString().slice(0, 10));
+    
+            // Get the last day of the selected month using 0th day of the next month
+            const lastDay = new Date(year, monthIndex + 1, 0).getDate(); // e.g., 29 for Feb (leap), 30, or 31
+    
+            const paddedMonth = String(monthIndex + 1).padStart(2, '0');
+            const paddedLastDay = String(lastDay).padStart(2, '0');
+    
+            const start = `${year}-${paddedMonth}-01`;
+            const end = `${year}-${paddedMonth}-${paddedLastDay}`;
+    
+            setStartDate(start);
+            setEndingDate(end);
         }
-    };
+    };    
 
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
