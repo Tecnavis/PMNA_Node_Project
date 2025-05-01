@@ -203,7 +203,7 @@ const Bookings: React.FC = () => {
             const response = await axios.get(`${backendUrl}/booking`, {
                 params: { search: searchTerm, page, limit, status: 'Order Completed' },
             });
-            
+
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
             setCurrentPage(response.data.page);
@@ -304,7 +304,7 @@ const Bookings: React.FC = () => {
                     if (parseFloat(value) === 0) {
                         payableAmount = 0
                     }
-                    
+
                     setCancelFormData((pre) => ({
                         ...pre,
                         amountForCustomer: payableAmount,
@@ -365,6 +365,7 @@ const Bookings: React.FC = () => {
                 totalDistence: cancelFormData.Totalkm,
                 driverSalary: cancelFormData.totalDriverSalary,
                 totalAmount: cancelFormData.amountForCustomer,
+                status: "Order Completed"
             };
 
             const result: APIForCancelApiResponse = await handleUpdateCancelData(selectedBooking?._id || '', cancelData);

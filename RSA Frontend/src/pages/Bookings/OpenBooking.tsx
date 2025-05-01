@@ -24,7 +24,7 @@ export interface Booking {
     feedbackCheck: boolean;
     fileNumber: string;
     serviceVehicleNumber: string;
-    vehicleNumber:string;
+    vehicleNumber: string;
     location: string;
     cashPending?: boolean;
     dropoffImagePending?: boolean;
@@ -684,7 +684,7 @@ const Preview = () => {
                                                     />
                                                     <div className='text-xs'>
                                                         <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -
-                                                        <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span> 
+                                                        <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -876,8 +876,7 @@ const Preview = () => {
                                     {/* Service vehicle number  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Vehicle number</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.
-vehicleNumber || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.vehicleNumber || "N/A"}</td>
                                     </tr>
 
                                     {/*Service Category  */}
@@ -912,7 +911,10 @@ vehicleNumber || "N/A"}</td>
                                     {/* Pickup time  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Time</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.pickupTime)}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                        <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleDateString()}</span> - 
+                                        <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleTimeString()}</span>
+                                        </td>
                                     </tr>
                                     {/* Dropoff time  */}
                                     <tr>
