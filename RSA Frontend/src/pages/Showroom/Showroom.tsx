@@ -329,6 +329,7 @@ const Showroom: React.FC = () => {
                     <table>
                         <thead>
                             <tr>
+                                <th>No</th>
                                 <th>Photo</th>
                                 <th>Name</th>
                                 <th>Staffs</th>
@@ -342,6 +343,7 @@ const Showroom: React.FC = () => {
                         <tbody>
                             {filteredShowrooms.map((items, index) => (
                                 <tr key={index}>
+                                    <td>{index + 1}</td>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
                                             <img
@@ -352,13 +354,13 @@ const Showroom: React.FC = () => {
                                         </div>
                                     </td>
                                     <td>
-                                        <div onClick={() => openStaffModal(items._id)}>
-                                            <IconUsersGroup />
+                                        <div className="whitespace-nowrap">
+                                            {items.name.charAt(0).toLocaleUpperCase() + items.name.slice(1)}
                                         </div>
                                     </td>
                                     <td>
-                                        <div className="whitespace-nowrap">
-                                            {items.name.charAt(0).toLocaleUpperCase() + items.name.slice(1)}
+                                        <div onClick={() => openStaffModal(items._id)}>
+                                            <IconUsersGroup />
                                         </div>
                                     </td>
                                     <td>
@@ -612,7 +614,7 @@ const Showroom: React.FC = () => {
                     </div>
                 </Dialog>
             </Transition>
-            <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId}/>
+            <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} />
             {/* Delete confirmation modal  */}
 
             <ConfirmationModal
