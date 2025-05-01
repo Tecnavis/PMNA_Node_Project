@@ -876,8 +876,7 @@ const Preview = () => {
                                     {/* Service vehicle number  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Vehicle number</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.
-                                            vehicleNumber || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.vehicleNumber || "N/A"}</td>
                                     </tr>
 
                                     {/*Service Category  */}
