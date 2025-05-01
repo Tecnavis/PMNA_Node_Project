@@ -87,8 +87,14 @@ const Leaves: React.FC = () => {
             const response = await axios.get(`${backendUrl}/leaves`);
             const formattedLeaves = response.data.map((leave: any) => ({
                 ...leave,
-                driver: typeof leave.driver === 'object' ? leave.driver.name : leave.driver, // Ensure it's a string
+                driver:
+                    leave.driver && typeof leave.driver === 'object'
+                        ? leave.driver.name
+                        : typeof leave.driver === 'string'
+                        ? leave.driver
+                        : 'Unknown',
             }));
+            
             setLeaves(formattedLeaves);
         } catch (error) {
             console.error('Error fetching leaves:', error);
