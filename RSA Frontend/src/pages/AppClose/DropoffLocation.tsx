@@ -148,6 +148,7 @@ const DropoffUploadPage = () => {
             formData.append('dropoffTime', dropoffTime || ' ');
             formData.append('mob1', mob1);
             formData.append('customerVehicleNumber', customerVehicleNumber);
+            formData.append("dropoffImagePending", "false");
 
             // Append images (only if they exist)
             images.forEach((img) => {

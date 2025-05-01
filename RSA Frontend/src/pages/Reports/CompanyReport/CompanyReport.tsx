@@ -225,6 +225,20 @@ const CompanyReport = () => {
         });
     };
 
+    const calculateTotalBalance = () => {
+        return bookings?.reduce((totalBalance, booking) => {
+            const { receivedAmount = 0, totalAmount = 0 } = booking;
+
+            if (receivedAmount >= totalAmount) {
+                return totalBalance ;
+            }
+
+            const balance = totalAmount - receivedAmount;
+
+            return totalBalance + balance;
+        }, 0);  // Initial value for totalBalance is 0
+    };
+
     const handleSelectAll = () => {
         if (selectedBookings.size === bookings.length) {
             // Deselect all
@@ -259,34 +273,90 @@ const CompanyReport = () => {
         }
     };
 
+    const totalProfit = (): number => {
+        // Initialize total profit
+        let totalProfitAmount = 0;
+    
+        // Loop through each booking and calculate actual profit or loss
+        bookings.forEach((booking) => {
+            const {
+                receivedAmount = 0,
+                totalAmount = 0,
+                driverSalary = 0,
+            } = booking;
+    
+            // Calculate profit or loss
+            const isProfit = receivedAmount > totalAmount; // Determine if it's a profit or loss
+            const profit = totalAmount - receivedAmount; // Basic profit/loss calculation
+    
+            // Calculate the actual profit considering driver salary
+            if (isProfit) {
+                const actualProfit = Math.abs(profit) - driverSalary;
+                totalProfitAmount += actualProfit; // Add actual profit
+            } else {
+                const actualProfit = profit + driverSalary;
+                totalProfitAmount -= actualProfit; // Subtract actual loss
+            }
+        });
+    
+        // Return the total actual profit amount (positive or negative)
+        return totalProfitAmount;
+    };
+    
+
     const calculateBookingProfitOrLoss = (
         booking: Booking,
         type: 'overall' | 'actual' = 'overall'
     ): string => {
         const {
             receivedAmount = 0,
-            afterExpenseForDriver = 0,
-            afterExpenseForProvider = 0,
-            insuranceAmount = 0,
-            adjustmentValue = 0,
+            totalAmount = 0,
             driverSalary = 0,
         } = booking;
 
-        const totalExpenses = afterExpenseForDriver + afterExpenseForProvider + insuranceAmount;
-        const netProfit = receivedAmount - totalExpenses + adjustmentValue;
-        const actualProfit = netProfit - driverSalary;
-
-        const value = type === 'overall' ? netProfit : actualProfit;
-
-        if (value < 0) {
-            return <span className='text-red-500'>Loss: ₹{Math.abs(value).toFixed(2)}</span>;
+        if (receivedAmount === 0) {
+            return <span>No Profit/Loss</span>;
         }
 
-        if (value > 0) {
-            return <span className='text-green-500'>Profit: ₹{value.toFixed(2)}</span>;
+        const isProfit = receivedAmount > totalAmount ? true : false
+        const profit = totalAmount - receivedAmount;
+
+        if (isProfit && type === 'overall') {
+            return <span className='text-green-500'>Gain: ₹{Math.abs(profit)}</span>;
+        } else if (!isProfit && type === 'overall') {
+            if (profit === 0) {
+                return <span className="text-gray-500">No Profit and No Gain</span>;
+            } else {
+                return (
+                    <span className='text-red-500'>
+                        Loss: ₹{Math.abs(profit)}
+                    </span>
+                );
+            }
+        } else {
+            if (isProfit) {
+                const profitAmount = Math.abs(profit)
+                const actualProfit = profitAmount - driverSalary
+                return <span
+                    className={`${actualProfit > 0
+                        ? 'text-green-500'
+                        : actualProfit < 0
+                            ? 'text-red-500'
+                            : 'text-gray-500'
+                        }`}
+                >
+                    {actualProfit > 0
+                        ? 'Gain'
+                        : actualProfit < 0
+                            ? 'Loss'
+                            : 'No Profit/Loss'}: ₹{Math.abs(actualProfit)}
+                </span>;
+            } else {
+                const actualProfit = profit + driverSalary
+                return <span className='text-red-500'>Loss: ₹{Math.abs(actualProfit)}</span>;
+            }
         }
 
-        return <span >No profit, no loss</span>
     };
 
     const cols = [
@@ -413,7 +483,7 @@ const CompanyReport = () => {
                 if (booking._id === 'total') {
                     return (
                         <span className="font-semibold text-lg text-primary ">
-                            {totalBalance}
+                            {calculateTotalBalance()}
                         </span>
                     );
                 }
@@ -523,23 +593,23 @@ const CompanyReport = () => {
         if (month === 'All Months') {
             const today = new Date();
             const twoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // Jan 1st, two years ago
-    
+
             setStartDate(twoYearsAgo.toISOString().slice(0, 10)); // YYYY-MM-DD
             setEndingDate(today.toISOString().slice(0, 10)); // today
         } else {
             const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert to 0-index
-    
+
             // Start of selected month
             const firstDay = new Date(year, monthIndex, 1);
-    
+
             // End of selected month
             const lastDay = new Date(year, monthIndex + 1, 0);
-    
+
             setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
             setEndingDate(lastDay.toISOString().slice(0, 10));
         }
     };
-    
+
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {
@@ -753,7 +823,7 @@ const CompanyReport = () => {
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base dark:text-white-dark">
                                             Balance Amount To Collect in {selectedMonth}
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
+                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{calculateTotalBalance()}</span>
                                         </h6>
                                     </div>
                                 </div>
@@ -767,7 +837,7 @@ const CompanyReport = () => {
                                         <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                             <h6 className="text-white-dark text-base dark:text-white-dark">
                                                 Total Profit :
-                                                <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.overallAmount}</span>
+                                                <span className="block text-base text-[#515365] dark:text-white-light">₹{totalProfit()}</span>
                                             </h6>
                                         </div>
                                     </div>

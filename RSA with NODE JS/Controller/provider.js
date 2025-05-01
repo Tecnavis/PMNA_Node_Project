@@ -181,7 +181,7 @@ exports.verifyOTP = async (req, res) => {
     res.status(200).json({
       token,
       message: "login successfully",
-      success : true
+      success: true
     });
   } catch (err) {
     console.error(err.message);

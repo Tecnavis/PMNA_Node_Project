@@ -38,9 +38,9 @@ const ShowroomModal: React.FC<ShowroomModalProps> = ({ isOpen, onClose }) => {
                 mobile: '',
                 state: '',
                 district: '',
-                services: {},  // or send as needed
-            };
-            
+                services: {}, // or provide the proper service structure
+              };
+              
 
         try {
             // Make the POST request
