@@ -1,6 +1,6 @@
 import axios from 'axios';
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import { FiUploadCloud } from 'react-icons/fi';
+import { FiCheck, FiUploadCloud, FiX } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { CLOUD_IMAGE } from '../../constants/status';
@@ -9,6 +9,9 @@ interface Booking {
     _id?: string;
     receivedUser?: string;
     companyBooking: boolean;
+    pickupImagePending?: boolean;
+    inventoryImagePending?: boolean;
+
     approve: boolean;
     receivedAmount: number;
     phoneNumber: any;
@@ -73,7 +76,7 @@ const DropoffUploadPage = () => {
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
     const [bookingData, setBookingData] = useState<Booking | null>(null);
     const [loading, setLoading] = useState<Boolean>(false);
-
+   
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const location = useLocation();
     const navigate = useNavigate();
@@ -84,6 +87,10 @@ const DropoffUploadPage = () => {
     const [images, setImages] = useState<(File | null)[]>(Array(6).fill(null));
     const [previews, setPreviews] = useState<(string | null)[]>(Array(6).fill(null));
     const [imageFiles, setImageFiles] = useState<(File | null)[]>(Array(6).fill(null));
+   // --- New Inventory Image State ---
+   const [inventoryImage, setInventoryImage] = useState<File | null>(null);
+   const [inventoryPreview, setInventoryPreview] = useState<string | null>(null);
+   const [inventoryUploaded, setInventoryUploaded] = useState(false);
 
     // Fetch existing booking data if itemId exists
     useEffect(() => {
@@ -135,7 +142,23 @@ const DropoffUploadPage = () => {
 
     // Count of uploaded images
     const uploadedCount = previews.filter((img) => img !== null).length;
+  // Handler for inventory image upload
+  const handleInventoryUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        const objectUrl = URL.createObjectURL(file);
+        setInventoryImage(file);
+        setInventoryPreview(objectUrl);
+        setInventoryUploaded(true);
+    }
+};
 
+// Remove inventory image
+const removeInventoryImage = () => {
+    setInventoryImage(null);
+    setInventoryPreview(null);
+    setInventoryUploaded(false);
+};
     // Handler for form submission
     const handleSubmit = async () => {
         setLoading(true)
@@ -149,6 +172,7 @@ const DropoffUploadPage = () => {
             formData.append('mob1', mob1);
             formData.append('customerVehicleNumber', customerVehicleNumber);
             formData.append("dropoffImagePending", "false");
+            formData.append("inventoryImagePending", "false");
 
             // Append images (only if they exist)
             images.forEach((img) => {
@@ -157,6 +181,12 @@ const DropoffUploadPage = () => {
 
             if (bookingData) {
                 await axios.put(`${backendUrl}/booking/${itemId}`, formData);
+                  // Then upload inventory image if exists
+                  if (inventoryImage) {
+                    const inventoryFormData = new FormData();
+                    inventoryFormData.append('image', inventoryImage);
+                    await axios.patch(`${backendUrl}/booking/inventory/${itemId}`, inventoryFormData);
+                }
                 Swal.fire({
                     icon: 'success',
                     title: 'Booking Updated',
@@ -224,16 +254,16 @@ const DropoffUploadPage = () => {
         <div className="min-h-screen bg-white px-4 py-6 flex flex-col items-center">
             {/* Step Indicator */}
             <div className="flex justify-center items-center gap-4 mb-6">
-                {Array(6)
-                    .fill(null)
-                    .map((_, index) => (
-                        <React.Fragment key={index}>
-                            <div className={`w-6 h-6 flex justify-center items-center rounded-full ${index < uploadedCount ? 'bg-red-500 text-white' : 'border-2 border-red-500 text-red-500'}`}>
-                                {index < uploadedCount ? '✔' : index + 1}
-                            </div>
-                            {index < 5 && <div className="w-16 border-t-2 border-red-500"></div>}
-                        </React.Fragment>
-                    ))}
+                {Array(6).fill(null).map((_, index) => (
+                    <React.Fragment key={index}>
+                        <div className={`w-6 h-6 flex justify-center items-center rounded-full ${
+                            index < uploadedCount ? 'bg-red-500 text-white' : 'border-2 border-red-500 text-red-500'
+                        }`}>
+                            {index < uploadedCount ? '✔' : index + 1}
+                        </div>
+                        {index < 5 && <div className="w-16 border-t-2 border-red-500"></div>}
+                    </React.Fragment>
+                ))}
             </div>
 
             <div className="w-full max-w-md mb-4">
@@ -241,10 +271,12 @@ const DropoffUploadPage = () => {
 
                 {/* Delivery Form */}
                 <div className="border-2 border-red-200 rounded-lg p-4 space-y-4">
-                    {/* Recipient Name */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1">File Number</label>
-                        {bookingData?.fileNumber ? <span className="text-danger font-medium">{bookingData.fileNumber}</span> : <span className="text-gray-500 italic">No file number available</span>}
+                        {bookingData?.fileNumber ? 
+                            <span className="text-danger font-medium">{bookingData.fileNumber}</span> : 
+                            <span className="text-gray-500 italic">No file number available</span>
+                        }
                     </div>
 
                     <div>
@@ -252,15 +284,16 @@ const DropoffUploadPage = () => {
                         <input
                             type="text"
                             value={bookingData?.customerVehicleNumber || ''}
-                            onChange={(e) => setBookingData((prev) => (prev ? { ...prev, customerVehicleNumber: e.target.value } : prev))}
+                            onChange={(e) => setBookingData(prev => prev ? 
+                                {...prev, customerVehicleNumber: e.target.value} : prev)}
                             className="border border-gray-300 rounded-md p-2 w-full"
                         />
                     </div>
-                    {/* Delivery Date + Time */}
+
                     <div className="flex gap-2">
                         <div className="flex-1">
                             <label className="block text-sm font-semibold text-gray-700 mb-1">
-                            DropOff Time
+                                DropOff Time
                             </label>
                             <input
                                 type="datetime-local"
@@ -271,14 +304,57 @@ const DropoffUploadPage = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Inventory Image Upload Section */}
+                <div className="mt-6">
+                    <h2 className="text-lg font-bold text-gray-900 mb-2">Inventory Sheet</h2>
+                    <p className="text-gray-600 mb-4">Upload a clear photo of the signed inventory sheet</p>
+                    
+                    <div className="flex flex-col items-center">
+                        {inventoryPreview ? (
+                            <div className="relative group">
+                                <img 
+                                    src={inventoryPreview} 
+                                    alt="Inventory sheet" 
+                                    className="w-full max-w-xs h-64 object-contain border-2 border-green-200 rounded-lg shadow-sm"
+                                />
+                                <button
+                                    onClick={removeInventoryImage}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-md"
+                                >
+                                    <FiX size={16} />
+                                </button>
+                                <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                                    <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                                        <FiCheck className="mr-1" /> Uploaded
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg w-full max-w-xs h-64 cursor-pointer hover:border-red-300 transition-colors duration-200">
+                                <div className="flex flex-col items-center justify-center p-4 text-center">
+                                    <FiUploadCloud className="text-gray-500 text-3xl mb-2" />
+                                    <span className="text-sm font-medium text-gray-700">Upload Inventory Sheet</span>
+                                    <span className="text-xs text-gray-500 mt-1">Click to browse or drag & drop</span>
+                                    <span className="text-xs text-gray-500">(JPG, PNG, or PDF)</span>
+                                </div>
+                                <input 
+                                    type="file" 
+                                    accept="image/*,.pdf" 
+                                    className="hidden" 
+                                    onChange={handleInventoryUpload}
+                                />
+                            </label>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            {/* Title */}
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Attach Additional Images  (Please upload images for Front, Rear, Left Side, Right Side, Inventory Sheet and Sticker)</h2>
+            {/* Vehicle Images Section */}
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Attach Vehicle Images</h2>
             <p className="text-gray-600 mb-6 text-center">Upload legible pictures of your delivery documentation.</p>
 
-            {/* Image Upload Grid */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4 mb-6">
                 {images.map((_, index) => (
                     <label key={index} className="flex flex-col items-center justify-center border-2 border-dashed border-gray-400 rounded-lg w-24 h-24 cursor-pointer relative">
                         {previews[index] ? (
@@ -289,30 +365,18 @@ const DropoffUploadPage = () => {
                                 <span className="text-xs text-gray-600 text-center">Choose or Capture</span>
                             </div>
                         )}
-
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, index)} />
                     </label>
                 ))}
             </div>
-
-            {/* Submit Button */}
-            {/* <button
-            onClick={handleSubmit}
-            className={`mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${
-              uploadedCount === 3
-                ? "bg-red-500 text-white"
-                : "bg-gray-300 text-gray-600 cursor-not-allowed"
-            }`}
-            disabled={uploadedCount < 3}
-          >
-            Submit
-          </button> */}
             <button
-                onClick={handleSubmit}
-                // @ts-ignore
-                disabled={uploadedCount < 6 || loading} // Example condition
-                className={` bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs ${uploadedCount < 6 ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
+    onClick={handleSubmit}
+    disabled={uploadedCount < 6 || !Boolean(inventoryUploaded) || !!loading}
+    className={`bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs transition-colors duration-200 ${
+        uploadedCount < 6 || !inventoryUploaded ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+    }`}
+>
+
                 {loading ? (
                     <div className="flex items-center justify-center">
                         <svg
@@ -321,25 +385,12 @@ const DropoffUploadPage = () => {
                             fill="none"
                             viewBox="0 0 24 24"
                         >
-                            <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                            ></circle>
-                            <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         Submitting...
                     </div>
-                ) : (
-                    "Submit"
-                )}
+                ) : "Submit"}
             </button>
         </div>
     );

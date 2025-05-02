@@ -12,6 +12,7 @@ import BookingNotes from './BookingNotes';
 import { dateFormate, formattedTime } from '../../utils/dateUtils';
 import FeedbackModal from './FeedbackModal';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { FiAlertTriangle, FiCheck, FiZoomIn } from 'react-icons/fi';
 
 export interface Booking {
     _id: string;
@@ -29,6 +30,7 @@ export interface Booking {
     cashPending?: boolean;
     dropoffImagePending?: boolean;
     pickupImagePending?: boolean;
+    inventoryImagePending?: boolean;
     company: {
         name: string;
     };
@@ -166,7 +168,7 @@ const Preview = () => {
     const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
     const [role, setRole] = useState<string>('');
     const dropoffAndPickup = useRef<any>(null);
-
+    const [inventoryImageUrl, setInventoryImageUrl] = useState<string | null>(null);
     // checking the token
 
     const gettingToken = () => {
@@ -222,6 +224,10 @@ const Preview = () => {
             const dropoffUrls = dropoffFiles?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
             setDropoffImageUrls(dropoffUrls);
             setPickuptImageUrls(urls);
+               // Add inventory image URL if exists
+        if (response.data.inventoryImage) {
+            setInventoryImageUrl(`${CLOUD_IMAGE}${response.data.inventoryImage}`);
+        }
         } catch (error) {
             console.error('Error fetching bookings:', error);
         }
@@ -486,6 +492,18 @@ const Preview = () => {
                 });
                 return;
             }
+            if (booking?.inventoryImagePending) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Inventory Image is Pending',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+                return;
+            }
             // If no pending, proceed
             await axios.patch(`${backendUrl}/booking/verifybooking/${id}`);
             navigate('/completedbookings');
@@ -718,7 +736,40 @@ const Preview = () => {
                             )}
                         </Tab.Panels>
                     </Tab.Group>
-
+                    <div className="mt-8">
+    <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Inventory Sheet</h3>
+    
+    {inventoryImageUrl ? (
+        <div className="relative group max-w-md mx-auto">
+            <div className="relative overflow-hidden rounded-lg shadow-md border-2 border-green-100 dark:border-green-800 transition-all duration-300 hover:shadow-lg">
+                <img 
+                    src={inventoryImageUrl} 
+                    alt="Inventory sheet"
+                    className="w-full h-64 object-contain bg-gray-50 dark:bg-gray-800"
+                    onClick={() => setEnlargedImage(inventoryImageUrl)}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                    <div className="flex justify-between w-full items-center">
+                       
+                        <button 
+                            onClick={() => setEnlargedImage(inventoryImageUrl)}
+                            className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors"
+                        >
+                            <FiZoomIn size={18} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+          
+        </div>
+    ) : (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-center">
+            <FiAlertTriangle className="mx-auto text-yellow-500 dark:text-yellow-400 text-2xl mb-2" />
+            <p className="text-yellow-700 dark:text-yellow-300 font-medium">No inventory sheet uploaded</p>
+            <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">Please upload the signed inventory sheet</p>
+        </div>
+    )}
+</div>
                     <table className="table-striped mt-4">
                         <tbody>
                             {booking && (

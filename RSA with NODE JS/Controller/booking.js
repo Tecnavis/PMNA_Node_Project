@@ -962,6 +962,9 @@ exports.verifyBooking = async (req, res) => {
         if (booking.pickupImagePending || booking.dropoffImagePending) {
             return res.status(400).json({ message: 'Image is pending.' });
         }
+        if (booking.inventoryImagePending) {
+            return res.status(400).json({ message: 'Inventory Image is pending.' });
+        }
         // Adjust cash in hand and salary similar to updatePickupByAdmin
         if (booking.workType === "RSAWork") {
             const selectedCompany = booking.company;
