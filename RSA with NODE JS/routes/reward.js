@@ -7,7 +7,7 @@ const jwt = require('../Middileware/jwt')
 // Routes
 router.post('/', jwt, upload.single('image'), controller.createReward)
     .get('/', jwt, controller.getAllRewards)
-    .get('/redeem-reward', jwt, controller.redeemForShowroomStaff)
+    .get('/redeem-reward', jwt, controller.redeemReward)
     .get('/redemtions', jwt, controller.getAllredemationsBaseUserType)
     .get('/redemable-rewards', jwt, controller.getAllRedeemableRewards)
     .get('/:id', jwt, controller.getRewardById)
