@@ -84,6 +84,9 @@ const bookingSchema = new mongoose.Schema({
     cancelImage: {
         type: String, // Path to the uploaded image
     },
+    inventoryImage: {
+        type: String, // Path to the uploaded image
+    },
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' } // New props
 
 }, { timestamps: true });

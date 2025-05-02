@@ -49,6 +49,8 @@ router.put('/:id', jwt, upload.array('images', 6), controller.updateBooking);
 
 // Route to cancel booking
 router.patch('/cancel/:id', jwt, upload.single('image'), controller.cancelBooking);
+// Route to inventory image add 
+router.patch('/inventory/:id', jwt, upload.single('image'), controller.inventoryBooking);
 
 //Route to update the pickup and dropoff details
 router.put('/pickupbyadmin/:id', jwt, controller.updatePickupByAdmin);
