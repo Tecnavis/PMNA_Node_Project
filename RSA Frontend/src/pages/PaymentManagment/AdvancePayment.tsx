@@ -65,38 +65,62 @@ const AdvancePayment: React.FC = () => {
     }
 
     const createAdvancePayment = async () => {
-
         if (!amount || !remark.trim()) {
             Swal.fire({
                 toast: true,
                 position: 'top',
-                icon: 'warning', // or 'success', 'error', 'info'
+                icon: 'warning',
                 title: 'All fields are required',
                 showConfirmButton: false,
                 timer: 3000,
                 timerProgressBar: true,
-                // background: '#fff',
                 customClass: {
                     popup: 'small-toast'
                 }
             });
-            return
+            return;
         }
-        try {
-            const res = await axios.post(`${BASE_URL}/advance-payment`, {
-                advance: amount,
-                driverId: selectedDriver,
-                remark,
-                type: 'Advance'
-            });
-            fetchAdvancePayment()
-            setRemark('')
-            setAmount('')
-            fetchDrivers()
-        } catch (error) {
-
+    
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: `You are about to settle an advance payment of ₹${amount}.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, confirm',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        });
+    
+        if (result.isConfirmed) {
+            try {
+                await axios.post(`${BASE_URL}/advance-payment`, {
+                    advance: amount,
+                    driverId: selectedDriver,
+                    remark,
+                    type: 'Advance'
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: 'Advance payment settled successfully',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                fetchAdvancePayment();
+                setRemark('');
+                setAmount('');
+                fetchDrivers();
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed',
+                    text: 'Error settling advance payment. Try again.',
+                });
+                console.error('Advance payment error:', error);
+            }
         }
-    }
+    };
+    
 
     const fetchCashCollection = async () => {
         try {
