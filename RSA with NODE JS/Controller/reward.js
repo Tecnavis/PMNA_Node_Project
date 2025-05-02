@@ -112,10 +112,10 @@ exports.deleteReward = async (req, res) => {
   }
 };
 
-exports.redeemForShowroomStaff = async (req, res) => {
-  const { id, userType, staffId } = req.query;
+exports.redeemReward = async (req, res) => {
+  const { rewardId, rewardFor, userId } = req.query;
   try {
-    const redemption = await redeemForShowroomStaff(id, staffId, userType);
+    const redemption = await managredeemReward(rewardId, userId, rewardFor);
 
     return res.status(201).json({
       success: true,
@@ -133,18 +133,18 @@ exports.redeemForShowroomStaff = async (req, res) => {
 };
 
 
-const redeemForShowroomStaff = async (rewardId, staffId, userType) => {
+const managredeemReward = async (rewardId, userId, rewardFor) => {
   const session = await mongoose.startSession();
   let historyRedeem = null;
 
   try {
     await session.withTransaction(async () => {
-      if (!mongoose.Types.ObjectId.isValid(rewardId) || !mongoose.Types.ObjectId.isValid(staffId)) {
+      if (!mongoose.Types.ObjectId.isValid(rewardId) || !mongoose.Types.ObjectId.isValid(userId)) {
         throw new Error('Invalid reward or staff ID');
       }
 
       let userModel;
-      switch (userType) {
+      switch (rewardFor) {
         case 'ShowroomStaff':
           userModel = ShowroomStaff;
           break;
@@ -163,20 +163,20 @@ const redeemForShowroomStaff = async (rewardId, staffId, userType) => {
 
       const [reward, user] = await Promise.all([
         Reward.findById(rewardId).session(session),
-        userModel.findById(staffId).session(session)
+        userModel.findById(userId).session(session)
       ]);
 
       if (!reward) throw new Error('Reward not found');
       if (!user) throw new Error('Staff member not found');
-      if (reward.rewardFor !== userType) throw new Error(`This reward is not available for ${userType}`);
+      if (reward.rewardFor !== rewardFor) throw new Error(`This reward is not available for ${rewardFor}`);
       if (reward.stock <= 0) throw new Error('This reward is out of stock');
 
       let useAblePoints = user.rewardPoints
-      if (userType === 'Showroom') {
+      if (rewardFor === 'Showroom') {
         useAblePoints = user.rewardPoints / 2;
       }
       if (reward.pointsRequired > useAblePoints) {
-        if (userType === 'Showroom') {
+        if (rewardFor === 'Showroom') {
 
           throw new Error(`Insufficient points. You can only use half of your points (${useAblePoints} available)`);
         } else {
@@ -188,7 +188,7 @@ const redeemForShowroomStaff = async (rewardId, staffId, userType) => {
       historyRedeem = new Redemption({
         reward: reward._id,
         user: user._id,
-        redeemByModel: userType
+        redeemByModel: rewardFor
       });
 
       reward.stock -= 1;
