@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { FiCheck, FiUploadCloud, FiX } from 'react-icons/fi';
@@ -82,7 +83,7 @@ const DropoffUploadPage = () => {
     const navigate = useNavigate();
     const params = new URLSearchParams(location.search);
     const itemId = params.get('itemId');
-
+// --------------------------------------
     // --- Image Upload States ---
     const [images, setImages] = useState<(File | null)[]>(Array(6).fill(null));
     const [previews, setPreviews] = useState<(string | null)[]>(Array(6).fill(null));
@@ -141,8 +142,8 @@ const DropoffUploadPage = () => {
     };
 
     // Count of uploaded images
-    const uploadedCount = previews.filter((img) => img !== null).length;
-  // Handler for inventory image upload
+    const requiredUploadedCount = previews.slice(0, 4).filter((img) => img !== null).length;
+    // Handler for inventory image upload
   const handleInventoryUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -162,6 +163,16 @@ const removeInventoryImage = () => {
     // Handler for form submission
     const handleSubmit = async () => {
         setLoading(true)
+        if (requiredUploadedCount < 4) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Incomplete Upload',
+                text: 'Please upload at least 4 required images before submitting.',
+            });
+            setLoading(false);
+            return;
+        }
+        
         try {
             // Prepare common data
             const formData = new FormData();
@@ -254,17 +265,20 @@ const removeInventoryImage = () => {
         <div className="min-h-screen bg-white px-4 py-6 flex flex-col items-center">
             {/* Step Indicator */}
             <div className="flex justify-center items-center gap-4 mb-6">
-                {Array(6).fill(null).map((_, index) => (
-                    <React.Fragment key={index}>
-                        <div className={`w-6 h-6 flex justify-center items-center rounded-full ${
-                            index < uploadedCount ? 'bg-red-500 text-white' : 'border-2 border-red-500 text-red-500'
-                        }`}>
-                            {index < uploadedCount ? '✔' : index + 1}
-                        </div>
-                        {index < 5 && <div className="w-16 border-t-2 border-red-500"></div>}
-                    </React.Fragment>
-                ))}
+    {Array(6).fill(null).map((_, index) => (
+        <React.Fragment key={index}>
+            <div className={`w-6 h-6 flex justify-center items-center rounded-full ${
+                previews[index] ? 'bg-red-500 text-white' : 'border-2 border-red-500 text-red-500'
+            } ${index >= 4 ? 'opacity-50' : ''}`} // Optional images are faded
+                title={index < 4 ? 'Required' : 'Optional'}
+            >
+                {previews[index] ? '✔' : index + 1}
             </div>
+            {index < 5 && <div className="w-16 border-t-2 border-red-500"></div>}
+        </React.Fragment>
+    ))}
+</div>
+
 
             <div className="w-full max-w-md mb-4">
                 <h1 className="text-xl font-bold text-gray-900 mb-2">Customer Verification</h1>
@@ -371,9 +385,9 @@ const removeInventoryImage = () => {
             </div>
             <button
     onClick={handleSubmit}
-    disabled={uploadedCount < 6 || !Boolean(inventoryUploaded) || !!loading}
+    disabled={requiredUploadedCount  < 4 || !Boolean(inventoryUploaded) || !!loading}
     className={`bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs transition-colors duration-200 ${
-        uploadedCount < 6 || !inventoryUploaded ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+        requiredUploadedCount  < 4 || !inventoryUploaded ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
     }`}
 >
 
