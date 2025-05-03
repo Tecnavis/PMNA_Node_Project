@@ -53,15 +53,6 @@ exports.createShowroom = async (req, res) => {
       district
     })
 
-    const phoneIsExist = (phone || mobile) ? await Showroom.findOne({ $or: [{ phone }, { mobile }] }) : null;
-
-    if (phoneIsExist) {
-      return res.status(400).json({
-        message: "Phone number already exists in the showroom.",
-        success: false,
-      });
-    }
-
     const showroom = new Showroom({
       name,
       showroomId,
