@@ -15,9 +15,8 @@ export const getShowroomById = async (
         );
 
         return response.data;
-    } catch (error: unknown) {
-        const errorMessage = handleApiError(error);
-        throw new Error(errorMessage);
+    } catch (error: any) {
+        throw new Error(error);
     }
 };
 
@@ -35,8 +34,7 @@ export const getShowroomReports = async (query: {
             }
         );
         return response.data;
-    } catch (error: unknown) {
-        const errorMessage = handleApiError(error);
-        throw new Error(errorMessage);
+    } catch (error: any) {
+        throw new Error(error);
     }
 };

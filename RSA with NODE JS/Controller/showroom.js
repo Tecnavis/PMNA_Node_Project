@@ -535,7 +535,9 @@ exports.loginShowroom = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials, invalid password!', success: false });
     }
 
-    return res.status(200).json({ message: 'Login sucessfull', success: true, data: isShowroomExist });
+    const token = jwt.sign({ id: isShowroomExist._id, role: "Showroom" }, process.env.JWT_SECRET);
+
+    return res.status(200).json({ message: 'Login sucessfull', success: true, data: isShowroomExist, token });
   } catch (error) {
     console.error("Error in showroom login:", error);
 
