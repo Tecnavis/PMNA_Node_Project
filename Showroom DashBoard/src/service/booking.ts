@@ -31,8 +31,7 @@ export const getBookings = async (formData: any): Promise<AllBookingResponse> =>
         );
 
         return response.data;
-    } catch (error: unknown) {
-        const errorMessage = handleApiError(error);
-        throw new Error(errorMessage);
+    } catch (error: any) {
+        throw new Error(error);
     }
 };
