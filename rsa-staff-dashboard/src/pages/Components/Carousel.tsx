@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import { Navigation, Pagination, Autoplay } from 'swiper';
 import { useEffect, useState } from 'react';
 import CodeHighlight from '../../components/Highlight';
 import { useDispatch, useSelector } from 'react-redux';
@@ -65,7 +63,7 @@ const Carousel = () => {
                                 </span>
                             </button>
                         </div>
-                        <Swiper
+                        {/* <Swiper
                             modules={[Navigation, Pagination]}
                             navigation={{ nextEl: '.swiper-button-next-ex1', prevEl: '.swiper-button-prev-ex1' }}
                             pagination={{ clickable: true }}
@@ -89,7 +87,7 @@ const Carousel = () => {
                             <button className="swiper-button-next-ex1 grid place-content-center ltr:right-2 rtl:left-2 p-1 transition text-primary hover:text-white border border-primary  hover:border-primary hover:bg-primary rounded-full absolute z-[999] top-1/2 -translate-y-1/2">
                                 <IconCaretDown className="w-5 h-5 rtl:rotate-90 -rotate-90" />
                             </button>
-                        </Swiper>
+                        </Swiper> */}
                         {tabs.includes('code1') && (
                             <CodeHighlight>
                                 <pre className="language-typescript">
@@ -140,7 +138,7 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
                                 </span>
                             </button>
                         </div>
-                        <Swiper
+                        {/* <Swiper
                             modules={[Navigation, Autoplay, Pagination]}
                             navigation={{ nextEl: '.swiper-button-next-ex2', prevEl: '.swiper-button-prev-ex2' }}
                             pagination={{ clickable: true }}
@@ -174,7 +172,7 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
                             <button className="swiper-button-next-ex2 grid place-content-center ltr:right-2 rtl:left-2 p-1 transition text-primary hover:text-white border border-primary  hover:border-primary hover:bg-primary rounded-full absolute z-[999] top-1/2 -translate-y-1/2">
                                 <IconCaretDown className="w-5 h-5 rtl:rotate-90 -rotate-90" />
                             </button>
-                        </Swiper>
+                        </Swiper> */}
                         {tabs.includes('code2') && (
                             <CodeHighlight>
                                 <pre className="language-typescript">
@@ -234,7 +232,7 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
                                 </span>
                             </button>
                         </div>
-                        <Swiper
+                        {/* <Swiper
                             modules={[Pagination, Autoplay]}
                             pagination={{ clickable: true }}
                             autoplay={{ delay: 2000 }}
@@ -256,7 +254,7 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
                                     );
                                 })}
                             </div>
-                        </Swiper>
+                        </Swiper> */}
                         {tabs.includes('code3') && (
                             <CodeHighlight>
                                 <pre className="language-typescript">
@@ -298,7 +296,7 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
                         </div>
                         <div className="swiper max-w-3xl mx-auto mb-5" id="slider4">
                             <div className="swiper-wrapper">
-                                <Swiper
+                                {/* <Swiper
                                     modules={[Navigation, Pagination]}
                                     slidesPerView={1}
                                     spaceBetween={30}
@@ -335,7 +333,7 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
                                             <div className="mb-4 sm:text-base font-medium">Lorem Ipsum is simply dummy text of the printing.</div>
                                         </div>
                                     </SwiperSlide>
-                                </Swiper>
+                                </Swiper> */}
                             </div>
                             <button className="swiper-button-prev-ex4 grid place-content-center ltr:left-2 rtl:right-2 p-1 transition text-primary hover:text-white border border-primary  hover:border-primary hover:bg-primary rounded-full absolute z-[999] top-1/2 -translate-y-1/2">
                                 <IconCaretDown className="w-5 h-5 rtl:-rotate-90 rotate-90" />
@@ -355,44 +353,44 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
 
 <div className="swiper max-w-3xl mx-auto mb-5" id="slider4">
     <div className="swiper-wrapper">
-        <Swiper
-            modules={[Navigation, Pagination]}
-            slidesPerView={1}
-            spaceBetween={30}
-            loop={true}
-            pagination={{
-                clickable: true,
-                type: 'fraction',
-            }}
-            navigation={{
-                nextEl: '.swiper-button-next-ex4',
-                prevEl: '.swiper-button-prev-ex4',
-            }}
-            dir={themeConfig.rtlClass}
-            key={themeConfig.rtlClass === 'rtl' ? 'true' : 'false'}
-        >
-            <SwiperSlide>
-                <img src="/assets/images/carousel1.jpeg" className="w-full" alt="slide1" />
-                <div className="absolute z-[999] text-white bottom-8 left-1/2 w-full -translate-x-1/2 text-center sm:px-0 px-11">
-                    <div className="text-3xl font-bold">Slide 1</div>
-                    <div className="mb-4 sm:text-base font-medium">Lorem Ipsum is simply dummy text of the printing.</div>
-                </div>
-            </SwiperSlide>
-            <SwiperSlide>
-                <img src="/assets/images/carousel2.jpeg" className="w-full" alt="slide2" />
-                <div className="absolute z-[999] text-white bottom-8 left-1/2 w-full -translate-x-1/2 text-center sm:px-0 px-11">
-                    <div className="text-3xl font-bold">Slide 2</div>
-                    <div className="mb-4 sm:text-base font-medium">Lorem Ipsum is simply dummy text of the printing.</div>
-                </div>
-            </SwiperSlide>
-            <SwiperSlide>
-                <img src="/assets/images/carousel3.jpeg" className="w-full" alt="slide3" />
-                <div className="absolute z-[999] text-white bottom-8 left-1/2 w-full -translate-x-1/2 text-center sm:px-0 px-11">
-                    <div className="text-3xl font-bold">Slide 3</div>
-                    <div className="mb-4 sm:text-base font-medium">Lorem Ipsum is simply dummy text of the printing.</div>
-                </div>
-            </SwiperSlide>
-        </Swiper>
+        // <Swiper
+        //     modules={[Navigation, Pagination]}
+        //     slidesPerView={1}
+        //     spaceBetween={30}
+        //     loop={true}
+        //     pagination={{
+        //         clickable: true,
+        //         type: 'fraction',
+        //     }}
+        //     navigation={{
+        //         nextEl: '.swiper-button-next-ex4',
+        //         prevEl: '.swiper-button-prev-ex4',
+        //     }}
+        //     dir={themeConfig.rtlClass}
+        //     key={themeConfig.rtlClass === 'rtl' ? 'true' : 'false'}
+        // >
+        //     <SwiperSlide>
+        //         <img src="/assets/images/carousel1.jpeg" className="w-full" alt="slide1" />
+        //         <div className="absolute z-[999] text-white bottom-8 left-1/2 w-full -translate-x-1/2 text-center sm:px-0 px-11">
+        //             <div className="text-3xl font-bold">Slide 1</div>
+        //             <div className="mb-4 sm:text-base font-medium">Lorem Ipsum is simply dummy text of the printing.</div>
+        //         </div>
+        //     </SwiperSlide>
+        //     <SwiperSlide>
+        //         <img src="/assets/images/carousel2.jpeg" className="w-full" alt="slide2" />
+        //         <div className="absolute z-[999] text-white bottom-8 left-1/2 w-full -translate-x-1/2 text-center sm:px-0 px-11">
+        //             <div className="text-3xl font-bold">Slide 2</div>
+        //             <div className="mb-4 sm:text-base font-medium">Lorem Ipsum is simply dummy text of the printing.</div>
+        //         </div>
+        //     </SwiperSlide>
+        //     <SwiperSlide>
+        //         <img src="/assets/images/carousel3.jpeg" className="w-full" alt="slide3" />
+        //         <div className="absolute z-[999] text-white bottom-8 left-1/2 w-full -translate-x-1/2 text-center sm:px-0 px-11">
+        //             <div className="text-3xl font-bold">Slide 3</div>
+        //             <div className="mb-4 sm:text-base font-medium">Lorem Ipsum is simply dummy text of the printing.</div>
+        //         </div>
+        //     </SwiperSlide>
+        // </Swiper>
     </div>
     <button className="swiper-button-prev-ex4 grid place-content-center ltr:left-2 rtl:right-2 p-1 transition text-primary hover:text-white border border-primary  hover:border-primary hover:bg-primary rounded-full absolute z-[999] top-1/2 -translate-y-1/2">
         <svg>...</svg>
@@ -418,7 +416,7 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
                         </div>
                         <div className="swiper" id="slider5">
                             <div className="swiper-wrapper">
-                                <Swiper
+                                {/* <Swiper
                                     modules={[Navigation, Pagination]}
                                     navigation={{
                                         nextEl: '.swiper-button-next-ex5',
@@ -458,7 +456,7 @@ import { Navigation, Pagination, Autoplay } from 'swiper';
                                             </SwiperSlide>
                                         );
                                     })}
-                                </Swiper>
+                                </Swiper> */}
                             </div>
                             <button className="swiper-button-prev-ex5 grid place-content-center ltr:left-2 rtl:right-2 p-1 transition text-primary hover:text-white border border-primary  hover:border-primary hover:bg-primary rounded-full absolute z-[999] top-[44%] -translate-y-1/2">
                                 <IconCaretDown className="w-5 h-5 rtl:-rotate-90 rotate-90" />
@@ -478,32 +476,32 @@ import { Navigation, Pagination } from 'swiper';
 
 <div className="swiper" id="slider5">
     <div className="swiper-wrapper">
-        <Swiper
-            modules={[Navigation, Pagination]}
-            navigation={{
-                nextEl: '.swiper-button-next-ex5',
-                prevEl: '.swiper-button-prev-ex5',
-            }}
-            pagination={{
-                clickable: true,
-            }}
-            breakpoints={{
-                1024: {
-                    slidesPerView: 3,
-                    spaceBetween: 30,
-                },
-                768: {
-                    slidesPerView: 2,
-                    spaceBetween: 40,
-                },
-                320: {
-                    slidesPerView: 1,
-                    spaceBetween: 20,
-                },
-            }}
-            dir={themeConfig.rtlClass}
-            key={themeConfig.rtlClass === 'rtl' ? 'true' : 'false'}
-        >
+        // <Swiper
+        //     modules={[Navigation, Pagination]}
+        //     navigation={{
+        //         nextEl: '.swiper-button-next-ex5',
+        //         prevEl: '.swiper-button-prev-ex5',
+        //     }}
+        //     pagination={{
+        //         clickable: true,
+        //     }}
+        //     breakpoints={{
+        //         1024: {
+        //             slidesPerView: 3,
+        //             spaceBetween: 30,
+        //         },
+        //         768: {
+        //             slidesPerView: 2,
+        //             spaceBetween: 40,
+        //         },
+        //         320: {
+        //             slidesPerView: 1,
+        //             spaceBetween: 20,
+        //         },
+        //     }}
+        //     dir={themeConfig.rtlClass}
+        //     key={themeConfig.rtlClass === 'rtl' ? 'true' : 'false'}
+        // >
             {items.map((item, i) => {
                 return (
                     <SwiperSlide key={i}>
