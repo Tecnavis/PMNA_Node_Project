@@ -959,6 +959,9 @@ exports.verifyBooking = async (req, res) => {
         if (booking.pickupImagePending || booking.dropoffImagePending) {
             return res.status(400).json({ message: 'Image is pending.' });
         }
+        if (booking.inventoryImagePending) {
+            return res.status(400).json({ message: 'Inventory Image is pending.' });
+        }
         // Adjust cash in hand and salary similar to updatePickupByAdmin
         if (booking.workType === "RSAWork") {
             const selectedCompany = booking.company;
@@ -1770,3 +1773,40 @@ exports.cancelBooking = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" })
     }
 }
+// Controller for inventory booking
+exports.inventoryBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!req.file || !req.file.filename) {
+            return res.status(400).json({
+                message: 'Please upload an image.',
+                success: false
+            });
+        }
+
+        const image = req.file.filename;
+
+        const booking = await Booking.findById(id);
+
+        if (!booking) {
+            return res.status(404).json({
+                message: 'Booking not found.',
+                success: false
+            });
+        }
+
+        booking.inventoryImage = image;
+        await booking.save();
+
+        return res.status(200).json({
+            message: 'Inventory image added.',
+            success: true,
+            booking
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
