@@ -1,4 +1,5 @@
 // /components/reward/RewardCard.tsx
+// @ts-ignore
 import { Card, Text, Badge, Button, Group } from '@mantine/core';
 import { IReward } from '../../interface/reward';
 import { BASE_URL } from '../../config/axiosConfig';

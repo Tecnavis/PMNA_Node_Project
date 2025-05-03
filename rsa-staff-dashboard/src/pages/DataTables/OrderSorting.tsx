@@ -574,7 +574,7 @@ const OrderSorting = () => {
                     </div>
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         highlightOnHover
                         className={`${isRtl ? 'whitespace-nowrap table-hover' : 'whitespace-nowrap table-hover'}`}
                         records={recordsData}
@@ -595,7 +595,7 @@ const OrderSorting = () => {
                         onSortStatusChange={setSortStatus}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
         </div>

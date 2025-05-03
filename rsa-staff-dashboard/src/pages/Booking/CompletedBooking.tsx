@@ -121,8 +121,11 @@ const CompletedBookings: React.FC = () => {
                                                 </>
                                             )}
                                         </td>
-
-                                        <td>{items.bookedBy?.name || "N/A"}</td>
+                                        <td>
+                                            {typeof items.bookedBy === 'object' && items.bookedBy !== null
+                                                ? items.bookedBy.name
+                                                : 'N/A'}
+                                        </td>
                                     </tr>
                                 );
                             })}

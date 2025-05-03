@@ -5,7 +5,6 @@ async function calculateNetTotalAmountInHand(companyId) {
         {
             $match: {
                 company: companyId,
-             
                 status: 'Order Completed',
                 workType: 'RSAWork'
             }
