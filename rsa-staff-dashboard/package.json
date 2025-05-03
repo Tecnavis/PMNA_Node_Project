@@ -37,7 +37,6 @@
         "firebase": "^10.8.0",
         "formik": "^2.2.9",
         "framer-motion": "^12.7.4",
-        "google-maps-react": "^2.0.6",
         "highlight.js": "^11.6.0",
         "mantine-datatable": "^1.7.17",
         "nouislider-react": "^3.4.1",
