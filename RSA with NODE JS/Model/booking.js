@@ -81,7 +81,7 @@ const bookingSchema = new mongoose.Schema({
     cancelStatus: { type: Boolean }, // New props
     cancelReason: { type: String }, // New props
     partialPayment: { type: Boolean }, // New props
-    partialAmount: { type: String }, // New props
+    partialAmount: { type: Number }, // New props
     cancelKm: { type: Number }, // New props
     invoiceNumber: { type: String }, // New props
     pickupDistence: { type: String }, // New props
