@@ -697,7 +697,7 @@ const Skin = () => {
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         striped
                         className="whitespace-nowrap table-striped"
                         records={recordsData}
@@ -716,7 +716,7 @@ const Skin = () => {
                         onRecordsPerPageChange={setPageSize}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
 
@@ -727,7 +727,7 @@ const Skin = () => {
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search1} onChange={(e) => setSearch1(e.target.value)} />
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         highlightOnHover
                         className="whitespace-nowrap table-hover"
                         records={recordsData1}
@@ -746,7 +746,7 @@ const Skin = () => {
                         onRecordsPerPageChange={setPageSize1}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
 
@@ -757,7 +757,7 @@ const Skin = () => {
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search2} onChange={(e) => setSearch2(e.target.value)} />
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         className="whitespace-nowrap table-bordered"
                         records={recordsData2}
                         columns={[
@@ -775,7 +775,7 @@ const Skin = () => {
                         onRecordsPerPageChange={setPageSize2}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
 
@@ -786,7 +786,7 @@ const Skin = () => {
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search3} onChange={(e) => setSearch3(e.target.value)} />
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         className="whitespace-nowrap table-compact"
                         records={recordsData3}
                         columns={[
@@ -804,7 +804,7 @@ const Skin = () => {
                         onRecordsPerPageChange={setPageSize3}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
 
@@ -815,7 +815,7 @@ const Skin = () => {
                     <input type="text" className="form-input w-auto" placeholder="Search..." value={search4} onChange={(e) => setSearch4(e.target.value)} />
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         highlightOnHover
                         striped
                         className="whitespace-nowrap table-striped table-hover table-bordered table-compact"
@@ -835,7 +835,7 @@ const Skin = () => {
                         onRecordsPerPageChange={setPageSize4}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
         </div>

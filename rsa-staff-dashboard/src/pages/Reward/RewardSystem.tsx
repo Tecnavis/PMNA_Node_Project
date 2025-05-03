@@ -1,5 +1,6 @@
 // /components/reward/RewardSystem.tsx
 import React, { useState, useEffect } from 'react';
+// @ts-ignore
 import { Tabs, Modal, Group, Badge, Text, Space, Divider, LoadingOverlay } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import Swal from 'sweetalert2';

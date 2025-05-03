@@ -54,7 +54,7 @@ export interface IBooking {
     adjustmentValue?: number;
     amountWithoutInsurance?: number;
     createdBy?: IDriver;
-    bookedBy?: string;
+    bookedBy?: string | {name:string};
     pickupDate?: Date | string;
     pickupTime?: Date | string;
     dropoffTime?: Date | string;

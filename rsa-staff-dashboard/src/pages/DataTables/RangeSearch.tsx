@@ -625,7 +625,7 @@ const RangeSearch = () => {
                     </div>
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         highlightOnHover
                         className="whitespace-nowrap table-hover"
                         records={recordsData}
@@ -658,7 +658,7 @@ const RangeSearch = () => {
                         onSortStatusChange={setSortStatus}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
         </div>

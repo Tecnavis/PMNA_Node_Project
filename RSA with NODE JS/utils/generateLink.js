@@ -1,7 +1,7 @@
 //Generate showroom link
 exports.generateShowRoomLink = (showroom) => {
     // const baseUrl = `https://rsapmna-de966.web.app/showrooms/showroom/showroomDetails`; // Your actual base URL
-    const baseUrl = `http://localhost:5173/showroom/showroom-details`; // Your actual base URL
+    const baseUrl = `https://pmna-showroom-staff.onrender.com`; // Your actual base URL
 
     const queryParams = new URLSearchParams({
         id: showroom._id,
