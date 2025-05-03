@@ -1325,7 +1325,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 exports.settleAmount = async (req, res) => {
     try {
         const { id } = req.params;
-        const { receivedAmount, receivedUser, role } = req.body;
+        const { partialAmount, receivedUser, role } = req.body;
         const userId = req.user.id || req.user._id
 
         const booking = await Booking.findById(id);
@@ -1348,13 +1348,17 @@ exports.settleAmount = async (req, res) => {
         }
 
         if (booking.company) {
-            booking.receivedAmountByCompany += receivedAmount;
+            booking.receivedAmountByCompany += partialAmount;
             if (booking.totalAmount <= booking.receivedAmountByCompany) {
                 booking.cashPending = false;
             }
         } else {
-            booking.receivedAmount += receivedAmount;
-            if (booking.totalAmount <= booking.receivedAmount) {
+            booking.partialAmount += partialAmount;
+            if (booking.partialAmount < booking.totalAmount) {
+                booking.partialPayment = true;
+                booking.cashPending = true;
+            } else if (booking.partialAmount === booking.totalAmount) {
+                booking.partialPayment = false;
                 booking.cashPending = false;
             }
         }
