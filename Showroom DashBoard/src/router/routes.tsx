@@ -106,7 +106,6 @@ const RecoverIdCover = lazy(() => import('../pages/Authentication/RecoverIdCover
 const UnlockCover = lazy(() => import('../pages/Authentication/UnlockCover'));
 const About = lazy(() => import('../pages/About'));
 const Error = lazy(() => import('../components/Error'));
-const Charts = lazy(() => import('../pages/Charts'));
 const FormBasic = lazy(() => import('../pages/Forms/Basic'));
 const FormInputGroup = lazy(() => import('../pages/Forms/InputGroup'));
 const FormLayouts = lazy(() => import('../pages/Forms/Layouts'));
@@ -386,12 +385,6 @@ const routes = [
     {
         path: '/elements/typography',
         element: <Typography />,
-    },
-
-    // charts page
-    {
-        path: '/charts',
-        element: <Charts />,
     },
     // widgets page
     {

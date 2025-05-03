@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../store';
-import ReactApexChart from 'react-apexcharts';
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import Dropdown from '../components/Dropdown';
 import { setPageTitle } from '../store/themeConfigSlice';
@@ -770,7 +769,7 @@ const Widgets = () => {
                                         <span className="animate-spin border-2 border-black dark:border-white !border-l-transparent  rounded-full w-5 h-5 inline-flex"></span>
                                     </div>
                                 ) : (
-                                    <ReactApexChart series={revenueChart.series} options={revenueChart.options} type="area" height={325} />
+                                    <span className="animate-spin border-2 border-black dark:border-white !border-l-transparent  rounded-full w-5 h-5 inline-flex"></span>
                                 )}
                             </div>
                         </div>
@@ -787,7 +786,7 @@ const Widgets = () => {
                                         <span className="animate-spin border-2 border-black dark:border-white !border-l-transparent  rounded-full w-5 h-5 inline-flex"></span>
                                     </div>
                                 ) : (
-                                    <ReactApexChart series={salesByCategory.series} options={salesByCategory.options} type="donut" height={460} />
+                                    <span className="animate-spin border-2 border-black dark:border-white !border-l-transparent  rounded-full w-5 h-5 inline-flex"></span>
                                 )}
                             </div>
                         </div>
@@ -814,7 +813,7 @@ const Widgets = () => {
                                         <span className="animate-spin border-2 border-black dark:border-white !border-l-transparent  rounded-full w-5 h-5 inline-flex"></span>
                                     </div>
                                 ) : (
-                                    <ReactApexChart series={dailySales.series} options={dailySales.options} type="bar" height={160} />
+                                    <span className="animate-spin border-2 border-black dark:border-white !border-l-transparent  rounded-full w-5 h-5 inline-flex"></span>
                                 )}
                             </div>
                         </div>
@@ -912,7 +911,7 @@ const Widgets = () => {
                                     <span className="animate-spin border-2 border-black dark:border-white !border-l-transparent  rounded-full w-5 h-5 inline-flex"></span>
                                 </div>
                             ) : (
-                                <ReactApexChart series={totalOrders.series} options={totalOrders.options} type="area" height={290} />
+                                <span className="animate-spin border-2 border-black dark:border-white !border-l-transparent  rounded-full w-5 h-5 inline-flex"></span>
                             )}
                         </div>
                     </div>
@@ -1450,7 +1449,6 @@ const Widgets = () => {
                                     <div className="text-[#f8538d] text-lg">423,964</div>
                                 </div>
 
-                                <ReactApexChart series={totalVisit.series} options={totalVisit.options} type="line" height={58} className="overflow-hidden" />
                             </div>
 
                             <div>
@@ -1459,7 +1457,6 @@ const Widgets = () => {
                                     <div className="text-[#f8538d] text-lg">7,929</div>
                                 </div>
 
-                                <ReactApexChart series={paidVisit.series} options={paidVisit.options} type="line" height={58} className="overflow-hidden" />
                             </div>
                         </div>
                     </div>
@@ -1562,7 +1559,6 @@ const Widgets = () => {
                             </div>
                         </div>
 
-                        <ReactApexChart options={uniqueVisitorSeries.options} series={uniqueVisitorSeries.series} type="bar" height={360} className="overflow-hidden" />
                     </div>
 
                     <div className="panel h-full">
@@ -1763,7 +1759,6 @@ const Widgets = () => {
                             </div>
                         </div>
                         <div className="h-40">
-                            <ReactApexChart series={followers.series} options={followers.options} type="area" height={160} className="w-full absolute bottom-0 overflow-hidden" />
                         </div>
                     </div>
 
@@ -1778,7 +1773,6 @@ const Widgets = () => {
                             </div>
                         </div>
                         <div className="h-40">
-                            <ReactApexChart series={referral.series} options={referral.options} type="area" height={160} className="w-full absolute bottom-0 overflow-hidden" />
                         </div>
                     </div>
 
@@ -1793,7 +1787,6 @@ const Widgets = () => {
                             </div>
                         </div>
                         <div className="h-40">
-                            <ReactApexChart series={engagement.series} options={engagement.options} type="area" height={160} className="w-full absolute bottom-0 overflow-hidden" />
                         </div>
                     </div>
                 </div>
