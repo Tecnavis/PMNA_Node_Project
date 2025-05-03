@@ -100,9 +100,9 @@ const Status: React.FC = () => {
         setLoader(true);
 
         try {
-            const receivedAmount = paymentAmount
+            const partialAmount = paymentAmount
 
-            const response = await axiosInstance.patch(`/booking/sattle-amount/${selectedBooking?._id}`, { receivedAmount, receivedUser, role });
+            const response = await axiosInstance.patch(`/booking/sattle-amount/${selectedBooking?._id}`, { partialAmount, receivedUser, role });
 
             setShowPaymentModal(false);
             setPaymentAmount(0);
@@ -118,7 +118,7 @@ const Status: React.FC = () => {
 
         if (/^\d*$/.test(value)) {
             const numericValue = Number(value);
-            const maxAllowed = (selectedBooking?.totalAmount ?? 0) - (selectedBooking?.receivedAmount ?? 0);
+            const maxAllowed = (selectedBooking?.totalAmount ?? 0) - (selectedBooking?.partialAmount ?? 0);
 
             if (numericValue <= maxAllowed) {
                 setPaymentAmount(numericValue);
@@ -498,16 +498,16 @@ const Status: React.FC = () => {
                     </h2>
                     <div className="mt-4 flex">
                         <label className="block">Payable Amount (By Customer) : <span>
-                            &#8377;{((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.receivedAmount ?? 0))}
+                            &#8377;{((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.partialAmount ?? 0))}
                         </span>
                         </label>
                     </div>
-                    {(selectedBooking?.receivedAmount ?? 0) > 0 && (
+                    {(selectedBooking?.partialAmount ?? 0) > 0 && (
                         <div>
                             <label className="block">
                                 Received Amount:
                                 <span className="text-blue-700">
-                                    &#8377;{(selectedBooking?.receivedAmount || 0)}
+                                    &#8377;{(selectedBooking?.partialAmount || 0)}
                                 </span>
                             </label>
                         </div>
@@ -520,9 +520,9 @@ const Status: React.FC = () => {
                             className="border p-2 w-full"
                         />
                     </div>
-                    {paymentAmount < (((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.receivedAmount ?? 0))) && (
+                    {paymentAmount < (((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.partialAmount ?? 0))) && (
                         <div className="mt-2 text-red-500">
-                            Balance Remaining: {((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.receivedAmount ?? 0)) - paymentAmount}
+                            Balance Remaining: {((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.partialAmount ?? 0)) - paymentAmount}
                         </div>
                     )}
                     <ul className="flex gap-3">

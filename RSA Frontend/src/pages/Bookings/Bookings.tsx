@@ -57,6 +57,7 @@ export interface Booking {
     cancelReason: string,// new prop
     cancelImage: string,// new prop
     company: Company | string
+    partialAmount?: number;
     cancelKm: number,// new prop
     vehicleNumber: string,// new prop
     dummyDriverName: string,// new prop
