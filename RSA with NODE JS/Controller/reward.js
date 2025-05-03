@@ -115,7 +115,14 @@ exports.deleteReward = async (req, res) => {
 exports.redeemReward = async (req, res) => {
   const { rewardId, rewardFor, userId } = req.query;
   try {
-    const redemption = await managredeemReward(rewardId, userId, rewardFor);
+
+    let redemption
+
+    if (rewardFor === 'Showroom') {
+      redemption = await manageRewardRedeemForShowroom(userId);
+    } else {
+      redemption = await manageRewardRedeem(rewardId, userId, rewardFor);
+    }
 
     return res.status(201).json({
       success: true,
@@ -133,7 +140,7 @@ exports.redeemReward = async (req, res) => {
 };
 
 
-const managredeemReward = async (rewardId, userId, rewardFor) => {
+const manageRewardRedeem = async (rewardId, userId, rewardFor) => {
   const session = await mongoose.startSession();
   let historyRedeem = null;
 
@@ -210,6 +217,14 @@ const managredeemReward = async (rewardId, userId, rewardFor) => {
     session.endSession();
   }
 };
+
+const manageRewardRedeemForShowroom = async (showroomId) => {
+  try {
+    const showroom = await Showroom.findById(showroomId)
+  } catch (error) {
+    throw new Error('Internal server error.');
+  }
+}
 
 // Function for get the redemptions base ont he userId userType
 exports.getRedemptions = async (userId, userType) => {

@@ -30,6 +30,7 @@ type Booking = {
   fileNumber?: string;
   customerVehicleNumber?: string;
   totalAmount?: number;
+  showroomAmount: number;
   receivedAmount: number | string;
   approve?: boolean;
   // add or remove fields according to showroom requirements
@@ -158,28 +159,30 @@ const ShowroomCashCollectionsReport = () => {
       accessor: 'createdAt',
       title: 'Date',
       render: (record: Booking) =>
-        new Date(record.createdAt || '').toLocaleDateString()
+        `${new Date(record.createdAt || '').toLocaleDateString()}, ${new Date(record.createdAt || '').toLocaleTimeString()}`
     },
     { accessor: 'fileNumber', title: 'File Number' },
-    { accessor: 'dropoffLocation', title: 'Drop' },
-
-    { accessor: 'customerVehicleNumber', title: 'Customer Vehicle Number' },
-    { accessor: 'totalAmount', title: 'Payable Amount' },
+    {
+      accessor: 'showroomAmount',
+      title: 'Payable Amount From Showroom',
+      render: (record: Booking) => {
+        return <div className='flex gap-2'>
+          <input type="number" className=' border py-2 px-2 border-gray-500 rounded-md h-9' value={record?.showroomAmount || 0} />
+          <button className='bg-green-500 text-white p-2 rounded'>OK</button>
+        </div>
+      }
+    },
+    { accessor: 'insuranceAmount', title: 'Payable Insurance From Showroom' },
     {
       accessor: 'receivedAmount',
       title: 'Amount Received',
       render: (booking: Booking) => (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }} className='flex gap-2'>
           <input
             type="text"
             value={inputValues[booking._id] || booking.receivedAmount || ''}
             onChange={(e) => handleInputChange(booking._id, e.target.value)}
-            style={{
-              border: '1px solid #d1d5db',
-              borderRadius: '0.25rem',
-              padding: '0.25rem 0.5rem',
-              marginRight: '0.5rem',
-            }}
+            className=' border py-2 px-2 border-gray-500 rounded-md h-9'
             disabled={booking.approve}
           />
           <button
