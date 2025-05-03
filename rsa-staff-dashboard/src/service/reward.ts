@@ -3,7 +3,6 @@ import { axiosInstance as axios } from "../config/axiosConfig";
 import { BASE_URL } from "../config/axiosConfig";
 import { handleApiError } from "../utils/errorHandler";
 import { GetllAllRedeemReponseType, IReward } from "../interface/reward";
-import { Parallax } from "swiper";
 
 // API service for fetching showroom by ID
 export const getRewards = async (

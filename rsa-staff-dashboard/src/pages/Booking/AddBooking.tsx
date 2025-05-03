@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 import { getShowroomById } from '../../service/showroom';
 import { IShowroom } from '../../interface/showroom';
-// @ts-ignore
 import { useForm } from "react-hook-form";
 import { AddBookingResponse, AddNewBookingFormData } from '../../interface/booking';
 import { addNewBooking } from '../../service/booking';
@@ -273,7 +272,7 @@ const AddBook: React.FC = () => {
                                     value: 500,
                                     message: "Comment can't exceed 500 characters"
                                 },
-                                validate: (value: { trim: () => { (): any; new(): any; length: number; }; }) => value.trim().length > 0 || "Comment cannot be empty or whitespace"
+                                validate: value => value.trim().length > 0 || "Comment cannot be empty or whitespace"
                             })}
                         />
                         {errors.comments && (
