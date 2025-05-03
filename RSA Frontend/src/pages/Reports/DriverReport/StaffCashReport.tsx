@@ -159,7 +159,7 @@ const Profile = () => {
         }));
     };
 
-  
+
 
     const handleSelectAll = () => {
         if (selectedBookings.size === bookings.length) {
@@ -169,7 +169,6 @@ const Profile = () => {
             // Select all
             const allIds = new Map(
                 bookings
-                    
                     .map((booking) => [booking._id, booking])
             );
             setSelectedBookings(new Map(allIds));
@@ -352,7 +351,7 @@ const Profile = () => {
                 );
             }
         },
-      
+
         {
             accessor: 'viewmore',
             title: 'View More',
@@ -378,23 +377,23 @@ const Profile = () => {
         if (month === 'All Months') {
             const today = new Date();
             const twoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // Jan 1st, two years ago
-    
+
             setStartDate(twoYearsAgo.toISOString().slice(0, 10)); // YYYY-MM-DD
             setEndingDate(today.toISOString().slice(0, 10)); // today
         } else {
             const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert to 0-index
-    
+
             // Start of selected month
             const firstDay = new Date(year, monthIndex, 1);
-    
+
             // End of selected month
             const lastDay = new Date(year, monthIndex + 1, 0);
-    
+
             setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
             setEndingDate(lastDay.toISOString().slice(0, 10));
         }
     };
-    
+
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {
@@ -516,16 +515,16 @@ const Profile = () => {
                                 <p className="font-semibold text-primary text-xl">{staff?.name}</p>
 
                             </div>
-                            <ul className="mt-5 flex gap-2 item-center justify-center  max-w-[160px] m-auto space-y-4 font-semibold text-white-dark">
+                            <ul className='flex items-center gap-3 text-white-dark m-auto w-full justify-center mt-3' >
                                 <li className="flex items-center gap-2">
                                     <IconPhone />
-                                    <span className="whitespace-nowrap" dir="ltr">
+                                    <span className="whitespace-nowrap" >
                                         {staff?.phone}
                                     </span>
                                 </li>
-                                <li className="flex items-center justify-center gap-2">
+                                <li className="flex items-center justify-center gap-1.5">
                                     <IconUser />
-                                    <span className="whitespace-nowrap" dir="ltr">
+                                    <span className="whitespace-nowrap " >
                                         {staff?.userName}
                                     </span>
                                 </li>

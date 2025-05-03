@@ -101,6 +101,7 @@ const CompanyReport = () => {
                 receivedAmount: balanceForApplay,
                 driverId: id,
                 bookingIds,
+                workType : 'PaymentWork'
             })
             fetchBookings();
             setSelectedBookings(new Map());
@@ -155,7 +156,7 @@ const CompanyReport = () => {
             });
             const data = response.data;
             const totalBalanceCalculated = (data.bookings || []).reduce(
-                (total, booking) => total + (booking.totalAmount - booking.receivedAmount),
+                (total, booking) => total + (booking.totalAmount - booking.receivedAmountByCompany),
                 0
             );
 
@@ -193,7 +194,7 @@ const CompanyReport = () => {
         // Check if receivedAmount is not zero
         if (calculateBalance(
             parseFloat(record.totalAmount?.toString() || '0'),
-            record.receivedAmount || 0,
+            record.receivedAmountByCompany || 0,
             record.receivedUser
         ) !== 0) {
             Swal.fire({
@@ -231,13 +232,13 @@ const CompanyReport = () => {
 
     const calculateTotalBalance = () => {
         return bookings?.reduce((totalBalance, booking) => {
-            const { receivedAmount = 0, totalAmount = 0 } = booking;
+            const { receivedAmountByCompany = 0, totalAmount = 0 } = booking;
 
-            if (receivedAmount >= totalAmount) {
+            if (receivedAmountByCompany >= totalAmount) {
                 return totalBalance ;
             }
 
-            const balance = totalAmount - receivedAmount;
+            const balance = totalAmount - receivedAmountByCompany;
 
             return totalBalance + balance;
         }, 0);  // Initial value for totalBalance is 0
@@ -284,14 +285,14 @@ const CompanyReport = () => {
         // Loop through each booking and calculate actual profit or loss
         bookings.forEach((booking) => {
             const {
-                receivedAmount = 0,
+                receivedAmountByCompany = 0,
                 totalAmount = 0,
                 driverSalary = 0,
             } = booking;
     
             // Calculate profit or loss
-            const isProfit = receivedAmount > totalAmount; // Determine if it's a profit or loss
-            const profit = totalAmount - receivedAmount; // Basic profit/loss calculation
+            const isProfit = receivedAmountByCompany > totalAmount; // Determine if it's a profit or loss
+            const profit = totalAmount - receivedAmountByCompany; // Basic profit/loss calculation
     
             // Calculate the actual profit considering driver salary
             if (isProfit) {
@@ -313,17 +314,17 @@ const CompanyReport = () => {
         type: 'overall' | 'actual' = 'overall'
     ): string => {
         const {
-            receivedAmount = 0,
+            receivedAmountByCompany = 0,
             totalAmount = 0,
             driverSalary = 0,
         } = booking;
 
-        if (receivedAmount === 0) {
+        if (receivedAmountByCompany === 0) {
             return <span>No Profit/Loss</span>;
         }
 
-        const isProfit = receivedAmount > totalAmount ? true : false
-        const profit = totalAmount - receivedAmount;
+        const isProfit = receivedAmountByCompany > totalAmount ? true : false
+        const profit = totalAmount - receivedAmountByCompany;
 
         if (isProfit && type === 'overall') {
             return <span className='text-green-500'>Gain: ₹{Math.abs(profit)}</span>;
@@ -459,7 +460,7 @@ const CompanyReport = () => {
                                             Number(
                                                 calculateBalance(
                                                     parseFloat(booking.totalAmount?.toString() || '0'),
-                                                    inputValues[booking._id] || booking.receivedAmount || '0',
+                                                    inputValues[booking._id] || booking.receivedAmountByCompany || '0',
                                                     booking.receivedUser
                                                 )
                                             ) === 0
@@ -493,7 +494,10 @@ const CompanyReport = () => {
                 }
                 return (
                     <span className={`text-red-500`}>
-                        {booking.totalAmount - booking.receivedAmount}
+                        {
+                        console.log(booking.totalAmount ,booking.receivedAmountByCompany )    
+                        }
+                        {booking.totalAmount  - booking.receivedAmountByCompany }
                     </span>
                 );
             },
@@ -625,7 +629,7 @@ const CompanyReport = () => {
         const parsedAmount = Number(amount) || 0; // Convert to number safely
         const parsedReceivedAmount = Number(receivedAmount) || 0;
         const balance = parsedAmount - parsedReceivedAmount;
-
+        console.log('balance',balance)
         return balance; // Always return a string
     };
 
@@ -662,7 +666,7 @@ const CompanyReport = () => {
     useEffect(() => {
         const updatedValues: Record<string, number> = {};
         bookings.forEach((booking) => {
-            updatedValues[booking._id] = booking.receivedAmount;
+            updatedValues[booking._id] = booking.receivedAmountByCompany;
         });
 
         setInputValues(updatedValues);
@@ -693,7 +697,7 @@ const CompanyReport = () => {
                 console.log(booking.status, booking.cashPending, booking.workType)
                 // If receivedUser is "Staff", amount should be 0
                 const amountToUse = booking.totalAmount;
-                const receivedAmount = booking.receivedAmount;
+                const receivedAmount = booking.receivedAmountByCompany;
                 const balance = amountToUse - receivedAmount;
 
                 totalBalances += isNaN(balance) ? 0 : balance;
@@ -731,12 +735,6 @@ const CompanyReport = () => {
                                     <IconPhone className='text-black' />
                                     <span dir="ltr">
                                         {company?.phone}
-                                    </span>
-                                </li>
-                                <li className="flex ">
-                                    <span>Advance Payment :  </span>
-                                    <span className='text-primary'>
-                                        ₹{company?.advance || 0}
                                     </span>
                                 </li>
                             </ul>

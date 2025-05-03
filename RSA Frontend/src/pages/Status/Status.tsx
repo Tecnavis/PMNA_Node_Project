@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Booking } from '../Bookings/Bookings';
-import { axiosInstance , BASE_URL } from '../../config/axiosConfig';
+import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
 import IconBarChart from '../../components/Icon/IconBarChart';
 import { formattedTime, dateFormate } from '../../utils/dateUtils'
@@ -55,9 +55,10 @@ const Status: React.FC = () => {
     const [feedbacks, setFeedbacks] = useState<Feedbacks[]>([]);
     const [selectedResponses, setSelectedResponses] = useState<{ [key: string]: string }>({});
     const [selectedBookingId, setSelectedBookingId] = useState<string>('');
+    const [receivedUser, setReceivedUser] = useState<string>('');
 
     const navigate = useNavigate();
-
+    const role = localStorage.getItem('role') || ''
 
     const handlePageChange = (page: number) => {
         if (page === currentPage || page < 1 || page > totalPages) return;
@@ -101,7 +102,7 @@ const Status: React.FC = () => {
         try {
             const receivedAmount = paymentAmount
 
-            const response = await axiosInstance.patch(`/booking/sattle-amount/${selectedBooking?._id}`, { receivedAmount });
+            const response = await axiosInstance.patch(`/booking/sattle-amount/${selectedBooking?._id}`, { receivedAmount, receivedUser, role });
 
             setShowPaymentModal(false);
             setPaymentAmount(0);
@@ -267,6 +268,10 @@ const Status: React.FC = () => {
         }
     };
 
+    const handleRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setReceivedUser(e.target.value);
+    };
+
     return <div>
         <div className="container-fluid">
             <div className="row">
@@ -326,7 +331,7 @@ const Status: React.FC = () => {
                         </li>
                     </ul>
                 </div>
-        
+
                 <div className='rounded-lg m-5'>
 
                     {
@@ -522,18 +527,35 @@ const Status: React.FC = () => {
                     )}
                     <ul className="flex gap-3">
                         <li className="flex items-center gap-1">
-                            <input type="radio" name="role" value="driver" defaultChecked />
-                            <label className='mt-1'>Driver</label>
+                            <input
+                                type="radio"
+                                name="role"
+                                value="Driver"
+                                defaultChecked
+                                onChange={handleRoleChange}
+                            />
+                            <label className="mt-1">Driver</label>
                         </li>
                         <li className="flex items-center gap-1">
-                            <input type="radio" name="role" value="staff" />
-                            <label className='mt-1'>Staff</label>
+                            <input
+                                type="radio"
+                                name="role"
+                                value="Staff"
+                                onChange={handleRoleChange}
+                            />
+                            <label className="mt-1">Staff</label>
                         </li>
                         <li className="flex items-center gap-1">
-                            <input type="radio" name="role" value="showroom" />
-                            <label className='mt-1'>Showroom</label>
+                            <input
+                                type="radio"
+                                name="role"
+                                value="Showroom"
+                                onChange={handleRoleChange}
+                            />
+                            <label className="mt-1">Showroom</label>
                         </li>
                     </ul>
+
                     <button
                         onClick={handleSavePayment}
                         className="bg-green-500 text-white py-2 px-4 rounded mt-4"

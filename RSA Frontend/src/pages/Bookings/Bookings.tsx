@@ -68,6 +68,7 @@ export interface Booking {
     accountantVerified: boolean,// new prop
     transferedSalary: number,// new prop
     receivedAmount: number,
+    receivedAmountByCompany: number,
     phoneNumber: any;
     pickupTime: string;
     dropoffTime: string;

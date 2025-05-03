@@ -31,6 +31,8 @@ const bookingSchema = new mongoose.Schema({
     payableAmountForDriver: { type: Number },
     totalAmount: { type: Number },
     receivedAmount: { type: Number, default: 0 },
+    receivedAmountByCompany: { type: Number, default: 0 },
+    showroomAmount: { type: Number, default: 0 },
     totalDriverDistence: { type: Number },
     driverSalary: { type: Number },
     transferedSalary: { type: Number },
@@ -68,7 +70,8 @@ const bookingSchema = new mongoose.Schema({
     accountantVerified: { type: Boolean },
     cashPending: { type: Boolean },// New props
     approve: { type: Boolean, default: false },// New props
-    receivedUser: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' }, // New props
+    receivedUser: { type: String }, // New props
+    receivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' }, // New props
     dummyDriverName: { type: String }, // New props
     dummyProviderName: { type: String }, // New props
     bookingStatus: { type: String }, // New props

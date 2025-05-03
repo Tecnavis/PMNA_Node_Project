@@ -9,6 +9,7 @@ const Vehicle = require('../Model/vehicle');
 const { io } = require('../config/socket');
 const { capitalizeFirstLetter } = require('../utils/dateUtils');
 const NotificationService = require('../services/notification.service');
+const Staff = require('../Model/staff');
 
 
 
@@ -417,7 +418,7 @@ exports.getAllBookings = async (req, res) => {
         }
 
         if (staffId) {
-            query.receivedUser = new mongoose.Types.ObjectId(staffId)
+            query.receivedUserId = new mongoose.Types.ObjectId(staffId)
         }
 
         // Handle search
@@ -434,7 +435,6 @@ exports.getAllBookings = async (req, res) => {
             } else {
                 // Escape special regex characters
                 const escapedSearch = search.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
-                const searchRegex = new RegExp(escapedSearch, 'i');
 
                 // Search conditions array
                 const searchConditions = [
@@ -458,9 +458,7 @@ exports.getAllBookings = async (req, res) => {
                     }
                 }
 
-                if (searchConditions.length > 0) {
-                    query.$or = searchConditions;
-                }
+                query.$or = searchConditions;
             }
         }
 
@@ -473,9 +471,6 @@ exports.getAllBookings = async (req, res) => {
                 $lte: endOfDay
             };
         }
-
-        console.dir(query, { depth: null, colors: true })
-
         // Pagination and sorting by createdAt in descending order
         const total = await Booking.countDocuments(query);
         const bookings = await Booking.find(query)
@@ -485,11 +480,11 @@ exports.getAllBookings = async (req, res) => {
             .populate('company')
             .populate('driver')
             .populate('provider')
-            .populate('receivedUser')
+            .populate('receivedUserId')
             .skip((page - 1) * limit)
             .limit(limit)
             .sort({ createdAt: -1 })
-            .lean();
+            .lean()
 
         const balanceAmount = bookings.reduce((total, booking) => {
             return total + booking.receivedAmount;
@@ -508,7 +503,9 @@ exports.getAllBookings = async (req, res) => {
             {
                 $group: {
                     _id: null,
-                    totalCollected: { $sum: "$receivedAmount" },
+                    totalCollected: {
+                        $sum: forCompanyReport ? "$receivedAmountByCompany" : "$receivedAmount"
+                    },
                     totalOverall: { $sum: "$totalAmount" }
                 }
             }
@@ -616,9 +613,9 @@ exports.updateBooking = async (req, res) => {
         }
         // Handle uploaded images
         if (req.files && req.files.length > 0) {
-            if(updatedData.dropoffTime){
+            if (updatedData.dropoffTime) {
                 updatedData.dropoffImages = req.files.map(file => file.filename);
-            }else{
+            } else {
                 updatedData.pickupImages = req.files.map(file => file.filename);
             }
         }
@@ -1328,7 +1325,8 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 exports.settleAmount = async (req, res) => {
     try {
         const { id } = req.params;
-        const { receivedAmount } = req.body;
+        const { receivedAmount, receivedUser, role } = req.body;
+        const userId = req.user.id || req.user._id
 
         const booking = await Booking.findById(id);
 
@@ -1338,9 +1336,27 @@ exports.settleAmount = async (req, res) => {
             });
         }
 
-        booking.receivedAmount += receivedAmount;
-        if (booking.totalAmount <= booking.receivedAmount) {
-            booking.cashPending = false;
+        if (role !== 'admin' || !role) {
+            booking.receivedUserId = userId
+            booking.receivedUser = 'Staff'
+
+            await Staff.findByIdAndUpdate(userId, {
+                $inc: {
+                    cashInHand: receivedAmount
+                }
+            })
+        }
+
+        if (booking.company) {
+            booking.receivedAmountByCompany += receivedAmount;
+            if (booking.totalAmount <= booking.receivedAmountByCompany) {
+                booking.cashPending = false;
+            }
+        } else {
+            booking.receivedAmount += receivedAmount;
+            if (booking.totalAmount <= booking.receivedAmount) {
+                booking.cashPending = false;
+            }
         }
 
         await booking.save();
@@ -1383,19 +1399,22 @@ exports.updateBookingApproved = async (req, res) => {
 
 //Controller for distribute received amount
 exports.distributeReceivedAmount = async (req, res) => {
-    const { receivedAmount, driverId, bookingIds, workType } = req.body
+    const { receivedAmount, driverId, bookingIds, workType = 'RSAWork' } = req.body;
+
     try {
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
 
         const userId = req.user_id || req.user?.id;
 
+        let receivedField = workType === 'PaymentWork' ? '$receivedAmountByCompany' : '$receivedAmount';
+
         // Fetch bookings from DB where receivedUser is NOT "Staff" and balance > 0
         const bookings = await Booking.find({
             _id: { $in: bookingIds },
-            workType: { $ne: 'RSAWork' }, // 👈 Exclude RSAWork bookings
-            $expr: { $gt: ["$totalAmount", { $ifNull: ["$receivedAmount", 0] }] }
-        }).sort({ createdAt: -1 }); // Sort by latest date first
+            workType: { $ne: workType },
+            $expr: { $gt: ["$totalAmount", { $ifNull: [receivedField, 0] }] }
+        }).sort({ createdAt: -1 });
 
         // Update bookings by distributing receivedAmount
         for (const booking of bookings) {
@@ -1408,7 +1427,11 @@ exports.distributeReceivedAmount = async (req, res) => {
                 booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
                 remainingAmount -= appliedAmount;
 
-                booking.receivedUser = new mongoose.Types.ObjectId(userId);
+                if (workType === 'PaymentWork') {
+                    booking.receivedUserId = new mongoose.Types.ObjectId(userId);
+                    booking.receivedUser = 'Staff'
+                }
+
                 selectedBookingIds.push(booking._id);
 
                 await booking.save(); // Save updated booking to DB

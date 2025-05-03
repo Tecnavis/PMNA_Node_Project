@@ -35,7 +35,7 @@ exports.getAllLeaves = async (req, res) => {
   try {
     console.log("Fetching all leaves...");
 
-    const allLeaves = await Leaves.find().populate("driver"); // Ensure 'driver' reference is populated
+    const allLeaves = await Leaves.find().populate("driver").sort({ createdAt: -1 }); // Ensure 'driver' reference is populated
     res.status(200).json(allLeaves);
   } catch (error) {
     console.error("Error fetching leaves:", error); // Log error

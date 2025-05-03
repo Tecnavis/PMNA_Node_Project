@@ -5,7 +5,7 @@ async function calculateNetTotalAmountInHand(companyId) {
         {
             $match: {
                 company: companyId,
-                // cashPending: false,
+                cashPending: false,
                 status: 'Order Completed',
                 workType: 'RSAWork'
             }
@@ -16,9 +16,9 @@ async function calculateNetTotalAmountInHand(companyId) {
                 netTotalAmount: {
                     $sum: {
                         $cond: {
-                            if: { $gte: ['$receivedAmount', '$totalAmount'] }, // If receivedAmount is greater than or equal to totalAmount
+                            if: { $gte: ['$receivedAmountByCompany', '$totalAmount'] }, // If receivedAmountByCompany is greater than or equal to totalAmount
                             then: 0, // Do not add anything (skip this value)
-                            else: { $subtract: ['$totalAmount', '$receivedAmount'] } // Calculate difference if totalAmount > receivedAmount
+                            else: { $subtract: ['$totalAmount', '$receivedAmountByCompany'] } // Calculate difference if totalAmount > receivedAmountByCompany
                         }
                     }
                 }

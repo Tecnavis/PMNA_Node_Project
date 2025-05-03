@@ -13,6 +13,7 @@ import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import IconPlus from '../../components/Icon/IconPlus';
 import { Booking } from './Bookings';
 import { getDistance } from '../../services/olaMapApi';
+import { DUMMY_SHOWROOM } from './constant';
 
 export interface Company {
     _id: string;
@@ -380,6 +381,7 @@ const BookingAdd: React.FC = () => {
     const fetchShowroom = async () => {
         try {
             const response = await axios.get(`${backendUrl}/showroom`);
+            response.data.push(DUMMY_SHOWROOM)
             setShowrooms(response.data);
         } catch (error) {
             console.error('Error fetching showrooms:', error);
@@ -532,8 +534,8 @@ const BookingAdd: React.FC = () => {
             }
         } else {
             let getServiceType = selectedCompany.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType._id === selectedServiceType?._id);
-            
-            if(!getServiceType){
+
+            if (!getServiceType) {
                 // @ts-ignore
                 getServiceType = selectedCompany.vehicle.find((vehicle) => vehicle.serviceType && vehicle.serviceType === selectedServiceType?._id);
             }
@@ -610,7 +612,7 @@ const BookingAdd: React.FC = () => {
         if (selectedOption === 'insurance' && selectedShowroom) {
             // Set the insuranceAmount of the selected showroom
             setInsuranceAmount(selectedShowroom.insurenceAmount?.toString() || '');
-        } else if(selectedOption === 'readyPayment'){
+        } else if (selectedOption === 'readyPayment') {
             // Reset insuranceAmount if the selected accident option is not 'insurance'
             setInsuranceAmount('');
         }
@@ -1385,12 +1387,12 @@ const BookingAdd: React.FC = () => {
                                         styles={{
                                             singleValue: (provided, state) => ({
                                                 ...provided,
-                                                color: state.data.value === 'Lifting' ? '#ef4444' : 'black', // Red if Lifting
+                                                color: state.data.value === 'Lifting' || state.data.name === 'Dummy Showroom' ? '#ef4444' : 'black', // Red if Lifting
                                             }),
                                             option: (provided, state) => ({
                                                 ...provided,
-                                                color: state.data.value === 'Lifting' ? '#ef4444' : 'black',
-                                                fontWeight: state.data.value === 'Lifting' ? 'bold' : '',
+                                                color: state.data.value === 'Lifting' || state.data.name === 'Dummy Showroom' ? '#ef4444' : 'black',
+                                                fontWeight: state.data.value === 'Lifting' || state.data.name === 'Dummy Showroom' ? 'bold' : '',
                                             }),
                                         }}
                                     />

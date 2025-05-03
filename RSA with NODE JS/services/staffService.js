@@ -5,7 +5,7 @@ async function calculateNetTotalAmountInHand(staffId) {
     const result = await Booking.aggregate([
         {
             $match: {
-                receivedUser: staffId,
+                receivedUserId: staffId,
                 cashPending: false,
                 status: 'Order Completed',
                 workType: 'PaymentWork'
