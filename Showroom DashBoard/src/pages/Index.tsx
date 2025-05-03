@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { IRootState } from '../store';
-import ReactApexChart from 'react-apexcharts';
 import { axiosInstance, BASE_URL } from '../config/axiosConfig';
 import sweetAlert from '../components/sweetAlert';
 
@@ -201,7 +200,7 @@ const Index = () => {
                                         <span className="animate-spin border-2 border-gray-300 dark:border-gray-700 !border-l-transparent rounded-full w-5 h-5 inline-flex"></span>
                                     </div>
                                 ) : (
-                                    <ReactApexChart series={salesByCategory.series} options={salesByCategory.options} type="donut" height={460} />
+                                    <span className="animate-spin border-2 border-gray-300 dark:border-gray-700 !border-l-transparent rounded-full w-5 h-5 inline-flex"></span>
                                 )}
                             </div>
                         </div>

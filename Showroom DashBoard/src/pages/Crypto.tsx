@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../store';
 import { Link } from 'react-router-dom';
-import ReactApexChart from 'react-apexcharts';
 import Dropdown from '../components/Dropdown';
 import { setPageTitle } from '../store/themeConfigSlice';
 import IconArrowLeft from '../components/Icon/IconArrowLeft';
@@ -831,7 +830,6 @@ const Crypto = () => {
                                         </div>
                                     </div>
                                     <div className="flex-1 overflow-hidden">
-                                        <ReactApexChart series={item.series} options={item.isUp ? profiteChartOption : lossChartOption} type="line" height={45} />
                                     </div>
                                 </button>
                             </div>
@@ -951,7 +949,6 @@ const Crypto = () => {
                     </div>
                     {/*  selected chart  */}
                     <div className="flex-1 px-4 overflow-hidden">
-                        <ReactApexChart series={currentCoin.series} options={selectedBitCoinChart.options} type="line" height={411} />
                     </div>
                 </div>
             </div>

@@ -35,7 +35,6 @@
         "@types/react-text-mask": "^5.4.11",
         "@uppy/compressor": "^1.1.1",
         "@x1mrdonut1x/nouislider-react": "^3.4.3",
-        "apexcharts": "^4.7.0",
         "axios": "^1.8.4",
         "caniuse-lite": "^1.0.30001591",
         "dotenv": "^16.4.5",

@@ -753,15 +753,7 @@ const Basic = () => {
                                 accessor: 'series',
                                 title: 'Progress',
                                 render: ({ id }) => (
-                                    <ReactApexChart
-                                        key={id}
-                                        type="line"
-                                        series={[{ data: [21, 9, 36, 12, 44, 25, 59] }]}
-                                        // @ts-ignore
-                                        options={chart_options()}
-                                        height={30}
-                                        width={150}
-                                    />
+                                    <span className={`badge badge-outline-${randomStatusColor()} `}>{randomStatus()}</span>
                                 ),
                             },
                             {
