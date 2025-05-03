@@ -1,5 +1,6 @@
 const Provider = require('../Model/provider');
 const { sendOtp, verifyOtp  } = require('../services/otpService');
+const jwt = require('jsonwebtoken');
 
 // Create a new provider
 exports.createProvider = async (req, res) => {
