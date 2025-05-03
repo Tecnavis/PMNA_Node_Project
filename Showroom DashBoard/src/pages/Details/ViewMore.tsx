@@ -591,7 +591,9 @@ const Preview = () => {
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
                                             {pickupImageUrls?.map((url, index) => (
                                                 <div key={index} className='flex flex-col gap-5 justify-center items-center'>
-                                                    <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
+                                                    <button onClick={() => handleRemovePickupImage(index)}>
+                                                    <IoIosCloseCircleOutline  />
+                                                    </button>
                                                     <img
                                                         src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
                                                         className="w-16 h-16 hover:cursor-pointer"
