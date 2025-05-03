@@ -7,7 +7,7 @@ import { IRootState } from '../../store';
 import { Tab } from '@headlessui/react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
-import { Navigation, Pagination } from 'swiper';
+// import { Navigation, Pagination } from 'swiper';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -2430,7 +2430,7 @@ const [modal16, setModal16] = useState(false);
                                                             <IconX className="w-5 h-5" />
                                                         </button>
                                                     </div>
-                                                    <Swiper
+                                                    {/* <Swiper
                                                         modules={[Navigation, Pagination]}
                                                         navigation={{
                                                             nextEl: '.swiper-button-next1',
@@ -2464,7 +2464,7 @@ const [modal16, setModal16] = useState(false);
                                                             <IconCaretDown className="w-5 h-5 rtl:rotate-90 -rotate-90" />
                                                         </button>
                                                         <div className="swiper-pagination"></div>
-                                                    </Swiper>
+                                                    </Swiper> */}
                                                 </Dialog.Panel>
                                             </div>
                                         </div>
@@ -2954,44 +2954,44 @@ import { Navigation, Pagination } from 'swiper';
                                     <svg>...</svg>
                                 </button>
                             </div>
-                            <Swiper
-                                ref={swiperRef}
-                                modules={[Navigation, Pagination]}
-                                navigation={{
-                                    nextEl: '.swiper-button-next-ex1',
-                                    prevEl: '.swiper-button-prev-ex1',
-                                }}
-                                observer={true}
-                                observeParents={true}
-                                pagination={{ clickable: true }}
-                                className="swiper mx-auto mb-5 max-w-3xl"
-                                id="slider1"
-                                dir={themeConfig.rtlClass}
-                                key={themeConfig.rtlClass === 'rtl' ? 'true' : 'false'}
-                            >
-                                <div className="swiper-wrapper">
-                                    {items.map((item, i) => {
-                                        return (
-                                            <SwiperSlide key={i}>
-                                                <img src={\`/assets/images/\${item}\`} className="max-h-80 w-full object-cover" alt="img" />
-                                            </SwiperSlide>
-                                        );
-                                    })}
-                                </div>
-                                <button
-                                    type="button"
-                                    className="swiper-button-prev-ex1 absolute top-1/2 z-[999] grid -translate-y-1/2 place-content-center rounded-full border border-primary p-1  text-primary transition hover:border-primary hover:bg-primary hover:text-white ltr:left-2 rtl:right-2"
-                                >
-                                    <svg>...</svg>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="swiper-button-next-ex1 absolute top-1/2 z-[999] grid -translate-y-1/2 place-content-center rounded-full border border-primary p-1 text-primary transition hover:border-primary hover:bg-primary hover:text-white ltr:right-2 rtl:left-2"
-                                >
-                                    <svg>...</svg>
-                                </button>
-                                <div className="swiper-pagination"></div>
-                            </Swiper>
+                            // <Swiper
+                            //     ref={swiperRef}
+                            //     modules={[Navigation, Pagination]}
+                            //     navigation={{
+                            //         nextEl: '.swiper-button-next-ex1',
+                            //         prevEl: '.swiper-button-prev-ex1',
+                            //     }}
+                            //     observer={true}
+                            //     observeParents={true}
+                            //     pagination={{ clickable: true }}
+                            //     className="swiper mx-auto mb-5 max-w-3xl"
+                            //     id="slider1"
+                            //     dir={themeConfig.rtlClass}
+                            //     key={themeConfig.rtlClass === 'rtl' ? 'true' : 'false'}
+                            // >
+                            //     <div className="swiper-wrapper">
+                            //         {items.map((item, i) => {
+                            //             return (
+                            //                 <SwiperSlide key={i}>
+                            //                     <img src={\`/assets/images/\${item}\`} className="max-h-80 w-full object-cover" alt="img" />
+                            //                 </SwiperSlide>
+                            //             );
+                            //         })}
+                            //     </div>
+                            //     <button
+                            //         type="button"
+                            //         className="swiper-button-prev-ex1 absolute top-1/2 z-[999] grid -translate-y-1/2 place-content-center rounded-full border border-primary p-1  text-primary transition hover:border-primary hover:bg-primary hover:text-white ltr:left-2 rtl:right-2"
+                            //     >
+                            //         <svg>...</svg>
+                            //     </button>
+                            //     <button
+                            //         type="button"
+                            //         className="swiper-button-next-ex1 absolute top-1/2 z-[999] grid -translate-y-1/2 place-content-center rounded-full border border-primary p-1 text-primary transition hover:border-primary hover:bg-primary hover:text-white ltr:right-2 rtl:left-2"
+                            //     >
+                            //         <svg>...</svg>
+                            //     </button>
+                            //     <div className="swiper-pagination"></div>
+                            // </Swiper>
                         </Dialog.Panel>
                     </div>
                 </div>

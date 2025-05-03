@@ -12,8 +12,14 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
-    server: {
-        host: 'localhost',
-        port: 5174
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    react: ['react', 'react-dom'],
+                    vendor: ['axios', 'lodash'], // any heavy libraries you're using
+                }
+            }
+        }
     }
 });

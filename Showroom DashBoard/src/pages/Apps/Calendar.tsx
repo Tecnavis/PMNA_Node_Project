@@ -304,7 +304,9 @@ const Calendar = () => {
                         leave-from="opacity-100"
                         leave-to="opacity-0"
                     >
-                        <Dialog.Overlay className="fixed inset-0 bg-[black]/60" />
+                        <Dialog className="fixed inset-0 bg-[black]/60" onClose={function (value: boolean): void {
+                            throw new Error('Function not implemented.');
+                        } } />
                     </Transition.Child>
 
                     <div className="fixed inset-0 overflow-y-auto">
