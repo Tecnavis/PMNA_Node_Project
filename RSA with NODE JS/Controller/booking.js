@@ -1336,13 +1336,14 @@ exports.settleAmount = async (req, res) => {
             });
         }
 
-        if (role !== 'admin' || !role) {
+        console.log(role, req.body)
+        if (role !== 'admin' && receivedUser === 'Staff') {
             booking.receivedUserId = userId
             booking.receivedUser = 'Staff'
 
             await Staff.findByIdAndUpdate(userId, {
                 $inc: {
-                    cashInHand: receivedAmount
+                    cashInHand: partialAmount
                 }
             })
         }
@@ -1353,6 +1354,7 @@ exports.settleAmount = async (req, res) => {
                 booking.cashPending = false;
             }
         } else {
+            booking.partialAmount = booking.partialAmount || 0;
             booking.partialAmount += partialAmount;
             if (booking.partialAmount < booking.totalAmount) {
                 booking.partialPayment = true;

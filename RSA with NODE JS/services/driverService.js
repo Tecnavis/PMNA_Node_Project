@@ -14,13 +14,13 @@ const getTotalDriverExpense = async (driverId) => {
         },
         {
             $group: {
-                _id: null, 
+                _id: null,
                 totalExpense: { $sum: '$amount' }
             }
         }
     ]);
 
-    return result[0]?.totalExpense || 0; 
+    return result[0]?.totalExpense || 0;
 }
 // Calculating the net total amount in hand 
 async function calculateNetTotalAmountInHand(driverId) {
@@ -45,8 +45,31 @@ async function calculateNetTotalAmountInHand(driverId) {
             }
         }
     ]);
-    
-    return (result[0]?.netTotalAmount || 0)
+    const result2 = await Booking.aggregate([
+        {
+            $match: {
+                driver: driverId,
+                partialPayment: true,
+                workType: 'PaymentWork'
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                netTotalAmount2: {
+                    // $sum: {
+                    //     $subtract: ['$totalAmount', '$partialAmount']
+                    // }
+                    $sum: '$partialAmount'
+                }
+            }
+        }
+    ]);
+
+    return (
+        (result[0]?.netTotalAmount || 0) +
+        (result2[0]?.netTotalAmount2 || 0)
+    );
 }
 // Calculate the driver total salary from verified bookings
 async function calculateTotalSalary(driverId) {

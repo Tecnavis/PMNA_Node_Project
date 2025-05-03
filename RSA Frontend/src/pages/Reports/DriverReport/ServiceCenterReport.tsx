@@ -11,6 +11,7 @@ import IconCreditCard from '../../../components/Icon/IconCreditCard';
 import IconPhone from '../../../components/Icon/IconPhone';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
 import { CLOUD_IMAGE } from '../../../constants/status';
+import defaultShowroomImage from '../../../assets/images/ChatGPT Image May 3, 2025, 04_44_15 PM.png'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -33,6 +34,7 @@ type Booking = {
   showroomAmount: number;
   receivedAmount: number | string;
   approve?: boolean;
+  insuranceAmount: number
   // add or remove fields according to showroom requirements
 };
 interface FilterData {
@@ -50,12 +52,12 @@ const ShowroomCashCollectionsReport = () => {
   const [search, setSearch] = useState('');
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const [payableAmounts, setPayableAmounts] = useState<Record<string, number>>({})
 
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const isRtl = useSelector((state: any) => state.themeConfig.rtlClass) === 'rtl';
-  // ----------------------------------
   const [selectedMonth, setSelectedMonth] = useState<string>(
     new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date())
   );
@@ -71,7 +73,6 @@ const ShowroomCashCollectionsReport = () => {
   const printRef = useRef<HTMLDivElement>(null);
   const role = localStorage.getItem('role') || '';
 
-  // -----------------------------------
   // Set token for API requests
   const gettingToken = () => {
     const token = localStorage.getItem('token');
@@ -112,8 +113,6 @@ const ShowroomCashCollectionsReport = () => {
     }
   };
 
-
-
   useEffect(() => {
     gettingToken();
     getShowroom();
@@ -126,7 +125,6 @@ const ShowroomCashCollectionsReport = () => {
     }
   }, [showroom, startDate, endingDate, page, search, pageSize]);
 
-
   useEffect(() => {
     dispatch(setPageTitle('Showroom Cash Collection Report'));
   }, [dispatch]);
@@ -138,8 +136,12 @@ const ShowroomCashCollectionsReport = () => {
     }));
   };
 
-  const handleOkClick = (bookingId: string) => {
+  const handleReceivedAmount = (bookingId: string) => {
     // Add logic to handle OK click for a booking (e.g., update received amount, approve payment, etc.)
+  };
+
+  const handlePayablemount = (bookingId: string) => {
+    
   };
 
   // Function to calculate balance (adjust if your showroom logic is different)
@@ -153,29 +155,49 @@ const ShowroomCashCollectionsReport = () => {
     {
       accessor: '_id',
       title: 'Select',
+      cellsClassName: 'text-center',
       render: (_: Booking, index: number) => index + 1
     },
     {
       accessor: 'createdAt',
       title: 'Date',
+      cellsClassName: 'text-center',
       render: (record: Booking) =>
         `${new Date(record.createdAt || '').toLocaleDateString()}, ${new Date(record.createdAt || '').toLocaleTimeString()}`
     },
-    { accessor: 'fileNumber', title: 'File Number' },
+    { accessor: 'fileNumber', title: 'File Number', cellsClassName: 'text-center', },
     {
       accessor: 'showroomAmount',
+      cellsClassName: 'text-center',
       title: 'Payable Amount From Showroom',
       render: (record: Booking) => {
         return <div className='flex gap-2'>
-          <input type="number" className=' border py-2 px-2 border-gray-500 rounded-md h-9' value={record?.showroomAmount || 0} />
-          <button className='bg-green-500 text-white p-2 rounded'>OK</button>
+          <input
+            type="number"
+            value={payableAmounts[record._id] || record?.showroomAmount}
+            className=' border py-2 px-2 border-gray-500 rounded-md h-9'
+            onChange={(e) =>
+              setPayableAmounts({
+                ...payableAmounts,
+                [record._id]: Number(e.target.value),
+              })
+            }
+          />
+          <button
+            className='bg-green-500 text-white p-2 rounded'
+            onClick={() => handlePayablemount(record._id)}
+          >
+            OK
+          </button>
         </div>
       }
     },
-    { accessor: 'insuranceAmount', title: 'Payable Insurance From Showroom' },
+    { accessor: 'insuranceAmount', cellsClassName: 'text-center', title: 'Payable Insurance From Showroom', render: (record: Booking) => <span className='text-center'>{record?.insuranceAmount || 0} </span> },
+    { accessor: 'insuranceAmount', cellsClassName: 'text-center', title: 'Total (Payable Amount + Payable Insurance)', render: (record: Booking) => <span className='text-center'>{(record?.insuranceAmount || 0) + (record?.showroomAmount || 0)} </span> },
     {
       accessor: 'receivedAmount',
-      title: 'Amount Received',
+      cellsClassName: 'text-center',
+      title: 'Received Amount(from showroom)',
       render: (booking: Booking) => (
         <div style={{ display: 'flex', alignItems: 'center' }} className='flex gap-2'>
           <input
@@ -186,7 +208,7 @@ const ShowroomCashCollectionsReport = () => {
             disabled={booking.approve}
           />
           <button
-            onClick={() => handleOkClick(booking._id)}
+            onClick={() => handleReceivedAmount(booking._id)}
             disabled={booking.approve || loadingStates[booking._id]}
             style={{
               backgroundColor:
@@ -207,7 +229,8 @@ const ShowroomCashCollectionsReport = () => {
     },
     {
       accessor: 'balance',
-      title: 'Balance',
+      title: 'Balance(from showroom)',
+      cellsClassName: 'text-center',
       render: (booking: Booking) => {
         const effectiveReceivedAmount = inputValues[booking._id] || booking.receivedAmount || 0;
         return (
@@ -227,12 +250,21 @@ const ShowroomCashCollectionsReport = () => {
       }
     },
     {
+      accessor: 'status',
+      title: 'Status',
+      cellsClassName: 'text-center',
+      render: (record: Booking) =>
+        <button className={`px-2 py-1 ${record.approve ? ' text-green-500' : 'text-red-500'} rounded`}>{record.approve ? 'Approved' : 'Not Approved	'}</button>
+    },
+    {
       accessor: 'approve',
       title: 'Approve',
+      cellsClassName: 'text-center',
       render: (record: Booking) =>
         <button className="px-2 py-1 bg-green-500 text-white rounded">Approve</button>
     },
   ];
+
   const handleMonth = (month: string) => {
     setSelectedMonth(month);
     updateDateRange(month, selectedYear);
@@ -270,7 +302,7 @@ const ShowroomCashCollectionsReport = () => {
             </div>
             <div className="mb-5 flex flex-col justify-center items-center">
               <img
-                src={`${CLOUD_IMAGE}${showroom?.image}`}
+                src={showroom?.image ? `${CLOUD_IMAGE}${showroom.image}` : defaultShowroomImage}
                 alt="Showroom"
                 className="w-24 h-24 rounded-full object-cover mb-5 border-2"
               />
