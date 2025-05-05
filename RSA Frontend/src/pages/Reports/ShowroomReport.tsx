@@ -6,6 +6,7 @@ import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { GrNext, GrPrevious } from 'react-icons/gr';
 
 interface Showroom {
   _id: string;
@@ -40,28 +41,34 @@ const ShowroomReport = () => {
     dispatch(setPageTitle('Showroom Report'));
   }, [dispatch]);
 
-  const [page, setPage] = useState(1);
-  const PAGE_SIZES = [10, 20, 30, 50, 100];
-  const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
-  const [search, setSearch] = useState('');
-  const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({
-    columnAccessor: 'name',
-    direction: 'asc',
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [showrooms, setShowrooms] = useState<Showroom[]>([]);
-  const [recordsData, setRecordsData] = useState<Showroom[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch showrooms from backend
-  const fetchShowrooms = async (search = '') => {
+  // Fetch showrooms from backend with pagination
+  const fetchShowrooms = async (searchTerm = '', page = 1, limit = 10) => {
     try {
-      const response = await axios.get(`${backendUrl}/showroom/filtered`, {
-        params: { search },
+      setLoading(true);
+      const search = searchTerm;
+      const response = await axios.get(`${backendUrl}/showroom/all-showrooms`, {
+        params: { search, page, limit },
       });
-      setShowrooms(response.data);
+      setShowrooms(response.data.data);
+      setTotalPages(response.data.totalPages);
+      setCurrentPage(response.data.page);// Server already paginated the data
     } catch (error) {
       console.error('Error fetching showrooms:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchShowrooms(searchTerm, page); // use current search term
   };
 
   // Token check and fetching data
@@ -72,26 +79,8 @@ const ShowroomReport = () => {
     } else {
       navigate('/auth/boxed-signin');
     }
-    fetchShowrooms(search);
-  }, [search, navigate]);
-
-  // Handle pagination
-  useEffect(() => {
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize;
-    setRecordsData(showrooms.slice(from, to));
-  }, [page, pageSize, showrooms]);
-
-  // Optional: handle sorting (you can adjust the logic based on your needs)
-  useEffect(() => {
-    const sortedData = sortBy(showrooms, sortStatus.columnAccessor);
-    setRecordsData(
-      (sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData).slice(
-        (page - 1) * pageSize,
-        (page - 1) * pageSize + pageSize
-      )
-    );
-  }, [sortStatus, showrooms, page, pageSize]);
+    fetchShowrooms(searchTerm);
+  }, [searchTerm, navigate]);
 
   return (
     <div>
@@ -103,15 +92,16 @@ const ShowroomReport = () => {
               type="text"
               className="form-input w-auto"
               placeholder="Search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
         <div className="datatables">
           <DataTable
+          fetching={loading}
             className="whitespace-nowrap table-hover"
-            records={recordsData}
+            records={showrooms}
             columns={[
               {
                 accessor: 'name',
@@ -151,6 +141,99 @@ const ShowroomReport = () => {
             ]}
           />
         </div>
+      </div>
+      {/* Custom Pagination Controls */}
+      <div className="mt-4 flex justify-center">
+        <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
+          {/* Previous Button */}
+          <li>
+            <button
+              type="button"
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+              className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
+              disabled={currentPage === 1}
+            >
+              <GrPrevious />
+            </button>
+          </li>
+
+          {/* Always show first page */}
+          <li>
+            <button
+              type="button"
+              onClick={() => handlePageChange(1)}
+              className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+            >
+              1
+            </button>
+          </li>
+
+          {/* Show ellipsis if current page is far from start */}
+          {currentPage > 4 && totalPages > 7 && (
+            <li className="flex items-end">
+              <span className="px-1">...</span>
+            </li>
+          )}
+
+          {/* Middle pages - dynamic range */}
+          {Array.from({ length: Math.min(5, totalPages - 2) }, (_, i) => {
+            let pageNum;
+            if (currentPage < 4) {
+              pageNum = i + 2; // Show pages 2-6 when near start
+            } else if (currentPage > totalPages - 3) {
+              pageNum = totalPages - 4 + i; // Show last pages when near end
+            } else {
+              pageNum = currentPage - 2 + i; // Show pages around current
+            }
+
+            if (pageNum > 1 && pageNum < totalPages) {
+              return (
+                <li key={pageNum}>
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                  >
+                    {pageNum}
+                  </button>
+                </li>
+              );
+            }
+            return null;
+          })}
+
+          {/* Show ellipsis if current page is far from end */}
+          {currentPage < totalPages - 3 && totalPages > 7 && (
+            <li className="flex items-end">
+              <span className="px-1">...</span>
+            </li>
+          )}
+
+          {/* Always show last page if there's more than 1 page */}
+          {totalPages > 1 && (
+            <li>
+              <button
+                type="button"
+                onClick={() => handlePageChange(totalPages)}
+                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === totalPages ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+              >
+                {totalPages}
+              </button>
+            </li>
+          )}
+
+          {/* Next Button */}
+          <li>
+            <button
+              type="button"
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+              className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
+              disabled={currentPage === totalPages}
+            >
+              <GrNext />
+            </button>
+          </li>
+        </ul>
       </div>
     </div>
   );
