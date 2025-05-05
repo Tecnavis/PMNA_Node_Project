@@ -21,6 +21,7 @@ import IconAward from '../Icon/IconAward';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
 import IconHome from '../Icon/IconHome';
 import { BASE_URL } from '../../config/axiosConfig';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 
 const Sidebar = () => {
@@ -70,7 +71,7 @@ const Sidebar = () => {
                 <div className="bg-white dark:bg-black h-full">
                     <div className="flex justify-between items-center px-4 my-2">
                         <NavLink to="/" className="main-logo p-3 flex items-center shrink-0">
-                            <img className="w-48 mx-auto  rounded-md" src={`${BASE_URL}images/${showroomIcon}`} alt="logo" />
+                            <img className="w-48 mx-auto  rounded-md" src={`${CLOUD_IMAGE}${showroomIcon}`} alt="logo" />
                         </NavLink>
                         <button
                             type="button"

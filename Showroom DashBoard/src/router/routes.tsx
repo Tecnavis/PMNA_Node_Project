@@ -1,7 +1,4 @@
 import { Suspense, lazy } from 'react';
-import { Navigate } from 'react-router-dom';
-// import Booking from '../pages/Booking/Booking';
-// import ApprovedBoking from '../pages/Booking/ApprovedBoking';
 
 import ExpenseSummery from '../pages/Report/generalReports/ExpenseSummery';
 import SalesSummery from '../pages/Report/generalReports/SalesSummery';
@@ -85,17 +82,6 @@ const Checkbox = lazy(() => import('../pages/DataTables/Checkbox'));
 const RangeSearch = lazy(() => import('../pages/DataTables/RangeSearch'));
 const Export = lazy(() => import('../pages/DataTables/Export'));
 const ColumnChooser = lazy(() => import('../pages/DataTables/ColumnChooser'));
-
-const KnowledgeBase = lazy(() => import('../pages/Pages/KnowledgeBase'));
-const ContactUsBoxed = lazy(() => import('../pages/Pages/ContactUsBoxed'));
-const ContactUsCover = lazy(() => import('../pages/Pages/ContactUsCover'));
-const Faq = lazy(() => import('../pages/Pages/Faq'));
-const ComingSoonBoxed = lazy(() => import('../pages/Pages/ComingSoonBoxed'));
-const ComingSoonCover = lazy(() => import('../pages/Pages/ComingSoonCover'));
-const ERROR404 = lazy(() => import('../pages/Pages/Error404'));
-const ERROR500 = lazy(() => import('../pages/Pages/Error500'));
-const ERROR503 = lazy(() => import('../pages/Pages/Error503'));
-const Maintenence = lazy(() => import('../pages/Pages/Maintenence'));
 const LoginBoxed = lazy(() => import('../pages/Authentication/LoginBoxed'));
 const RegisterBoxed = lazy(() => import('../pages/Authentication/RegisterBoxed'));
 const UnlockBoxed = lazy(() => import('../pages/Authentication/UnlockBox'));
@@ -104,37 +90,9 @@ const LoginCover = lazy(() => import('../pages/Authentication/LoginCover'));
 const RegisterCover = lazy(() => import('../pages/Authentication/RegisterCover'));
 const RecoverIdCover = lazy(() => import('../pages/Authentication/RecoverIdCover'));
 const UnlockCover = lazy(() => import('../pages/Authentication/UnlockCover'));
-const About = lazy(() => import('../pages/About'));
 const Error = lazy(() => import('../components/Error'));
-const FormBasic = lazy(() => import('../pages/Forms/Basic'));
-const FormInputGroup = lazy(() => import('../pages/Forms/InputGroup'));
-const FormLayouts = lazy(() => import('../pages/Forms/Layouts'));
-const Validation = lazy(() => import('../pages/Forms/Validation'));
-const InputMask = lazy(() => import('../pages/Forms/InputMask'));
-const Select2 = lazy(() => import('../pages/Forms/Select2'));
-const Touchspin = lazy(() => import('../pages/Forms/TouchSpin'));
-const CheckBoxRadio = lazy(() => import('../pages/Forms/CheckboxRadio'));
-const Switches = lazy(() => import('../pages/Forms/Switches'));
-const Wizards = lazy(() => import('../pages/Forms/Wizards'));
-const FileUploadPreview = lazy(() => import('../pages/Forms/FileUploadPreview'));
-const QuillEditor = lazy(() => import('../pages/Forms/QuillEditor'));
-const MarkDownEditor = lazy(() => import('../pages/Forms/MarkDownEditor'));
-const DateRangePicker = lazy(() => import('../pages/Forms/DateRangePicker'));
-const Clipboard = lazy(() => import('../pages/Forms/Clipboard'));
-// const isAuthenticated = () => {
-//     // Implement your authentication check here
-//     return false; // This is a placeholder, return actual auth status
-//   };
+
 const routes = [
-    // dashboard
-    // {
-    //     path: '/',
-    //     element: (
-    //       <Suspense fallback={<div>Loading...</div>}>
-    //         {isAuthenticated() ? <Index/> : <Navigate to="/login"/>}
-    //       </Suspense>
-    //     ),
-    //   },
     {
         path: '/',
         element: <LoginCover />,
@@ -147,51 +105,35 @@ const routes = [
     {
         path: '/showrm/qr',
         element: <QRLogin />,
-        // layout: 'blank',
     },
     {
         path: '/index',
         element: <Index />,
-        // layout: 'blank',
     },
-    // showroom
     {
         path: '/showrm',
         element: <ShowRm />,
-        // layout: 'blank',
     },
-    // {
-    //     path: '/showroomstaff ',
-    //     element: <ShowroomStaff/>,
-    //     layout: 'blank',
-    // },
     {
         path: '/addbook',
         element: <AddBook />,
-        // layout: 'blank',
     },
     {
         path: '/staff',
         element: <Staff />,
-        // layout: 'blank',
     },
     {
         path: '/home',
         element: <Home />,
-        // layout: 'blank',
     },
-    // details page
     {
         path: '/showrm/viewmore/:id',
         element: <ViewMore />,
-        // layout: 'blank',
     },
-    // analytics page
     {
         path: '/analytics',
         element: <Analytics />,
     },
-    // finance page
     {
         path: '/finance',
         element: <Finance />,
@@ -199,9 +141,7 @@ const routes = [
     {
         path: '/cashreport',
         element: <CashReport />,
-        // layout: 'blank',
     },
-    // crypto page
     {
         path: '/crypto',
         element: <Crypto />,
@@ -509,57 +449,6 @@ const routes = [
         path: '/receivable/payment',
         element: <PaymentReceived />,
     },
-
-
-    {
-        path: '/pages/knowledge-base',
-        element: <KnowledgeBase />,
-    },
-    {
-        path: '/pages/contact-us-boxed',
-        element: <ContactUsBoxed />,
-        layout: 'blank',
-    },
-    {
-        path: '/pages/contact-us-cover',
-        element: <ContactUsCover />,
-        layout: 'blank',
-    },
-    {
-        path: '/pages/faq',
-        element: <Faq />,
-    },
-    {
-        path: '/pages/coming-soon-boxed',
-        element: <ComingSoonBoxed />,
-        layout: 'blank',
-    },
-    {
-        path: '/pages/coming-soon-cover',
-        element: <ComingSoonCover />,
-        layout: 'blank',
-    },
-    {
-        path: '/pages/error404',
-        element: <ERROR404 />,
-        layout: 'blank',
-    },
-    {
-        path: '/pages/error500',
-        element: <ERROR500 />,
-        layout: 'blank',
-    },
-    {
-        path: '/pages/error503',
-        element: <ERROR503 />,
-        layout: 'blank',
-    },
-    {
-        path: '/pages/maintenence',
-        element: <Maintenence />,
-        layout: 'blank',
-    },
-    //Authentication
     {
         path: '/auth/boxed-signin',
         element: <LoginBoxed />,
@@ -598,72 +487,6 @@ const routes = [
     {
         path: '/auth/cover-password-reset',
         element: <RecoverIdCover />,
-        layout: 'blank',
-    },
-    //forms page
-    {
-        path: '/forms/basic',
-        element: <FormBasic />,
-    },
-    {
-        path: '/forms/input-group',
-        element: <FormInputGroup />,
-    },
-    {
-        path: '/forms/layouts',
-        element: <FormLayouts />,
-    },
-    {
-        path: '/forms/validation',
-        element: <Validation />,
-    },
-    {
-        path: '/forms/input-mask',
-        element: <InputMask />,
-    },
-    {
-        path: '/forms/select2',
-        element: <Select2 />,
-    },
-    {
-        path: '/forms/touchspin',
-        element: <Touchspin />,
-    },
-    {
-        path: '/forms/checkbox-radio',
-        element: <CheckBoxRadio />,
-    },
-    {
-        path: '/forms/switches',
-        element: <Switches />,
-    },
-    {
-        path: '/forms/wizards',
-        element: <Wizards />,
-    },
-    {
-        path: '/forms/file-upload',
-        element: <FileUploadPreview />,
-    },
-    {
-        path: '/forms/quill-editor',
-        element: <QuillEditor />,
-    },
-    {
-        path: '/forms/markdown-editor',
-        element: <MarkDownEditor />,
-    },
-    {
-        path: '/forms/date-picker',
-        element: <DateRangePicker />,
-    },
-    {
-        path: '/forms/clipboard',
-        element: <Clipboard />,
-    },
-    {
-        path: '/about',
-        element: <About />,
         layout: 'blank',
     },
     {

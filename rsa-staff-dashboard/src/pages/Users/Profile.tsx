@@ -10,6 +10,7 @@ import IconMessage from '../../components/Icon/IconMessage';
 import IconMenuMailbox from '../../components/Icon/Menu/IconMenuMailbox';
 import IconTwitter from '../../components/Icon/IconTwitter';
 import { motion } from 'framer-motion';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 const Profile = () => {
   const [staffData, setStaffData] = useState<IShowroomStaff | null>(null);
@@ -207,7 +208,7 @@ const Profile = () => {
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Showroom Image</h4>
                       <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                         <img
-                          src={`${BASE_URL}images/${showroom.image}`}
+                          src={`${CLOUD_IMAGE}${showroom.image}`}
                           alt={showroom.name}
                           className="w-full h-48 object-cover"
                         />

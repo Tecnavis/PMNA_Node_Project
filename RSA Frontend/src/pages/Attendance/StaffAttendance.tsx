@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux';
 import { IRootState } from '../../store';
 import Dropdown from '../../components/Dropdown';
 import { MONTHS, MONTHS_NUMBER, YEARS_FOR_FILTER } from '../Reports/constant';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 
 export interface AttendanceRecord {
@@ -278,7 +279,7 @@ const StaffAttendance = () => {
                 <div className="w-full shadow-[4px_6px_10px_-3px_#bfc9d4] rounded-lg border border-white-light dark:border-[#1b2e4b] dark:bg-[#191e3a] dark:shadow-none p-5">
                     <div className="text-center flex flex-col items-center justify-center gap-1">
                         <div className="mb-5 w-20 h-20 rounded-full overflow-hidden mx-auto border border-blue-500">
-                            <img src={`${BASE_URL}/images/${staff?.image}`} alt="profile" className="w-full h-full object-cover" />
+                            <img src={`${CLOUD_IMAGE}${staff?.image}`} alt="profile" className="w-full h-full object-cover" />
                         </div>
                         <h5 className=" text-[17px] font-semibold mb-2">{staff?.name}</h5>
                         <div className='flex items-center justify-center gap-2'>

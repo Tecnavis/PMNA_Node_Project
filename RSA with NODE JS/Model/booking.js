@@ -68,35 +68,34 @@ const bookingSchema = new mongoose.Schema({
     verified: { type: Boolean },
     feedbackCheck: { type: Boolean },
     accountantVerified: { type: Boolean },
-    cashPending: { type: Boolean },// New props
-    approve: { type: Boolean, default: false },// New props
-    receivedUser: { type: String }, // New props
-    receivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' }, // New props
-    dummyDriverName: { type: String }, // New props
-    dummyProviderName: { type: String }, // New props
-    bookingStatus: { type: String }, // New props
-    companyName: { type: String }, // New props
+    cashPending: { type: Boolean },
+    approve: { type: Boolean, default: false },
+    receivedUser: { type: String },
+    receivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+    dummyDriverName: { type: String },
+    dummyProviderName: { type: String },
+    bookingStatus: { type: String },
+    companyName: { type: String },
     pickupImagePending: { type: Boolean },
     dropoffImagePending: { type: Boolean },
-    cancelStatus: { type: Boolean }, // New props
-    cancelReason: { type: String }, // New props
-    partialPayment: { type: Boolean }, // New props
-    partialAmount: { type: Number }, // New props
-    partialPaymentRemark: { type: String }, // New props
-
-    cancelKm: { type: Number }, // New props
-    invoiceNumber: { type: String }, // New props
-    pickupDistence: { type: String }, // New props
-    invoiceStatus: { type: Boolean }, // New props
+    cancelStatus: { type: Boolean },
+    cancelReason: { type: String },
+    partialPayment: { type: Boolean },
+    partialAmount: { type: Number },
+    partialPaymentRemark: { type: String },
+    cancelKm: { type: Number },
+    invoiceNumber: { type: String },
+    pickupDistence: { type: String },
+    invoiceStatus: { type: Boolean },
     cancelImage: {
-        type: String, // Path to the uploaded image
+        type: String,
     },
     inventoryImage: {
-        type: String, // Path to the uploaded image
+        type: String,
     },
-    inventoryImagePending: { type: Boolean }, // New props
-
-    notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' } // New props
+    inventoryImagePending: { type: Boolean },
+    notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' },
+    rewardAmount: { type: Number }
 
 }, { timestamps: true });
 
