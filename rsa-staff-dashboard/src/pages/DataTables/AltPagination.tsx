@@ -571,7 +571,7 @@ const AltPagination = () => {
                     </div>
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         noRecordsText="No results match your search query"
                         highlightOnHover
                         className="whitespace-nowrap table-hover"
@@ -593,7 +593,7 @@ const AltPagination = () => {
                         onSortStatusChange={setSortStatus}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
         </div>

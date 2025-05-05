@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import Dropdown from '../components/Dropdown';
-import ReactApexChart from 'react-apexcharts';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../store';
 import { setPageTitle } from '../store/themeConfigSlice';
@@ -553,7 +552,6 @@ const Finance = () => {
                                     </div>
                                 </div>
                                 <div className="mb-5 overflow-hidden">
-                                    <ReactApexChart series={bitcoin.series} options={bitcoin.options} type="line" height={45} />
                                 </div>
                                 <div className="flex justify-between items-center font-bold text-base">
                                     $20,000 <span className="text-success font-normal text-sm">+0.25%</span>
@@ -571,7 +569,6 @@ const Finance = () => {
                                     </div>
                                 </div>
                                 <div className="mb-5 overflow-hidden">
-                                    <ReactApexChart series={ethereum.series} options={ethereum.options} type="line" height={45} />
                                 </div>
                                 <div className="flex justify-between items-center font-bold text-base">
                                     $21,000 <span className="text-danger font-normal text-sm">-1.25%</span>
@@ -589,7 +586,6 @@ const Finance = () => {
                                     </div>
                                 </div>
                                 <div className="mb-5 overflow-hidden">
-                                    <ReactApexChart series={litecoin.series} options={litecoin.options} type="line" height={45} />
                                 </div>
                                 <div className="flex justify-between items-center font-bold text-base">
                                     $11,657 <span className="text-success font-normal text-sm">+0.25%</span>
@@ -618,7 +614,6 @@ const Finance = () => {
                                     </div>
                                 </div>
                                 <div className="mb-5 overflow-hidden">
-                                    <ReactApexChart series={binance.series} options={binance.options} type="line" height={45} />
                                 </div>
                                 <div className="flex justify-between items-center font-bold text-base">
                                     $21,000 <span className="text-danger font-normal text-sm">-1.25%</span>
@@ -636,7 +631,6 @@ const Finance = () => {
                                     </div>
                                 </div>
                                 <div className="mb-5 overflow-hidden">
-                                    <ReactApexChart series={tether.series} options={tether.options} type="line" height={45} />
                                 </div>
                                 <div className="flex justify-between items-center font-bold text-base">
                                     $20,000 <span className="text-success font-normal text-sm">+0.25%</span>
@@ -654,7 +648,6 @@ const Finance = () => {
                                     </div>
                                 </div>
                                 <div className="mb-5 overflow-hidden">
-                                    <ReactApexChart series={solana.series} options={solana.options} type="line" height={45} />
                                 </div>
                                 <div className="flex justify-between items-center font-bold text-base">
                                     $21,000 <span className="text-danger font-normal text-sm">-1.25%</span>

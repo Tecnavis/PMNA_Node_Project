@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
 import IconLockDots from '../../components/Icon/IconLockDots';
 import IconUser from '../../components/Icon/IconUser';
 

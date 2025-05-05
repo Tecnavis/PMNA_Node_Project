@@ -11,6 +11,12 @@ import IconCreditCard from '../../../components/Icon/IconCreditCard';
 import IconPhone from '../../../components/Icon/IconPhone';
 import { MONTHS, YEARS_FOR_FILTER } from '../constant'
 import { CLOUD_IMAGE } from '../../../constants/status';
+import defaultShowroomImage from '../../../assets/images/ChatGPT Image May 3, 2025, 04_44_15 PM.png'
+import { LocateIcon } from 'lucide-react';
+import { Booking } from '../../Bookings/Bookings';
+import { BASE_URL } from '../../../config/axiosConfig';
+import Swal from 'sweetalert2';
+
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -18,23 +24,13 @@ type Showroom = {
   _id: string;
   name: string;
   image: string;
+  location: string;
   phone: string;
   advance: number;
   cashInHand: number;
   showroomId: string;
 };
 
-type Booking = {
-  _id: string;
-  createdAt?: string;
-  fileNumber?: string;
-  customerVehicleNumber?: string;
-  totalAmount?: number;
-  showroomAmount: number;
-  receivedAmount: number | string;
-  approve?: boolean;
-  // add or remove fields according to showroom requirements
-};
 interface FilterData {
   totalCollectedAmount: number,
   overallAmount: number,
@@ -50,12 +46,14 @@ const ShowroomCashCollectionsReport = () => {
   const [search, setSearch] = useState('');
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const [payableAmounts, setPayableAmounts] = useState<Record<string, number>>({})
+  const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
+  const [inVoiceLoading, setInVoiceLoading] = useState<boolean>(false);
 
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const isRtl = useSelector((state: any) => state.themeConfig.rtlClass) === 'rtl';
-  // ----------------------------------
   const [selectedMonth, setSelectedMonth] = useState<string>(
     new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date())
   );
@@ -71,7 +69,6 @@ const ShowroomCashCollectionsReport = () => {
   const printRef = useRef<HTMLDivElement>(null);
   const role = localStorage.getItem('role') || '';
 
-  // -----------------------------------
   // Set token for API requests
   const gettingToken = () => {
     const token = localStorage.getItem('token');
@@ -107,12 +104,11 @@ const ShowroomCashCollectionsReport = () => {
         }
       });
       setBookings(response.data.bookings);
+      calculateFinacials(response.data.bookings)
     } catch (error) {
       console.error("Error fetching bookings for showroom:", error);
     }
   };
-
-
 
   useEffect(() => {
     gettingToken();
@@ -126,7 +122,6 @@ const ShowroomCashCollectionsReport = () => {
     }
   }, [showroom, startDate, endingDate, page, search, pageSize]);
 
-
   useEffect(() => {
     dispatch(setPageTitle('Showroom Cash Collection Report'));
   }, [dispatch]);
@@ -138,8 +133,63 @@ const ShowroomCashCollectionsReport = () => {
     }));
   };
 
-  const handleOkClick = (bookingId: string) => {
-    // Add logic to handle OK click for a booking (e.g., update received amount, approve payment, etc.)
+  const handleApprove = async (bookingId: string, action: Boolean) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Do you want to approve this booking?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, confirm it!'
+    });
+    if (result.isConfirmed) {
+      await axios.put(`${BASE_URL}/booking/${bookingId}`, {
+        approve: action
+      });
+      fetchBookings();
+      Swal.fire('Confirmed!', 'The booking updated success.', 'success');
+    }
+  };
+
+  const handleReceivedAmount = async (bookingId: string) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Do you want to udpate received amount?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, confirm it!'
+    });
+    const amount = inputValues[bookingId]
+    if (result.isConfirmed) {
+      await axios.put(`${BASE_URL}/booking/${bookingId}`, {
+        receivedAmount: amount
+      });
+      fetchBookings();
+      Swal.fire('Confirmed!', 'The amount has been updated.', 'success');
+    }
+  };
+
+  const handlePayablemount = async (bookingId: string) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Do you want to udpate showroom payable amount?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, confirm it!'
+    });
+    const amount = payableAmounts[bookingId]
+    if (result.isConfirmed) {
+      await axios.put(`${BASE_URL}/booking/${bookingId}`, {
+        showroomAmount: amount
+      });
+      fetchBookings();
+      Swal.fire('Confirmed!', 'The amount has been updated.', 'success');
+    }
   };
 
   // Function to calculate balance (adjust if your showroom logic is different)
@@ -149,33 +199,103 @@ const ShowroomCashCollectionsReport = () => {
     return (parsedAmount - parsedReceivedAmount).toFixed(2);
   };
 
+  const handleSelectAll = () => {
+    if (selectedBookings.size === bookings.length) {
+      // Deselect all
+      setSelectedBookings(new Set());
+    } else {
+      // Select all
+      const allIds = new Set(
+        bookings
+          .filter(booking => !booking.approve)
+          .map((booking) => booking._id)
+      );
+      const idsArray = Array.from(allIds);
+
+      setSelectedBookings(new Set(idsArray));
+    }
+  };
+
   const cols = [
     {
       accessor: '_id',
-      title: 'Select',
+      title: '#',
+      className: 'text-center',
+      headerClassName: 'text-center',
       render: (_: Booking, index: number) => index + 1
+    },
+    {
+      accessor: 'selectall',
+      title: (
+        <label className="flex items-center mt-2">
+          <input
+            type="checkbox"
+            name="selectAll"
+            className="mr-2"
+            onChange={handleSelectAll}
+          />
+          <span>Select All</span>
+        </label>
+      ),
+      render: (record: Booking) =>
+        record._id !== 'total' ? <input
+          type="checkbox"
+          disabled={record.approve}
+          checked={selectedBookings.has(record._id)}
+          onChange={() => {
+            if (record.approve) return; // Prevent state update if disabled
+            setSelectedBookings((prevSelected) => {
+              const updatedSelection = new Set(prevSelected);
+              if (updatedSelection.has(record._id)) {
+                updatedSelection.delete(record._id);
+              } else {
+                updatedSelection.add(record._id);
+              }
+              return updatedSelection;
+            });
+          }}
+        /> : null
     },
     {
       accessor: 'createdAt',
       title: 'Date',
+      cellsClassName: 'text-center',
       render: (record: Booking) =>
         `${new Date(record.createdAt || '').toLocaleDateString()}, ${new Date(record.createdAt || '').toLocaleTimeString()}`
     },
-    { accessor: 'fileNumber', title: 'File Number' },
+    { accessor: 'fileNumber', title: 'File Number', cellsClassName: 'text-center', },
     {
       accessor: 'showroomAmount',
+      cellsClassName: 'text-center',
       title: 'Payable Amount From Showroom',
       render: (record: Booking) => {
         return <div className='flex gap-2'>
-          <input type="number" className=' border py-2 px-2 border-gray-500 rounded-md h-9' value={record?.showroomAmount || 0} />
-          <button className='bg-green-500 text-white p-2 rounded'>OK</button>
+          <input
+            type="number"
+            value={payableAmounts[record._id] || record?.showroomAmount || 0}
+            className=' border py-2 px-2 border-gray-500 rounded-md h-9'
+            onChange={(e) =>
+              setPayableAmounts({
+                ...payableAmounts,
+                [record._id]: Number(e.target.value),
+              })
+            }
+          />
+          <button
+            className='bg-green-500 text-white p-2 rounded'
+            onClick={() => handlePayablemount(record._id)}
+          >
+            OK
+          </button>
         </div>
       }
     },
-    { accessor: 'insuranceAmount', title: 'Payable Insurance From Showroom' },
+    { accessor: 'insuranceAmount', cellsClassName: 'text-center', title: 'Payable Insurance From Showroom', render: (record: Booking) => <span className='text-center'>{record?.insuranceAmount || 0} </span> },
+    { accessor: 'insuranceAmount', cellsClassName: 'text-center', title: 'Total (Payable Amount + Payable Insurance)', render: (record: Booking) => <span className='text-center'>{(record?.insuranceAmount || 0) + (record?.showroomAmount || 0)} </span> },
     {
       accessor: 'receivedAmount',
-      title: 'Amount Received',
+      cellsClassName: 'text-center',
+      title: 'Received Amount(from showroom)',
       render: (booking: Booking) => (
         <div style={{ display: 'flex', alignItems: 'center' }} className='flex gap-2'>
           <input
@@ -186,7 +306,7 @@ const ShowroomCashCollectionsReport = () => {
             disabled={booking.approve}
           />
           <button
-            onClick={() => handleOkClick(booking._id)}
+            onClick={() => handleReceivedAmount(booking._id)}
             disabled={booking.approve || loadingStates[booking._id]}
             style={{
               backgroundColor:
@@ -207,7 +327,8 @@ const ShowroomCashCollectionsReport = () => {
     },
     {
       accessor: 'balance',
-      title: 'Balance',
+      title: 'Balance(from showroom)',
+      cellsClassName: 'text-center',
       render: (booking: Booking) => {
         const effectiveReceivedAmount = inputValues[booking._id] || booking.receivedAmount || 0;
         return (
@@ -227,12 +348,21 @@ const ShowroomCashCollectionsReport = () => {
       }
     },
     {
+      accessor: 'status',
+      title: 'Status',
+      cellsClassName: 'text-center',
+      render: (record: Booking) =>
+        <button className={`px-2 py-1 ${record.approve ? ' text-green-500' : 'text-red-500'} rounded`}>{record.approve ? 'Approved' : 'Not Approved	'}</button>
+    },
+    {
       accessor: 'approve',
       title: 'Approve',
+      cellsClassName: 'text-center',
       render: (record: Booking) =>
-        <button className="px-2 py-1 bg-green-500 text-white rounded">Approve</button>
+        <button className={`px-2 py-1 bg-green-500 text-white rounded`} onClick={() => record.approve ? null :  handleApprove(record._id, !record.approve)}>{record.approve ? "Approved" : "Approve"}</button>
     },
   ];
+
   const handleMonth = (month: string) => {
     setSelectedMonth(month);
     updateDateRange(month, selectedYear);
@@ -257,6 +387,32 @@ const ShowroomCashCollectionsReport = () => {
     setEndingDate(lastDay.toISOString().slice(0, 10));
   };
 
+  const calculateFinacials = (newBookings: Booking[] = bookings) => {
+    let totalCollectedAmount = 0;
+    let balaceAmount = 0;
+    let overallAmount = 0;
+
+    newBookings?.forEach((booking) => {
+
+      totalCollectedAmount += booking.partialPayment ? booking.partialAmount || 0 : booking.receivedAmount || 0;
+
+      balaceAmount += booking.partialPayment
+        ? (booking.totalAmount || 0) - (booking.partialAmount || 0)
+        : (booking.totalAmount || 0) + (booking.receivedAmount);
+
+      overallAmount += booking.totalAmount || 0
+
+    })
+
+    return [totalCollectedAmount, balaceAmount, overallAmount]
+  }
+
+  const handleNavigateInvoicePage = () => {
+    setInVoiceLoading(true)
+    const invoiceBookings = bookings.filter((booking) => selectedBookings.has(booking._id))
+    navigate('/servicecenterreport/selectiveInvoice', { state: { bookings: invoiceBookings, role: 'Showroom' } });
+  };
+
   return (
     <div>
       <div className="pt-5">
@@ -270,20 +426,20 @@ const ShowroomCashCollectionsReport = () => {
             </div>
             <div className="mb-5 flex flex-col justify-center items-center">
               <img
-                src={`${CLOUD_IMAGE}${showroom?.image}`}
+                src={showroom?.image ? `${CLOUD_IMAGE}${showroom.image}` : defaultShowroomImage}
                 alt="Showroom"
                 className="w-24 h-24 rounded-full object-cover mb-5 border-2"
               />
               <p className="font-semibold text-primary text-xl">{showroom?.name}</p>
               <span>{showroom?.showroomId}</span>
-              <ul className="mt-5 flex gap-5 font-semibold text-white-dark">
+              <ul className="mt-5 gap-5 font-semibold text-white-dark flex items-center justify-center">
                 <li className="flex items-center gap-2">
                   <IconPhone className="text-black" />
                   <span>{showroom?.phone}</span>
                 </li>
-                <li className="flex items-center">
-                  <span>Advance Payment: </span>
-                  <span className="text-primary">₹{showroom?.advance || 0}</span>
+                <li className="flex items-center justify-center">
+                  <span><LocateIcon size={18} /></span>
+                  <span>{showroom?.location || "N/A"}</span>
                 </li>
               </ul>
             </div>
@@ -365,7 +521,7 @@ const ShowroomCashCollectionsReport = () => {
                   <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                     <h6 className="text-white-dark text-base  dark:text-white-dark">
                       Total Collected Amount in {selectedMonth}
-                      <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.totalCollectedAmount}</span>
+                      <span className="block text-base text-[#515365] dark:text-white-light">₹{calculateFinacials()[0]}</span>
                     </h6>
                   </div>
                 </div>
@@ -378,7 +534,7 @@ const ShowroomCashCollectionsReport = () => {
                   <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                     <h6 className="text-white-dark text-base dark:text-white-dark">
                       Balance Amount To Collect in {selectedMonth}
-                      <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
+                      <span className="block text-base text-[#515365] dark:text-white-light">₹{calculateFinacials()[1]}</span>
                     </h6>
                   </div>
                 </div>
@@ -392,7 +548,7 @@ const ShowroomCashCollectionsReport = () => {
                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                       <h6 className="text-white-dark text-base dark:text-white-dark">
                         Overall Amount in {selectedMonth}
-                        <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.overallAmount}</span>
+                        <span className="block text-base text-[#515365] dark:text-white-light">₹{calculateFinacials()[2]}</span>
                       </h6>
                     </div>
                   </div>
@@ -405,7 +561,7 @@ const ShowroomCashCollectionsReport = () => {
         {/* Report Table */}
         <div className="panel mt-6">
           <div className="flex flex-col md:flex-row items-center justify-between mb-5">
-            <button className="btn btn-primary">Generate Invoice</button>
+            <button className="btn btn-primary" onClick={handleNavigateInvoicePage}>Generate Invoice</button>
             <div className="mt-3 md:mt-0">
               <input
                 type="text"

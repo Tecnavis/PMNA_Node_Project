@@ -125,7 +125,7 @@ const SweetAlert = () => {
                 
             });
         } else if (type === 7) {
-            let timerInterval: string | number | NodeJS.Timer | undefined;
+            let timerInterval: ReturnType<typeof setInterval> | undefined;
             Swal.fire({
                 title: 'Auto close alert!',
                 html: 'I will close in <b></b> milliseconds.',

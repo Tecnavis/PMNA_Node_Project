@@ -1,4 +1,6 @@
 const Provider = require('../Model/provider');
+const { sendOtp, verifyOtp  } = require('../services/otpService');
+const jwt = require('jsonwebtoken');
 
 // Create a new provider
 exports.createProvider = async (req, res) => {
@@ -122,14 +124,8 @@ exports.loginProvider = async (req, res) => {
     // Check if driver exists
     const provider = await Provider.findOne({ phone });
     if (!provider) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid Phone Number" });
     }
-
-    // // Compare passwords
-    // const isMatch = await bcrypt.compare(password, provider.password);
-    // if (!isMatch) {
-    //   return res.status(400).json({ message: "Invalid credentials" });
-    // }
 
     // generate OTP
     const otpRespose = await sendOtp('+91', phone)

@@ -48,10 +48,10 @@ const DriverCashCollectionsReport = () => {
     const year = now.getFullYear();
     const monthIndex = now.getMonth(); // 0-indexed
     const month = String(monthIndex + 1).padStart(2, '0'); // convert to 01–12
-    
+
     const lastDay = new Date(year, monthIndex + 1, 0).getDate(); // Get actual last day
     const paddedLastDay = String(lastDay).padStart(2, '0');
-    
+
     const [startDate, setStartDate] = useState<string>(`${year}-${month}-01`);
     const [endingDate, setEndingDate] = useState<string>(`${year}-${month}-${paddedLastDay}`);
 
@@ -295,16 +295,18 @@ const DriverCashCollectionsReport = () => {
             render: (booking: Booking) => {
                 if (booking._id === 'total') {
                     return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
-                } if (booking.cashPending) {
-                    return <span className='ml-5 text-center text-red-500'>Cash is pending...
-</span>
+                } else if (booking.cashPending && booking.partialPayment) {
+                    return <span className='flex justify-center items-center w-full ml-5 text-center text-red-500 font-semibold'>Partialy Payed : {booking.partialAmount}</span>
+                } else if (booking.cashPending) {
+                    return <span className='ml-5 flex justify-center items-center text-center w-full text-red-500'>Cash is pending...
+                    </span>
                 } else if (booking.totalAmount == booking.receivedAmount) {
-                    return <div className='text-center flex item-center  justify-center  bg-yellow-100 p-2 rounded'>{booking.receivedAmount}</div>
+                    return <div className='flex justify-center items-center text-center w-fullbg-yellow-100 p-2 rounded'>{booking.receivedAmount}</div>
                 } else {
-                    return (<td key={booking._id} >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className=' flex justify-center text-center items-center'>
+                    return (<td key={booking._id} className='flex justify-center items-center text-center w-full'>
+                        <div className=' flex justify-center items-center text-center w-full'>
                             {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                                <span className={`flex justify-center text-center  ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
+                                <span className={`flex justify-center items-center text-center w-full  ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
                             ) : (
                                 <>
                                     <input
@@ -363,6 +365,16 @@ const DriverCashCollectionsReport = () => {
                         </div>
                     );
                 }
+
+                if (booking.cashPending && booking.partialPayment) {
+                    return <span className={`text-red-500 flex item-center  justify-center  text-center`}>{
+                        booking.workType === 'RSAWork'
+                            ? '0.00'
+                            : (booking.totalAmount - booking.partialAmount)
+                    }
+                    </span>
+                }
+
                 if (booking.cashPending) {
                     return (
                         <div className='text-center'>0</div>
@@ -428,26 +440,26 @@ const DriverCashCollectionsReport = () => {
         if (month === 'All Months') {
             const today = new Date();
             const twoYearsAgo = new Date(today.getFullYear() - 2, 0, 1); // Jan 1st, two years ago
-    
+
             setStartDate(twoYearsAgo.toISOString().slice(0, 10)); // YYYY-MM-DD
             setEndingDate(today.toISOString().slice(0, 10)); // today
         } else {
             const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert to 0-index
-    
+
             // Get the last day of the selected month using 0th day of the next month
             const lastDay = new Date(year, monthIndex + 1, 0).getDate(); // e.g., 29 for Feb (leap), 30, or 31
-    
+
             const paddedMonth = String(monthIndex + 1).padStart(2, '0');
             const paddedLastDay = String(lastDay).padStart(2, '0');
-    
+
             const start = `${year}-${paddedMonth}-01`;
             const end = `${year}-${paddedMonth}-${paddedLastDay}`;
-    
+
             setStartDate(start);
             setEndingDate(end);
         }
-    };    
-    
+    };
+
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {

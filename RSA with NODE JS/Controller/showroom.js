@@ -53,15 +53,6 @@ exports.createShowroom = async (req, res) => {
       district
     })
 
-    const phoneIsExist = (phone || mobile) ? await Showroom.findOne({ $or: [{ phone }, { mobile }] }) : null;
-
-    if (phoneIsExist) {
-      return res.status(400).json({
-        message: "Phone number already exists in the showroom.",
-        success: false,
-      });
-    }
-
     const showroom = new Showroom({
       name,
       showroomId,
@@ -103,8 +94,10 @@ exports.createShowroom = async (req, res) => {
 // Get all showrooms
 exports.getShowrooms = async (req, res) => {
   try {
-    const showrooms = await Showroom.find();
-    res.json(showrooms);
+    const showrooms = await Showroom.find()
+      .populate('showroomId')
+      return res.status(200).json(showrooms);
+  
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -116,6 +109,53 @@ exports.getShowroomById = async (req, res) => {
     const showroom = await Showroom.findById(req.params.id);
     if (!showroom) return res.status(404).json({ message: 'showroom not found' });
     res.status(200).json(showroom);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get all showrooms
+exports.getPaginatedShowrooms = async (req, res) => {
+  try {
+
+    let { search, page = 1, limit = 25 } = req.query;
+
+    page = parseInt(page, 10);
+    limit = parseInt(limit, 10);
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+    if (search) {
+      const serachQuery = search.trim()
+      const regex = new RegExp(serachQuery, 'i'); // case-insensitive search
+
+      query.$or = [
+        { name: regex },
+        { phone: regex },
+        { email: regex },
+        { position: regex },
+        { state: regex },
+        { district: regex },
+        { 'showroomId.name': regex }, // for populated fields
+      ];
+    }
+
+    const totalCount = await Showroom.countDocuments(query);
+
+    const showrooms = await Showroom.find(query)
+      .populate('showroomId')
+      .skip(skip)
+      .limit(limit);
+      return res.status(200).json({
+        success: true,
+        message: "Showroom retrieved successfully.",
+        data: showrooms,
+        page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount
+      });
+  
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -544,7 +584,9 @@ exports.loginShowroom = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials, invalid password!', success: false });
     }
 
-    return res.status(200).json({ message: 'Login sucessfull', success: true, data: isShowroomExist });
+    const token = jwt.sign({ id: isShowroomExist._id, role: "Showroom" }, process.env.JWT_SECRET);
+
+    return res.status(200).json({ message: 'Login sucessfull', success: true, data: isShowroomExist, token });
   } catch (error) {
     console.error("Error in showroom login:", error);
 

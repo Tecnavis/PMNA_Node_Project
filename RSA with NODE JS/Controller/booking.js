@@ -438,9 +438,9 @@ exports.getAllBookings = async (req, res) => {
 
                 // Search conditions array
                 const searchConditions = [
-                    { fileNumber: searchRegex },
-                    { mob1: searchRegex },
-                    { customerVehicleNumber: searchRegex },
+                    { fileNumber: escapedSearch },
+                    { mob1: escapedSearch },
+                    { customerVehicleNumber: escapedSearch },
                 ];
 
                 // Only search drivers/providers if search is numeric
@@ -635,6 +635,16 @@ exports.updateBooking = async (req, res) => {
             booking.invoiceNumber = updatedData.invoiceNumber
             // booking.invoiceStatus = 
         }
+
+        // If the total ammount changed then check with redeemed if redeem for this booking
+        if (
+            updatedData.totalAmount &&
+            booking.rewardAmount &&
+            booking.totalAmount !== updatedData.totalAmount
+        ) {
+            updatedData.totalAmount -= booking.rewardAmount;
+        }
+
 
         const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
             .populate('baselocation') // Populate related documents
@@ -1325,7 +1335,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 exports.settleAmount = async (req, res) => {
     try {
         const { id } = req.params;
-        const { receivedAmount, receivedUser, role } = req.body;
+        const { partialAmount, receivedUser, role } = req.body;
         const userId = req.user.id || req.user._id
 
         const booking = await Booking.findById(id);
@@ -1336,25 +1346,31 @@ exports.settleAmount = async (req, res) => {
             });
         }
 
-        if (role !== 'admin' || !role) {
+        console.log(role, req.body)
+        if (role !== 'admin' && receivedUser === 'Staff') {
             booking.receivedUserId = userId
             booking.receivedUser = 'Staff'
 
             await Staff.findByIdAndUpdate(userId, {
                 $inc: {
-                    cashInHand: receivedAmount
+                    cashInHand: partialAmount
                 }
             })
         }
 
         if (booking.company) {
-            booking.receivedAmountByCompany += receivedAmount;
+            booking.receivedAmountByCompany += partialAmount;
             if (booking.totalAmount <= booking.receivedAmountByCompany) {
                 booking.cashPending = false;
             }
         } else {
-            booking.receivedAmount += receivedAmount;
-            if (booking.totalAmount <= booking.receivedAmount) {
+            booking.partialAmount = booking.partialAmount || 0;
+            booking.partialAmount += partialAmount;
+            if (booking.partialAmount < booking.totalAmount) {
+                booking.partialPayment = true;
+                booking.cashPending = true;
+            } else if (booking.partialAmount === booking.totalAmount) {
+                booking.partialPayment = false;
                 booking.cashPending = false;
             }
         }

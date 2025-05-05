@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import RewardDetails from '../pages/Rewards/RewardDetails';
+import ShowroomInvoice from '../pages/Reports/DriverReport/ShowroomInvoice';
 
 const StatusTable = lazy(() => import('../pages/Screen/StatusTable'));
 const PaymentWorkReport = lazy(() => import('../pages/PaymentManagment/PaymentWorkReport'))
@@ -256,6 +257,10 @@ const routes = [
     {
         path: '/servicecenterreport/:id',
         element: <ServiceCenterReport />,
+    },
+    {
+        path: '/servicecenterreport/selectiveInvoice',
+        element: <ShowroomInvoice />,
     },
     {
         path: '/completedbookings',

@@ -53,10 +53,13 @@ interface Company {
 
 export interface Booking {
     invoiceNumber: string;
+    partialPayment: Boolean;
     receivedUser: string,// new prop
-    cancelReason: string,// new prop
+    cancelReason: string,// w prop
     cancelImage: string,// new prop
     company: Company | string
+    partialAmount?: number;
+    showroomAmount?: number;
     cancelKm: number,// new prop
     vehicleNumber: string,// new prop
     dummyDriverName: string,// new prop

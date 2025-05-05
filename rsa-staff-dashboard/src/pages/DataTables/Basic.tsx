@@ -541,7 +541,7 @@ const Basic = () => {
             <div className="panel mt-6">
                 <h5 className="font-semibold text-lg dark:text-white-light mb-5">Basic</h5>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         noRecordsText="No results match your search query"
                         highlightOnHover
                         className="whitespace-nowrap table-hover"
@@ -561,7 +561,7 @@ const Basic = () => {
                         onRecordsPerPageChange={setPageSize}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
         </div>

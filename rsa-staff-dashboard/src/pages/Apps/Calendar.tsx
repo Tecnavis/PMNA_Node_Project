@@ -3,13 +3,11 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import { Fragment, useEffect, useState } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
+import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import IconPlus from '../../components/Icon/IconPlus';
-import IconX from '../../components/Icon/IconX';
 
 const Calendar = () => {
     const dispatch = useDispatch();
@@ -291,167 +289,6 @@ const Calendar = () => {
                     />
                 </div>
             </div>
-
-            {/* add event modal */}
-            <Transition appear show={isAddEventModal} as={Fragment}>
-                <Dialog as="div" onClose={() => setIsAddEventModal(false)} open={isAddEventModal} className="relative z-[51]">
-                    <Transition.Child
-                        as={Fragment}
-                        enter="duration-300 ease-out"
-                        enter-from="opacity-0"
-                        enter-to="opacity-100"
-                        leave="duration-200 ease-in"
-                        leave-from="opacity-100"
-                        leave-to="opacity-0"
-                    >
-                        <Dialog.Overlay className="fixed inset-0 bg-[black]/60" />
-                    </Transition.Child>
-
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center px-4 py-8">
-                            <Transition.Child
-                                as={Fragment}
-                                enter="duration-300 ease-out"
-                                enter-from="opacity-0 scale-95"
-                                enter-to="opacity-100 scale-100"
-                                leave="duration-200 ease-in"
-                                leave-from="opacity-100 scale-100"
-                                leave-to="opacity-0 scale-95"
-                            >
-                                <Dialog.Panel className="panel border-0 p-0 rounded-lg overflow-hidden w-full max-w-lg text-black dark:text-white-dark">
-                                    <button
-                                        type="button"
-                                        className="absolute top-4 ltr:right-4 rtl:left-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-600 outline-none"
-                                        onClick={() => setIsAddEventModal(false)}
-                                    >
-                                        <IconX />
-                                    </button>
-                                    <div className="text-lg font-medium bg-[#fbfbfb] dark:bg-[#121c2c] ltr:pl-5 rtl:pr-5 py-3 ltr:pr-[50px] rtl:pl-[50px]">
-                                        {params.id ? 'Edit Event' : 'Add Event'}
-                                    </div>
-                                    <div className="p-5">
-                                        <form className="space-y-5">
-                                            <div>
-                                                <label htmlFor="title">Event Title :</label>
-                                                <input
-                                                    id="title"
-                                                    type="text"
-                                                    name="title"
-                                                    className="form-input"
-                                                    placeholder="Enter Event Title"
-                                                    value={params.title || ''}
-                                                    onChange={(e) => changeValue(e)}
-                                                    required
-                                                />
-                                                <div className="text-danger mt-2" id="titleErr"></div>
-                                            </div>
-
-                                            <div>
-                                                <label htmlFor="dateStart">From :</label>
-                                                <input
-                                                    id="start"
-                                                    type="datetime-local"
-                                                    name="start"
-                                                    className="form-input"
-                                                    placeholder="Event Start Date"
-                                                    value={params.start || ''}
-                                                    min={minStartDate}
-                                                    onChange={(event: any) => startDateChange(event)}
-                                                    required
-                                                />
-                                                <div className="text-danger mt-2" id="startDateErr"></div>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="dateEnd">To :</label>
-                                                <input
-                                                    id="end"
-                                                    type="datetime-local"
-                                                    name="end"
-                                                    className="form-input"
-                                                    placeholder="Event End Date"
-                                                    value={params.end || ''}
-                                                    min={minEndDate}
-                                                    onChange={(e) => changeValue(e)}
-                                                    required
-                                                />
-                                                <div className="text-danger mt-2" id="endDateErr"></div>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="description">Event Description :</label>
-                                                <textarea
-                                                    id="description"
-                                                    name="description"
-                                                    className="form-textarea min-h-[130px]"
-                                                    placeholder="Enter Event Description"
-                                                    value={params.description || ''}
-                                                    onChange={(e) => changeValue(e)}
-                                                ></textarea>
-                                            </div>
-                                            <div>
-                                                <label>Badge:</label>
-                                                <div className="mt-3">
-                                                    <label className="inline-flex cursor-pointer ltr:mr-3 rtl:ml-3">
-                                                        <input
-                                                            type="radio"
-                                                            className="form-radio"
-                                                            name="type"
-                                                            value="primary"
-                                                            checked={params.type === 'primary'}
-                                                            onChange={(e) => setParams({ ...params, type: e.target.value })}
-                                                        />
-                                                        <span className="ltr:pl-2 rtl:pr-2">Work</span>
-                                                    </label>
-                                                    <label className="inline-flex cursor-pointer ltr:mr-3 rtl:ml-3">
-                                                        <input
-                                                            type="radio"
-                                                            className="form-radio text-info"
-                                                            name="type"
-                                                            value="info"
-                                                            checked={params.type === 'info'}
-                                                            onChange={(e) => setParams({ ...params, type: e.target.value })}
-                                                        />
-                                                        <span className="ltr:pl-2 rtl:pr-2">Travel</span>
-                                                    </label>
-                                                    <label className="inline-flex cursor-pointer ltr:mr-3 rtl:ml-3">
-                                                        <input
-                                                            type="radio"
-                                                            className="form-radio text-success"
-                                                            name="type"
-                                                            value="success"
-                                                            checked={params.type === 'success'}
-                                                            onChange={(e) => setParams({ ...params, type: e.target.value })}
-                                                        />
-                                                        <span className="ltr:pl-2 rtl:pr-2">Personal</span>
-                                                    </label>
-                                                    <label className="inline-flex cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            className="form-radio text-danger"
-                                                            name="type"
-                                                            value="danger"
-                                                            checked={params.type === 'danger'}
-                                                            onChange={(e) => setParams({ ...params, type: e.target.value })}
-                                                        />
-                                                        <span className="ltr:pl-2 rtl:pr-2">Important</span>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-end items-center !mt-8">
-                                                <button type="button" className="btn btn-outline-danger" onClick={() => setIsAddEventModal(false)}>
-                                                    Cancel
-                                                </button>
-                                                <button type="button" onClick={() => saveEvent()} className="btn btn-primary ltr:ml-4 rtl:mr-4">
-                                                    {params.id ? 'Update Event' : 'Create Event'}
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
-                    </div>
-                </Dialog>
-            </Transition>
         </div>
     );
 };

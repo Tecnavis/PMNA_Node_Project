@@ -576,7 +576,7 @@ const Custom = () => {
                     </div>
                 </div>
                 <div className="datatables">
-                    <DataTable
+                    {/* <DataTable
                         className="whitespace-nowrap table-hover"
                         records={recordsData}
                         columns={[
@@ -599,7 +599,7 @@ const Custom = () => {
                         onSelectedRecordsChange={setSelectedRecords}
                         minHeight={200}
                         paginationText={({ from, to, totalRecords }) => `Showing  ${from} to ${to} of ${totalRecords} entries`}
-                    />
+                    /> */}
                 </div>
             </div>
         </div>

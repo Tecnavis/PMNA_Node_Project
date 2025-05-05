@@ -20,6 +20,7 @@ import A4Page from '../../components/A4Page';
 import ShowroomStaffModal from './ShowroomStaffModal';
 import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { GrNext, GrPrevious } from 'react-icons/gr';
 
 
 
@@ -70,7 +71,9 @@ const Showroom: React.FC = () => {
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const [url, setUrl] = useState<string>('');
     const [showroomId, setShowroomId] = useState<string>('');
-
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(0);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const navigate = useNavigate();
 
@@ -87,13 +90,18 @@ const Showroom: React.FC = () => {
     };
 
     // getting all showroom
-    const fetchShowroom = async () => {
+    const fetchShowroom = async (searchTerm = '', page = 1, limit = 10) => {
         try {
-            const response = await axios.get(`${backendUrl}/showroom`);
-            setShowrooms(response.data);
-            setFilteredShowrooms(response.data); // Initialize filteredShowrooms with all data
+            const response = await axios.get(`${backendUrl}/showroom`, {
+                params: { search: searchTerm, page, limit },
+            });
+
+            setShowrooms(response.data.data);
+            setFilteredShowrooms(response.data.data);
+            setTotalPages(response.data.totalPages);
+            setCurrentPage(response.data.page);
         } catch (error) {
-            console.error('Error fetching showrooms:', error);
+            console.error('Error fetching showroom staff:', error);
         }
     };
 
@@ -122,7 +130,7 @@ const Showroom: React.FC = () => {
         setModal5(true);
         const response = await axios.get(`${backendUrl}/showroom/${id}`);
         const data = response.data;
-        console.log(data, 'this is the data');
+
         setShowroom(data);
     };
 
@@ -131,6 +139,10 @@ const Showroom: React.FC = () => {
         fetchShowroom();
     }, []);
 
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+        fetchShowroom(searchTerm, page); // use current search term
+    };
     // Download excel sheet
     const handleDownloadExcel = () => {
         // Convert the data to JSON format suitable for Excel
@@ -164,7 +176,12 @@ const Showroom: React.FC = () => {
         // Write the Excel file
         XLSX.writeFile(workbook, 'showrooms.xlsx');
     };
-
+    const handleSearchChange = (e: any) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        setCurrentPage(1); // reset to first page on search
+        fetchShowroom(value, 1); // fetch results based on search
+    };
     // Print the table
     const handlePrint = () => {
         // Create a new window to hold the table for printing
@@ -261,25 +278,6 @@ const Showroom: React.FC = () => {
         }
     };
 
-    // Handle search input change
-    const handleSearchChange = (e: any) => {
-        const value = e.target.value;
-        setSearch(value);
-
-        // Filter showrooms based on the search criteria
-        const filtered = showrooms.filter((showroom) =>
-            showroom.showroomId.toLowerCase().includes(value.toLowerCase()) ||
-            showroom.name.toLowerCase().includes(value.toLowerCase()) ||
-            showroom.location.toLowerCase().includes(value.toLowerCase()) ||
-            showroom.latitudeAndLongitude.toLowerCase().includes(value.toLowerCase()) ||
-            showroom.phone.toLowerCase().includes(value.toLowerCase()) ||
-            showroom.state.toLowerCase().includes(value.toLowerCase()) ||
-            showroom.district.toLowerCase().includes(value.toLowerCase())
-        );
-
-        setFilteredShowrooms(filtered);
-    };
-
     // opening modal for delete confirmation 
     const openDeleteModal = (item: string) => {
         setItemToDelete(item);
@@ -322,8 +320,7 @@ const Showroom: React.FC = () => {
                             PRINT
                         </button>
                     </div>
-
-                    <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={handleSearchChange} />
+                    <input type="text" className="form-input w-auto" placeholder="Search..." onChange={handleSearchChange} />
                 </div>
                 <div className="table-responsive mb-5">
                     <table>
@@ -379,7 +376,7 @@ const Showroom: React.FC = () => {
                                                     <button
                                                         onClick={() => {
                                                             setModalOpen(true)
-                                                            setUrl(`http://localhost:5175/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
+                                                            setUrl(`https://pmna-showroom-staff.onrender.com/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
                                                         }}
                                                         style={{
                                                             backgroundColor: '#007bff',
@@ -615,8 +612,42 @@ const Showroom: React.FC = () => {
                 </Dialog>
             </Transition>
             <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} />
-            {/* Delete confirmation modal  */}
 
+            <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
+                <li>
+                    <button
+                        type="button"
+                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
+                    >
+                        <GrPrevious />
+                    </button>
+                </li>
+                {Array.from({ length: totalPages }, (_, index) => (
+                    <li key={index}>
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(index + 1)}
+                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                        >
+                            {index + 1}
+                        </button>
+                    </li>
+                ))}
+                <li>
+                    <button
+                        type="button"
+                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
+                    >
+                        <GrNext />
+                    </button>
+                </li>
+            </ul>
+
+
+
+            {/* Delete confirmation modal  */}
             <ConfirmationModal
                 isVisible={isModalVisible}
                 onConfirm={() => {

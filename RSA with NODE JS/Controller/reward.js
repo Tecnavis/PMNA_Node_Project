@@ -1,5 +1,6 @@
 const { Reward, RewardFor } = require('../Model/reward');
 const ShowroomStaff = require('../Model/showroomStaff');
+const Booking = require('../Model/booking');
 const Staff = require('../Model/staff');
 const Driver = require('../Model/driver');
 const Showroom = require('../Model/showroom');
@@ -113,13 +114,13 @@ exports.deleteReward = async (req, res) => {
 };
 
 exports.redeemReward = async (req, res) => {
-  const { rewardId, rewardFor, userId } = req.query;
+  const { rewardId = '', rewardFor, userId, bookingId = '' } = req.query;
   try {
 
     let redemption
 
     if (rewardFor === 'Showroom') {
-      redemption = await manageRewardRedeemForShowroom(userId);
+      redemption = await manageRewardRedeemForShowroom(userId, bookingId);
     } else {
       redemption = await manageRewardRedeem(rewardId, userId, rewardFor);
     }
@@ -127,7 +128,7 @@ exports.redeemReward = async (req, res) => {
     return res.status(201).json({
       success: true,
       data: redemption,
-      message: 'Redemption request submitted for approval',
+      message: 'Redemption redeemed successfull.',
     });
   } catch (error) {
     console.error('[REDEEM ERROR]', error);
@@ -161,9 +162,6 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor) => {
         case 'Driver':
           userModel = Driver;
           break;
-        case 'Showroom':
-          userModel = Showroom;
-          break;
         default:
           throw new Error('Invalid user type');
       }
@@ -179,17 +177,10 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor) => {
       if (reward.stock <= 0) throw new Error('This reward is out of stock');
 
       let useAblePoints = user.rewardPoints
-      if (rewardFor === 'Showroom') {
-        useAblePoints = user.rewardPoints / 2;
-      }
+    
       if (reward.pointsRequired > useAblePoints) {
-        if (rewardFor === 'Showroom') {
-
-          throw new Error(`Insufficient points. You can only use half of your points (${useAblePoints} available)`);
-        } else {
-
           throw new Error(`Insufficient points. Available points (${useAblePoints})`);
-        }
+        
       }
 
       historyRedeem = new Redemption({
@@ -218,13 +209,45 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor) => {
   }
 };
 
-const manageRewardRedeemForShowroom = async (showroomId) => {
+const manageRewardRedeemForShowroom = async (showroomId, bookingId) => {
   try {
-    const showroom = await Showroom.findById(showroomId)
+    const showroom = await Showroom.findById(showroomId);
+    const booking = await Booking.findById(bookingId);
+
+    if (!showroom || !booking) {
+      throw new Error('Invalid showroom or booking ID.');
+    }
+
+    if (booking.rewardAmount) {
+      throw new Error('Rewards have already been redeemed for this booking.');
+    }
+
+    if (showroom.rewardPoints > 0) {
+      throw new Error(`Insufficient points. Available points (${showroom.rewardPoints})`);
+    }
+
+    const usablePoints = showroom.rewardPoints / 2;
+
+    const pointsToUse = Math.min(usablePoints, booking.totalAmount);
+
+    booking.rewardAmount = pointsToUse;
+    booking.totalAmount -= pointsToUse;
+    showroom.rewardPoints -= pointsToUse;
+
+    await Promise.all([booking.save(), showroom.save()]);
+
+    return {
+      message: 'Reward applied successfully',
+      rewardUsed: pointsToUse,
+      updatedBooking: booking,
+      updatedShowroom: showroom,
+    };
   } catch (error) {
+    console.error('Error redeeming reward:', error);
     throw new Error('Internal server error.');
   }
-}
+};
+
 
 // Function for get the redemptions base ont he userId userType
 exports.getRedemptions = async (userId, userType) => {

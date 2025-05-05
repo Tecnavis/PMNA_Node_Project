@@ -142,8 +142,8 @@ function Rewards() {
       return [
         { category: 'Driver', rewards: driverRewards },
         { category: 'Showroom', rewards: showRoomRewards },
-        { category: 'Marketing Executive', rewards: [] },
         { category: 'ShowroomStaff', rewards: showroomStaffRewards },
+        { category: 'Marketing Executive', rewards: [] },
       ];
     } else {
       return [{ category: visibleCategory, rewards: getCategoryRewards(visibleCategory) }];
@@ -244,8 +244,8 @@ function Rewards() {
               {[
                 { category: 'Driver', rewardPoints: 100 },
                 { category: 'Showroom', rewardPoints: 10 },
-                { category: 'Marketing Executive', rewardPoints: 100 },
                 { category: 'ShowroomStaff', rewardPoints: 100 },
+                { category: 'Marketing Executive', rewardPoints: 100 },
               ].map((client, index) => (
                 <div
                   key={index}

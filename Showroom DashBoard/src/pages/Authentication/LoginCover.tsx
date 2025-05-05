@@ -13,7 +13,7 @@ type FormValues = {
 };
 
 
-const LoginCover: React.FC = () => {    
+const LoginCover: React.FC = () => {
 
     const navigate = useNavigate();
 
@@ -31,11 +31,12 @@ const LoginCover: React.FC = () => {
     const signIn = async (formData: FormValues) => {
         try {
             const response = await axiosInstance.post(`${BASE_URL}/showroom/login`, formData);
-            const { message, success, data } = response.data;
+            const { message, success, data, token } = response.data;
 
             localStorage.setItem('showroomId', data?._id);
             localStorage.setItem('userName', data?.username);
             localStorage.setItem('password', data?.password);
+            localStorage.setItem('token', token);
 
             if (success) {
                 sweetAlert({

@@ -1,4 +1,5 @@
 // /components/reward/RedemptionHistory.tsx
+// @ts-ignore
 import { Card, Text, Grid, Group, Badge, LoadingOverlay } from '@mantine/core';
 import { IRedemption, IReward } from '../../interface/reward';
 import { BASE_URL } from '../../config/axiosConfig';
