@@ -38,3 +38,23 @@ export const getShowroomReports = async (query: {
         throw new Error(error);
     }
 };
+
+export const redeemReward = async (
+    userId: string, bookingId: string
+): Promise<any> => {
+    try {
+        const response: AxiosResponse = await axios.get(
+            `${BASE_URL}/reward/redeem-reward`,
+            {
+                params: {
+                    userId: userId || '',
+                    bookingId: bookingId || '',
+                    rewardFor: "Showroom"
+                }
+            }
+        );
+        return response.data;
+    } catch (error: any) {
+        handleApiError(error)
+    }
+};

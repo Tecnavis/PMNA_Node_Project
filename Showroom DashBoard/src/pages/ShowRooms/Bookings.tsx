@@ -6,7 +6,11 @@ import { Anchor, Text, Group } from '@mantine/core';
 import { IBooking } from '../../interface/booking';
 import { dateFormate, formattedTime } from '../../utils/dateUtils';
 import IconUser from '../../components/Icon/IconUser';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+import { redeemReward } from '../../service/showroom';
 
+const MySwal = withReactContent(Swal);
 interface BookingsTableProps {
     bookings: IBooking[];
     isLoading: boolean;
@@ -30,6 +34,32 @@ const Bookings: React.FC<BookingsTableProps> = ({
     onPageSizeChange,
     showPagination = true,
 }) => {
+
+    const showroomRewardPoints = localStorage.getItem('showroomRewardPoints')
+    const showroomId = localStorage.getItem('showroomId') || ''
+
+    const handleRedeemReward = async (booking: IBooking) => {
+        try {
+            
+            const result = await MySwal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to redeem the reward?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, confirm it!'
+            });
+            
+            if (result.isConfirmed) {
+                await redeemReward(showroomId, booking._id)
+                Swal.fire('Confirmed!', 'The reward redeemed successfull.', 'success');
+            }
+        } catch (error:any) {
+            Swal.fire('Warning', error?.message || "Reward redeem unsccessfull", 'warning');
+        }
+    }
+
     const cols = [
         {
             accessor: 'createdAt',
@@ -68,12 +98,20 @@ const Bookings: React.FC<BookingsTableProps> = ({
             title: 'Redeem Reward',
             render: (booking: IBooking) => (
                 <div className='text-gray-700 uppercase'>
-   <button
-                          className="relative flex items-center gap-2 px-5 py-2 text-lg font-semibold text-white rounded-lg bg-gradient-to-r from-yellow-500 to-orange-600 shadow-lg hover:shadow-xl hover:scale-105 transition transform duration-300 ease-in-out"
-                          onClick={() => handleRedeemReward(booking)}
-                          >
-                          🎁 Redeem Reward
-                        </button>                </div>
+                    <button
+                        disabled={booking.totalDistence < 50 || booking?.rewardAmount}
+                        className={`
+                            relative flex items-center gap-2 px-5 py-2 text-lg font-semibold rounded-lg 
+                            shadow-lg transition transform duration-300 ease-in-out
+                            ${booking.totalDistence < 50 || booking?.rewardAmount
+                                ? 'bg-gray-400 text-white cursor-not-allowed'
+                                : 'text-white bg-gradient-to-r from-yellow-500 to-orange-600 hover:shadow-xl hover:scale-105'}
+                            `}
+                        onClick={() => handleRedeemReward(booking)}
+                    >
+                        🎁 Redeem Reward
+                    </button>
+                </div>
             ),
             cellsStyle: { backgroundColor: 'rgba(255, 165, 0, 0.2)' }
         }
@@ -81,24 +119,24 @@ const Bookings: React.FC<BookingsTableProps> = ({
 
     return (
         <div style={{ overflowX: 'auto', fontFamily: 'Arial, sans-serif' }}>
-<div className="ml-auto w-72 bg-gradient-to-br from-white via-gray-50 to-gray-100 p-6 rounded-2xl shadow-xl border border-gray-200">
-{/* Premium Badge */}
-    <div className="bg-white text-yellow-600 text-xs font-bold px-3 py-1 rounded-full shadow-lg mb-2">
-      PREMIUM
-    </div>
+            <div className="ml-auto w-72 bg-gradient-to-br from-white via-gray-50 to-gray-100 p-6 rounded-2xl shadow-xl border border-gray-200">
+                {/* Premium Badge */}
+                <div className="bg-white text-yellow-600 text-xs font-bold px-3 py-1 rounded-full shadow-lg mb-2">
+                    PREMIUM
+                </div>
 
-    {/* Reward Points Title */}
-    <h3 className="text-lg font-semibold tracking-wide uppercase text-center">
-      Reward Points
-    </h3>
+                {/* Reward Points Title */}
+                <h3 className="text-lg font-semibold tracking-wide uppercase text-center">
+                    Reward Points
+                </h3>
 
-    {/* Points Display */}
-    <p className="text-4xl font-extrabold mt-2 text-center">
-      788
-    </p>
-  </div>
-     
-<br />
+                {/* Points Display */}
+                <p className="text-4xl font-extrabold mt-2 text-center">
+                    {showroomRewardPoints}
+                </p>
+            </div>
+
+            <br />
             <DataTable
                 fetching={isLoading}
                 totalRecords={showPagination ? totalRecords : 0}

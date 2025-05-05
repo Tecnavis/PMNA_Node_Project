@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import './showroomAdd.module.css';
 import Swal from 'sweetalert2';
 import { axiosInstance, BASE_URL, VITE_STAFF_DASHBOARD_URL } from '../../config/axiosConfig';
+import { CLOUD_IMAGE } from '../../constants/status';
 
 interface ShowRoomDetailsType {
     id: string;
@@ -230,7 +231,7 @@ const ShowRoomDetails: React.FC = () => {
                 {/* Showroom Details */}
                 <div className="flex items-center justify-center">
                     <div className='h-full w-[250px]'>
-                        <img src={`${BASE_URL}/images/${showRoomDetails.image}`} alt={showRoomDetails.name} className="w-full rounded-lg shadow-md h-[280px] bg-cover object-cover" />
+                        <img src={`${CLOUD_IMAGE}/${showRoomDetails.image}`} alt={showRoomDetails.name} className="w-full rounded-lg shadow-md h-[280px] bg-cover object-cover" />
                     </div>
                 </div>
                 <div className="w-full py-2 ml-6 flex flex-col gap-4 text-lg text-gray-700  rounded-md my-6 md:my-0">

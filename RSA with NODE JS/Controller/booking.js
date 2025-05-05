@@ -438,9 +438,9 @@ exports.getAllBookings = async (req, res) => {
 
                 // Search conditions array
                 const searchConditions = [
-                    { fileNumber: searchRegex },
-                    { mob1: searchRegex },
-                    { customerVehicleNumber: searchRegex },
+                    { fileNumber: escapedSearch },
+                    { mob1: escapedSearch },
+                    { customerVehicleNumber: escapedSearch },
                 ];
 
                 // Only search drivers/providers if search is numeric
@@ -635,6 +635,16 @@ exports.updateBooking = async (req, res) => {
             booking.invoiceNumber = updatedData.invoiceNumber
             // booking.invoiceStatus = 
         }
+
+        // If the total ammount changed then check with redeemed if redeem for this booking
+        if (
+            updatedData.totalAmount &&
+            booking.rewardAmount &&
+            booking.totalAmount !== updatedData.totalAmount
+        ) {
+            updatedData.totalAmount -= booking.rewardAmount;
+        }
+
 
         const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
             .populate('baselocation') // Populate related documents

@@ -5,10 +5,6 @@ import { BsBuildings } from 'react-icons/bs';
 import { HiOutlineWrenchScrewdriver } from 'react-icons/hi2';
 import { IoMdCheckmarkCircleOutline } from 'react-icons/io';
 
-import ServiceCenter from '../ShowRooms/ServiceCenter/CompletedBookings';
-import CompletedBookingsSC from '../ShowRooms/ServiceCenter/CompletedBookings';
-import CompletedBodyBookings from '../ShowRooms/BodyShopes/CompletedBodyBookings';
-import CompleteShowRoom from '../ShowRooms/ShowRoom/CompleteShowRoom';
 import Completed from '../ShowRooms/ServiceCenter/Completed';
 import CompletedBody from '../ShowRooms/BodyShopes/CompletedBody';
 import CompletedShowRoom from '../ShowRooms/ShowRoom/CompletedShowroom';

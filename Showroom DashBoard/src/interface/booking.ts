@@ -8,6 +8,7 @@ export interface IFeedback {
 export interface IBooking {
     _id?: string;
     workType?: string;
+    rewardAmount?: number;
     fileNumber?: string;
     location?: string;
     latitudeAndLongitude?: string;

@@ -10,12 +10,14 @@ import { Booking } from '../../Bookings/Bookings';
 import Logo from '../../../assets/images/RSALogo.png'
 import { dateFormate, formattedTime } from '../../../utils/dateUtils';
 
-const SelectiveShowroomInvoice = () => {
+const ShowroomInvoice = () => {
     const location = useLocation();
     const booking = location.state?.bookings || [];
+    const totalPayableAmountShowroom = location.state?.totalPayableAmount || 0;
     const role = location.state?.role || "Driver";
     const invoiceRef = useRef<HTMLDivElement>(null);
     const [searchParams] = useSearchParams()
+
     if (!booking || booking.length === 0) {
         return <div>No bookings selected for invoice generation.</div>;
     }
@@ -61,35 +63,24 @@ const SelectiveShowroomInvoice = () => {
 
     // Calculate total payable amount
     const totalPayableAmount = booking
-        .filter((b: any) => b.workType !== 'RSAWork' && !b.cashPending)
+        .filter((b: any) => b.workType !== 'RSAWork' && (!b.cashPending || b.partialPayment))
         .reduce((total: number, b: any) => total + (Number(b.totalAmount) || 0), 0);
 
     // Calculate total balance amount
     const totalBalanceAmount = booking
-        .filter((b: any) => b.workType !== 'RSAWork' && !b.cashPending)
-        .reduce((total: any, booking: any) => total + Number(booking.totalAmount - booking.receivedAmount), 0);
+        .filter((b: any) => b.workType !== 'RSAWork' && (!b.cashPending || b.partialPayment))
+        .reduce((total: any, booking: any) => total + Number(booking.totalAmount - (booking.partialPayment ? booking.partialAmount : booking.receivedAmount)), 0);
 
-
-    const columnsForDriver = [
+    const columnsForShowroom = [
         { key: 'id', label: 'SL.NO' },
-        { key: 'dateAndTime', label: 'Date and Time' },
-        { key: 'fileNumber', label: 'FileNumber' },
-        { key: 'amountOfBooking', label: 'Amount of Booking', class: 'text-center' },
-        { key: 'payableAmount', label: 'Payable Amount', class: 'text-center' },
+        { key: 'serviceType', label: 'Service Type' },
+        { key: 'Vehicle Number', label: 'Vehicle Number' },
+        { key: 'amountOfBooking', label: 'Payable Amount', class: 'text-center' },
         { key: 'receivedAmount', label: 'Amount Received', class: 'text-center' },
         { key: 'balanceSalary', label: 'Balance', class: 'text-center' },
     ];
 
-    const columnsForCompany = [
-        { key: 'id', label: 'SL.NO' },
-        { key: 'serviceType', label: 'Service Type' },
-        { key: 'Vehicle Number', label: 'Vehicle Number' },
-        { key: 'amountOfBooking', label: 'Amount of Booking', class: 'text-center' },
-        { key: 'receivedAmount', label: 'Amount Received from Company', class: 'text-center' },
-        { key: 'balanceSalary', label: 'Balance', class: 'text-center' },
-    ];
-
-    const columns = role === 'driver' ? columnsForDriver : columnsForCompany;
+    const columns = columnsForShowroom;
     return (
         <div>
             <div className="flex items-center lg:justify-end justify-center flex-wrap gap-4 mb-6">
@@ -149,7 +140,7 @@ const SelectiveShowroomInvoice = () => {
                     <table className="table-striped w-full">
                         <thead>
                             <tr>
-                                {(role === 'driver' ? columnsForDriver : columnsForCompany).map((column) => (
+                                {(columnsForShowroom).map((column) => (
                                     <th key={column.key} className={column.class || ''}>
                                         {column.label}
                                     </th>
@@ -165,16 +156,16 @@ const SelectiveShowroomInvoice = () => {
                                             {column.key === 'dateAndTime' &&
                                                 role === 'driver' &&
                                                 `${dateFormate(booking.createdAt)} at ${formattedTime(booking.createdAt)}`}
-                                            {column.key === 'serviceType' && role === 'company' && (booking.serviceType.serviceName || "N/A")}
-                                            {column.key === 'Vehicle Number' && role === 'company' && (booking.customerVehicleNumber || "N/A")}
+                                            {column.key === 'serviceType' && (booking.serviceType.serviceName || "N/A")}
+                                            {column.key === 'Vehicle Number' && (booking.customerVehicleNumber || "N/A")}
                                             {column.key === 'fileNumber' && (booking?.fileNumber || "N/A")}
                                             {column.key === 'amountOfBooking' && (booking?.totalAmount || 0)}
                                             {column.key === 'payableAmount' && role === 'driver' && (booking.workType === 'RSAWork' ? 'Company Work' : booking?.totalAmount || 0)}
                                             {column.key === 'receivedAmount' &&
-                                                (booking.workType === 'RSAWork' ? 0 : (booking?.receivedAmount || 0))
+                                                (booking.workType === 'RSAWork' ? 0 : (booking.partialPayment ? booking.partialAmount : booking?.receivedAmount || 0))
                                             }
                                             {column.key === 'balanceSalary' &&
-                                                (booking.workType === 'RSAWork' ? 0 : (booking?.totalAmount || 0) - (booking?.receivedAmount || 0))
+                                                (booking.workType === 'RSAWork' ? 0 : (booking?.totalAmount || 0) - (booking.partialPayment ? booking.partialAmount : booking?.receivedAmount || 0))
                                             }
                                         </td>
                                     ))}
@@ -196,4 +187,4 @@ const SelectiveShowroomInvoice = () => {
     );
 };
 
-export default SelectiveShowroomInvoice;
+export default ShowroomInvoice;

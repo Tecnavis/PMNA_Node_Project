@@ -5,6 +5,7 @@ import Dropdown from '../Dropdown';
 import { axiosInstance, BASE_URL } from "../../config/axiosConfig";
 import { IShowroom } from "../../interface/showroom";
 import { getShowroomById } from "../../service/showroom";
+import { CLOUD_IMAGE } from "../../constants/status";
 
 const Header: React.FC = () => {
   const [tollFreeNumber, setTollFreeNumber] = useState<string>("");
@@ -29,6 +30,7 @@ const Header: React.FC = () => {
           setShowroomName(data.name || "Showroom Name");
           setMobileNumber(data.mobile || "Showroom Name");
           setImg(data.image || "Showroom Name");
+          localStorage.setItem("showroomRewardPoints", String(data?.rewardPoints));
 
         }
       } catch (error) {
@@ -108,7 +110,7 @@ const Header: React.FC = () => {
               button={
                 <img
                   className="w-14 h-14 rounded-full object-cover saturate-50 group-hover:saturate-100 border-2 border-red-500"
-                  src={`${BASE_URL}/images/${img}` || "/default-avatar.png"} // Use img URL or fallback to a default image
+                  src={`${CLOUD_IMAGE}${img}` || "/default-avatar.png"} // Use img URL or fallback to a default image
                   alt="userProfile"
                 />
               }
@@ -118,7 +120,7 @@ const Header: React.FC = () => {
                   <div className="flex items-center px-4 py-4">
                     <img
                       className="rounded-md w-10 h-10 object-cover border border-red-500"
-                      src={`${BASE_URL}/images/${img}` || "/default-avatar.png"} // Use img URL or fallback to a default image
+                      src={`${CLOUD_IMAGE}${img}` || "/default-avatar.png"} // Use img URL or fallback to a default image
                       alt="userProfile"
                     />
                     <div className="ltr:pl-4 rtl:pr-4 truncate">
