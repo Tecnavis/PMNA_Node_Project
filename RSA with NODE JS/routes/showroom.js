@@ -14,6 +14,7 @@ router.get('/showroom-staff/:id', controller.getShowroomStaffs)
 router.get('/get-showroom-staff/:id', controller.getShowroomStaffById)
 router.get('/report',jwt, controller.showroomDashBoardReport);
 router.get('/showroom-staff-profile',jwt, controller.getStaffProfile);
+router.get('/all-showrooms',jwt, controller.getPaginatedShowrooms);
 
 router.get('/filtered', jwt, controller.filterGetShowrooms);
 
