@@ -114,6 +114,53 @@ exports.getShowroomById = async (req, res) => {
   }
 };
 
+// Get all showrooms
+exports.getPaginatedShowrooms = async (req, res) => {
+  try {
+
+    let { search, page = 1, limit = 25 } = req.query;
+
+    page = parseInt(page, 10);
+    limit = parseInt(limit, 10);
+    const skip = (page - 1) * limit;
+
+    const query = {};
+
+    if (search) {
+      const serachQuery = search.trim()
+      const regex = new RegExp(serachQuery, 'i'); // case-insensitive search
+
+      query.$or = [
+        { name: regex },
+        { phone: regex },
+        { email: regex },
+        { position: regex },
+        { state: regex },
+        { district: regex },
+        { 'showroomId.name': regex }, // for populated fields
+      ];
+    }
+
+    const totalCount = await Showroom.countDocuments(query);
+
+    const showrooms = await Showroom.find(query)
+      .populate('showroomId')
+      .skip(skip)
+      .limit(limit);
+      return res.status(200).json({
+        success: true,
+        message: "Showroom retrieved successfully.",
+        data: showrooms,
+        page,
+        totalPages: Math.ceil(totalCount / limit),
+        totalCount
+      });
+  
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Filtered get showrooms endpoint
 exports.filterGetShowrooms = async (req, res) => {
   try {
