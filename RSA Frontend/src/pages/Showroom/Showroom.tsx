@@ -92,7 +92,7 @@ const Showroom: React.FC = () => {
     // getting all showroom
     const fetchShowroom = async (searchTerm = '', page = 1, limit = 10) => {
         try {
-            const response = await axios.get(`${backendUrl}/showroom`, {
+            const response = await axios.get(`${backendUrl}/showroom/all-showrooms`, {
                 params: { search: searchTerm, page, limit },
             });
 
@@ -191,7 +191,7 @@ const Showroom: React.FC = () => {
         if (printWindow) {
             // Generate the table rows from the showroom data
             const tableRows = showrooms
-                .map((item) => {
+                ?.map((item) => {
                     return `
                         <tr>
                             <td>
@@ -338,7 +338,7 @@ const Showroom: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredShowrooms.map((items, index) => (
+                            {filteredShowrooms?.map((items, index) => (
                                 <tr key={index}>
                                     <td>{index + 1}</td>
                                     <td>
@@ -614,39 +614,95 @@ const Showroom: React.FC = () => {
             <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} />
 
             <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
+                {/* Previous Button */}
                 <li>
                     <button
                         type="button"
                         onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                         className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
+                        disabled={currentPage === 1}
                     >
                         <GrPrevious />
                     </button>
                 </li>
-                {Array.from({ length: totalPages }, (_, index) => (
-                    <li key={index}>
+
+                {/* Always show first page */}
+                <li>
+                    <button
+                        type="button"
+                        onClick={() => handlePageChange(1)}
+                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                    >
+                        1
+                    </button>
+                </li>
+
+                {/* Show ellipsis if current page is far from start */}
+                {currentPage > 4 && totalPages > 7 && (
+                    <li className="flex items-end">
+                        <span className="px-1">...</span>
+                    </li>
+                )}
+
+                {/* Middle pages - dynamic range */}
+                {Array.from({ length: Math.min(5, totalPages - 2) }, (_, i) => {
+                    let pageNum;
+                    if (currentPage < 4) {
+                        pageNum = i + 2; // Show pages 2-6 when near start
+                    } else if (currentPage > totalPages - 3) {
+                        pageNum = totalPages - 4 + i; // Show last pages when near end
+                    } else {
+                        pageNum = currentPage - 2 + i; // Show pages around current
+                    }
+
+                    if (pageNum > 1 && pageNum < totalPages) {
+                        return (
+                            <li key={pageNum}>
+                                <button
+                                    type="button"
+                                    onClick={() => handlePageChange(pageNum)}
+                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                                >
+                                    {pageNum}
+                                </button>
+                            </li>
+                        );
+                    }
+                    return null;
+                })}
+
+                {/* Show ellipsis if current page is far from end */}
+                {currentPage < totalPages - 3 && totalPages > 7 && (
+                    <li className="flex items-end">
+                        <span className="px-1">...</span>
+                    </li>
+                )}
+
+                {/* Always show last page if there's more than 1 page */}
+                {totalPages > 1 && (
+                    <li>
                         <button
                             type="button"
-                            onClick={() => handlePageChange(index + 1)}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                            onClick={() => handlePageChange(totalPages)}
+                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === totalPages ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
                         >
-                            {index + 1}
+                            {totalPages}
                         </button>
                     </li>
-                ))}
+                )}
+
+                {/* Next Button */}
                 <li>
                     <button
                         type="button"
                         onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                         className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
+                        disabled={currentPage === totalPages}
                     >
                         <GrNext />
                     </button>
                 </li>
             </ul>
-
-
-
             {/* Delete confirmation modal  */}
             <ConfirmationModal
                 isVisible={isModalVisible}

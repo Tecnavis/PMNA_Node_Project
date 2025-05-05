@@ -94,8 +94,31 @@ exports.createShowroom = async (req, res) => {
 // Get all showrooms
 exports.getShowrooms = async (req, res) => {
   try {
+    const showrooms = await Showroom.find()
+      .populate('showroomId')
+      return res.status(200).json(showrooms);
+  
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-    let { search, page = 1, limit = 10 } = req.query;
+// get showroom by id 
+exports.getShowroomById = async (req, res) => {
+  try {
+    const showroom = await Showroom.findById(req.params.id);
+    if (!showroom) return res.status(404).json({ message: 'showroom not found' });
+    res.status(200).json(showroom);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get all showrooms
+exports.getPaginatedShowrooms = async (req, res) => {
+  try {
+
+    let { search, page = 1, limit = 25 } = req.query;
 
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
@@ -133,17 +156,6 @@ exports.getShowrooms = async (req, res) => {
         totalCount
       });
   
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// get showroom by id 
-exports.getShowroomById = async (req, res) => {
-  try {
-    const showroom = await Showroom.findById(req.params.id);
-    if (!showroom) return res.status(404).json({ message: 'showroom not found' });
-    res.status(200).json(showroom);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
