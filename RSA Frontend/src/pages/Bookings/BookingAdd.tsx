@@ -784,6 +784,7 @@ const BookingAdd: React.FC = () => {
     // handle create booking
 
     const handleSubmit = async (e: React.FormEvent) => {
+        setLoading(true);
         e.preventDefault();
 
 
@@ -855,7 +856,6 @@ const BookingAdd: React.FC = () => {
                 }
             };
 
-            setLoading(true);
 
             try {
                 const response = await axios.post(`${backendUrl}/booking`, data, {
@@ -1005,7 +1005,7 @@ const BookingAdd: React.FC = () => {
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-
+        setLoading(true);
         if (validate()) {
             const data: any = {
                 workType: workType,
@@ -1049,8 +1049,6 @@ const BookingAdd: React.FC = () => {
             if (selectedCompany?._id) {
                 data.company = selectedCompany._id;
             }
-
-            setLoading(true);
 
             try {
                 const response = await axios.put(`${backendUrl}/booking/${uid}`, data, {
@@ -1853,15 +1851,78 @@ const BookingAdd: React.FC = () => {
                         </div>
                         <div className="sm:col-span-2">
                             {uid ? (
-                                <button type="button" className="btn btn-info mt-5" onClick={handleUpdate}>
-                                    Update
+                                <button
+                                    type="button"
+                                    className="btn btn-info mt-5 flex items-center justify-center gap-2"
+                                    onClick={handleUpdate}
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <>
+                                            <svg
+                                                className="animate-spin h-5 w-5 text-white"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                />
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                                />
+                                            </svg>
+                                            Updating...
+                                        </>
+                                    ) : (
+                                        "Update"
+                                    )}
                                 </button>
                             ) : (
-                                <button type="button" className="btn btn-success mt-5" onClick={handleSubmit}>
-                                    Save
+                                <button
+                                    type="button"
+                                    className="btn btn-success mt-5 flex items-center justify-center gap-2"
+                                    onClick={handleSubmit}
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <>
+                                            <svg
+                                                className="animate-spin h-5 w-5 text-white"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                />
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                                />
+                                            </svg>
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        "Save"
+                                    )}
                                 </button>
                             )}
                         </div>
+
                     </div>
                 </div>
             </form>
