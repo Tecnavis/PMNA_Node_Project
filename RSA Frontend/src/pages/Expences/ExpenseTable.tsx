@@ -72,7 +72,15 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
                                     </div>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
-                                    {new Date(expense.createdAt).toLocaleString()}
+                                {new Date(expense.createdAt).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: true,
+})}
                                 </td>
                                 <td className="px-4 py-3 capitalize">{expense.approve ? "Approved" : "Rejected"}</td>
                             </motion.tr>

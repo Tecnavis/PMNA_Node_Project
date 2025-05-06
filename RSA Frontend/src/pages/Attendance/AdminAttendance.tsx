@@ -28,7 +28,7 @@ const AdminAttendance = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [staffs, setStaffs] = useState<User[]>([]);
     const [attendanceStatus, setAttendanceStatus] = useState<Record<string, AttendanceStatus>>({});
-    // state for filter attendance 
+    const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
     const today = new Date()
     const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth() + 1)
     const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear())
@@ -121,22 +121,7 @@ const AdminAttendance = () => {
         }
     };
 
-    const getLocations = (): Promise<Location> => {
-        return new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-                (position) => resolve({
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude
-                }),
-                (error) => {
-                    console.error("Geolocation error:", error.message);
-                    reject(error);
-                },
-                { enableHighAccuracy: true }
-            );
-        });
-    };
-
+   
     const calculateAttendanceStatus = (staffList: User[], records: AdminAttendanceRecord[]) => {
         const today = new Date();
         const statusMap: Record<string, AttendanceStatus> = {};
@@ -166,6 +151,43 @@ const AdminAttendance = () => {
 
         return statusMap;
     };
+  //fetch user acutal location for checkin and checkout
+    const getLocations = (): Promise<Location> => {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+
+                    setLocation((prev) => ({
+                        ...prev,
+                        latitude,
+                        longitude
+                    }));
+
+                    resolve({ latitude, longitude });
+                },
+                (error) => {
+                    console.error("Geolocation error:", error.message);
+                    reject(error);
+                },
+                { enableHighAccuracy: true }
+            );
+        });
+    };
+    // fetch user actual location name using reverse geocoding
+const getLocationName = async (lat: number, lon: number): Promise<string> => {
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+        );
+        const data = await response.json();
+        return data.display_name || `${lat}, ${lon}`;
+    } catch (error) {
+        console.error("Error fetching location name:", error);
+        return `${lat}, ${lon}`;
+    }
+};
 
     const handleCheckIn = async (staffId: string) => {
         try {
@@ -173,9 +195,10 @@ const AdminAttendance = () => {
             if (!latitude || !longitude) {
                 throw new Error("Location not available");
             }
+            const locationName = await getLocationName(latitude, longitude);
 
             await axiosInstance.post(`/attendance/admin-check-in/${staffId}`, {
-                checkInLocation: `${latitude}, ${longitude}`
+                checkInLocation: locationName
             });
 
             Swal.fire({
@@ -202,9 +225,10 @@ const AdminAttendance = () => {
             if (!latitude || !longitude) {
                 throw new Error("Location not available");
             }
+            const locationName = await getLocationName(latitude, longitude);
 
             await axiosInstance.patch(`/attendance/${staffId}`, {
-                checkOutLocation: `${latitude}, ${longitude}`
+                checkOutLocation: locationName
             });
 
             Swal.fire({
@@ -271,7 +295,7 @@ const AdminAttendance = () => {
                 showIcon: false
             }
         }[status];
-
+     
         return (
             <div key={staff._id} className="w-full shadow-lg rounded-lg border border-white-light p-5">
                 <div className="text-center flex flex-col items-center gap-1">
@@ -298,7 +322,8 @@ const AdminAttendance = () => {
     useEffect(() => {
         fetchAttendanceRecords()
     }, [selectedMonth, selectedYear])
-
+//fetch user acutal location for checkin and checkout
+   
     return (
         <main className='flex flex-col justify-center items-center gap-5 pt-5 px-3'>
             <div className='flex justify-between'>
