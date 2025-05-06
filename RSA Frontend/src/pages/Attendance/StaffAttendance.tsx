@@ -162,7 +162,19 @@ const StaffAttendance = () => {
             );
         });
     };
-
+    const getLocationName = async (lat: number, lon: number): Promise<string> => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
+            );
+            const data = await response.json();
+            return data.display_name || `${lat}, ${lon}`;
+        } catch (error) {
+            console.error("Error fetching location name:", error);
+            return `${lat}, ${lon}`;
+        }
+    };
+    
     //update today attendance as check-in
     const handleCheckIn = async () => {
         try {
@@ -257,19 +269,7 @@ const StaffAttendance = () => {
     useEffect(() => {
         fetchAttendanceRecors(staff?._id)
     }, [selectedMonth, selectedYear])
-    const getLocationName = async (lat: number, lon: number): Promise<string> => {
-        try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
-            );
-            const data = await response.json();
-            return data.display_name || `${lat}, ${lon}`;
-        } catch (error) {
-            console.error("Error fetching location name:", error);
-            return `${lat}, ${lon}`;
-        }
-    };
-    
+ 
     return <main className='flex flex-col justify-center items-center gap-5 pt-5 px-3'>
         <div>
             <h2 className='text-3xl font-bold text-gray-700'>Attendance</h2>

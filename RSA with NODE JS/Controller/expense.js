@@ -112,35 +112,45 @@ exports.approve = async (req, res) => {
     }
 }
 
-exports.getAllExpense = async (req, res) => {
+// controllers/expenseController.js
+
+// All expenses, newest first
+exports.getAllExpense = async (req, res) => { 
     try {
-        const expense = await Expense.find().populate('driver')
-
-        return res.status(201).json({
-            message: "All Expenses are fetched successfully",
-            success: true,
-            expenseData: expense
-        })
+      const expense = await Expense
+        .find()
+        .sort({ createdAt: -1 })           // ← sort descending by createdAt
+        .populate('driver');
+  
+      return res.status(200).json({
+        message: "All Expenses are fetched successfully",
+        success: true,
+        expenseData: expense
+      });
     } catch (error) {
-        console.error(error.message)
-        return res.status(500).json({ message: 'Error fetching expense', error: error.message });
+      console.error(error);
+      return res.status(500).json({ message: 'Error fetching expense', error: error.message });
     }
-}
-
-exports.getAllPendingExpense = async (req, res) => {
+  };
+  
+  exports.getAllPendingExpense = async (req, res) => {
     try {
-        const pendingExpense = await Expense.find({ approve: { $exists: false } }).populate('driver');
-
-        return res.status(201).json({
-            message: "All Expenses are fetched successfully",
-            success: true,
-            expenseData: pendingExpense
-        })
+      const pendingExpense = await Expense
+        .find({ approve: { $exists: false } })
+        .sort({ createdAt: -1 })           // ← same here
+        .populate('driver');
+  
+      return res.status(200).json({
+        message: "All Pending Expenses are fetched successfully",
+        success: true,
+        expenseData: pendingExpense
+      });
     } catch (error) {
-        console.error(error.message)
-        return res.status(500).json({ message: 'Error fetching expense', error: error.message });
+      console.error(error);
+      return res.status(500).json({ message: 'Error fetching pending expenses', error: error.message });
     }
-}
+  };
+  
 
 exports.getExpenseById = async (req, res) => {
     try {
