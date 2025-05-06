@@ -22,6 +22,16 @@ const dieselExpenseSchema = new mongoose.Schema({
         required: true,
         min: [0, 'Amount must be positive']
     },
+    vehicleNumber: {
+        type: String,
+        trim: true,
+        required: true
+    },
+    expenceKm: {
+        type: Number,
+        required: true,
+        min: [0, 'Amount must be positive']
+    },
     images: {
         type: [String],
         validate: {

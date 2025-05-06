@@ -3,9 +3,9 @@ const DieselExpense = require('../Model/dieselExpense');
 // Create a new diesel expense
 exports.createExpense = async (req, res) => {
     try {
-        const { expenseId, driver, description, amount } = req.body;
+        const { expenseId, driver, description, amount, vehicleNumber,expenceKm } = req.body;
 
-        if (!expenseId || !driver || !description || !amount) {
+        if (!expenseId || !driver || !description || !amount || !expenceKm || !vehicleNumber) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
 
@@ -20,7 +20,9 @@ exports.createExpense = async (req, res) => {
             driver,
             description,
             amount,
-            images
+            images,
+            vehicleNumber,
+            expenceKm
         });
 
         await newExpense.save();
@@ -79,7 +81,10 @@ exports.toggleApproval = async (req, res) => {
 // Get all expenses - for Admin
 exports.getAllExpenses = async (req, res) => {
     try {
-        const expenses = await DieselExpense.find().populate('driver');
+        const expenses = await DieselExpense .find()
+        .sort({ createdAt: -1 })           // ← sort descending by createdAt
+        .populate('driver');
+  
         res.status(200).json({ data: expenses });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });

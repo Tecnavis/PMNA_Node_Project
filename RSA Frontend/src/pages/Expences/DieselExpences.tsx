@@ -121,7 +121,9 @@ const DieselExpenses = () => {
               <tr>
                 <th className="px-4 py-3">Expense ID</th>
                 <th className="px-4 py-3">Driver</th>
+                <th className="px-4 py-3">Vehicle Number</th>
                 <th className="px-4 py-3">Description</th>
+                <th className="px-4 py-3">KiloMeter </th>
                 <th className="px-4 py-3">Amount (₹)</th>
                 <th className="px-4 py-3">Images</th>
                 <th className="px-4 py-3">Date</th>
@@ -151,7 +153,23 @@ const DieselExpenses = () => {
                         className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
                         onClick={() => toggleDescription(expense._id)}
                       >
+                        {expense.vehicleNumber}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 max-w-xs">
+                      <div
+                        className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
+                        onClick={() => toggleDescription(expense._id)}
+                      >
                         {expense.description}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 max-w-xs">
+                      <div
+                        className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
+                        onClick={() => toggleDescription(expense._id)}
+                      >
+                        {expense.expenceKm}
                       </div>
                     </td>
                     <td className="px-4 py-3 font-semibold text-green-700">₹{expense.amount.toLocaleString()}</td>
