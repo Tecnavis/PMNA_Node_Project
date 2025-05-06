@@ -388,6 +388,16 @@ const Status: React.FC = () => {
                                             <span className='w-1/2  font-semibold pl-4 dark:text-white'>Dropoff Time :</span>
                                             <span className='w-1/2 text-end text-gray-500 dark:text-gray-300 pr-4'>{dateFormate(booking?.dropoffTime)} at {formattedTime(booking?.dropoffTime)}</span>
                                         </li>
+                                        {booking?.partialPaymentRemark && (
+    <li className='w-full flex flex-row mt-3 border-b'>
+        <span className='w-1/2 font-semibold pl-4 text-violet-600 dark:text-violet-300'>
+            Partial Payment Remark:
+        </span>
+        <span className='w-1/2 text-end pr-4 text-red-600 italic dark:text-gray-300'>
+            {booking.partialPaymentRemark}
+        </span>
+    </li>
+)}
                                         <li className='w-full flex flex-row justify-center my-3 place-items-center'>
                                             <span className='w-1/2  font-semibold pl-4 mb-2 dark:text-white'>Status :</span>
                                             <span className='w-1/2 text-end pr-4 pt-1'>
@@ -397,9 +407,9 @@ const Status: React.FC = () => {
                                             </span>
                                         </li>
                                     </ul>
-                                    {!booking.cashPending && <div className="flex items-center  justify-between my-5">
+                                    {<div className="flex items-center  justify-between my-5">
                                         <button onClick={() => navigate(`/openbooking/${booking?._id}`)}
-                                            className='text-white mb-10 mx-4 flex justify-between items-center gap-2 bg-blue-500 px-10 py-1 rounded-md text-md hover:bg-blue-600'
+                                            className='text-white mb-2 mx-4 flex justify-between items-center gap-2 bg-blue-500 px-10 py-1 rounded-md text-md hover:bg-blue-600'
                                         >
                                             Order Details
                                             <IconArrowLeft />
@@ -414,6 +424,8 @@ const Status: React.FC = () => {
                                             )
                                         }
                                     </div>}
+    
+
                                     {booking.cashPending && <div className="flex justify-start my-5">
                                         <button
                                             onClick={() => handlePaymentSettlement(booking)}

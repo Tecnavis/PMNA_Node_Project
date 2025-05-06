@@ -54,6 +54,7 @@ interface Company {
 export interface Booking {
     invoiceNumber: string;
     partialPayment: Boolean;
+    partialPaymentRemark:string;
     receivedUser: string,// new prop
     cancelReason: string,// w prop
     cancelImage: string,// new prop
