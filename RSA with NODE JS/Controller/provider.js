@@ -1,5 +1,5 @@
 const Provider = require('../Model/provider');
-const { sendOtp, verifyOtp  } = require('../services/otpService');
+const { sendOtp, verifyOtp } = require('../services/otpService');
 const jwt = require('jsonwebtoken');
 
 // Create a new provider
@@ -137,7 +137,7 @@ exports.loginProvider = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: provider._id }, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: provider._id, role: "Provider", name: `${provider.name}` }, process.env.JWT_SECRET);
     provider.tokens = token; // If you want to store the token, you can update the provider schema to include a `tokens` field
     await provider.save();
 

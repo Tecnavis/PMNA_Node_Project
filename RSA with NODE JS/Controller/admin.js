@@ -45,7 +45,7 @@ exports.loginAdmin = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ id: admin._id, user: { name: `Admin-${email}` } }, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: admin._id, user: { name: `${email}`, role: 'Admin' } }, process.env.JWT_SECRET);
     console.log(token, 'Generated JWT token');
 
     admin.tokens = token;

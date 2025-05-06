@@ -96,8 +96,8 @@ exports.getShowrooms = async (req, res) => {
   try {
     const showrooms = await Showroom.find()
       .populate('showroomId')
-      return res.status(200).json(showrooms);
-  
+    return res.status(200).json(showrooms);
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -147,15 +147,15 @@ exports.getPaginatedShowrooms = async (req, res) => {
       .populate('showroomId')
       .skip(skip)
       .limit(limit);
-      return res.status(200).json({
-        success: true,
-        message: "Showroom retrieved successfully.",
-        data: showrooms,
-        page,
-        totalPages: Math.ceil(totalCount / limit),
-        totalCount
-      });
-  
+    return res.status(200).json({
+      success: true,
+      message: "Showroom retrieved successfully.",
+      data: showrooms,
+      page,
+      totalPages: Math.ceil(totalCount / limit),
+      totalCount
+    });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -456,7 +456,7 @@ exports.staffLogin = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: showroomStaff._id }, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: showroomStaff._id, role: "ShowroomStaff", name: `${showroomStaff.name}` }, process.env.JWT_SECRET);
 
     // Include role and name in the response
     res.status(200).json({
@@ -584,7 +584,7 @@ exports.loginShowroom = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials, invalid password!', success: false });
     }
 
-    const token = jwt.sign({ id: isShowroomExist._id, role: "Showroom" }, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: isShowroomExist._id, role: "Showroom", name: isShowroomExist?.name }, process.env.JWT_SECRET);
 
     return res.status(200).json({ message: 'Login sucessfull', success: true, data: isShowroomExist, token });
   } catch (error) {
