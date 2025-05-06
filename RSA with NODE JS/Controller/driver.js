@@ -261,7 +261,7 @@ exports.verifyOTP = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: driver._id }, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: driver._id, role: 'Driver', name: `${driver.name}` }, process.env.JWT_SECRET);
 
     res.status(200).json({
       token,

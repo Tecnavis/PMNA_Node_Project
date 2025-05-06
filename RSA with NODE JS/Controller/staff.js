@@ -150,7 +150,7 @@ exports.loginStaff = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: staff._id }, process.env.JWT_SECRET);
+    const token = jwt.sign({ id: staff._id, role: "Staff", name: `${staff.name}` }, process.env.JWT_SECRET);
 
     // Include role and name in the response
     res.status(200).json({

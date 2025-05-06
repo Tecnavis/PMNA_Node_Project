@@ -423,31 +423,35 @@ exports.getAllBookings = async (req, res) => {
 
         // Handle search
         if (search) {
-            search = search.trim();
+
+            // Overridinf the custom plugin
+            query._includeHidden = true;
+
+            const searchQuery = search.trim();
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
 
             // Handle date search separately
-            if (dateRegex.test(search)) {
-                const [day, month, year] = search.split('/');
+            if (dateRegex.test(searchQuery)) {
+                const [day, month, year] = searchQuery.split('/');
                 const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
             } else {
-                // Escape special regex characters
-                const escapedSearch = search.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+
+                const regex = new RegExp(searchQuery, 'i');
 
                 // Search conditions array
                 const searchConditions = [
-                    { fileNumber: escapedSearch },
-                    { mob1: escapedSearch },
-                    { customerVehicleNumber: escapedSearch },
+                    { fileNumber: regex },
+                    { mob1: regex },
+                    { customerVehicleNumber: regex },
                 ];
 
                 // Only search drivers/providers if search is numeric
-                if (/^\d+$/.test(search)) {
+                if (/^\d+$/.test(regex)) {
                     const [matchingDrivers, matchingProviders] = await Promise.all([
-                        Driver.find({ phone: searchRegex }).select('_id').lean(),
-                        Provider.find({ phone: searchRegex }).select('_id').lean()
+                        Driver.find({ phone: regex }).select('_id').lean(),
+                        Provider.find({ phone: regex }).select('_id').lean()
                     ]);
 
                     if (matchingDrivers.length > 0) {
@@ -736,7 +740,7 @@ exports.uploadImage = async (req, res) => {
 };
 
 // remove the pickup image 
-exports.removePickupImages = async (req, res) => {
+exports.changePickupImages = async (req, res) => {
     const { id, index } = req.params;
 
     if (!id) {
@@ -751,27 +755,18 @@ exports.removePickupImages = async (req, res) => {
             return res.status(404).json({ message: "Booking not found" });
         }
 
-        const pickupImages = booking.pickupImages;
-
         // Check if the index is valid
-        if (index < 0 || index >= pickupImages.length) {
+        if (index < 0 || index >= booking.pickupImages.length) {
             return res.status(400).json({ message: "Invalid index" });
         }
 
-        // Remove the image at the specified index
-        const removedImage = pickupImages.splice(index, 1);
-        // Check after removal
-        booking.pickupImagePending = pickupImages.length < 3;
-
         // Save the updated booking
-        booking.pickupImages = pickupImages;
+        booking.pickupImages[index] = req?.file?.filename || booking.pickupImages[index];
         await booking.save();
 
         res.status(200).json({
             message: "Image removed successfully",
-            removedImage,
             pickupImagePending: booking.pickupImagePending,
-
         });
     } catch (error) {
         console.error("Error removing pickup image:", error);
@@ -833,7 +828,7 @@ exports.addPickupImages = async (req, res) => {
 };
 
 // remove the dropoff image 
-exports.removeDropoffImages = async (req, res) => {
+exports.changeDropoffImages = async (req, res) => {
     const { id, index } = req.params;
 
     if (!id) {
@@ -855,18 +850,15 @@ exports.removeDropoffImages = async (req, res) => {
             return res.status(400).json({ message: "Invalid index" });
         }
 
-        // Remove the image at the specified index
-        const removedImage = dropoffImages.splice(index, 1);
         // Check after removal
         booking.dropoffImagePending = dropoffImages.length < 3;
 
         // Save the updated booking
-        booking.dropoffImages = dropoffImages;
+        booking.dropoffImages[index] = req?.file?.filename || booking.dropoffImages[index];
         await booking.save();
 
         res.status(200).json({
             message: "Image removed successfully",
-            removedImage,
             dropoffImagePending: booking.dropoffImagePending,
 
         });

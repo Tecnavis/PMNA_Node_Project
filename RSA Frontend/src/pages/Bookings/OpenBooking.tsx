@@ -171,6 +171,7 @@ const Preview = () => {
     const dropoffAndPickup = useRef<any>(null);
     const [inventoryImageUrl, setInventoryImageUrl] = useState<string | null>(null);
     const [isUploadingInventory, setIsUploadingInventory] = useState(false);
+    const [uploading, setUplading] = useState<Record<number, boolean>>({});
 
     // checking the token
 
@@ -227,10 +228,10 @@ const Preview = () => {
             const dropoffUrls = dropoffFiles?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
             setDropoffImageUrls(dropoffUrls);
             setPickuptImageUrls(urls);
-               // Add inventory image URL if exists
-        if (response.data.inventoryImage) {
-            setInventoryImageUrl(`${CLOUD_IMAGE}${response.data.inventoryImage}`);
-        }
+            // Add inventory image URL if exists
+            if (response.data.inventoryImage) {
+                setInventoryImageUrl(`${CLOUD_IMAGE}${response.data.inventoryImage}`);
+            }
         } catch (error) {
             console.error('Error fetching bookings:', error);
         }
@@ -341,10 +342,30 @@ const Preview = () => {
 
     //Removing pickup images
 
-    const handleRemovePickupImage = async (index: number) => {
+    const handleChangePickupImage = async (
+        e: React.ChangeEvent<HTMLInputElement>,
+        index: number
+    ) => {
         try {
-            await axios.patch(`${backendUrl}/booking/pickupimage/${id}/${index}`);
+
+            const files = e.target.files;
+            if (!files || files.length === 0) {
+
+                return
+            };
+
+            const file = files[0];
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            await axios.patch(`${backendUrl}/booking/pickupimage/${id}/${index}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
             setPickuptImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+            fetchBookingById()
         } catch (error: unknown) {
             console.error('Error deleting image:', error);
             alert('Failed to delete the image.');
@@ -352,10 +373,29 @@ const Preview = () => {
     };
     //Removing dropoff images
 
-    const handleRemoveDropoffImage = async (index: number) => {
+    const handleChangeDropoffImage = async (
+        e: React.ChangeEvent<HTMLInputElement>,
+        index: number
+    ) => {
         try {
-            await axios.patch(`${backendUrl}/booking/dropoffimage/${id}/${index}`);
+            const files = e.target.files;
+            if (!files || files.length === 0) {
+
+                return
+            };
+
+            const file = files[0];
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            await axios.patch(`${backendUrl}/booking/dropoffimage/${id}/${index}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
             setDropoffImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+            fetchBookingById()
         } catch (error: unknown) {
             console.error('Error deleting image:', error);
             alert('Failed to delete the image.');
@@ -607,53 +647,53 @@ const Preview = () => {
         gettingToken();
         fetchBookingById();
     }, []);
-// Add this handler function
-const handleInventoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    // Add this handler function
+    const handleInventoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-    try {
-        setIsUploadingInventory(true);
-        
-        const formData = new FormData();
-        formData.append('image', file);
+        try {
+            setIsUploadingInventory(true);
 
-        const response = await axios.patch(`${backendUrl}/booking/inventory/${id}`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+            const formData = new FormData();
+            formData.append('image', file);
 
-        // Update local state with new image
-        setInventoryImageUrl(`${CLOUD_IMAGE}${response.data.booking.inventoryImage}`);
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Inventory Updated!',
-            text: 'The inventory sheet has been successfully uploaded',
-            toast: true,
-            position: 'top',
-            showConfirmButton: false,
-            timer: 3000,
-        });
+            const response = await axios.patch(`${backendUrl}/booking/inventory/${id}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
 
-        // Refresh booking data to update pending status
-        fetchBookingById();
-    } catch (error) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Upload Failed',
-            text: 'Failed to upload inventory sheet',
-            toast: true,
-            position: 'top',
-            showConfirmButton: false,
-            timer: 3000,
-        });
-        console.error('Error uploading inventory image:', error);
-    } finally {
-        setIsUploadingInventory(false);
-    }
-};
+            // Update local state with new image
+            setInventoryImageUrl(`${CLOUD_IMAGE}${response.data.booking.inventoryImage}`);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Inventory Updated!',
+                text: 'The inventory sheet has been successfully uploaded',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+            });
+
+            // Refresh booking data to update pending status
+            fetchBookingById();
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Upload Failed',
+                text: 'Failed to upload inventory sheet',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+            });
+            console.error('Error uploading inventory image:', error);
+        } finally {
+            setIsUploadingInventory(false);
+        }
+    };
     return (
         <div>
             <div className="panel">
@@ -708,19 +748,26 @@ const handleInventoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>
                                     <div className="flex items-start pt-5">
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
                                             {pickupImageUrls?.map((url, index) => (
-                                                <div key={index} className='flex flex-col gap-5 justify-center items-center'>
-                                                    <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
+                                                <div>
                                                     <img
                                                         src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
                                                         className="w-16 h-16 hover:cursor-pointer"
                                                         onClick={() => {
-                                                            setEnlargedImage(url)
+                                                            setEnlargedImage(url);
                                                         }}
                                                     />
-                                                    <div className='text-xs'>
-                                                        <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleDateString()}</span> -
-                                                        <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleTimeString()}</span>
-                                                    </div>
+                                                    <label
+                                                        className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block"
+                                                    >
+                                                        Change
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={(e) => handleChangePickupImage(e, index)}
+                                                            id={`dropoff-image-${index}`}
+                                                        />
+                                                    </label>
                                                 </div>
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
@@ -740,19 +787,32 @@ const handleInventoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>
                                     <div className="flex items-start pt-5">
                                         <div className="flex items-center justify-center gap-6">
                                             {dropoffImageUrls.map((url, index) => (
-                                                <div key={index} className='flex flex-col gap-5 justify-center items-center'>
-                                                    <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} />
-                                                    <img
-                                                        src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
-                                                        className="w-16 h-16 hover:cursor-pointer"
-                                                        onClick={() => {
-                                                            setEnlargedImage(url);
-                                                        }}
-                                                    />
-                                                    <div className='text-xs'>
+                                                <div key={index} className='flex flex-col justify-center items-center p-1'>
+                                                    <div>
+                                                        <img
+                                                            src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
+                                                            className="w-16 h-16 hover:cursor-pointer"
+                                                            onClick={() => {
+                                                                setEnlargedImage(url);
+                                                            }}
+                                                        />
+                                                        <label
+                                                            className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block"
+                                                        >
+                                                            Change
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={(e) => handleChangeDropoffImage(e, index)}
+                                                                id={`dropoff-image-${index}`}
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                    <span className='text-xs'>
                                                         <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -
                                                         <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
-                                                    </div>
+                                                    </span>
                                                 </div>
                                             ))}
 
@@ -786,78 +846,78 @@ const handleInventoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>
                         </Tab.Panels>
                     </Tab.Group>
                     {/* --------------------------------------------------------------- */}
-<div className="mt-8">
-    <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Inventory Sheet</h3>
-    
-    {inventoryImageUrl ? (
-        <div className="relative group max-w-md mx-auto">
-            <div className="relative overflow-hidden rounded-lg shadow-md border-2 border-green-100 dark:border-green-800 transition-all duration-300 hover:shadow-lg">
-                <img 
-                    src={inventoryImageUrl} 
-                    alt="Inventory sheet"
-                    className="w-full h-64 object-contain bg-gray-50 dark:bg-gray-800"
-                    onClick={() => setEnlargedImage(inventoryImageUrl)}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                    <div className="flex justify-between w-full items-center">
-                        <span className="text-white text-sm bg-green-500 px-2 py-1 rounded-full flex items-center">
-                            <FiCheck className="mr-1" /> Verified Inventory
-                        </span>
-                        <div className="flex gap-2">
-                            <label className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors cursor-pointer">
-                                <FiEdit2 size={18} />
-                                <input 
-                                    type="file" 
-                                    accept="image/*,.pdf" 
-                                    className="hidden" 
-                                    onChange={handleInventoryImageUpload}
-                                    disabled={isUploadingInventory}
-                                />
-                            </label>
-                            <button 
-                                onClick={() => setEnlargedImage(inventoryImageUrl)}
-                                className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors"
-                            >
-                                <FiZoomIn size={18} />
-                            </button>
-                        </div>
+                    <div className="mt-8">
+                        <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Inventory Sheet</h3>
+
+                        {inventoryImageUrl ? (
+                            <div className="relative group max-w-md mx-auto">
+                                <div className="relative overflow-hidden rounded-lg shadow-md border-2 border-green-100 dark:border-green-800 transition-all duration-300 hover:shadow-lg">
+                                    <img
+                                        src={inventoryImageUrl}
+                                        alt="Inventory sheet"
+                                        className="w-full h-64 object-contain bg-gray-50 dark:bg-gray-800"
+                                        onClick={() => setEnlargedImage(inventoryImageUrl)}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                                        <div className="flex justify-between w-full items-center">
+                                            <span className="text-white text-sm bg-green-500 px-2 py-1 rounded-full flex items-center">
+                                                <FiCheck className="mr-1" /> Verified Inventory
+                                            </span>
+                                            <div className="flex gap-2">
+                                                <label className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors cursor-pointer">
+                                                    <FiEdit2 size={18} />
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*,.pdf"
+                                                        className="hidden"
+                                                        onChange={handleInventoryImageUpload}
+                                                        disabled={isUploadingInventory}
+                                                    />
+                                                </label>
+                                                <button
+                                                    onClick={() => setEnlargedImage(inventoryImageUrl)}
+                                                    className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors"
+                                                >
+                                                    <FiZoomIn size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        ) : (
+                            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-center">
+                                <FiAlertTriangle className="mx-auto text-yellow-500 dark:text-yellow-400 text-2xl mb-2" />
+                                <p className="text-yellow-700 dark:text-yellow-300 font-medium">No inventory sheet uploaded</p>
+                                <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">Please upload the signed inventory sheet</p>
+
+                                <label className="mt-4 inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg shadow hover:bg-primary-dark transition-colors cursor-pointer">
+                                    {isUploadingInventory ? (
+                                        <span className="flex items-center">
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Uploading...
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center">
+                                            <FiUpload className="mr-2" />
+                                            Upload Inventory Sheet
+                                        </span>
+                                    )}
+                                    <input
+                                        type="file"
+                                        accept="image/*,.pdf"
+                                        className="hidden"
+                                        onChange={handleInventoryImageUpload}
+                                        disabled={isUploadingInventory}
+                                    />
+                                </label>
+                            </div>
+                        )}
                     </div>
-                </div>
-            </div>
-            
-        </div>
-    ) : (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-center">
-            <FiAlertTriangle className="mx-auto text-yellow-500 dark:text-yellow-400 text-2xl mb-2" />
-            <p className="text-yellow-700 dark:text-yellow-300 font-medium">No inventory sheet uploaded</p>
-            <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">Please upload the signed inventory sheet</p>
-            
-            <label className="mt-4 inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg shadow hover:bg-primary-dark transition-colors cursor-pointer">
-                {isUploadingInventory ? (
-                    <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Uploading...
-                    </span>
-                ) : (
-                    <span className="flex items-center">
-                        <FiUpload className="mr-2" />
-                        Upload Inventory Sheet
-                    </span>
-                )}
-                <input 
-                    type="file" 
-                    accept="image/*,.pdf" 
-                    className="hidden" 
-                    onChange={handleInventoryImageUpload}
-                    disabled={isUploadingInventory}
-                />
-            </label>
-        </div>
-    )}
-</div>
                     <table className="table-striped mt-4">
                         <tbody>
                             {booking && (
@@ -1051,8 +1111,8 @@ const handleInventoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Time</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                        <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleDateString()}</span> - 
-                                        <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleTimeString()}</span>
+                                            <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleDateString()}</span> -
+                                            <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleTimeString()}</span>
                                         </td>
                                     </tr>
                                     {/* Dropoff time  */}
@@ -1149,8 +1209,6 @@ const handleInventoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                                                         {pickupImageUrls?.map((url, index) => (
                                                             <div key={index}>
-                                                                <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
-
                                                                 <img src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }} className="w-16 h-16" />
                                                             </div>
                                                         ))}
@@ -1176,7 +1234,6 @@ const handleInventoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                                                         {dropoffImageUrls?.map((url, index) => (
                                                             <div key={index}>
-                                                                <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} />
                                                                 <img src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }} className="w-16 h-16" />
                                                             </div>
                                                         ))}

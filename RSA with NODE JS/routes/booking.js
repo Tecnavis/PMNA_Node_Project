@@ -56,13 +56,13 @@ router.patch('/inventory/:id', jwt, upload.single('image'), controller.inventory
 router.put('/pickupbyadmin/:id', jwt, controller.updatePickupByAdmin);
 
 // Route for the removing the pickup Image
-router.patch('/pickupimage/:id/:index', jwt, controller.removePickupImages);
+router.patch('/pickupimage/:id/:index', jwt,upload.single('image'), controller.changePickupImages);
 
 // Route for adding pickup images
 router.patch('/addingpickupimage/:id', jwt, upload.array('images', 6), controller.addPickupImages);
 
 // Route for the removing the dropoff Image
-router.patch('/dropoffimage/:id/:index', jwt, controller.removeDropoffImages);
+router.patch('/dropoffimage/:id/:index', jwt, upload.single('image'), controller.changeDropoffImages);
 
 // Route for adding pickup images
 router.patch('/addingdropoffimage/:id', jwt, upload.array('images', 6), controller.addDropoffImages);
