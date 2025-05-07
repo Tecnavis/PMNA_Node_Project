@@ -176,6 +176,7 @@ exports.verifyOTP = async (req, res) => {
 
     res.status(200).json({
       token,
+      providerId: provider._id,
       message: "login successfully",
       success: true
     });
