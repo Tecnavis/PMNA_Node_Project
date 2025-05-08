@@ -79,18 +79,44 @@ exports.toggleApproval = async (req, res) => {
 };
 
 // Get all expenses - for Admin
+// exports.getAllExpenses = async (req, res) => {
+//     try {
+//         const expenses = await DieselExpense .find()
+//         .sort({ createdAt: -1 })           // ← sort descending by createdAt
+//         .populate('driver');
+  
+//         res.status(200).json({ data: expenses });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Server error', error: error.message });
+//     }
+// };
 exports.getAllExpenses = async (req, res) => {
     try {
-        const expenses = await DieselExpense .find()
-        .sort({ createdAt: -1 })           // ← sort descending by createdAt
-        .populate('driver');
-  
+        const { month, year, vehicleNumber } = req.query;
+
+        const query = {};
+
+        // Filter by month and year
+         // Filter by month and year
+         if (month && year) {
+            const startDate = new Date(`${year}-${month}-01T00:00:00.000Z`);
+            const endDate = new Date(new Date(startDate).setMonth(startDate.getMonth() + 1));
+            query.createdAt = { $gte: startDate, $lt: endDate };
+        }
+        // Filter by vehicle number
+        if (vehicleNumber) {
+            query.vehicleNumber = vehicleNumber;
+        }
+
+        const expenses = await DieselExpense.find(query)
+            .sort({ createdAt: -1 }) // latest first
+            .populate('driver');
+
         res.status(200).json({ data: expenses });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
-
 // Get single expense by ID
 exports.getExpenseById = async (req, res) => {
     try {

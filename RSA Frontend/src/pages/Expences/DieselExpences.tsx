@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Tooltip } from '@mui/material';
-import { Check, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Card, Tooltip, MenuItem, Select, FormControl, InputLabel, TextField } from '@mui/material';
+import { Check, X, ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
 import { Button } from '@headlessui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,11 +18,41 @@ const DieselExpenses = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+// -----------------------------------------------
+    // Filter states
+    const [month, setMonth] = useState<string>('');
+    const [year, setYear] = useState<string>('');
+    const [vehicleNumber, setVehicleNumber] = useState<string>('');
+    const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
+    const [filterLoading, setFilterLoading] = useState(false);
 
-  const fetchDieselExpences = async () => {
+    const months = [
+      { value: '01', label: 'January' },
+      { value: '02', label: 'February' },
+      { value: '03', label: 'March' },
+      { value: '04', label: 'April' },
+      { value: '05', label: 'May' },
+      { value: '06', label: 'June' },
+      { value: '07', label: 'July' },
+      { value: '08', label: 'August' },
+      { value: '09', label: 'September' },
+      { value: '10', label: 'October' },
+      { value: '11', label: 'November' },
+      { value: '12', label: 'December' },
+    ];
+  
+    const years = [
+      { value: '2023', label: '2023' },
+      { value: '2024', label: '2024' },
+      { value: '2025', label: '2025' },
+    ];
+  
+const fetchDieselExpences = async () => {
     try {
       setLoading(true);
-      const data: IDieselExpense[] = await getExpences() as IDieselExpense[];
+      setFilterLoading(true);
+
+      const data: IDieselExpense[] = await getExpences(month, year, vehicleNumber) as IDieselExpense[];
       setExpenses(data);
     } catch (error) {
       console.error('Error fetching expenses:', error);
@@ -30,6 +60,18 @@ const DieselExpenses = () => {
       setLoading(false);
     }
   }
+
+  const handleFilterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchDieselExpences();
+  };
+
+  const handleResetFilters = () => {
+    setMonth('');
+    setYear('');
+    setVehicleNumber('');
+    fetchDieselExpences();
+  };
 
   useEffect(() => {
     fetchDieselExpences();
@@ -113,8 +155,85 @@ const DieselExpenses = () => {
           >
             Diesel Expenses
           </motion.h2>
+          <Button 
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+          >
+            <Filter size={18} />
+            Filters
+          </Button>
         </div>
+        <AnimatePresence>
+          {isFilterOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-6 overflow-hidden"
+            >
+              <Card className="p-4 shadow-sm">
+                <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Month</InputLabel>
+                    <Select
+                      value={month}
+                      label="Month"
+                      onChange={(e) => setMonth(e.target.value)}
+                    >
+                      <MenuItem value="">All Months</MenuItem>
+                      {months.map((m) => (
+                        <MenuItem key={m.value} value={m.value}>
+                          {m.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
 
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Year</InputLabel>
+                    <Select
+                      value={year}
+                      label="Year"
+                      onChange={(e) => setYear(e.target.value)}
+                    >
+                      <MenuItem value="">All Years</MenuItem>
+                      {years.map((y) => (
+                        <MenuItem key={y.value} value={y.value}>
+                          {y.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <TextField
+                    label="Vehicle Number"
+                    value={vehicleNumber}
+                    onChange={(e) => setVehicleNumber(e.target.value)}
+                    size="small"
+                    fullWidth
+                  />
+
+                  <div className="flex items-end gap-2">
+                    <Button
+                      type="submit"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg w-full"
+                    >
+                      Apply Filters
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg w-full"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm text-left text-gray-600">
             <thead className="bg-indigo-50 border-b text-indigo-700">
