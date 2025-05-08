@@ -67,6 +67,7 @@ exports.createBooking = async (req, res) => {
         const newBooking = new Booking(bookingData);
         await newBooking.save();
 
+
         const agendaInstance = await agenda;
         if (bookingData.pickupDate) {
 
