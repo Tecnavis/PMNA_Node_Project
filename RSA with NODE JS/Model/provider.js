@@ -67,6 +67,13 @@ const providerSchema = new mongoose.Schema({
   image: {
     type: String, // URL or path to the image
   },
+  fcmToken: {
+    type: String
+  },
+  currentLocation: {
+    type: String,
+    trim: true,
+  },
 });
 
 module.exports = mongoose.model('Provider', providerSchema);

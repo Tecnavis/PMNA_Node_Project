@@ -67,7 +67,7 @@ exports.getProviderById = async (req, res) => {
 // Update a provider by ID
 exports.updateProvider = async (req, res) => {
   try {
-    const { name, companyName, baseLocation, idNumber, creditAmountLimit, phone, personalPhoneNumber, password, serviceDetails } = req.body;
+    const { name, companyName, baseLocation, idNumber, creditAmountLimit, phone, personalPhoneNumber, password, serviceDetails, currentLocation, fcmToken } = req.body;
 
     const provider = await Provider.findById(req.params.id);
     if (!provider) return res.status(404).json({ message: 'Provider not found' });
@@ -96,6 +96,8 @@ exports.updateProvider = async (req, res) => {
     provider.password = password || provider.password;
     provider.image = req.file ? req.file.filename : provider.image;
     provider.serviceDetails = serviceData;
+    provider.currentLocation = currentLocation || provider.currentLocation
+    provider.fcmToken = fcmToken || provider.fcmToken;
 
     await provider.save();
     res.status(200).json(provider);
