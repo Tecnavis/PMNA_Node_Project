@@ -14,6 +14,8 @@ import IconPlus from '../../components/Icon/IconPlus';
 import { Booking } from './Bookings';
 import { getDistance } from '../../services/olaMapApi';
 import { DUMMY_SHOWROOM } from './constant';
+import Flatpickr from 'react-flatpickr';
+import 'flatpickr/dist/themes/material_blue.css';
 
 export interface Company {
     _id: string;
@@ -853,7 +855,8 @@ const BookingAdd: React.FC = () => {
                 dummyEntity: {
                     name: selectedEntity?.name,
                     id: selectedEntity?.id
-                }
+                },
+                dateNow: new Date().toISOString()
             };
 
 
@@ -1212,6 +1215,7 @@ const BookingAdd: React.FC = () => {
         setErrors(formErrors);
 
         console.log(formErrors)
+        Object.keys(formErrors).length === 0 ? null : setLoading(false);
         return Object.keys(formErrors).length === 0;
     };
     // ref to scrolling 
@@ -1274,7 +1278,13 @@ const BookingAdd: React.FC = () => {
                             <label htmlFor="pickupDate">
                                 Pickup Date <span style={{ color: 'red' }}>(optional)</span>
                             </label>
-                            <input id="date-time" min={today} type="datetime-local" className="form-input" value={pickupDate ? new Date(pickupDate).toISOString().slice(0, 16) : ''} onChange={(e) => setPickupDate(e.target.value)} />{' '}
+                            <Flatpickr
+                                id="date-time"
+                                options={{ enableTime: true, dateFormat: "Y-m-d\\TH:i" }}
+                                value={pickupDate}
+                                onChange={([date]) => setPickupDate(""+date)}
+                                className="form-input"
+                            />
                         </div>
                         {/* selcect company if the work type is RSAWork  */}
                         {workType === 'RSAWork' && (
