@@ -3,8 +3,8 @@ const DieselExpense = require('../Model/dieselExpense');
 // Create a new diesel expense
 exports.createExpense = async (req, res) => {
     try {
-        const { expenseId, driver, description, amount, vehicleNumber,expenceKm } = req.body;
-
+        const { expenseId, driver, description, amount, vehicleNumber, expenceKm } = req.body;
+        
         if (!expenseId || !driver || !description || !amount || !expenceKm || !vehicleNumber) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
@@ -84,7 +84,7 @@ exports.toggleApproval = async (req, res) => {
 //         const expenses = await DieselExpense .find()
 //         .sort({ createdAt: -1 })           // ← sort descending by createdAt
 //         .populate('driver');
-  
+
 //         res.status(200).json({ data: expenses });
 //     } catch (error) {
 //         res.status(500).json({ message: 'Server error', error: error.message });
@@ -97,8 +97,8 @@ exports.getAllExpenses = async (req, res) => {
         const query = {};
 
         // Filter by month and year
-         // Filter by month and year
-         if (month && year) {
+        // Filter by month and year
+        if (month && year) {
             const startDate = new Date(`${year}-${month}-01T00:00:00.000Z`);
             const endDate = new Date(new Date(startDate).setMonth(startDate.getMonth() + 1));
             query.createdAt = { $gte: startDate, $lt: endDate };
@@ -138,7 +138,7 @@ exports.getExpensesByDriver = async (req, res) => {
 
         const expenses = await DieselExpense.find({ driver: driverId }).populate('driver');
         res.status(200).json({ data: expenses });
-        
+
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

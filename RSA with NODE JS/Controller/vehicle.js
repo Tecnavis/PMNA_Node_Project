@@ -7,7 +7,7 @@ exports.createVehicle = async (req, res) => {
     try {
         const { vehicleName, serviceKM, serviceVehicle } = req.body
 
-        if(!vehicleName && !serviceKM && !serviceVehicle){
+        if (!vehicleName && !serviceKM && !serviceVehicle) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
@@ -31,40 +31,40 @@ exports.createVehicle = async (req, res) => {
 // Read Vehicles (Get all vehicles)
 exports.getAllVehicle = async (req, res) => {
     try {
-      let { search = "", page = 1, limit = 10 } = req.query;
-  
-      page = parseInt(page, 10) || 1;
-      limit = parseInt(limit, 10);
-      const skip = (page - 1) * limit;
-  
-      let query = {};
-  
-      if (search.trim()) {
-        query = {
-          $or: [
-            { vehicleName: { $regex: search, $options: "i" } },
-            { serviceVehicle: { $regex: search, $options: "i" } },
-          ],
-        };
-      }
-  
-      const [vehicles, total] = await Promise.all([
-        Vehicle.find(query).skip(skip).limit(limit),
-        Vehicle.countDocuments(query),
-      ]);
-  
-      res.status(200).json({
-        data: vehicles,
-        page,
-        limit,
-        total,
-      });
+        let { search = "", page = 1, limit = 10 } = req.query;
+
+        page = parseInt(page, 10) || 1;
+        limit = parseInt(limit, 10);
+        const skip = (page - 1) * limit;
+
+        let query = {};
+
+        if (search.trim()) {
+            query = {
+                $or: [
+                    { vehicleName: { $regex: search, $options: "i" } },
+                    { serviceVehicle: { $regex: search, $options: "i" } },
+                ],
+            };
+        }
+
+        const [vehicles, total] = await Promise.all([
+            Vehicle.find(query).skip(skip).limit(limit),
+            Vehicle.countDocuments(query),
+        ]);
+
+        res.status(200).json({
+            data: vehicles,
+            page,
+            limit,
+            total,
+        });
     } catch (error) {
-      console.error("Error in getAllVehicle:", error);
-      res.status(500).json({ message: error.message });
+        console.error("Error in getAllVehicle:", error);
+        res.status(500).json({ message: error.message });
     }
-  };
-  
+};
+
 
 // Read vechicle by ID
 exports.getVehicleById = async (req, res) => {
@@ -112,7 +112,7 @@ exports.deleteVehicle = async (req, res) => {
 exports.addRecord = async (req, res) => {
     try {
         const { vehicleNumber } = req.body
-        
+
         const vehicle = await Vehicle.find({ serviceVehicle: vehicleNumber })
         if (!vehicle) {
             return res.status(404).json({ message: 'Vehicle not found' })
@@ -320,8 +320,8 @@ exports.dismissExpiredRecord = async (req, res) => {
 exports.getVehiclesExceedingServiceKM = async (req, res) => {
     try {
         const vehicles = await Vehicle.find({
-            valid : false,
-            vehicleServiceDismissed: false, 
+            valid: false,
+            vehicleServiceDismissed: false,
         });
 
         if (vehicles.length === 0) {
@@ -350,7 +350,7 @@ exports.getVehiclesExceedingServiceKM = async (req, res) => {
 exports.updateVehicleServiceStatus = async (req, res) => {
     try {
         const { vehicleId } = req.params;
-        const {  role } = req.body; // New serviceKM value
+        const { role } = req.body; // New serviceKM value
 
         // Find the vehicle
         const vehicle = await Vehicle.findById(vehicleId);
@@ -381,5 +381,16 @@ exports.updateVehicleServiceStatus = async (req, res) => {
             message: "An error occurred while updating the vehicle.",
             error: error.message,
         });
+    }
+};
+
+// Get only all vehicle names (no pagination)
+exports.getAllVehicleNames = async (req, res) => {
+    try {
+        const vehicleNames = await Vehicle.find({}, { serviceVehicle: 1, _id: 0 }).sort({ createdAt: -1 });
+        res.status(200).json({ data: vehicleNames });
+    } catch (error) {
+        console.error("Error in getAllVehicleNames:", error);
+        res.status(500).json({ message: error.message });
     }
 };

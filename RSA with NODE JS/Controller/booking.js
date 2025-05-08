@@ -7,16 +7,15 @@ const ShowroomStaff = require('../Model/showroomStaff');
 const mongoose = require('mongoose');
 const Vehicle = require('../Model/vehicle');
 const { io } = require('../config/socket');
-const { capitalizeFirstLetter } = require('../utils/dateUtils');
-const NotificationService = require('../services/notification.service');
+const { capitalizeFirstLetter, convertTo12HourFormat } = require('../utils/dateUtils');
 const Staff = require('../Model/staff');
-
+const agenda = require('../config/Agenda.config')()
 
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
     try {
-        const bookingData = req.body;
+        let bookingData = req.body;
 
         const isFileNumberExisint = await Booking.findOne({ fileNumber: bookingData.fileNumber })
 
@@ -68,22 +67,31 @@ exports.createBooking = async (req, res) => {
         const newBooking = new Booking(bookingData);
         await newBooking.save();
 
-        if (bookingData.provider) {
+        const agendaInstance = await agenda;
+        if (bookingData.pickupDate) {
 
-        } else if (bookingData.driver) {
-            if (source.fcmToken) {
-                const notificationResult = await NotificationService.sendNotification({
-                    token: source.fcmToken,
-                    title: "New Booking Notification",
-                    body: 'A new booking has been assigned to you.',
-                    sound: 'alert'
-                })
-                if (notificationResult.error === 'Token not registered') {
-                    // Option 2: Or you might want to notify admin about the invalid token
-                    console.warn(`Driver ${bookingData.driver} has invalid FCM token`);
-                }
+            const dateNow = convertTo12HourFormat(bookingData.dateNow)
+            const pickupTime = convertTo12HourFormat(bookingData.pickupDate);
+
+            if (new Date(pickupTime) > new Date(dateNow)) {
+                console.log('Scheduling future job');
+                await agendaInstance.schedule(pickupTime, 'activate booking', {
+                    bookingId: newBooking._id
+                });
             }
+            else {
+                console.log('Running job immediately');
+                await agendaInstance.now('activate booking', {
+                    bookingId: newBooking._id
+                });
+            }
+        } else {
+            console.log('Running job immediately 2');
+            await agendaInstance.now('activate booking', {
+                bookingId: newBooking._id
+            });
         }
+
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
 

@@ -3,7 +3,11 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var cors = require('cors')
+const rateLimit = require('express-rate-limit');
+
 var connectDB = require('./config/db')
+var initAgenda = require('./config/Agenda.config.js')
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var adminRouter = require('./routes/admin');
@@ -29,22 +33,35 @@ var attendanceRouter = require('./routes/attendance')
 var pmnrRouter = require('./routes/pmnrReport')
 var expenseRouter = require('./routes/expense')
 var dieselExpensesRouter = require('./routes/dieselExpense')
+var setupAgendaJobs = require('./config/Agenda.config.js')
 
-const cors = require('cors')
 const { app, server } = require('./config/socket.js');
 
+// Connect to database
 connectDB()
+
+setupAgendaJobs().then(() => {
+  console.log("Job Scheduler connected.");
+}).catch(console.error);
 
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], 
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['*'],
-  exposedHeaders: ['Content-Type', 'Authorization'], 
+  exposedHeaders: ['Content-Type', 'Authorization'],
 }))
 
-// view engine setup
 app.set('views', path.join(__dirname, 'views'));
 
+const limiter = rateLimit({
+  windowMs: 10 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests, please wait 10 seconds before retrying.',
+});
+
+app.use(limiter);
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

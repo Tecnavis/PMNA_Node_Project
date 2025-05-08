@@ -274,3 +274,26 @@ exports.verifyOTP = async (req, res) => {
     res.status(500).json({ message: "Server error", success: false, });
   }
 }
+
+exports.getDriversForDropdown = async (req, res) => {
+  try {
+
+    const drivers = await Driver.find().select('_id name').lean();
+
+    const dropdownData = drivers.map(driver => ({
+      _id: driver._id,
+      label: driver.name,
+    }));
+
+    res.json({
+      success: true,
+      data: dropdownData
+    });
+  } catch (error) {
+    console.error('Driver dropdown fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch driver dropdown data'
+    });
+  }
+};
