@@ -4,6 +4,7 @@ import { IRootState } from './store';
 import { toggleRTL, toggleTheme, toggleLocale, toggleMenu, toggleLayout, toggleAnimation, toggleNavbar, toggleSemidark } from './store/themeConfigSlice';
 import store from './store';
 import { useNavigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 function App({ children }: PropsWithChildren) {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -20,8 +21,8 @@ function App({ children }: PropsWithChildren) {
         dispatch(toggleLocale(localStorage.getItem('i18nextLng') || themeConfig.locale));
         dispatch(toggleSemidark(localStorage.getItem('semidark') || themeConfig.semidark));
 
-          // Keydown event listener for navigation
-          const handleKeyDown = (event: KeyboardEvent) => {
+        // Keydown event listener for navigation
+        const handleKeyDown = (event: KeyboardEvent) => {
             const target = event.target as HTMLElement;
 
             // Check if the target element is an input, textarea, or any focusable form element
@@ -49,10 +50,10 @@ function App({ children }: PropsWithChildren) {
 
     return (
         <div
-            className={`${(store.getState().themeConfig.sidebar && 'toggle-sidebar') || ''} ${themeConfig.menu} ${themeConfig.layout} ${
-                themeConfig.rtlClass
-            } main-section antialiased relative font-nunito text-sm font-normal`}
+            className={`${(store.getState().themeConfig.sidebar && 'toggle-sidebar') || ''} ${themeConfig.menu} ${themeConfig.layout} ${themeConfig.rtlClass
+                } main-section antialiased relative font-nunito text-sm font-normal`}
         >
+            <Toaster position="bottom-right" reverseOrder={true}/>
             {children}
         </div>
     );

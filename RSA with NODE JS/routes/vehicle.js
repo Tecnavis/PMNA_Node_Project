@@ -4,12 +4,16 @@ const Jwt = require('../Middileware/jwt')
 const upload = require('../config/multer')
 const router = express.Router();
 
+// base url = vehicle
 
 // Route for getting all records
 router.get('/compliance-record', Jwt,controller.getAllRecordDetails);
 
 //Route for dismissing expericed record
 router.patch('/compliance-record-dismiss', Jwt,controller.dismissExpiredRecord);
+
+//Route for get all vehicles names
+router.get('/names', Jwt,controller.getAllVehicleNames);
 
 //Route for getting single record by ID
 router.get('/compliance-record/:id', Jwt,controller.getRecordById);

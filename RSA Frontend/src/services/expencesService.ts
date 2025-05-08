@@ -10,13 +10,13 @@ export const getExpences = async (
     month?: string,
     year?: string,
     vehicleNumber?: string
-  ): Promise<IDieselExpense[]> => {
-        try {
-            const params = new URLSearchParams();
-            if (month) params.append('month', month);
-            if (year) params.append('year', year);
-            if (vehicleNumber) params.append('vehicleNumber', vehicleNumber);
-        
+): Promise<IDieselExpense[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (month) params.append('month', month);
+        if (year) params.append('year', year);
+        if (vehicleNumber) params.append('vehicleNumber', vehicleNumber);
+
         const response: AxiosResponse<IAPIResponseAllDieselExpenses> = await axios.get(
             `${BASE_URL}/diesel-expenses?${params.toString()}`
         );
@@ -26,7 +26,7 @@ export const getExpences = async (
         return [];
     }
 };
-
+// Approve dieslse expnse
 export const approveExpense = async (expenseId: string, status: string): Promise<IDieselExpense> => {
     try {
         const response = await axios.patch<IAPIResponseApproveDieselExpenses>(
@@ -38,6 +38,47 @@ export const approveExpense = async (expenseId: string, status: string): Promise
         throw error;
     }
 };
+// Update dieslse expnse
+export const udpateDieselExpance = async (
+    expenseId: string,
+    data: any
+): Promise<IDieselExpense> => {
+    try {
+        const response = await axios.put(
+            `${BASE_URL}/diesel-expenses/${expenseId}`,
+            { ...data }
+        );
+        return response.data.data;
+    } catch (error) {
+        console.error('Error updating expense status:', error);
+        throw error;
+    }
+}
+
+// Create new  dieslse expnse
+export const createDieselExpance = async (
+    data: any
+): Promise<IDieselExpense> => {
+    try {
+        const response = await axios.post(
+            `${BASE_URL}/diesel-expenses/`,
+            data,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            }
+        );
+        return response.data.data;
+    } catch (error) {
+        console.error('Error updating expense status:', error);
+        throw error;
+    }
+}
+
+
+// ---------------------------------------------------------------------Expense Service-----------------------------------------------------------------------------------------------------------------------------------------------
+
 
 export const fetchPendingExpenses = async (): Promise<Expense[]> => {
     try {
@@ -78,3 +119,4 @@ export const updateStatus = async (
         throw error;
     }
 };
+
