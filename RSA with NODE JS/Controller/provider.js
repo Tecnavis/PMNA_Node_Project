@@ -1,6 +1,8 @@
 const Provider = require('../Model/provider');
+const Booking = require('../Model/booking');
 const { sendOtp, verifyOtp } = require('../services/otpService');
 const jwt = require('jsonwebtoken');
+const { updateProviderFinancials } = require('../services/providerService');
 
 // Create a new provider
 exports.createProvider = async (req, res) => {
@@ -46,8 +48,40 @@ exports.createProvider = async (req, res) => {
 // Get all providers
 exports.getAllProviders = async (req, res) => {
   try {
-    const providers = await Provider.find().populate('baseLocation serviceDetails.serviceType');
-    res.status(200).json(providers);
+    const providers = await Provider.find().populate('baseLocation serviceDetails.serviceType').lean();
+
+    const providerIds = providers.map(provider => provider._id);
+
+    await Promise.all(
+      providers.map(provider =>
+        updateProviderFinancials(
+          provider._id
+        )
+      )
+    );
+
+    // Fetch the last booking status for each driver
+    const lastBookings = await Booking.aggregate([
+      { $match: { provider: { $in: providerIds } } },
+      { $sort: { updatedAt: -1 } }, // Sort by latest updatedAt
+      {
+        $group: {
+          _id: "$provider",
+          status: { $first: "$status" }, // Get the latest status
+        }
+      }
+    ]);
+
+    // Convert to lookup maps for fast access
+    const statusMap = new Map(lastBookings.map(booking => [booking._id.toString(), booking.status]));
+
+    // Merge data into driver objects
+    const updatedProvider = providers.map(provider => ({
+      ...provider,
+      status: statusMap.get(provider._id.toString()) || "Unknown"
+    }));
+
+    res.status(200).json(updatedProvider);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -58,6 +92,11 @@ exports.getProviderById = async (req, res) => {
   try {
     const provider = await Provider.findById(req.params.id).populate('baseLocation serviceDetails.serviceType');
     if (!provider) return res.status(404).json({ message: 'Provider not found' });
+
+    updateProviderFinancials(
+      provider._id
+    )
+
     res.status(200).json(provider);
   } catch (error) {
     res.status(500).json({ message: error.message });

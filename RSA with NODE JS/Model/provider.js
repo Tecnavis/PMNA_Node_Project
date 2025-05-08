@@ -74,6 +74,13 @@ const providerSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  currentBookingStatus: {
+    type: String,
+  },
+  balanceAmount: {
+    type: Number,
+    default: 0
+  },
 });
 
 module.exports = mongoose.model('Provider', providerSchema);
