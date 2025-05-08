@@ -6,10 +6,19 @@ import { Expense, IAPIResponseAllDieselExpenses, IAPIResponseApproveDieselExpens
 
 
 // API service for fetching dieselExpenses
-export const getExpences = async (): Promise<IDieselExpense[]> => {
-    try {
+export const getExpences = async (
+    month?: string,
+    year?: string,
+    vehicleNumber?: string
+  ): Promise<IDieselExpense[]> => {
+        try {
+            const params = new URLSearchParams();
+            if (month) params.append('month', month);
+            if (year) params.append('year', year);
+            if (vehicleNumber) params.append('vehicleNumber', vehicleNumber);
+        
         const response: AxiosResponse<IAPIResponseAllDieselExpenses> = await axios.get(
-            `${BASE_URL}/diesel-expenses`
+            `${BASE_URL}/diesel-expenses?${params.toString()}`
         );
         return response.data.data;
     } catch (error) {

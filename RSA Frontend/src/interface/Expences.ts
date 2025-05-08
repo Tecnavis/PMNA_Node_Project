@@ -10,7 +10,7 @@ export interface IDieselExpense {
     description: string;
     amount: number;
     images: string[];
-    vehicleNumber: string;
+    vehicleNumber?: string;
     expenceKm: number;
     status: 'Pending' | 'Approved' | 'Rejected';
     createdAt: string;
