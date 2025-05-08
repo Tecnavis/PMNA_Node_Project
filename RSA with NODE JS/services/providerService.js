@@ -69,13 +69,13 @@ async function calculateTotalSalary(providerId) {
     return result[0]?.totalSalary || 0;
 }
 // Update financial values in driver side
-async function updateProviderFinancials(providerId) {
+async function updateProviderFinancials(providerId, advance = 0) {
     const netTotalAmount = await calculateNetTotalAmountInHand(providerId);
     const totalSalary = await calculateTotalSalary(providerId);
 
     const balance = calculateBalanceAmount(netTotalAmount, totalSalary) || 0
 
-    const finalCashInHand = netTotalAmount 
+    const finalCashInHand = netTotalAmount + advance
     const updatedDriver = await Provider.findByIdAndUpdate(
         providerId,
         {

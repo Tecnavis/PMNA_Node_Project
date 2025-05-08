@@ -55,7 +55,8 @@ exports.getAllProviders = async (req, res) => {
     await Promise.all(
       providers.map(provider =>
         updateProviderFinancials(
-          provider._id
+          provider._id,
+          providers.filter(d => String(d._id) === String(provider._id))[0].advance || 0
         )
       )
     );
@@ -94,7 +95,8 @@ exports.getProviderById = async (req, res) => {
     if (!provider) return res.status(404).json({ message: 'Provider not found' });
 
     updateProviderFinancials(
-      provider._id
+      provider._id,
+      provider.advance,
     )
 
     res.status(200).json(provider);
@@ -245,6 +247,16 @@ exports.filtergetProviders = async (req, res) => {
     }
 
     const providers = await Provider.find(filter).populate('baseLocation serviceDetails.serviceType');
+
+    await Promise.all(
+      providers.map(provider =>
+        updateProviderFinancials(
+          provider._id,
+          providers.filter(d => String(d._id) === String(provider._id))[0].advance || 0
+        )
+      )
+    );
+
     res.json(providers);
   } catch (error) {
     res.status(500).json({ error: error.message });

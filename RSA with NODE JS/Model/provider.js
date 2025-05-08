@@ -35,10 +35,10 @@ const providerSchema = new mongoose.Schema({
     required: true,
   },
   cashInHand: {
-    type: Number, 
+    type: Number,
   },
   driverSalary: {
-    type: Number, 
+    type: Number,
   },
   serviceDetails: [
     {
@@ -78,6 +78,10 @@ const providerSchema = new mongoose.Schema({
     type: String,
   },
   balanceAmount: {
+    type: Number,
+    default: 0
+  },
+  advance: {
     type: Number,
     default: 0
   },
