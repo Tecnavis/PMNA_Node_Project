@@ -69,7 +69,18 @@ exports.createBooking = async (req, res) => {
         await newBooking.save();
 
         if (bookingData.provider) {
-
+            if (source.fcmToken) {
+                const notificationResult = await NotificationService.sendNotification({
+                    token: source.fcmToken,
+                    title: "New Booking Notification",
+                    body: 'A new booking has been assigned to you.',
+                    sound: 'alert'
+                })
+                if (notificationResult.error === 'Token not registered') {
+                    // Option 2: Or you might want to notify admin about the invalid token
+                    console.warn(`Driver ${bookingData.driver} has invalid FCM token`);
+                }
+            }
         } else if (bookingData.driver) {
             if (source.fcmToken) {
                 const notificationResult = await NotificationService.sendNotification({
