@@ -55,7 +55,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 const limiter = rateLimit({
   windowMs: 10 * 1000,
-  max: 10,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too many requests, please wait 10 seconds before retrying.',

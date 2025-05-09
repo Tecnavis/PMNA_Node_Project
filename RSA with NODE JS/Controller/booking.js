@@ -456,20 +456,21 @@ exports.getAllBookings = async (req, res) => {
                     { customerVehicleNumber: regex },
                 ];
 
-                // Only search drivers/providers if search is numeric
-                // if (/^\d+$/.test(regex)) {
-                    const [matchingDrivers, matchingProviders] = await Promise.all([
-                        Driver.find({ name: regex }).select('_id').lean(),
-                        Provider.find({ name: regex }).select('_id').lean()
-                    ]);
+                const [matchingDrivers, matchingProviders, matchingCompanies] = await Promise.all([
+                    Driver.find({ name: regex }).select('_id').lean(),
+                    Provider.find({ name: regex }).select('_id').lean(),
+                    Company.find({ name: regex }).select('_id').lean()
+                ]);
 
-                    if (matchingDrivers.length > 0) {
-                        searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
-                    }
-                    if (matchingProviders.length > 0) {
-                        searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
-                    }
-                // }
+                if (matchingDrivers.length > 0) {
+                    searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
+                }
+                if (matchingProviders.length > 0) {
+                    searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
+                }
+                if (matchingCompanies.length > 0) {
+                    searchConditions.push({ company: { $in: matchingCompanies.map(c => c._id) } });
+                }
 
                 query.$or = searchConditions;
             }
