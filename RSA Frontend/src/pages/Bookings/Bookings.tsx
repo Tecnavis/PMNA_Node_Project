@@ -54,7 +54,7 @@ interface Company {
 export interface Booking {
     invoiceNumber: string;
     partialPayment: Boolean;
-    partialPaymentRemark:string;
+    partialPaymentRemark: string;
     receivedUser: string,// new prop
     cancelReason: string,// w prop
     cancelImage: string,// new prop
@@ -165,6 +165,7 @@ const Bookings: React.FC = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [company, setCompany] = useState<Company | null>(null);
     const [modal5, setModal5] = useState<boolean>(false);
+    const [search, setSearch] = useState<string>('');
     const [isVisible, setIsVisible] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
@@ -185,7 +186,7 @@ const Bookings: React.FC = () => {
 
     const handlePageChange = (page: any) => {
         setCurrentPage(page);
-        fetchBookings('', page);
+        fetchBookings(page);
     };
 
     const navigate = useNavigate();
@@ -203,10 +204,10 @@ const Bookings: React.FC = () => {
     };
 
     // getting all bookings
-    const fetchBookings = async (searchTerm = '', page = 1, limit = 10) => {
+    const fetchBookings = async (page = 1, limit = 10) => {
         try {
             const response = await axios.get(`${backendUrl}/booking`, {
-                params: { search: searchTerm, page, limit, status: 'Order Completed' },
+                params: { search, page, limit, status: 'Order Completed' },
             });
 
             setBookings(response.data.bookings);
@@ -400,7 +401,10 @@ const Bookings: React.FC = () => {
                             type="text"
                             placeholder="Search bookings..."
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
-                            onChange={(e) => fetchBookings(e.target.value)} // Trigger search on input change
+                            onChange={(e) => {
+                                setSearch(e.target.value)
+                                fetchBookings()
+                            }} // Trigger search on input change
                         />
                     </div>
 
