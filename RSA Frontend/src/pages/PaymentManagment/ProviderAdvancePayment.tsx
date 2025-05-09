@@ -234,8 +234,8 @@ const AdvancePayment: React.FC = () => {
                             -- Select a Type --
                         </option>
                         <option value="advance">Advance</option>
-                        <option value="salary">Cash Collection</option>
-                        <option value="">Expense</option>
+                        {/* <option value="salary">Cash Collection</option>
+                        <option value="">Expense</option> */}
                     </select>
                 </div>
                 {

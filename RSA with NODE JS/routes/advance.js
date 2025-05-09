@@ -5,6 +5,5 @@ const router = express.Router();
 
 router.get('/', jwt, controller.getAllAdvance)
 router.post('/', jwt, controller.createNewAdvance)
-router.post('/provider', jwt, controller.createNewAdvance)
 
 module.exports = router;
