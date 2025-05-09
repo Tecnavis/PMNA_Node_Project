@@ -12,8 +12,8 @@ import Swal from 'sweetalert2';
 
 const AdvancePayment: React.FC = () => {
 
-    const [drivers, setDrivers] = useState<Driver[]>([]);
-    const [selectedDriver, setSelectedDriver] = useState<string>('');
+    const [providers, setProviders] = useState<Driver[]>([]);
+    const [selectedProvider, setSelectedProvider] = useState<string>('');
     const [selectedType, setSelectedType] = useState<string>('');
     const [amount, setAmount] = useState<number | ''>('');
     const [advanceDetails, setAdvanceDetails] = useState<AdvanceData[]>([]);
@@ -43,21 +43,25 @@ const AdvancePayment: React.FC = () => {
         window.location.reload();
     };
 
-    const fetchDrivers = async () => {
+    const fetchProviders = async () => {
         try {
-            const response = await axios.get(`${BASE_URL}/driver`);
-            setDrivers(response.data);
-            if (drivers.length) {
+            const response = await axios.get(`${BASE_URL}/provider`);
+            setProviders(response.data);
+            if (providers.length) {
                 updateNetTotalAmount(response.data)
             }
         } catch (error) {
-            console.error('Error fetching drivers:', error);
+            console.error('Error fetching providers:', error);
         }
     };
 
     const fetchAdvancePayment = async () => {
         try {
-            const res = await axios.get(`${BASE_URL}/advance-payment`)
+            const res = await axios.get(`${BASE_URL}/advance-payment`, {
+                params: {
+                    driverType: "Provider"
+                }
+            })
             setAdvanceDetails(res.data.data);
         } catch (error) {
             console.log('error, error fetching advacen payment', error)
@@ -80,7 +84,7 @@ const AdvancePayment: React.FC = () => {
             });
             return;
         }
-    
+
         const result = await Swal.fire({
             title: 'Are you sure?',
             text: `You are about to settle an advance payment of ₹${amount}.`,
@@ -90,12 +94,12 @@ const AdvancePayment: React.FC = () => {
             cancelButtonText: 'Cancel',
             reverseButtons: true
         });
-    
+
         if (result.isConfirmed) {
             try {
                 await axios.post(`${BASE_URL}/advance-payment`, {
                     advance: amount,
-                    driverId: selectedDriver,
+                    driverId: selectedProvider,
                     remark,
                     type: 'Advance'
                 });
@@ -109,7 +113,7 @@ const AdvancePayment: React.FC = () => {
                 fetchAdvancePayment();
                 setRemark('');
                 setAmount('');
-                fetchDrivers();
+                fetchProviders();
             } catch (error) {
                 Swal.fire({
                     icon: 'error',
@@ -120,7 +124,7 @@ const AdvancePayment: React.FC = () => {
             }
         }
     };
-    
+
 
     const fetchCashCollection = async () => {
         try {
@@ -163,7 +167,7 @@ const AdvancePayment: React.FC = () => {
                 amount: receivedAmount,
                 balance: ((Number(inHandAmount) || 0) - (Number(receivedAmount) || 0)),
                 currentNetAmount: inHandAmount,
-                driver: selectedDriver,
+                driver: selectedProvider,
                 receivedAmount,
                 remark
             })
@@ -178,45 +182,45 @@ const AdvancePayment: React.FC = () => {
         }
     }
     useEffect(() => {
-        fetchDrivers()
+        fetchProviders()
         fetchAdvancePayment()
         fetchCashCollection()
         fetchReceivedData()
     }, [])
 
-    const updateNetTotalAmount = (driver?: Driver[]) => {
-        if (driver?.length) {
-            const inHandAmountForSelectedDriver = driver.filter((d) => d._id === selectedDriver)
-            console.log('inHandAmountForSelectedDriver',inHandAmountForSelectedDriver[0]?.cashInHand)
-            setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand)
+    const updateNetTotalAmount = (provider?: Driver[]) => {
+        if (provider?.length) {
+            const inHandAmountForSelectedProvider = provider.filter((d) => d._id === selectedProvider)
+            console.log('inHandAmountForSelectedProvider', inHandAmountForSelectedProvider[0]?.cashInHand)
+            setInHandAmount(inHandAmountForSelectedProvider[0]?.cashInHand)
         } else {
 
-            const inHandAmountForSelectedDriver = drivers.filter((driver) => driver._id === selectedDriver)
-            setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand)
+            const inHandAmountForSelectedProvider = providers?.filter((provider) => provider._id === selectedProvider)
+            setInHandAmount(inHandAmountForSelectedProvider[0]?.cashInHand)
         }
     }
 
     useEffect(() => {
         updateNetTotalAmount()
-    }, [selectedDriver])
+    }, [selectedProvider])
 
     return (
         <main className='flex flex-col items-center justify-center'>
             <div className='rounded-md shadow-md min-w-[85%] p-5'>
                 <p className='text-4xl text-gray-700 uppercase text-center mb-4 font-bold'>Payment Management</p>
                 <div className="my-3">
-                    <label htmlFor="driverDropdown" className='mb-2 text-base'>Select Driver :</label>
+                    <label htmlFor="driverDropdown" className='mb-2 text-base'>Select Provider :</label>
                     <select id="driverDropdown"
-                        value={selectedDriver}
-                        onChange={(e) => setSelectedDriver(e.target.value)}
+                        value={selectedProvider}
+                        onChange={(e) => setSelectedProvider(e.target.value)}
                         className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
                     >
                         <option value="" disabled>
-                            -- Select a Driver --
+                            -- Select a Provider --
                         </option>
-                        {drivers?.map((driver) => (
-                            <option key={driver._id} value={driver._id}>
-                                {driver.name}
+                        {providers?.map((provider) => (
+                            <option key={provider._id} value={provider._id}>
+                                {provider.name}
                             </option>
                         ))}
                     </select>
@@ -230,8 +234,8 @@ const AdvancePayment: React.FC = () => {
                             -- Select a Type --
                         </option>
                         <option value="advance">Advance</option>
-                        <option value="salary">Cash Collection</option>
-                        <option value="">Expense</option>
+                        {/* <option value="salary">Cash Collection</option>
+                        <option value="">Expense</option> */}
                     </select>
                 </div>
                 {

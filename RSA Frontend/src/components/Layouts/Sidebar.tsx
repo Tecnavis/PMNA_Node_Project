@@ -275,7 +275,10 @@ const Sidebar = () => {
                                     <AnimateHeight duration={300} height={currentMenu === 'Payment Management' ? 'auto' : 0}>
                                         <ul className="sub-menu text-gray-500">
                                             <li>
-                                                <NavLink to="/advance-payment-managment">{t('Payment Report')}</NavLink>
+                                                <NavLink to="/driver-advance-payment-managment">{t('Driver Payment Report')}</NavLink>
+                                            </li>
+                                            <li>
+                                                <NavLink to="/provider-advance-payment-managment">{t('Provider Payment Report')}</NavLink>
                                             </li>
                                             <li>
                                                 <NavLink to="/pmnr-report">{t('Payment Work Report')}</NavLink>

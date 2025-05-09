@@ -6,14 +6,22 @@ const AdvanceSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
+    cashInHand: {
+        type: Number,
+        default: 0
+    },
     advance: {
         type: Number,
         required: true,
         default: 0
-    }, 
+    },
     driver: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Driver'
+        ref: 'userModel'
+    },
+    userModel: {
+        type: String,
+        enum: ["Driver", 'Provider']
     },
     type: {
         type: String,

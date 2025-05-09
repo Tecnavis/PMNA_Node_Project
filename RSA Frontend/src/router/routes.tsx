@@ -9,7 +9,8 @@ const DieselExpences = lazy(()=> import ( '../pages/Expences/DieselExpences'))
 const OtherExpences = lazy(()=> import ( '../pages/Expences/OtherExpences'))
 const Expence = lazy(()=> import ( '../pages/Reports/DriverReport/Expence'))
 
-const AdvancePayment = lazy(() => import('../pages/PaymentManagment/AdvancePayment'))
+const DriverAdvancePayment = lazy(() => import('../pages/PaymentManagment/DriverAdvancePayment'))
+const ProviderAdvancePayment = lazy(() => import('../pages/PaymentManagment/ProviderAdvancePayment'))
 const ProviderReport = lazy(() => import('../pages/Reports/ProviderReport/ProviderReport'))
 const CompanyReport = lazy(() => import('../pages/Reports/CompanyReport/CompanyReport'))
 const AdminAttendance = lazy(() => import('../pages/Attendance/AdminAttendance'))
@@ -243,8 +244,12 @@ const routes = [
         element: <StaffReport />,
     },
     {
-        path: '/advance-payment-managment',
-        element: <AdvancePayment />,
+        path: '/driver-advance-payment-managment',
+        element: <DriverAdvancePayment />,
+    },
+    {
+        path: '/provider-advance-payment-managment',
+        element: <ProviderAdvancePayment />,
     },
     {
         path: '/pmnr-report',
