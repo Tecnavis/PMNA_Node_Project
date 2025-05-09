@@ -5,5 +5,6 @@ const router = express.Router();
 
 router.get('/', jwt, controller.getAllReceivedDetails)
 router.post('/', jwt, controller.createReceivedDetails)
+router.post('/provider', jwt, controller.createReceivedDetails)
 
 module.exports = router;

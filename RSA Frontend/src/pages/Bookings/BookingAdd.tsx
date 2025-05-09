@@ -1282,7 +1282,7 @@ const BookingAdd: React.FC = () => {
                                 id="date-time"
                                 options={{ enableTime: true, dateFormat: "Y-m-d\\TH:i" }}
                                 value={pickupDate}
-                                onChange={([date]) => setPickupDate(""+date)}
+                                onChange={([date]) => setPickupDate("" + date)}
                                 className="form-input"
                             />
                         </div>
@@ -1771,9 +1771,15 @@ const BookingAdd: React.FC = () => {
                                         </h2>
                                     </>
                                         : <>
-                                            <h2 style={{ fontSize: 'x-large' }}>
-                                                Driver salary is :<span style={{ marginLeft: '10px' }}>₹{driverSalary || 0}</span>
-                                            </h2>
+                                            <div style={{ fontSize: 'x-large' }} className='flex item-center justify-center'>
+                                                <span className='pt-1.5'>Driver salary is ₹:</span>
+                                                <input
+                                                    type="number"
+                                                    className='border rounded-md w-24 pl-1'
+                                                    value={driverSalary === null || driverSalary === undefined ? '' : driverSalary}
+                                                    onChange={(e) => setDriverSalary(e.target.value === '' ? null : Number(e.target.value))}
+                                                />
+                                            </div>
                                         </>
                                 }
 
