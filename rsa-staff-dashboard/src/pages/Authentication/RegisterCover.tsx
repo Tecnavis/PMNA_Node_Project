@@ -31,6 +31,7 @@ const RegisterCover = () => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [registeringData, setRegisteringData] = useState({});
     const [isSignIn, setIsSignIn] = useState(true);
+    const [imageError, setImageError] = useState(false);
     const [showRoomDetails, setShowRoomDetails] = useState<ShowRoomDetailsType>({
         id: '',
         name: '',
@@ -256,16 +257,19 @@ const RegisterCover = () => {
                                 </h1>
 
                                 {/* Showroom Image */}
-                                <div className="mt-5 w-full max-w-[445px]">
-                                    <img
-                                        src={`${CLOUD_IMAGE}${showRoomDetails.image}`}
-                                        alt="https://via.placeholder.com/445x300?text=Showroom+Image"
-                                        className="w-full  rounded-md shadow-lg border-4  object-fill"
-                                        onError={(e) => {
-                                            e.currentTarget.onerror = null;
-                                            e.currentTarget.src = 'https://via.placeholder.com/445x300?text=Showroom+Image';
-                                        }}
-                                    />
+                                <div className="mt-5 w-full max-w-[445px] max-h-64">
+                                    {!imageError && showRoomDetails.image ? (
+                                        <img
+                                            src={`${CLOUD_IMAGE}${showRoomDetails.image}`}
+                                            alt="Showroom-Image"
+                                            onError={() => setImageError(true)}
+                                            className="w-full rounded-md shadow-lg border-4 max-h-64 object-contain"
+                                        />
+                                    ) : (
+                                        <span className="w-full h-64 flex items-center justify-center border-4 rounded-md shadow-lg text-gray-500">
+                                            No Image Available
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Showroom Info */}
