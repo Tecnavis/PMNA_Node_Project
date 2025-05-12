@@ -2,14 +2,30 @@ const { default: mongoose } = require('mongoose');
 const Advance = require('../Model/advance');
 const Booking = require('../Model/booking');
 const Driver = require('../Model/driver');
+const Provider = require('../Model/provider');
 
 //Controller for creating new advance
 exports.createNewAdvance = async (req, res) => {
     const { remark, advance, driverId, type } = req.body
     try {
 
-        const driver = await Driver.findById(driverId);
-        if (!driver) return res.status(404).json({ message: 'Driver not found' });
+        if (!remark || !advance || !driverId || !type) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        let source
+        let userType = "Driver"
+        source = await Driver.findById(driverId);
+
+        if (!source) {
+            source = await Provider.findById(driverId);
+            userType = 'Provider'
+        }
+
+        if (!source) {
+            userType = ''
+            return res.status(404).json({ message: 'Driver or Provider not found' });
+        }
 
         // Fetch all advance entries for the driver
         const previousAdvances = await Advance.find({ driver: driverId });
@@ -25,18 +41,19 @@ exports.createNewAdvance = async (req, res) => {
         // Create new advance document
 
         // Update driver's total advance
-        driver.advance = newAdvance;
-        await driver.save();
+        source.advance = newAdvance;
+        await source.save();
 
         const newAdvanceDoc = await Advance.create({
             driver: driverId,
             addedAdvance: Number(advance),
             advance: newAdvance,
             type,
+            userModel: userType,
             remark,
         });
 
-        const advanceMoreData = await settleBookingsWithAdvance(driverId, newAdvanceDoc);
+        const advanceMoreData = await settleBookingsWithAdvance(driverId, newAdvanceDoc, userType);
 
         // Update advance doc with settlement data
         newAdvanceDoc.filesNumbers = advanceMoreData.filesNumbers;
@@ -45,15 +62,16 @@ exports.createNewAdvance = async (req, res) => {
         newAdvanceDoc.transferdSalary = advanceMoreData.transferdSalary;
         await newAdvanceDoc.save();
 
-        res.status(200).json({ message: 'Advance saved and settlement done.', driver });
+        res.status(200).json({ message: 'Advance saved and settlement done.', driver: source });
 
     } catch (error) {
-        console.log(error)
+        console.log(error);
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 }
 
 // helper controller for update advance amount to all driver booking salary
-const settleBookingsWithAdvance = async (driverId, advanceDoc) => {
+const settleBookingsWithAdvance = async (driverId, advanceDoc, userType) => {
 
     const driverObjectId = new mongoose.Types.ObjectId(driverId);
 
@@ -65,25 +83,26 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc) => {
     }
 
     const bookings = await Booking.find({
-        driver: driverObjectId,
+        [userType === 'Driver' ? 'driver' : 'provider']: driverObjectId,
         verified: true,
     });
+
     if (!bookings.length || bookings.length === 0) {
-        return
+        return data
     }
     let remainingAdvance = advanceDoc.advance;
 
     for (const booking of bookings) {
-        
+
         const currentTransferred = booking.transferedSalary || 0;
         const balanceSalary = booking.driverSalary - currentTransferred;
-        
+
         if (balanceSalary <= 0) continue;
 
         data.filesNumbers.push(booking.fileNumber)
         data.driverSalary.push(booking.driverSalary)
         data.balanceSalary.push(balanceSalary)
-        
+
         const transferAmount = Math.min(balanceSalary, remainingAdvance);
 
         data.transferdSalary.push(transferAmount)
@@ -96,14 +115,18 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc) => {
     }
 
     advanceDoc.advance = remainingAdvance;
-    advanceDoc.cashInHand += remainingAdvance;
+    advanceDoc.cashInHand = (advanceDoc.cashInHand || 0) + remainingAdvance;
     await advanceDoc.save();
 
-    await Driver.findByIdAndUpdate(driverId, { advance: remainingAdvance });
+    if (userType === 'Provider') {
+        await Provider.findByIdAndUpdate(driverId, { advance: remainingAdvance });
+    } else {
+        await Driver.findByIdAndUpdate(driverId, { advance: remainingAdvance });
+    }
 
     advanceDoc.filesNumbers = data.filesNumbers;
     advanceDoc.driverSalary = data.driverSalary;
-    advanceDoc.balanceSalry = data.balanceSalry;
+    advanceDoc.balanceSalary = data.balanceSalary;
     advanceDoc.transferdSalary = data.transferdSalary;
 
     await advanceDoc.save();
@@ -114,7 +137,15 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc) => {
 //Controller for get all advance
 exports.getAllAdvance = async (req, res) => {
     try {
-        const allAdvance = await Advance.find().sort({ createdAt: -1 }).populate('driver');
+        const { driverType } = req.query;
+
+        let allAdvance
+
+        if (driverType === 'Driver') {
+            allAdvance = await Advance.find({ userModel: "Driver" }).sort({ createdAt: -1 }).populate('userModel');
+        } else {
+            allAdvance = await Advance.find({ userModel: "Provider" }).sort({ createdAt: -1 }).populate('userModel');
+        }
 
         if (!allAdvance) {
             return res.statu(404).json({
@@ -128,5 +159,6 @@ exports.getAllAdvance = async (req, res) => {
         })
     } catch (error) {
         console.log(error)
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 }

@@ -376,7 +376,7 @@ const Showroom: React.FC = () => {
                                                     <button
                                                         onClick={() => {
                                                             setModalOpen(true)
-                                                            setUrl(`https://pmna-showroom-staff.onrender.com/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
+                                                            setUrl(`http://showroomstaff.rsakerala.com/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
                                                         }}
                                                         style={{
                                                             backgroundColor: '#007bff',
