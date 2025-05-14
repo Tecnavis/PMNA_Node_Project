@@ -10,5 +10,6 @@ router.get('/', function (req, res, next) {
 
 router.get('/dashboard',  controller.dashboard)
 router.get('/showroom-dashboard/:id', jwt, controller.showroomDashboard)
+router.get('/logs',  controller.logs)
 
 module.exports = router;

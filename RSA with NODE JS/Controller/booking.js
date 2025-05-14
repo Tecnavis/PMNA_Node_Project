@@ -10,16 +10,34 @@ const { io } = require('../config/socket');
 const { capitalizeFirstLetter, convertTo12HourFormat } = require('../utils/dateUtils');
 const Staff = require('../Model/staff');
 const agenda = require('../config/Agenda.config')()
+const LoggerFactory = require('../utils/logger/LoggerFactory');
 
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
+    let bookingData = req.body;
+
     try {
-        let bookingData = req.body;
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/booking',
+            handler: 'createBooking',
+        });
+
+        routeLogger.info({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking creation process started...');
 
         const isFileNumberExisint = await Booking.findOne({ fileNumber: bookingData.fileNumber })
 
         if (isFileNumberExisint) {
+
+            routeLogger.error({
+                fileNumber: bookingData.fileNumber,
+                doneBy: req.user || 'unknown'
+            }, 'New Booking creation process failed, Enter a unique file Number');
+
             return res.status(400).json({ message: "Enter a unique file Number", success: false });
         }
 
@@ -46,15 +64,27 @@ exports.createBooking = async (req, res) => {
 
             if (bookingData.driver) {
                 source = await Driver.findById(bookingData.driver);
+                routeLogger.error({
+                    fileNumber: bookingData.fileNumber,
+                    doneBy: req.user || 'unknown'
+                }, 'New Booking creation process failed, Driver not found');
                 if (!source) return res.status(404).json({ message: "Driver not found" });
 
             } else {
                 source = await Provider.findById(bookingData.provider);
+                routeLogger.error({
+                    fileNumber: bookingData.fileNumber,
+                    doneBy: req.user || 'unknown'
+                }, 'New Booking creation process failed, Provider not found');
                 if (!source) return res.status(404).json({ message: "Provider not found" });
             }
 
             const selectedVehicle = getVehicleForService(bookingData.driver ? source.vehicle : source.serviceDetails, bookingData.serviceType);
             if (!selectedVehicle) {
+                routeLogger.error({
+                    fileNumber: bookingData.fileNumber,
+                    doneBy: req.user || 'unknown'
+                }, 'New Booking creation process failed, Vehicle not found for the selected service type.');
                 return res.status(404).json({ message: "Vehicle not found for the selected service type" });
             }
 
@@ -67,6 +97,10 @@ exports.createBooking = async (req, res) => {
         const newBooking = new Booking(bookingData);
         await newBooking.save();
 
+        routeLogger.info({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking created successfull.');
 
         const agendaInstance = await agenda;
         if (bookingData.pickupDate) {
@@ -115,6 +149,12 @@ exports.createBooking = async (req, res) => {
             }
         });
     } catch (error) {
+
+        routeLogger.FATAL({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking created failed.');
+
         if (error.name === "ValidationError") {
             return res.status(400).json({
                 success: false,
@@ -122,7 +162,7 @@ exports.createBooking = async (req, res) => {
                 errors: error.errors,
             });
         }
-        console.log(error)
+
         res.status(500).json({
             success: false,
             message: "An internal server error occurred",
@@ -133,12 +173,21 @@ exports.createBooking = async (req, res) => {
 
 // Controller to create a booking for showroom and showroom staff dashboard
 exports.addBookingForShowroom = async (req, res) => {
+    let bookingData = req.body;
     try {
-        let bookingData = req.body;
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/booking/showroom/add-booking',
+            handler: 'addBookingForShowroom',
+        });
 
         const showroomData = await Showroom.findById(bookingData.showroom).lean();
 
         if (!showroomData) {
+            routeLogger.FATAL({
+                fileNumber: bookingData.fileNumber,
+                doneBy: req.user || 'unknown'
+            }, 'New Booking created failed.Showroom not found. Please try another showroom');
             return res.status(404).json({
                 message: 'Showroom not found. Please try another showroom.',
                 success: false,
@@ -156,6 +205,10 @@ exports.addBookingForShowroom = async (req, res) => {
 
         const newBooking = await Booking.create(enrichedBookingData);
 
+        routeLogger.info({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Showroom Booking created successfull.');
 
         res.status(201).json({
             message: 'Booking created successfully',
@@ -181,6 +234,12 @@ exports.addBookingForShowroom = async (req, res) => {
             }
         });
     } catch (error) {
+
+        routeLogger.FATAL({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking created failed.');
+
         if (error.name === "ValidationError") {
             return res.status(400).json({
                 success: false,
@@ -306,7 +365,11 @@ exports.getOrderCompletedBookings = async (req, res) => {
 
         // Handle search
         if (search) {
+
+            query._includeHidden = true;
+            
             search = search.trim();
+
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (dateRegex.test(search)) {
                 const [day, month, year] = search.split('/');
@@ -372,6 +435,10 @@ exports.getOrderCompletedBookings = async (req, res) => {
 // ------------------------------
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/booking',
+        handler: 'createBooking',
+    });
     try {
         let {
             search,
@@ -529,6 +596,9 @@ exports.getAllBookings = async (req, res) => {
         const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
         const balanceAmountToCollect = overallAmount - totalCollectedAmount;
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'Booking fetch success.');
         return res.status(200).json({
             total,
             page,

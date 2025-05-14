@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+require('dotenv').config();
 
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not set');

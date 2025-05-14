@@ -5,10 +5,18 @@ const bcrypt = require('bcrypt');
 const { generateShowRoomLink } = require('../utils/generateLink');
 const { sendOtp, verifyOtp } = require('../services/otpService');
 const { default: mongoose } = require('mongoose');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
+const { StatusCodes } = require('http-status-codes');
+const LoggerFactory = require('../utils/logger/LoggerFactory');
+const { setVerifiedShowroomsThisMonth } = require('../services/showroomService');
 
 // Create a showroom
 exports.createShowroom = async (req, res) => {
+  const routeLogger = LoggerFactory.createChildLogger({
+    route: '/showroom',
+    handler: 'createShowroom',
+  });
   try {
     const {
       name,
@@ -24,6 +32,7 @@ exports.createShowroom = async (req, res) => {
       state,
       district,
       services, // May be undefined or missing
+      addedBy
     } = req.body;
 
     // Parse services if it's a string; otherwise, default to an empty object
@@ -81,9 +90,18 @@ exports.createShowroom = async (req, res) => {
           selected: parsedServices.showroom?.selected || false,
         },
       },
+      addedBy: addedBy || null
     });
 
+    routeLogger.info('New Showroom Created');
+
     const savedShowroom = await showroom.save();
+
+    routeLogger.info({
+      showroomName: savedShowroom.name,
+      doneBy: req.user || 'unknown'
+    }, 'New Showroom added in database successfully.');
+
     res.status(201).json(savedShowroom);
   } catch (error) {
     console.error('Error creating showroom:', error);
@@ -94,8 +112,17 @@ exports.createShowroom = async (req, res) => {
 // Get all showrooms
 exports.getShowrooms = async (req, res) => {
   try {
+    const routeLogger = LoggerFactory.createChildLogger({
+      route: '/showroom',
+      handler: 'createShowroom',
+    });
+    routeLogger.info('Showroom fething...');
+
     const showrooms = await Showroom.find()
       .populate('showroomId')
+
+    routeLogger.info({ ShowroomCount: showrooms.length }, 'Showroom fetched successfully.');
+
     return res.status(200).json(showrooms);
 
   } catch (error) {
@@ -118,7 +145,7 @@ exports.getShowroomById = async (req, res) => {
 exports.getPaginatedShowrooms = async (req, res) => {
   try {
 
-    let { search, page = 1, limit = 25 } = req.query;
+    let { search, page = 1, limit = 25, addedBy } = req.query;
 
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
@@ -141,16 +168,24 @@ exports.getPaginatedShowrooms = async (req, res) => {
       ];
     }
 
+    if (addedBy) {
+      query.addedBy = { $ne: null }
+      // query.addedBy = addedBy
+    }
+
     const totalCount = await Showroom.countDocuments(query);
 
     const showrooms = await Showroom.find(query)
       .populate('showroomId')
       .skip(skip)
       .limit(limit);
+
+      const developedShowrooms = await setVerifiedShowroomsThisMonth(showrooms)
+
     return res.status(200).json({
       success: true,
       message: "Showroom retrieved successfully.",
-      data: showrooms,
+      data: developedShowrooms,
       page,
       totalPages: Math.ceil(totalCount / limit),
       totalCount
@@ -265,7 +300,6 @@ exports.updateShowroom = async (req, res) => {
   }
 };
 
-
 // Delete a showroom
 exports.deleteShowroom = async (req, res) => {
   try {
@@ -306,7 +340,7 @@ exports.getAllShowroomStaff = async (req, res) => {
   try {
     // Fetch all showroom staff from the database
     const showroomStaff = await ShowroomStaff.find().populate('showroomId'); // Populating showroom details
-    console.log(showroomStaff, "showroom staff herer")
+
     return res.status(200).json({
       success: true,
       message: "Showroom staff retrieved successfully.",
@@ -364,9 +398,6 @@ exports.deleteShowroomStaff = async (req, res) => {
   try {
     const { showroomId, staffId } = req.params;
 
-    // Log the staffId to the console
-    console.log(`Attempting to delete staff member with ID: ${staffId} from showroom with ID: ${showroomId}`);
-
     // Attempt to delete the staff member using the ID and showroomId
     const deletedStaff = await ShowroomStaff.findOneAndDelete({
       _id: staffId,
@@ -394,12 +425,10 @@ exports.deleteShowroomStaff = async (req, res) => {
   }
 };
 
-
 // send otp for staff 
 exports.sendOtpForShowroomStaff = async (req, res) => {
   try {
     const { phoneNumber } = req.body;
-    console.log(req.body)
     // Check if staff exists
     const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
     if (!showroomStaff) {
@@ -475,7 +504,6 @@ exports.staffLogin = async (req, res) => {
 exports.showroomStaffSignup = async (req, res) => {
   try {
     const { name, phone: phoneNumber, whatsappNumber, designation, showroomId } = req.body;
-    console.log("body", req.body)
 
     if (!name || !phoneNumber || !designation || !showroomId) {
       return res.status(400).json({ message: "All required fields must be provided." });

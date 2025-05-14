@@ -5,6 +5,12 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors')
 const rateLimit = require('express-rate-limit');
+const StatusCodes = require('http-status-codes');
+
+var setupAgendaJobs = require('./config/Agenda.config.js')
+const { app, server } = require('./config/socket.js');
+const { errorHandler } = require('./Middileware/errorHandler.js');
+const LoggerFactory = require('./utils/logger/LoggerFactory');
 
 var connectDB = require('./config/db')
 var initAgenda = require('./config/Agenda.config.js')
@@ -33,9 +39,8 @@ var attendanceRouter = require('./routes/attendance')
 var pmnrRouter = require('./routes/pmnrReport')
 var expenseRouter = require('./routes/expense')
 var dieselExpensesRouter = require('./routes/dieselExpense')
-var setupAgendaJobs = require('./config/Agenda.config.js')
+var executivesRouter = require('./routes/executive')
 
-const { app, server } = require('./config/socket.js');
 
 // Connect to database
 connectDB()
@@ -43,6 +48,8 @@ connectDB()
 setupAgendaJobs().then(() => {
   console.log("Job Scheduler connected.");
 }).catch(console.error);
+
+const logger1 = LoggerFactory.initialize({});
 
 app.use(cors({
   origin: '*',
@@ -58,7 +65,12 @@ const limiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'Too many requests, please wait 10 seconds before retrying.',
+  message: 'Too many requests from this IP, please try again later',
+  handler: (req, res, next) => {
+    const err = new Error('Too many requests. Please try again later.');
+    err.status = StatusCodes.TOO_MANY_REQUESTS;
+    next(err);
+  },
 });
 
 app.use(limiter);
@@ -92,22 +104,7 @@ app.use('/attendance', attendanceRouter);
 app.use('/pmnr', pmnrRouter);
 app.use('/expense', expenseRouter);
 app.use('/diesel-expenses', dieselExpensesRouter);
+app.use('/marketing-executives', executivesRouter);
 
-// catch 404 and forward to error handler
-app.use(function (req, res, next) {
-  next(createError(404));
-});
-
-// error handler
-app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  console.log(err)
-  return res.status(err.status || 500).json({
-    message: err.message
-  })
-});
-
+app.use(errorHandler);
 module.exports = app;

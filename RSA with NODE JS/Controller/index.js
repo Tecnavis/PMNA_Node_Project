@@ -1,6 +1,10 @@
 var Bookings = require('../Model/booking')
 var TaxInsurance = require('../Model/taxInsurance')
 const mongoose = require('mongoose');
+const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
+const { StatusCodes } = require('http-status-codes');
+const path = require('path');
+const fs = require('fs');
 
 exports.dashboard = async (req, res) => {
     try {
@@ -198,3 +202,23 @@ exports.showroomDashboard = async (req, res) => {
     }
 }
 
+exports.logs = asyncErrorHandler(async (req, res) => {
+    const logFilePath = path.join(__dirname, '../logs/app.log');
+
+    fs.readFile(logFilePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to read log file' });
+        }
+
+        // Split logs by line and send as JSON array
+        const logLines = data.trim().split('\n').map(line => {
+            try {
+                return JSON.parse(line); // If logs are in JSON format (pino default)
+            } catch (e) {
+                return { raw: line }; // fallback for non-JSON lines
+            }
+        });
+
+        res.json(logLines);
+    });
+})

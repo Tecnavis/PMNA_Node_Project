@@ -1,0 +1,319 @@
+{"level":30,"timestamp":"2025-05-13T07:34:34.666Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":6400,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T09:49:35.662Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":6292,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T09:51:45.276Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":11440,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T09:53:52.119Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8764,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T09:55:23.684Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":7988,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T09:57:26.906Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":2556,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:00:36.172Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":4152,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:01:27.033Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":10064,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:02:00.400Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":9624,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:05:56.739Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":12632,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:10:40.070Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8160,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:13:02.168Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-13T10:13:02.709Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-13T10:13:02.885Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-13T10:13:05.875Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-13T10:13:06.745Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-13T10:39:58.801Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":13800,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:52:41.160Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":13972,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:53:54.144Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8320,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:54:24.904Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":2964,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-13T10:54:38.119Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-13T10:54:39.388Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-13T10:54:39.949Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T04:47:15.956Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":9736,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:20:28.990Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":9604,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:20:54.252Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":4240,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:21:22.779Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":2940,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:22:05.567Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":1156,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:24:43.024Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8544,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:25:38.542Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":11420,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:26:36.070Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":1404,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:26:57.454Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":4600,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:32:19.918Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":2836,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:33:56.163Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":15244,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:36:24.434Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":4940,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:37:50.785Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":14004,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:38:16.666Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":14968,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:38:26.407Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":2644,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:38:43.774Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":748,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:39:18.176Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":9632,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:39:36.826Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":5600,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:41:30.481Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":5632,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:41:49.800Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":220,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:42:22.227Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":14036,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:42:49.312Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":14268,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:44:27.675Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":6852,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:47:06.726Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":10892,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:47:29.545Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8560,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:47:54.656Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":7936,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T05:48:05.969Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":12280,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T06:36:29.006Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":11500,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T06:54:23.705Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":432,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T06:54:49.270Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":5288,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T07:00:04.961Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8600,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T07:00:05.286Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8600,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T07:06:10.681Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":2576,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T07:06:10.807Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":2576,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T07:34:20.926Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T07:34:22.166Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T07:34:49.254Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T07:34:50.400Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T07:34:51.053Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T07:34:51.558Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T07:35:52.272Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T07:35:54.705Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T07:35:54.716Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T07:35:54.869Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T09:15:08.296Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":11444,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:16:18.800Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:16:21.195Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:17:11.284Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8104,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:18:27.340Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":11796,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:19:03.121Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:19:48.992Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":9004,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:21:03.057Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:21:53.515Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":9060,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:22:18.489Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:23:12.995Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":11416,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:24:00.456Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8692,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:24:13.839Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:25:51.138Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:27:37.345Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":6220,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:28:01.711Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":13240,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:28:29.802Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":10196,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:29:04.694Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:29:45.149Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":14972,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:30:31.682Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":432,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:31:20.146Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:31:21.003Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Showroom verification record created successfully"}
+{"level":30,"timestamp":"2025-05-14T09:34:44.373Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:40:10.318Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":14936,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:42:16.529Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":4596,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:43:31.163Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8460,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:44:21.538Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":14748,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:44:31.554Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":6400,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:45:04.393Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":10596,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:46:02.493Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":14980,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:46:15.745Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8124,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:47:17.791Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":7496,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:50:46.654Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":7620,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:51:04.329Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":404,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:51:38.964Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":7192,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:52:03.002Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":15288,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:52:29.414Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":10556,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:52:46.032Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":5132,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:52:53.945Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":9004,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:54:04.842Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":2628,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:54:56.592Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":10536,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:55:08.013Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":15236,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T09:57:56.845Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:58:02.909Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T09:59:18.575Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":11268,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:01:47.313Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T10:01:48.040Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Showroom verification record created successfully"}
+{"level":30,"timestamp":"2025-05-14T10:02:33.813Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T10:02:34.491Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Showroom verification record created successfully"}
+{"level":30,"timestamp":"2025-05-14T10:02:56.865Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T10:02:57.273Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Showroom verification record created successfully"}
+{"level":30,"timestamp":"2025-05-14T10:03:31.256Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T10:03:31.708Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Showroom verification record created successfully"}
+{"level":30,"timestamp":"2025-05-14T10:04:41.136Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":13872,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:14:28.513Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":13012,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:15:48.554Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":4688,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:17:42.617Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":15304,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:18:12.457Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":13240,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:18:32.008Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":12792,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:18:42.972Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":6688,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:20:09.925Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T10:20:10.837Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Showroom verification record created successfully"}
+{"level":30,"timestamp":"2025-05-14T10:20:48.019Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T10:20:48.627Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Showroom verification record created successfully"}
+{"level":30,"timestamp":"2025-05-14T10:22:31.437Z","env":"production","version":"0.0.0","route":"/showroom/verification","handler":"verifyMonthlyVerification","message":"Starting monthly showroom verification process"}
+{"level":30,"timestamp":"2025-05-14T10:22:58.686Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:23:00.149Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:23:03.519Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:23:05.443Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:23:06.039Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:23:56.672Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:23:57.638Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:24:29.630Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:24:29.733Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:24:29.755Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:24:29.879Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:24:29.939Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:24:30.057Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:24:30.275Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:24:30.428Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:25:29.027Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:25:29.626Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:28:06.428Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8460,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:29:02.320Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":9996,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-14T10:29:31.723Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:29:32.330Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:29:34.995Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:29:35.137Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:29:35.157Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:29:35.294Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:30:37.309Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:30:37.472Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:04.541Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:04.757Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:13.765Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:13.905Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:14.053Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.209Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.238Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.359Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.372Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.532Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.558Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.694Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.706Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:15.843Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:22.227Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:22.424Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:27.907Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:28.007Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:31.144Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:31.336Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:31.638Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:31.864Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:32.440Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:32.577Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:36.574Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:36.701Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:36.725Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:36.918Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:40.538Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:40.694Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:44.684Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:44.813Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:49.981Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:50.087Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:52.638Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:52.763Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:52.786Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:52.905Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:52.975Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:53.103Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:53.209Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:53.341Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:53.361Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:53.533Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:59.417Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:32:59.571Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:32:59.815Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:33:00.081Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:42:42.637Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:42:42.782Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:42:45.601Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:42:45.725Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:42:50.175Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:42:50.342Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:42:55.350Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:42:55.581Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:43:07.480Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:43:07.625Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:43:07.642Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:43:07.770Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:43:49.355Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:43:49.487Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:43:50.111Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:43:50.230Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:43:52.884Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:43:53.114Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:43:53.237Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:43:53.356Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:43:53.833Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:43:54.079Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:43:54.133Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:43:54.548Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:44:01.808Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:44:01.986Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:44:02.007Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:44:02.403Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:44:49.495Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:44:49.626Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:45:09.297Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:45:09.384Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:45:21.367Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:45:21.506Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:45:23.301Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:45:23.453Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:45:23.573Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:45:23.695Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:45:23.876Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:45:24.051Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:45:31.887Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:45:32.057Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:45:32.065Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:45:32.084Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:45:32.207Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:45:32.594Z","env":"production","version":"0.0.0","route":"/booking","handler":"createBooking","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"Booking fetch success."}
+{"level":30,"timestamp":"2025-05-14T10:46:10.251Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:46:10.383Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:46:17.464Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:46:17.676Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:46:17.686Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:46:17.813Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:46:32.591Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:46:32.745Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:46:47.703Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:46:47.845Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:46:52.317Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:46:52.528Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:47:07.149Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:47:07.300Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:47:08.605Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:47:08.736Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:47:10.561Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:47:10.677Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:47:14.798Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:47:14.911Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:47:14.923Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:47:15.113Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:47:27.345Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:47:27.484Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:47:31.743Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:47:31.865Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:47:31.890Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:47:32.018Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:48:32.716Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:48:32.864Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:48:36.706Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:48:36.830Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:48:39.659Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:48:40.133Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:48:41.590Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:48:41.812Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:01.353Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:01.501Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:12.930Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:13.130Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:13.273Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:13.523Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:15.258Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:15.433Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:16.882Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:17.070Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:17.109Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:17.267Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:17.356Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:17.505Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:45.639Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:45.775Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:49:57.658Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:49:57.813Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:50:01.383Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:50:01.544Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:50:09.193Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:50:09.395Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:50:09.405Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:50:09.524Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:50:21.952Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:50:22.190Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:50:22.239Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:50:22.373Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-14T10:50:57.371Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-14T10:50:57.498Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":15,"message":"Showroom fetched successfully."}

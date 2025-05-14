@@ -31,7 +31,12 @@ const showroomSchema = new mongoose.Schema({
     showroom: {
       selected: { type: Boolean, default: false }
     }
-  }
+  },
+  addedBy: { // Optional reference to Marketing Executive (MX)
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MarketingExecutive',
+    default: null
+  },
 });
 
 module.exports = mongoose.model('Showroom', showroomSchema);
