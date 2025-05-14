@@ -11,6 +11,7 @@ const { capitalizeFirstLetter, convertTo12HourFormat } = require('../utils/dateU
 const Staff = require('../Model/staff');
 const agenda = require('../config/Agenda.config')()
 const LoggerFactory = require('../utils/logger/LoggerFactory');
+const NotificationService = require('../services/notification.service');
 
 
 // Controller to create a booking
@@ -367,7 +368,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
         if (search) {
 
             query._includeHidden = true;
-            
+
             search = search.trim();
 
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
@@ -748,7 +749,20 @@ exports.updateBooking = async (req, res) => {
             bookingId: updatedBooking._id,
             status: updatedBooking.status,
             updatedBooking
-        })
+        });
+
+        let receiver = updatedBooking.driver || updatedBooking.provider
+        
+        if (receiver.fcmToken) {
+            const notificationResult = await NotificationService.sendNotification({
+                token: receiver?.fcmToken || '',
+                title: "Booking Edited",
+                body: 'A booking assigned to you has been edited.',
+                sound: 'alert'
+            });
+            console.log('notificationResult', notificationResult)
+        }
+
         res.status(200).json({ message: 'Booking updated successfully', booking: updatedBooking });
     } catch (error) {
         console.error('Error updating booking:', error);
