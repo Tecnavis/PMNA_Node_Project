@@ -10,6 +10,7 @@ const { io } = require('../config/socket');
 const { capitalizeFirstLetter, convertTo12HourFormat } = require('../utils/dateUtils');
 const Staff = require('../Model/staff');
 const agenda = require('../config/Agenda.config')()
+const NotificationService = require('../services/notification.service');
 
 
 // Controller to create a booking
