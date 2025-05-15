@@ -1,8 +1,8 @@
 import { lazy } from 'react';
-import AddExecutive from '../pages/MarketingExecutive/AddExecutive';
-import ExecutiveShowroomsTable from '../pages/MarketingExecutive/ShowroomList';
-import LoggerPage from '../pages/Logs/LoggerPage';
-import ProviderSalaryReport from '../pages/Reports/ProviderReport/SalaryReport';
+const AddExecutive = lazy(() => import('../pages/MarketingExecutive/AddExecutive'))
+const ExecutiveShowroomsTable = lazy(() => import('../pages/MarketingExecutive/ShowroomList'))
+const LoggerPage = lazy(() => import('../pages/Logs/LoggerPage'))
+const ProviderSalaryReport = lazy(() => import('../pages/Reports/ProviderReport/SalaryReport'))
 
 const RewardDetails = lazy(() => import('../pages/Rewards/RewardDetails'))
 const ShowroomInvoice = lazy(() => import('../pages/Reports/DriverReport/ShowroomInvoice'))
