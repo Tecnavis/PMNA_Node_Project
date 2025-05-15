@@ -54,7 +54,6 @@ exports.createNewAdvance = async (req, res) => {
         });
 
         const advanceMoreData = await settleBookingsWithAdvance(driverId, newAdvanceDoc, userType);
-
         // Update advance doc with settlement data
         newAdvanceDoc.filesNumbers = advanceMoreData.filesNumbers;
         newAdvanceDoc.driverSalary = advanceMoreData.driverSalary;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Fragment } from 'react';
+import React, { useEffect, useState, Fragment, useRef } from 'react';
 import { Dialog, Transition, TransitionChild } from '@headlessui/react';
 import { Link, useNavigate } from 'react-router-dom';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
@@ -17,48 +17,18 @@ import IconFile from '../../components/Icon/IconFile';
 import ConfirmationModal from '../ConfirmationModal/ConfirmationModal';
 import { FaQrcode } from 'react-icons/fa';
 import A4Page from '../../components/A4Page';
-import ShowroomStaffModal from './ShowroomStaffModal';
+import ShowroomStaffModal from '../../pages/Showroom/ShowroomStaffModal';
 import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { GrNext, GrPrevious } from 'react-icons/gr';
+import { Showroom } from '../Showroom/Showroom';
+import { CircleCheckBig } from 'lucide-react';
+import getCurrentLocation from '../../utils/getCurrentLocation';
+import { verifyShowroom } from '../../services';
+import { toast } from 'react-hot-toast'
 
 
-
-export interface Showroom {
-    _id: string;
-    bookingPoints: string
-    rewardPoints: string
-    name: string;
-    showroomId: string;
-    location: string;
-    description: string;
-    showroomLink: string;
-    latitudeAndLongitude: string;
-    username: string;
-    password: string;
-    helpline: string;
-    phone: string;
-    mobile: string;
-    state: string;
-    district: string;
-    image: string;
-    services: {
-        serviceCenter: {
-            selected: boolean;
-            amount: number;
-        };
-        bodyShop: {
-            selected: boolean;
-            amount: number;
-        };
-        showroom: {
-            selected: boolean;
-        };
-    };
-    currentMonthVerified?: boolean;
-}
-
-const Showroom: React.FC = () => {
+function ExecutiveShowroomsTable() {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
     const [filteredShowrooms, setFilteredShowrooms] = useState<Showroom[]>([]);
@@ -78,6 +48,11 @@ const Showroom: React.FC = () => {
 
     const navigate = useNavigate();
 
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    const localRole = localStorage.getItem('role') || ''
+    const role = localRole[0].toUpperCase() + localRole.slice(1);
+
     // checking the token
     const gettingToken = () => {
         const token = localStorage.getItem('token');
@@ -94,7 +69,7 @@ const Showroom: React.FC = () => {
     const fetchShowroom = async (searchTerm = '', page = 1, limit = 10) => {
         try {
             const response = await axios.get(`${backendUrl}/showroom/all-showrooms`, {
-                params: { search: searchTerm, page, limit },
+                params: { search: searchTerm, page, limit, addedBy: true },
             });
 
             setShowrooms(response.data.data);
@@ -240,7 +215,7 @@ const Showroom: React.FC = () => {
                         font-family: Arial, sans-serif;
                         margin: 20px;
                     }
-                 
+                    
                     th, td {
                         border: 1px solid #ddd;
                         padding: 8px;
@@ -296,13 +271,45 @@ const Showroom: React.FC = () => {
         setModal(true);
         setShowroomId(id)
     }
+    const getLocation = async () => await getCurrentLocation()
+
+    const handleButtonClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, showroomId: string) => {
+        const files = event.target.files;
+        console.log(showrooms.find((showrrom)=>showrrom?._id ==  showroomId)?.name)
+        if (!files || files.length === 0) {
+            toast.error("Please choose an image.");
+            return;
+        }
+
+        const file = files[0];
+
+        const location = await getLocation();
+
+        const res = await verifyShowroom({
+            userType: role,
+            showroomId,
+            coordinates: [location.latitude, location.longitude],
+            accuracy: location.accuracy,
+            image: file
+        })
+        fetchShowroom()
+        if (res) {
+            toast.success("Showroom monthly verification completed.");
+        } else {
+            toast.error("Showroom verification failed");
+        }
+    };
 
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
             <div className="panel">
                 <div className="flex items-center justify-between mb-5">
                     <h5 className="font-semibold text-lg dark:text-white-light">Showroom Details</h5>
-                    <Link to="/showroomadd" className="font-semibold text-success hover:text-gray-400 dark:text-gray-400 dark:hover:text-gray-600">
+                    <Link to="/showroomadd" state={{ forExecutive: true }} className="font-semibold text-success hover:text-gray-400 dark:text-gray-400 dark:hover:text-gray-600">
                         <span className="flex items-center">
                             <BsBuildingAdd className="me-2" />
                             Add New
@@ -335,6 +342,7 @@ const Showroom: React.FC = () => {
                                 <th>Helpline</th>
                                 <th>Phone</th>
                                 <th>QR</th>
+                                <th>Verification Details</th>
                                 <th className="!text-center">Action</th>
                             </tr>
                         </thead>
@@ -358,7 +366,7 @@ const Showroom: React.FC = () => {
                                     </td>
                                     <td>
                                         <div onClick={() => openStaffModal(items._id)}>
-                                            <IconUsersGroup />
+                                            <IconUsersGroup className='hover:cursor-pointer' />
                                         </div>
                                     </td>
                                     <td>
@@ -379,21 +387,7 @@ const Showroom: React.FC = () => {
                                                             setModalOpen(true)
                                                             setUrl(`http://showroomstaff.rsakerala.com/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
                                                         }}
-                                                        style={{
-                                                            backgroundColor: '#007bff',
-                                                            color: '#fff',
-                                                            border: 'none',
-                                                            borderRadius: '8px',
-                                                            cursor: 'pointer',
-                                                            padding: '10px 14px',
-                                                            fontSize: '1rem',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '8px',
-                                                            transition: 'all 0.3s ease-in-out',
-                                                            boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
-                                                        }}
+                                                        className="bg-blue-600 text-white border-none rounded-lg cursor-pointer px-2 py-1.5 text-xs flex items-center justify-center gap-2 transition-all duration-300 ease-in-out shadow-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                                                         onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
                                                         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
                                                     >
@@ -405,6 +399,7 @@ const Showroom: React.FC = () => {
                                             <p>No QR Available</p>
                                         )}
                                     </td>
+                                    <td className='text-center underline text-blue-500 hover:cursor-pointer'>Show</td>
                                     <td className="text-center">
                                         <ul className="flex items-center justify-center gap-2">
                                             <li>
@@ -416,18 +411,51 @@ const Showroom: React.FC = () => {
                                             </li>
                                             <li>
                                                 <Tippy content="Edit">
-                                                    <button type="button" onClick={() => navigate(`/showroomadd/${items._id}`)}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            navigate(`/showroomadd/${items._id}`, {
+                                                                state: {
+                                                                    forExecutive: true,
+                                                                }
+                                                            })
+                                                        }
+                                                    >
                                                         <IconPencil className="text-primary" />
                                                     </button>
                                                 </Tippy>
                                             </li>
                                             <li>
                                                 <Tippy content="Delete">
-                                                    <button type="button" onClick={() => openDeleteModal(items._id)}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openDeleteModal(items._id)}
+                                                    >
                                                         <IconTrashLines className="text-danger" />
                                                     </button>
                                                 </Tippy>
                                             </li>
+                                            {!items?.currentMonthVerified &&
+                                                <li>
+                                                    <Tippy content="Verify Current Month">
+                                                        <button
+                                                            onClick={handleButtonClick}
+                                                            type="button"
+                                                        >
+                                                            <CircleCheckBig size='22' className="text-success" />
+                                                        </button>
+                                                    </Tippy>
+                                                    {/* Hidden file input */}
+                                                    <input
+                                                        type="file"
+                                                        ref={fileInputRef}
+                                                        onChange={(e) => {
+                                                            handleFileChange(e, items._id)
+                                                        }}
+                                                        style={{ display: 'none' }}
+                                                    />
+                                                </li>
+                                            }
                                         </ul>
                                     </td>
                                 </tr>
@@ -612,7 +640,7 @@ const Showroom: React.FC = () => {
                     </div>
                 </Dialog>
             </Transition>
-            <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} />
+            {/* <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} /> */}
 
             <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
                 {/* Previous Button */}
@@ -715,8 +743,10 @@ const Showroom: React.FC = () => {
                 onCancel={closeModal}
             />
             <A4Page url={url} modalOpen={modalOpen} setModalOpen={setModalOpen} />
-        </div >
-    );
-};
+            <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} />
 
-export default Showroom;
+        </div >
+    )
+}
+
+export default ExecutiveShowroomsTable

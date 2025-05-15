@@ -6,6 +6,7 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import axios, { AxiosError } from 'axios';
 import styles from './driverAdd.module.css';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { handleApiError } from '../../utils/errorHandler';
 
 
 interface ServiceType {
@@ -145,7 +146,15 @@ const DriverAdd: React.FC = () => {
                 navigate('/users/driver');
             } catch (error: unknown) {
                 if (error instanceof AxiosError) {
-                    console.error('Error creating driver:', error.response?.data?.message || error.message);
+                    Swal.fire({
+                        icon: 'error',
+                        title: error.response?.data?.message || error.message || 'Driver created failed',
+                        toast: true,
+                        position: 'top',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        padding: '10px 20px',
+                    });
                     setErrors(error.response?.data || {});
                 } else if (error instanceof Error) {
                     console.error('Error creating driver:', error.message);

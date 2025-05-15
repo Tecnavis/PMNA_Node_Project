@@ -18,6 +18,7 @@ import { FiUpload, FiEdit2, FiTrash2 } from 'react-icons/fi';
 export interface Booking {
     _id: string;
     workType: string;
+    inventoryImage: string;
     dummyProviderName?: string;
     bookingStatus: string;
     dummyDriverName?: string;
@@ -523,7 +524,7 @@ const Preview = () => {
                 });
                 return; // Stop here, don't verify
             }
-            if (booking?.pickupImagePending || booking?.dropoffImagePending) {
+            if (booking?.pickupImagePending && booking?.dropoffImagePending && booking?.dropoffImages.length < 3 && booking?.pickupImages.length < 3) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Image is Pending',
@@ -535,7 +536,7 @@ const Preview = () => {
                 });
                 return;
             }
-            if (booking?.inventoryImagePending) {
+            if (booking?.inventoryImagePending && !booking.inventoryImage) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Inventory Image is Pending',
@@ -1154,6 +1155,7 @@ const Preview = () => {
                                     </>
                                 ) : (
                                     booking.verified &&
+                                    !booking.provider &&
                                     !booking.feedbackCheck && (
                                         <button type="button" className="btn btn-success w-full" onClick={openFeedbackModal}>
                                             Feedback

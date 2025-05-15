@@ -29,14 +29,26 @@ exports.convertTo12HourFormat = (dateInput) => {
     const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
     let hours = date.getUTCHours();
     const ampm = hours >= 12 ? 'PM' : 'AM';
-    
+
     hours = hours % 12;
     hours = hours || 12; // 0 becomes 12
 
     // Get ISO string if input was string, otherwise convert Date to ISO
     const isoString = typeof dateInput === 'string' ? dateInput : date.toISOString();
-    
+
     // Construct new ISO string with 12-hour time
     const [datePart] = isoString.split('T');
     return `${datePart}T${hours.toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}:${date.getUTCSeconds().toString().padStart(2, '0')}.000Z`;
+};
+
+/**
+ * @function getCurrentMonthStart
+ * @description Returns the first day of the current month at 00:00:00
+ * @returns {Date} The date object representing the start of the current month
+ */
+exports.getCurrentMonthStart = () => {
+    const date = new Date();
+    date.setDate(1);
+    date.setHours(0, 0, 0, 0);
+    return date;
 };

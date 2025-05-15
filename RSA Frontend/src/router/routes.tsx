@@ -1,14 +1,18 @@
 import { lazy } from 'react';
-import RewardDetails from '../pages/Rewards/RewardDetails';
-import ShowroomInvoice from '../pages/Reports/DriverReport/ShowroomInvoice';
+import AddExecutive from '../pages/MarketingExecutive/AddExecutive';
+import ExecutiveShowroomsTable from '../pages/MarketingExecutive/ShowroomList';
+import LoggerPage from '../pages/Logs/LoggerPage';
+import ProviderSalaryReport from '../pages/Reports/ProviderReport/SalaryReport';
 
+const RewardDetails = lazy(() => import('../pages/Rewards/RewardDetails'))
+const ShowroomInvoice = lazy(() => import('../pages/Reports/DriverReport/ShowroomInvoice'))
+const MarketingExecutives = lazy(() => import('../pages/MarketingExecutive/MarketingExecutives'))
 const StatusTable = lazy(() => import('../pages/Screen/StatusTable'));
 const PaymentWorkReport = lazy(() => import('../pages/PaymentManagment/PaymentWorkReport'))
 const DriverSalaryReport = lazy(() => import('../pages/Reports/DriverReport/SalaryReport'))
-const DieselExpences = lazy(()=> import ( '../pages/Expences/DieselExpences'))
-const OtherExpences = lazy(()=> import ( '../pages/Expences/OtherExpences'))
-const Expence = lazy(()=> import ( '../pages/Reports/DriverReport/Expence'))
-
+const DieselExpences = lazy(() => import('../pages/Expences/DieselExpences'))
+const OtherExpences = lazy(() => import('../pages/Expences/OtherExpences'))
+const Expence = lazy(() => import('../pages/Reports/DriverReport/Expence'))
 const DriverAdvancePayment = lazy(() => import('../pages/PaymentManagment/DriverAdvancePayment'))
 const ProviderAdvancePayment = lazy(() => import('../pages/PaymentManagment/ProviderAdvancePayment'))
 const ProviderReport = lazy(() => import('../pages/Reports/ProviderReport/ProviderReport'))
@@ -145,14 +149,9 @@ const VehicleDetails = lazy(() => import('../pages/VehicleDetails/VehicleDetails
 const Status = lazy(() => import('../pages/Status/Status'))
 const ShowroomReport = lazy(() => import('../pages/Reports/ShowroomReport'))
 const Leaves = lazy(() => import('../pages/Leaves/Leaves'))
-
-
 const StaffReport = lazy(() => import('../pages/Reports/StaffReport'))
 const AppBokk = lazy(() => import('../pages/AppClose/AppBokk'))
 const PickupLocation = lazy(() => import('../pages/AppClose/PickupLocation'))
-
-
-
 const ServiceCenterReport = lazy(() => import('../pages/Reports/DriverReport/ServiceCenterReport'))
 const StaffCashReport = lazy(() => import('../pages/Reports/DriverReport/StaffCashReport'));
 const DropoffLocation = lazy(() => import('../pages/AppClose/DropoffLocation'));
@@ -230,6 +229,10 @@ const routes = [
     {
         path: '/provider-report/:id',
         element: <ProviderReport />,
+    },
+    {
+        path: '/provider-report/salaryreport/:id',
+        element: <ProviderSalaryReport />,
     },
     {
         path: '/company-report/:id',
@@ -397,7 +400,27 @@ const routes = [
         element: <StatusTable />,
         layout: 'blank'
     },
-
+    {
+        path: '/marketing-executives',
+        element: <MarketingExecutives />,
+    },
+    {
+        path: '/new-executive',
+        element: <AddExecutive />,
+    },
+    {
+        path: '/new-executive/:id',
+        element: <AddExecutive />,
+    },
+    {
+        path: '/marketing-executives/showroom',
+        element: <ExecutiveShowroomsTable />,
+    },
+    {
+        path: '/logs',
+        element: <LoggerPage />,
+        layout: 'blank'
+    },
     {
         path: '/analytics',
         element: <Analytics />,

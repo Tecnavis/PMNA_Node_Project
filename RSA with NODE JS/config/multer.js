@@ -1,5 +1,6 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { BadRequestError } = require('../Middileware/errorHandler');
 const cloudinary = require('cloudinary').v2;
 
 // Cloudinary config
@@ -29,7 +30,13 @@ const customMulter = multer({
         if (['image/jpeg', 'image/png', 'image/jpg'].includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type. Only JPEG and PNG files are allowed.'));
+            cb(new BadRequestError(
+                'Invalid file type',
+                [{
+                    field: 'image',
+                    message: 'Only JPEG, JPG, and PNG images are allowed'
+                }]
+            ));
         }
     },
 });

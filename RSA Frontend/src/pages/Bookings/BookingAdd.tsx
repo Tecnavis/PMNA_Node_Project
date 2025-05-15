@@ -434,7 +434,7 @@ const BookingAdd: React.FC = () => {
     // getting service types
 
     const fetchServiceTypes = async () => {
-           if (!totalDistance) {
+        if (!totalDistance) {
             return
         }
         try {
@@ -458,12 +458,14 @@ const BookingAdd: React.FC = () => {
             fetchAndFilterProviders(serviceTypeId);
         }
     };
- useEffect(() => {
+
+    useEffect(() => {
         fetchServiceTypes()
     }, [totalDistance])
-    // Fetch drivers and apply filter
+
+   // Fetch drivers and apply filter
     const fetchAndFilterDrivers = async (serviceTypeId: any) => {
-            if (!totalDistance) {
+        if (!totalDistance) {
             return
         }
         setDriverLoader(true)

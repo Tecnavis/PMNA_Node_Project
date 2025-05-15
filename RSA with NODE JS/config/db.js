@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { DatabaseError } = require('../Middileware/errorHandler');
 require('dotenv').config(); // Load .env variables
 
 const connectDB = async () => {
@@ -7,7 +8,7 @@ const connectDB = async () => {
         console.log('MongoDB Connected');
     } catch (error) {
         console.error(error.message);
-        process.exit(1); // Exit process with failure
+        process.exit(1); 
     }
 };
 

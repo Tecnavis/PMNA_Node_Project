@@ -884,6 +884,7 @@ const MultipleTables = () => {
                                         </div>
                                     ),
                                 },
+                                { accessor: 'balanceAmount', title: 'Balance Amount', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
 
                                 {
                                     accessor: 'action',
@@ -894,7 +895,7 @@ const MultipleTables = () => {
                                             <button type="button" className="btn btn-success px-2 py-1 text-xs" onClick={() => navigate(`/provider-report/${provider._id}`)}>
                                                 Cash Report
                                             </button>
-                                            <button type="button" className="btn btn-primary px-2 py-1 text-xs">
+                                            <button type="button" className="btn btn-primary px-2 py-1 text-xs" onClick={() => navigate(`/provider-report/salaryreport/${provider._id}`)}>
                                                 Salary
                                             </button>
                                             <button type="button" className="btn btn-danger px-2 py-1 text-xs">

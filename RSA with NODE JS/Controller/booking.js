@@ -10,17 +10,35 @@ const { io } = require('../config/socket');
 const { capitalizeFirstLetter, convertTo12HourFormat } = require('../utils/dateUtils');
 const Staff = require('../Model/staff');
 const agenda = require('../config/Agenda.config')()
+const LoggerFactory = require('../utils/logger/LoggerFactory');
 const NotificationService = require('../services/notification.service');
 
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
+    let bookingData = req.body;
+
     try {
-        let bookingData = req.body;
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/booking',
+            handler: 'createBooking',
+        });
+
+        routeLogger.info({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking creation process started...');
 
         const isFileNumberExisint = await Booking.findOne({ fileNumber: bookingData.fileNumber })
 
         if (isFileNumberExisint) {
+
+            routeLogger.error({
+                fileNumber: bookingData.fileNumber,
+                doneBy: req.user || 'unknown'
+            }, 'New Booking creation process failed, Enter a unique file Number');
+
             return res.status(400).json({ message: "Enter a unique file Number", success: false });
         }
 
@@ -47,15 +65,27 @@ exports.createBooking = async (req, res) => {
 
             if (bookingData.driver) {
                 source = await Driver.findById(bookingData.driver);
+                routeLogger.error({
+                    fileNumber: bookingData.fileNumber,
+                    doneBy: req.user || 'unknown'
+                }, 'New Booking creation process failed, Driver not found');
                 if (!source) return res.status(404).json({ message: "Driver not found" });
 
             } else {
                 source = await Provider.findById(bookingData.provider);
+                routeLogger.error({
+                    fileNumber: bookingData.fileNumber,
+                    doneBy: req.user || 'unknown'
+                }, 'New Booking creation process failed, Provider not found');
                 if (!source) return res.status(404).json({ message: "Provider not found" });
             }
 
             const selectedVehicle = getVehicleForService(bookingData.driver ? source.vehicle : source.serviceDetails, bookingData.serviceType);
             if (!selectedVehicle) {
+                routeLogger.error({
+                    fileNumber: bookingData.fileNumber,
+                    doneBy: req.user || 'unknown'
+                }, 'New Booking creation process failed, Vehicle not found for the selected service type.');
                 return res.status(404).json({ message: "Vehicle not found for the selected service type" });
             }
 
@@ -68,6 +98,10 @@ exports.createBooking = async (req, res) => {
         const newBooking = new Booking(bookingData);
         await newBooking.save();
 
+        routeLogger.info({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking created successfull.');
 
         const agendaInstance = await agenda;
         if (bookingData.pickupDate) {
@@ -116,6 +150,12 @@ exports.createBooking = async (req, res) => {
             }
         });
     } catch (error) {
+
+        routeLogger.FATAL({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking created failed.');
+
         if (error.name === "ValidationError") {
             return res.status(400).json({
                 success: false,
@@ -123,7 +163,7 @@ exports.createBooking = async (req, res) => {
                 errors: error.errors,
             });
         }
-        console.log(error)
+
         res.status(500).json({
             success: false,
             message: "An internal server error occurred",
@@ -134,12 +174,21 @@ exports.createBooking = async (req, res) => {
 
 // Controller to create a booking for showroom and showroom staff dashboard
 exports.addBookingForShowroom = async (req, res) => {
+    let bookingData = req.body;
     try {
-        let bookingData = req.body;
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/booking/showroom/add-booking',
+            handler: 'addBookingForShowroom',
+        });
 
         const showroomData = await Showroom.findById(bookingData.showroom).lean();
 
         if (!showroomData) {
+            routeLogger.FATAL({
+                fileNumber: bookingData.fileNumber,
+                doneBy: req.user || 'unknown'
+            }, 'New Booking created failed.Showroom not found. Please try another showroom');
             return res.status(404).json({
                 message: 'Showroom not found. Please try another showroom.',
                 success: false,
@@ -157,6 +206,10 @@ exports.addBookingForShowroom = async (req, res) => {
 
         const newBooking = await Booking.create(enrichedBookingData);
 
+        routeLogger.info({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Showroom Booking created successfull.');
 
         res.status(201).json({
             message: 'Booking created successfully',
@@ -182,6 +235,12 @@ exports.addBookingForShowroom = async (req, res) => {
             }
         });
     } catch (error) {
+
+        routeLogger.FATAL({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking created failed.');
+
         if (error.name === "ValidationError") {
             return res.status(400).json({
                 success: false,
@@ -307,8 +366,11 @@ exports.getOrderCompletedBookings = async (req, res) => {
 
         // Handle search
         if (search) {
+
             query._includeHidden = true;
+          
             search = search.trim();
+
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (dateRegex.test(search)) {
                 const [day, month, year] = search.split('/');
@@ -321,8 +383,8 @@ exports.getOrderCompletedBookings = async (req, res) => {
                 };
             } else {
                 const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
-                const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
-                const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
+                const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
+                const matchingProviders = await Provider.find({ name: searchRegex }).select('_id');
 
                 query.$or = [
                     { fileNumber: searchRegex },
@@ -374,6 +436,10 @@ exports.getOrderCompletedBookings = async (req, res) => {
 // ------------------------------
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/booking',
+        handler: 'createBooking',
+    });
     try {
         let {
             search,
@@ -531,6 +597,9 @@ exports.getAllBookings = async (req, res) => {
         const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
         const balanceAmountToCollect = overallAmount - totalCollectedAmount;
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'Booking fetch success.');
         return res.status(200).json({
             total,
             page,
@@ -680,7 +749,8 @@ exports.updateBooking = async (req, res) => {
             bookingId: updatedBooking._id,
             status: updatedBooking.status,
             updatedBooking
-  });
+
+        });
 
         let receiver = updatedBooking.driver || updatedBooking.provider
 
@@ -693,7 +763,8 @@ exports.updateBooking = async (req, res) => {
             });
             console.log('notificationResult', notificationResult)
         }
-                res.status(200).json({ message: 'Booking updated successfully', booking: updatedBooking });
+
+        res.status(200).json({ message: 'Booking updated successfully', booking: updatedBooking });
     } catch (error) {
         console.error('Error updating booking:', error);
         res.status(500).json({ message: 'Error updating booking', error: error.message });
@@ -773,7 +844,7 @@ exports.changePickupImages = async (req, res) => {
 
     try {
         // Find the booking by ID
-        const booking = await Booking.findById(id);
+        let booking = await Booking.findById(id);
 
         if (!booking) {
             return res.status(404).json({ message: "Booking not found" });
@@ -786,6 +857,13 @@ exports.changePickupImages = async (req, res) => {
 
         // Save the updated booking
         booking.pickupImages[index] = req?.file?.filename || booking.pickupImages[index];
+
+        if (booking.pickupImages.length < 3) {
+            booking.pickupImagePending = true
+        } else {
+            booking.pickupImagePending = false
+        }
+
         await booking.save();
 
         res.status(200).json({
@@ -978,14 +1056,17 @@ exports.verifyBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-        // 🔥 ADD this check here
+        
         if (booking.cashPending) {
             return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
         }
-        if (booking.pickupImagePending || booking.dropoffImagePending) {
-            return res.status(400).json({ message: 'Image is pending.' });
+        if (booking.pickupImagePending && booking.pickupImages.length < 3) {
+            return res.status(400).json({ message: 'Pickup images is pending.' });
         }
-        if (booking.inventoryImagePending) {
+        if (booking.dropoffImagePending && booking.dropoffImages) {
+            return res.status(400).json({ message: 'Drop of image is pending.' });
+        }
+        if (booking.inventoryImagePending && !booking.inventoryImage) {
             return res.status(400).json({ message: 'Inventory Image is pending.' });
         }
         // Adjust cash in hand and salary similar to updatePickupByAdmin
@@ -1043,10 +1124,14 @@ exports.verifyBooking = async (req, res) => {
             }
         }
 
+        const updateData = { verified: true };
+        if (booking.provider) {
+            updateData.feedbackCheck = true;
+        }
         // Update booking status to verified
         const updatedBooking = await Booking.findByIdAndUpdate(
             id,
-            { verified: true },
+            updateData,
             { new: true }
         );
 
@@ -1192,6 +1277,9 @@ exports.getApprovedBookings = async (req, res) => {
 
         // Handle search
         if (search) {
+            // Overridinf the custom plugin
+            query._includeHidden = true;
+
             search = search.trim();
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (dateRegex.test(search)) {
@@ -1351,7 +1439,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 exports.settleAmount = async (req, res) => {
     try {
         const { id } = req.params;
-        const { partialAmount, receivedUser, role } = req.body;
+        const { partialAmount, receivedUser, role, receivedAmount } = req.body;
         const userId = req.user.id || req.user._id
 
         const booking = await Booking.findById(id);
@@ -1362,7 +1450,6 @@ exports.settleAmount = async (req, res) => {
             });
         }
 
-        console.log(role, req.body)
         if (role !== 'admin' && receivedUser === 'Staff') {
             booking.receivedUserId = userId
             booking.receivedUser = 'Staff'
@@ -1380,14 +1467,18 @@ exports.settleAmount = async (req, res) => {
                 booking.cashPending = false;
             }
         } else {
-            booking.partialAmount = booking.partialAmount || 0;
-            booking.partialAmount += partialAmount;
-            if (booking.partialAmount < booking.totalAmount) {
-                booking.partialPayment = true;
-                booking.cashPending = true;
-            } else if (booking.partialAmount === booking.totalAmount) {
-                booking.partialPayment = false;
-                booking.cashPending = false;
+            if (receivedAmount && !role) {
+                booking.receivedAmount = receivedAmount;
+            } else {
+                booking.partialAmount = booking.partialAmount || 0;
+                booking.partialAmount += partialAmount;
+                if (booking.partialAmount < booking.totalAmount) {
+                    booking.partialPayment = true;
+                    booking.cashPending = true;
+                } else if (booking.partialAmount === booking.totalAmount) {
+                    booking.partialPayment = false;
+                    booking.cashPending = false;
+                }
             }
         }
 
@@ -1829,6 +1920,7 @@ exports.inventoryBooking = async (req, res) => {
         }
 
         booking.inventoryImage = image;
+        booking.inventoryImagePending = false
         await booking.save();
 
         return res.status(200).json({
