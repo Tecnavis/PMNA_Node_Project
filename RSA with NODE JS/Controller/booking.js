@@ -383,8 +383,8 @@ exports.getOrderCompletedBookings = async (req, res) => {
                 };
             } else {
                 const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
-                const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
-                const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
+                const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
+                const matchingProviders = await Provider.find({ name: searchRegex }).select('_id');
 
                 query.$or = [
                     { fileNumber: searchRegex },
@@ -752,7 +752,7 @@ exports.updateBooking = async (req, res) => {
         });
 
         let receiver = updatedBooking.driver || updatedBooking.provider
-        
+
         if (receiver.fcmToken) {
             const notificationResult = await NotificationService.sendNotification({
                 token: receiver?.fcmToken || '',
@@ -843,7 +843,7 @@ exports.changePickupImages = async (req, res) => {
 
     try {
         // Find the booking by ID
-        const booking = await Booking.findById(id);
+        let booking = await Booking.findById(id);
 
         if (!booking) {
             return res.status(404).json({ message: "Booking not found" });
@@ -856,6 +856,13 @@ exports.changePickupImages = async (req, res) => {
 
         // Save the updated booking
         booking.pickupImages[index] = req?.file?.filename || booking.pickupImages[index];
+
+        if (booking.pickupImages.length < 3) {
+            booking.pickupImagePending = true
+        } else {
+            booking.pickupImagePending = false
+        }
+
         await booking.save();
 
         res.status(200).json({
@@ -1048,14 +1055,17 @@ exports.verifyBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-        // 🔥 ADD this check here
+        
         if (booking.cashPending) {
             return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
         }
-        if (booking.pickupImagePending || booking.dropoffImagePending) {
-            return res.status(400).json({ message: 'Image is pending.' });
+        if (booking.pickupImagePending && booking.pickupImages.length < 3) {
+            return res.status(400).json({ message: 'Pickup images is pending.' });
         }
-        if (booking.inventoryImagePending) {
+        if (booking.dropoffImagePending && booking.dropoffImages) {
+            return res.status(400).json({ message: 'Drop of image is pending.' });
+        }
+        if (booking.inventoryImagePending && !booking.inventoryImage) {
             return res.status(400).json({ message: 'Inventory Image is pending.' });
         }
         // Adjust cash in hand and salary similar to updatePickupByAdmin
@@ -1113,10 +1123,14 @@ exports.verifyBooking = async (req, res) => {
             }
         }
 
+        const updateData = { verified: true };
+        if (booking.provider) {
+            updateData.feedbackCheck = true;
+        }
         // Update booking status to verified
         const updatedBooking = await Booking.findByIdAndUpdate(
             id,
-            { verified: true },
+            updateData,
             { new: true }
         );
 
@@ -1262,6 +1276,9 @@ exports.getApprovedBookings = async (req, res) => {
 
         // Handle search
         if (search) {
+            // Overridinf the custom plugin
+            query._includeHidden = true;
+
             search = search.trim();
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (dateRegex.test(search)) {
@@ -1421,7 +1438,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 exports.settleAmount = async (req, res) => {
     try {
         const { id } = req.params;
-        const { partialAmount, receivedUser, role } = req.body;
+        const { partialAmount, receivedUser, role, receivedAmount } = req.body;
         const userId = req.user.id || req.user._id
 
         const booking = await Booking.findById(id);
@@ -1432,7 +1449,6 @@ exports.settleAmount = async (req, res) => {
             });
         }
 
-        console.log(role, req.body)
         if (role !== 'admin' && receivedUser === 'Staff') {
             booking.receivedUserId = userId
             booking.receivedUser = 'Staff'
@@ -1450,14 +1466,18 @@ exports.settleAmount = async (req, res) => {
                 booking.cashPending = false;
             }
         } else {
-            booking.partialAmount = booking.partialAmount || 0;
-            booking.partialAmount += partialAmount;
-            if (booking.partialAmount < booking.totalAmount) {
-                booking.partialPayment = true;
-                booking.cashPending = true;
-            } else if (booking.partialAmount === booking.totalAmount) {
-                booking.partialPayment = false;
-                booking.cashPending = false;
+            if (receivedAmount && !role) {
+                booking.receivedAmount = receivedAmount;
+            } else {
+                booking.partialAmount = booking.partialAmount || 0;
+                booking.partialAmount += partialAmount;
+                if (booking.partialAmount < booking.totalAmount) {
+                    booking.partialPayment = true;
+                    booking.cashPending = true;
+                } else if (booking.partialAmount === booking.totalAmount) {
+                    booking.partialPayment = false;
+                    booking.cashPending = false;
+                }
             }
         }
 
@@ -1899,6 +1919,7 @@ exports.inventoryBooking = async (req, res) => {
         }
 
         booking.inventoryImage = image;
+        booking.inventoryImagePending = false
         await booking.save();
 
         return res.status(200).json({

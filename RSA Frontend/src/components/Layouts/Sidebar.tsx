@@ -1,7 +1,7 @@
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { toggleSidebar } from '../../store/themeConfigSlice';
 import { VscFeedback } from "react-icons/vsc";
 import AnimateHeight from 'react-animate-height';
@@ -10,27 +10,8 @@ import { useState, useEffect } from 'react';
 import IconCaretsDown from '../Icon/IconCaretsDown';
 import IconCaretDown from '../Icon/IconCaretDown';
 import IconMenuDashboard from '../Icon/Menu/IconMenuDashboard';
-import IconMinus from '../Icon/IconMinus';
-import IconMenuChat from '../Icon/Menu/IconMenuChat';
-import IconMenuMailbox from '../Icon/Menu/IconMenuMailbox';
-import IconMenuTodo from '../Icon/Menu/IconMenuTodo';
-import IconMenuNotes from '../Icon/Menu/IconMenuNotes';
-import IconMenuScrumboard from '../Icon/Menu/IconMenuScrumboard';
-import IconMenuContacts from '../Icon/Menu/IconMenuContacts';
-import IconMenuInvoice from '../Icon/Menu/IconMenuInvoice';
 import IconMenuCalendar from '../Icon/Menu/IconMenuCalendar';
-import IconMenuComponents from '../Icon/Menu/IconMenuComponents';
-import IconMenuElements from '../Icon/Menu/IconMenuElements';
-import IconMenuCharts from '../Icon/Menu/IconMenuCharts';
-import IconMenuWidgets from '../Icon/Menu/IconMenuWidgets';
-import IconMenuFontIcons from '../Icon/Menu/IconMenuFontIcons';
-import IconMenuDragAndDrop from '../Icon/Menu/IconMenuDragAndDrop';
-import IconMenuTables from '../Icon/Menu/IconMenuTables';
-import IconMenuDatatables from '../Icon/Menu/IconMenuDatatables';
-import IconMenuForms from '../Icon/Menu/IconMenuForms';
 import IconMenuUsers from '../Icon/Menu/IconMenuUsers';
-import IconMenuPages from '../Icon/Menu/IconMenuPages';
-import IconMenuAuthentication from '../Icon/Menu/IconMenuAuthentication';
 import IconMenuDocumentation from '../Icon/Menu/IconMenuDocumentation';
 import { TbCurrencyDollar, TbReport } from "react-icons/tb";
 import IconServer from '../Icon/IconServer';
@@ -41,6 +22,9 @@ import { BsCashStack } from 'react-icons/bs';
 import IconAt from '../Icon/IconAt';
 import IconAward from '../Icon/IconAward';
 import { ROLES } from '../../constants/roles'
+import { ImUserTie } from "react-icons/im";
+
+
 
 const Sidebar = () => {
     const [currentMenu, setCurrentMenu] = useState<string>('');
@@ -173,6 +157,34 @@ const Sidebar = () => {
                                             </li>
                                             <li>
                                                 <NavLink to="/users/company">Company Creation</NavLink>
+                                            </li>
+                                        </ul>
+                                    </AnimateHeight>
+                                </li>
+                            )}
+                            {/* Reward */}
+                            {[ROLES.VERIFIER, ROLES.ADMIN].includes(role) && (
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'marketing executive' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('marketing executive')}>
+                                        <div className="flex items-center">
+                                            <ImUserTie className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Marketing Executives')}</span>
+                                        </div>
+
+                                        <div className={currentMenu !== 'rewards' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
+
+                                    <AnimateHeight duration={300} height={currentMenu === 'marketing executive' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            {![ROLES.VERIFIER].includes(role) && (
+                                                <li>
+                                                    <NavLink to="/marketing-executives">Executives</NavLink>
+                                                </li>
+                                            )}
+                                            <li>
+                                                <NavLink className={'w-10'} to="/marketing-executives/showroom">Executive Showroom</NavLink>
                                             </li>
                                         </ul>
                                     </AnimateHeight>
@@ -338,7 +350,6 @@ const Sidebar = () => {
                                             <li>
                                                 <NavLink to="/otherexpences">{t('Other Expences')}</NavLink>
                                             </li>
-                                            
                                             <li>
                                                 <NavLink to="/dieselexpences">{t('Diesel Expence')}</NavLink>
                                             </li>

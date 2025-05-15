@@ -15,7 +15,7 @@ export const AdvanceDetailsTableColumn = [
         render: (advanceDetails: AdvanceData) =>
             typeof advanceDetails?.driver === 'object' ?
                 advanceDetails?.driver?.name
-                : "N/A"
+                : 'N/A'
     },
     {
         title: "ADVANCE PAYMENT DATE",

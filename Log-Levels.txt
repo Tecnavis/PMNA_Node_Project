@@ -1,0 +1,11 @@
+Best Practices for Production Logging
+----------------------------------------
+Log Levels: Use appropriate log levels:
+----------------------------------------
+
+TRACE: For detailed debugging
+DEBUG: For development information
+INFO: For general operational events
+WARN: For potentially harmful situations
+ERROR: For error events
+FATAL: For critical errors that require immediate attention

@@ -1,5 +1,6 @@
+// @ts-nocheck
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import defaultImage from '../../assets/images/user-front-side-with-white-background.jpg';
 import Swal from 'sweetalert2';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -8,6 +9,7 @@ import Select, { ActionMeta, SingleValue } from 'react-select';
 import statesData from './states-and-districts.json';
 import styles from './showroomAdd.module.css';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { getAllExecutives } from '../../services';
 
 const ShowroomAdd: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -35,6 +37,9 @@ const ShowroomAdd: React.FC = () => {
         showroom: { selected: false },
     });
 
+    const locations = useLocation();
+    const { forExecutive } = locations.state || {};
+
     const [confirmPassword, setConfirmPassword] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -43,6 +48,8 @@ const ShowroomAdd: React.FC = () => {
     const [profileImage, setProfileImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string>('');
     const [districtOptions, setDistrictOptions] = useState<{ value: string; label: string }[]>([]);
+    const [executiveOptions, setExecutiveOptions] = useState<{ name: string; _id: string }[]>([]);
+    const [executive, setExecutive] = useState<string>('');
     const uid = id.id;
 
     // check the page for token and redirect
@@ -55,6 +62,9 @@ const ShowroomAdd: React.FC = () => {
         } else {
             navigate('/auth/boxed-signin');
             console.log('Token not found in localStorage');
+        }
+        if (forExecutive) {
+            fetchExecutive()
         }
     }, []);
 
@@ -79,6 +89,9 @@ const ShowroomAdd: React.FC = () => {
             formData.append('mobile', mobile);
             formData.append('state', state);
             formData.append('district', district);
+            if (executive && forExecutive) {
+                formData.append('addedBy', executive);
+            }
 
             // Append services as JSON string
             formData.append('services', JSON.stringify(services));
@@ -106,7 +119,7 @@ const ShowroomAdd: React.FC = () => {
                     timer: 3000,
                     padding: '10px 20px',
                 });
-                navigate('/showroom');
+                navigate(-1);
                 // Optionally, reset the form here
             } catch (error: unknown) {
                 if (error instanceof AxiosError) {
@@ -198,6 +211,9 @@ const ShowroomAdd: React.FC = () => {
                         selected: data.services?.showroom?.selected || false,
                     },
                 });
+                if (forExecutive) {
+                    setExecutive(data.addedBy)
+                }
             } catch (error) {
                 console.error('Error fetching provider data:', error);
             }
@@ -205,7 +221,7 @@ const ShowroomAdd: React.FC = () => {
 
         fetchShowroomById();
     }, [uid]);
-
+    console.log(executiveOptions.find(i => i._id == executive)?.name)
     // handling edit
 
     const handleUpdate = async (e: React.FormEvent) => {
@@ -227,7 +243,9 @@ const ShowroomAdd: React.FC = () => {
             formData.append('mobile', mobile);
             formData.append('state', state);
             formData.append('district', district);
-
+            if (executive && forExecutive) {
+                formData.append('addedBy', executive);
+            }
             // Append services as JSON string
             formData.append('services', JSON.stringify(services));
 
@@ -254,7 +272,7 @@ const ShowroomAdd: React.FC = () => {
                     timer: 3000,
                     padding: '10px 20px',
                 });
-                navigate('/showroom');
+                navigate(-1);
             } catch (error: unknown) {
                 if (error instanceof AxiosError) {
                     Swal.fire({
@@ -367,6 +385,10 @@ const ShowroomAdd: React.FC = () => {
         if (!services.serviceCenter.selected && !services.bodyShop.selected && !services.showroom.selected) {
             formErrors.services = 'At least one service must be selected';
         }
+
+        if (!executive && forExecutive) {
+            formErrors.executive = 'Please select executive';
+        }
         // Set errors
         setErrors(formErrors);
 
@@ -417,6 +439,23 @@ const ShowroomAdd: React.FC = () => {
             setDistrict(''); // Reset district
         }
     };
+
+    const fetchExecutive = async () => {
+        try {
+            const res = await getAllExecutives(1, '1', true, 'name, _id');
+            if (res) {
+                setExecutiveOptions(res.data as { name: string; _id: string }[]);
+            } else {
+                console.error('Failed to fetch executives');
+            }
+        } catch (error) {
+            console.error('Error fetching executives:', error);
+        }
+    };
+
+    const handleExecutiveChange = async (newValue: SingleValue<{ value: string; label: string }>) => {
+        setExecutive(newValue?.value || '')
+    }
 
     return (
         <div>
@@ -511,7 +550,29 @@ const ShowroomAdd: React.FC = () => {
                             </div>
                             {errors.services && <p className="text-red-500">{errors.services}</p>}
                         </div>
+                        {
+                            forExecutive && (
+                                <div>
+                                    <label htmlFor="name">Marketing Executive</label>
+                                    <Select
+                                        id="mx"
+                                        options={executiveOptions?.map((item: { name: string, _id: string }) => ({
+                                            value: item._id,
+                                            label: item.name,
+                                        }))}
+                                        onChange={handleExecutiveChange}
+                                        value={
+                                            executiveOptions.find(i => i._id == executive)?.name
+                                                ? { value: executiveOptions.find(i => i._id == executive)?.name, label: executiveOptions.find(i => i._id == executive)?.name }
+                                                : executiveOptions.find(i => i._id == executive)?.name
+                                        }
 
+                                        placeholder="Select Executive"
+                                    />{' '}
+                                    {errors.executive && <p className="text-red-500">{errors.executive}</p>}
+                                </div>
+                            )
+                        }
                         <div>
                             <label htmlFor="name">Name</label>
                             <input id="name" type="text" autoComplete='off' placeholder="Enter Name" className="form-input" value={name} onChange={(e) => setName(e.target.value)} />
@@ -576,7 +637,7 @@ const ShowroomAdd: React.FC = () => {
                         </div>
                         <div>
                             <label htmlFor="mobile">Mobile number</label>
-                            <input maxLength={10}  id="helpline" type="text" placeholder="Enter Mobile number" className="form-input" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+                            <input maxLength={10} id="helpline" type="text" placeholder="Enter Mobile number" className="form-input" value={mobile} onChange={(e) => setMobile(e.target.value)} />
                             {/* {errors.phone_number && <p className="text-red-500">{errors.phone_number}</p>} */}
                         </div>
                         <div>
