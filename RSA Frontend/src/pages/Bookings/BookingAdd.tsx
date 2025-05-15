@@ -434,7 +434,7 @@ const BookingAdd: React.FC = () => {
     // getting service types
 
     const fetchServiceTypes = async () => {
-        if (!totalDistance) {
+           if (!totalDistance) {
             return
         }
         try {
@@ -458,14 +458,12 @@ const BookingAdd: React.FC = () => {
             fetchAndFilterProviders(serviceTypeId);
         }
     };
-
-    useEffect(() => {
+ useEffect(() => {
         fetchServiceTypes()
     }, [totalDistance])
-
-   // Fetch drivers and apply filter
+    // Fetch drivers and apply filter
     const fetchAndFilterDrivers = async (serviceTypeId: any) => {
-        if (!totalDistance) {
+            if (!totalDistance) {
             return
         }
         setDriverLoader(true)
@@ -1292,7 +1290,7 @@ const BookingAdd: React.FC = () => {
                                 id="date-time"
                                 options={{ enableTime: true, dateFormat: "Y-m-d\\TH:i" }}
                                 value={pickupDate}
-                                onChange={([date]) => setPickupDate("" + date)}
+                                onChange={([date]) => setPickupDate(""+date)}
                                 className="form-input"
                             />
                         </div>
@@ -1313,6 +1311,10 @@ const BookingAdd: React.FC = () => {
                                 {errors.selectedCompany && <p className="text-red-500">{errors.selectedCompany}</p>}
                             </div>
                         )}
+                          {workType === 'RSAWork' && (
+                          <div className="mt-4">
+                           </div>
+                          )}
                         {/* File number  */}
                         <div className="mt-4">
                             <label htmlFor="file-number" className="block font-medium">
@@ -1331,6 +1333,23 @@ const BookingAdd: React.FC = () => {
                             />
                             {errors.fileNumber && <p className="text-red-500">{errors.fileNumber}</p>}
                         </div>
+                        {/* --------------------------------- */}
+                         
+                          <div className="mt-4">
+                           </div>
+                         
+                          {/* ---------------------- */}
+     <div className="mb-6 pb-4 mt-4">
+    <h2 className="text-xl font-semibold text-gray-800 pb-1 relative inline-block">
+        Location Details
+        <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></span>  {/* Gradient underline */}
+    </h2>
+    <p className="text-gray-500 text-sm mt-2">Enter all location-related information</p>
+</div>
+                          <div className="mt-4">
+                           </div>
+                         
+                        
                         {/* Location  */}
                         <div className={styles.container}>
                             <label htmlFor="location">Pickup Location</label>
@@ -1424,31 +1443,7 @@ const BookingAdd: React.FC = () => {
                             {errors.selectedShowroom && <p className="text-red-500">{errors.selectedShowroom}</p>}
                         </div>
 
-                        {/* Total distance  */}
-                        <div>
-                            <label htmlFor="totalDistance">Total distance (KM)</label>
-                            <div className="flex">
-                                <a
-                                    href={`https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${baseLat},${baseLng}&waypoints=${pickupLat},${pickupLng}|${showroomLat},${showroomLng}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="btn btn-info ltr:rounded-r-none rtl:rounded-l-none"
-                                >
-                                    <GiPathDistance size={20} />
-                                </a>
-                                <input
-                                    id="totalDistance"
-                                    type="number"
-                                    ref={totalDistanceRef}
-                                    onChange={(e) => setTotalDistance(e.target.value)}
-                                    value={totalDistance}
-                                    placeholder="Enter total distance"
-                                    onWheel={(e) => e.preventDefault()}
-                                    className="form-input ltr:rounded-l-none rtl:rounded-r-none"
-                                />
-                            </div>
-                            {errors.totalDistance && <p className="text-red-500">{errors.totalDistance}</p>}
-                        </div>
+                      
                         {/* dropoff location  */}
                         <div>
                             <label htmlFor="dropofflocation">Dropoff location</label>
@@ -1493,6 +1488,40 @@ const BookingAdd: React.FC = () => {
                                 value={selectedShowroom?.latitudeAndLongitude}
                                 onChange={handleLatitudeAndLongitudeChange}
                             />
+                        </div>
+                          <div className="mb-6 pb-4 mt-4">
+    <h2 className="text-xl font-semibold text-gray-800 pb-1 relative inline-block">
+        Service Details
+        <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></span>  {/* Gradient underline */}
+    </h2>
+    <p className="text-gray-500 text-sm mt-2">Enter all Service-related information</p>
+</div>
+<div className="mt-4">
+                           </div>
+                          {/* Total distance  */}
+                        <div>
+                            <label htmlFor="totalDistance">Total distance (KM)</label>
+                            <div className="flex">
+                                <a
+                                    href={`https://www.google.com/maps/dir/?api=1&origin=${baseLat},${baseLng}&destination=${baseLat},${baseLng}&waypoints=${pickupLat},${pickupLng}|${showroomLat},${showroomLng}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-info ltr:rounded-r-none rtl:rounded-l-none"
+                                >
+                                    <GiPathDistance size={20} />
+                                </a>
+                                <input
+                                    id="totalDistance"
+                                    type="number"
+                                    ref={totalDistanceRef}
+                                    onChange={(e) => setTotalDistance(e.target.value)}
+                                    value={totalDistance}
+                                    placeholder="Enter total distance"
+                                    onWheel={(e) => e.preventDefault()}
+                                    className="form-input ltr:rounded-l-none rtl:rounded-r-none"
+                                />
+                            </div>
+                            {errors.totalDistance && <p className="text-red-500">{errors.totalDistance}</p>}
                         </div>
                         {/* traped location  */}
                         <div>
@@ -1747,6 +1776,7 @@ const BookingAdd: React.FC = () => {
                         {errors.totalDriverDistence && <p className="text-red-500">{errors.totalDriverDistence}</p>}
                     </div>
                 )}
+                
                 <div className="flex flex-col sm:flex-row mt-3">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                         {trappedLocation !== 'outsideOfRoad' && (
@@ -1781,20 +1811,26 @@ const BookingAdd: React.FC = () => {
                                         </h2>
                                     </>
                                         : <>
-                                            <div style={{ fontSize: 'x-large' }} className='flex item-center justify-center'>
-                                                <span className='pt-1.5'>Driver salary is ₹:</span>
-                                                <input
-                                                    type="number"
-                                                    className='border rounded-md w-24 pl-1'
-                                                    value={driverSalary === null || driverSalary === undefined ? '' : driverSalary}
-                                                    onChange={(e) => setDriverSalary(e.target.value === '' ? null : Number(e.target.value))}
-                                                />
-                                            </div>
+                                            <h2 style={{ fontSize: 'x-large' }}>
+                                                Driver salary is :<span style={{ marginLeft: '10px' }}>₹{driverSalary || 0}</span>
+                                            </h2>
                                         </>
                                 }
 
                             </div>
                         )}
+                         {!totalDriverDistence && (
+                        <div className="mt-4">
+                           </div>
+                         )}
+                                             <div className="mb-6 pb-4 mt-4">
+    <h2 className="text-xl font-semibold text-gray-800 pb-1 relative inline-block">
+        Customer Details
+        <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></span>  {/* Gradient underline */}
+    </h2>
+    <p className="text-gray-500 text-sm mt-2">Enter all Customer-related information</p>
+</div>  <div className="mt-4">
+                           </div>
                         <div>
                             <label htmlFor="customerName">Customer Name</label>
                             <input id="customerName" ref={customerNameRef} type="text" placeholder="Enter customer name" className="form-input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
