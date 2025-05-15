@@ -434,6 +434,9 @@ const BookingAdd: React.FC = () => {
     // getting service types
 
     const fetchServiceTypes = async () => {
+           if (!totalDistance) {
+            return
+        }
         try {
             const response = await axios.get(`${backendUrl}/serviceType`);
             setServiceTypes(response.data);
@@ -455,9 +458,14 @@ const BookingAdd: React.FC = () => {
             fetchAndFilterProviders(serviceTypeId);
         }
     };
-
+ useEffect(() => {
+        fetchServiceTypes()
+    }, [totalDistance])
     // Fetch drivers and apply filter
     const fetchAndFilterDrivers = async (serviceTypeId: any) => {
+            if (!totalDistance) {
+            return
+        }
         setDriverLoader(true)
         try {
             const response = await axios.get(`${backendUrl}/driver`);
@@ -1323,7 +1331,7 @@ const BookingAdd: React.FC = () => {
                         </div>
                         {/* Location  */}
                         <div className={styles.container}>
-                            <label htmlFor="location">Location</label>
+                            <label htmlFor="location">Pickup Location</label>
                             <div className={styles.inputContainer}>
                                 <input
                                     id="serviceName"
