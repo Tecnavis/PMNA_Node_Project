@@ -142,9 +142,9 @@ exports.getAllAdvance = async (req, res) => {
         let allAdvance
 
         if (driverType === 'Driver') {
-            allAdvance = await Advance.find({ userModel: "Driver" }).sort({ createdAt: -1 }).populate('userModel');
+            allAdvance = await Advance.find({ userModel: "Driver" }).sort({ createdAt: -1 }).populate('driver');
         } else {
-            allAdvance = await Advance.find({ userModel: "Provider" }).sort({ createdAt: -1 }).populate('userModel');
+            allAdvance = await Advance.find({ userModel: "Provider" }).sort({ createdAt: -1 }).populate('driver');
         }
 
         if (!allAdvance) {
