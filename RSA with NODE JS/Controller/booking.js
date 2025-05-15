@@ -368,7 +368,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
         if (search) {
 
             query._includeHidden = true;
-
+          
             search = search.trim();
 
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
@@ -749,6 +749,7 @@ exports.updateBooking = async (req, res) => {
             bookingId: updatedBooking._id,
             status: updatedBooking.status,
             updatedBooking
+
         });
 
         let receiver = updatedBooking.driver || updatedBooking.provider
