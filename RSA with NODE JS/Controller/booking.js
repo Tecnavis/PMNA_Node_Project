@@ -306,6 +306,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
 
         // Handle search
         if (search) {
+            query._includeHidden = true;
             search = search.trim();
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
             if (dateRegex.test(search)) {
@@ -678,8 +679,20 @@ exports.updateBooking = async (req, res) => {
             bookingId: updatedBooking._id,
             status: updatedBooking.status,
             updatedBooking
-        })
-        res.status(200).json({ message: 'Booking updated successfully', booking: updatedBooking });
+  });
+
+        let receiver = updatedBooking.driver || updatedBooking.provider
+
+        if (receiver.fcmToken) {
+            const notificationResult = await NotificationService.sendNotification({
+                token: receiver?.fcmToken || '',
+                title: "Booking Edited",
+                body: 'A booking assigned to you has been edited.',
+                sound: 'alert'
+            });
+            console.log('notificationResult', notificationResult)
+        }
+                res.status(200).json({ message: 'Booking updated successfully', booking: updatedBooking });
     } catch (error) {
         console.error('Error updating booking:', error);
         res.status(500).json({ message: 'Error updating booking', error: error.message });
