@@ -463,7 +463,7 @@ const BookingAdd: React.FC = () => {
         fetchServiceTypes()
     }, [totalDistance])
 
-    // Fetch drivers and apply filter
+   // Fetch drivers and apply filter
     const fetchAndFilterDrivers = async (serviceTypeId: any) => {
         if (!totalDistance) {
             return
@@ -1333,7 +1333,7 @@ const BookingAdd: React.FC = () => {
                         </div>
                         {/* Location  */}
                         <div className={styles.container}>
-                            <label htmlFor="location">Location</label>
+                            <label htmlFor="location">Pickup Location</label>
                             <div className={styles.inputContainer}>
                                 <input
                                     id="serviceName"
