@@ -17,7 +17,7 @@ const AdvanceSchema = new mongoose.Schema({
     },
     driver: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'userModel'
+        refPath: 'userModel'
     },
     userModel: {
         type: String,
