@@ -26,7 +26,7 @@ import { CircleCheckBig } from 'lucide-react';
 import getCurrentLocation from '../../utils/getCurrentLocation';
 import { verifyShowroom } from '../../services';
 import { toast } from 'react-hot-toast'
-
+import VerificationModal from './VerificationModal';
 
 function ExecutiveShowroomsTable() {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -45,9 +45,12 @@ function ExecutiveShowroomsTable() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedShowroomForVerification, setSelectedShowroomForVerification] = useState<string | null>(null);
 
     const navigate = useNavigate();
 
+    const [selectedShowroomId, setSelectedShowroomId] = useState<string | null>(null);
+    const [loadingId, setLoadingId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const localRole = localStorage.getItem('role') || ''
@@ -119,6 +122,7 @@ function ExecutiveShowroomsTable() {
         setCurrentPage(page);
         fetchShowroom(searchTerm, page); // use current search term
     };
+
     // Download excel sheet
     const handleDownloadExcel = () => {
         // Convert the data to JSON format suitable for Excel
@@ -152,12 +156,14 @@ function ExecutiveShowroomsTable() {
         // Write the Excel file
         XLSX.writeFile(workbook, 'showrooms.xlsx');
     };
+
     const handleSearchChange = (e: any) => {
         const value = e.target.value;
         setSearchTerm(value);
         setCurrentPage(1); // reset to first page on search
         fetchShowroom(value, 1); // fetch results based on search
     };
+
     // Print the table
     const handlePrint = () => {
         // Create a new window to hold the table for printing
@@ -273,34 +279,64 @@ function ExecutiveShowroomsTable() {
     }
     const getLocation = async () => await getCurrentLocation()
 
-    const handleButtonClick = () => {
-        fileInputRef.current?.click();
+    const handleButtonClick = (id: string) => {
+        setSelectedShowroomId(id);
+
+        // Create a new file input element each time
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.style.display = 'none';
+
+        input.onchange = (e) => {
+            handleFileChange(e as unknown as React.ChangeEvent<HTMLInputElement>);
+            // Clean up
+            document.body.removeChild(input);
+        };
+
+        document.body.appendChild(input);
+        input.click();
     };
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, showroomId: string) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
-        console.log(showrooms.find((showrrom)=>showrrom?._id ==  showroomId)?.name)
+
+        if (!selectedShowroomId) {
+            toast.error("No showroom selected");
+            return;
+        }
+
         if (!files || files.length === 0) {
             toast.error("Please choose an image.");
             return;
         }
 
         const file = files[0];
+        setLoadingId(selectedShowroomId);
 
-        const location = await getLocation();
+        try {
+            const location = await getLocation();
 
-        const res = await verifyShowroom({
-            userType: role,
-            showroomId,
-            coordinates: [location.latitude, location.longitude],
-            accuracy: location.accuracy,
-            image: file
-        })
-        fetchShowroom()
-        if (res) {
-            toast.success("Showroom monthly verification completed.");
-        } else {
-            toast.error("Showroom verification failed");
+            await toast.promise(
+                verifyShowroom({
+                    userType: role,
+                    showroomId: selectedShowroomId,
+                    coordinates: [location.latitude, location.longitude],
+                    accuracy: location.accuracy,
+                    image: file
+                }),
+                {
+                    loading: "Verifying showroom...",
+                    success: "Showroom monthly verification completed.",
+                    error: "Showroom verification failed."
+                }
+            );
+
+            fetchShowroom();
+        } catch (err) {
+            console.error("Verification failed", err);
+        } finally {
+            setLoadingId(null);
+            setSelectedShowroomId(null);
         }
     };
 
@@ -328,7 +364,17 @@ function ExecutiveShowroomsTable() {
                             PRINT
                         </button>
                     </div>
-                    <input type="text" className="form-input w-auto" placeholder="Search..." onChange={handleSearchChange} />
+                    <div className='flex items-center justify-center gap-2'>
+                        <select name="" id="" className='form-select py-1.5 px-20'>
+                            <option disabled defaultChecked>Select Executive</option>
+                            <option value="Hadhi">Hadhi Hassan</option>
+                            <option value="Hadhi">Hadhi Hassan</option>
+                            <option value="Hadhi">Hadhi Hassan</option>
+                            <option value="Hadhi">Hadhi Hassan</option>
+                            <option value="Hadhi">Hadhi Hassan</option>
+                        </select>
+                        <input type="text" className="form-input w-auto" placeholder="Search..." onChange={handleSearchChange} />
+                    </div>
                 </div>
                 <div className="table-responsive mb-5">
                     <table>
@@ -399,7 +445,12 @@ function ExecutiveShowroomsTable() {
                                             <p>No QR Available</p>
                                         )}
                                     </td>
-                                    <td className='text-center underline text-blue-500 hover:cursor-pointer'>Show</td>
+                                    <td
+                                        className='text-center underline text-blue-500 hover:cursor-pointer'
+                                        onClick={() => setSelectedShowroomForVerification(items._id)}
+                                    >
+                                        Show
+                                    </td>
                                     <td className="text-center">
                                         <ul className="flex items-center justify-center gap-2">
                                             <li>
@@ -435,27 +486,22 @@ function ExecutiveShowroomsTable() {
                                                     </button>
                                                 </Tippy>
                                             </li>
-                                            {!items?.currentMonthVerified &&
+                                            {!items?.currentMonthVerified && (
                                                 <li>
                                                     <Tippy content="Verify Current Month">
                                                         <button
-                                                            onClick={handleButtonClick}
+                                                            onClick={() => handleButtonClick(items._id)}
                                                             type="button"
+                                                            disabled={loadingId === items._id}
                                                         >
-                                                            <CircleCheckBig size='22' className="text-success" />
+                                                            <CircleCheckBig
+                                                                size='22'
+                                                                className={`text-success transition-transform`}
+                                                            />
                                                         </button>
                                                     </Tippy>
-                                                    {/* Hidden file input */}
-                                                    <input
-                                                        type="file"
-                                                        ref={fileInputRef}
-                                                        onChange={(e) => {
-                                                            handleFileChange(e, items._id)
-                                                        }}
-                                                        style={{ display: 'none' }}
-                                                    />
                                                 </li>
-                                            }
+                                            )}
                                         </ul>
                                     </td>
                                 </tr>
@@ -744,7 +790,13 @@ function ExecutiveShowroomsTable() {
             />
             <A4Page url={url} modalOpen={modalOpen} setModalOpen={setModalOpen} />
             <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} />
-
+            {/* Verification Modal */}
+            {selectedShowroomForVerification && (
+                <VerificationModal
+                    showroomId={selectedShowroomForVerification}
+                    onClose={() => setSelectedShowroomForVerification(null)}
+                />
+            )}
         </div >
     )
 }
