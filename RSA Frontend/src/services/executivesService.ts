@@ -2,6 +2,7 @@ import { AxiosResponse } from "axios";
 import { axiosInstance as axios, BASE_URL } from "../config/axiosConfig";
 import { IMarketingExecutives } from "../interface/Executives";
 import { showApiErrorToast } from "../utils/errorHandler";
+import { Verification } from "../interface/ShowroomVerification";
 
 
 export const createNewExecutives = async (formData: any) => {
@@ -80,6 +81,19 @@ export const deleteExecutiveById = async (id: string) => {
     } catch (error) {
         showApiErrorToast(error)
         return null;
+    }
+}
+
+export const getVerificationDocsForShowroom = async (showroomId: string): Promise<Verification[]> => {
+    try {
+        const res: AxiosResponse<{
+            data: Verification[];
+            success: boolean
+        }> = await axios.get(`${BASE_URL}/verification/showroom/${showroomId}`)
+        return res.data.data
+    } catch (error) {
+        showApiErrorToast(error)
+        return [];
     }
 }
 // APi server for verify the showroom

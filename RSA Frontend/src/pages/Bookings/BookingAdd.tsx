@@ -147,9 +147,7 @@ export interface SelectedEntity {
 }
 
 
-
 const BookingAdd: React.FC = () => {
-    // Checking message from openBooking 
 
     const locationFromOpen = useLocation();
     const params = new URLSearchParams(locationFromOpen.search);
@@ -160,7 +158,6 @@ const BookingAdd: React.FC = () => {
     } else {
         console.log('this is false')
     }
-
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const navigate = useNavigate();
@@ -243,7 +240,6 @@ const BookingAdd: React.FC = () => {
     const selectedShowroomRef = useRef<any>(null);
 
     // check the page for token and redirect
-
     useEffect(() => {
         const token = localStorage.getItem('token');
         const role = localStorage.getItem('role');
@@ -267,7 +263,6 @@ const BookingAdd: React.FC = () => {
     }, []);
 
     // Fetching companies
-
     const fetchCompanies = async () => {
         try {
             const response = await axios.get(`${backendUrl}/company`);
@@ -278,7 +273,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling company
-
     const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedId = e.target.value;
         const company = companies.find((comp) => comp?._id === selectedId) || null;
@@ -289,8 +283,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // fetching baselocations
-
-
     const fetchBaselocation = async () => {
         try {
             const response = await axios.get(`${backendUrl}/baselocation`);
@@ -301,14 +293,12 @@ const BookingAdd: React.FC = () => {
     };
 
     // Function to generate a unique ID for Payment Work
-
     const generateFileNumber = () => {
         const uniqueId = `${Date.now()}`;
         return `PMNA-${uniqueId}`;
     };
 
     // checking work type for condition
-
     const handleWorkTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedWorkType = e.target.value;
         setSelectedCompany(null);
@@ -324,7 +314,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // calculating the latitude and longitude for the baselocation
-
     useEffect(() => {
         if (latitudeAndLongitude && baseLocations.length > 0) {
             calculateDistances();
@@ -332,7 +321,6 @@ const BookingAdd: React.FC = () => {
     }, [latitudeAndLongitude, baseLocations]);
 
     // checking the pickup location and baselocation distance
-
     const getDistanceAndDuration = async (origin: any, destination: any, id: any) => {
         try {
             const response = await axios.post(`https://api.olamaps.io/routing/v1/directions`, null, {
@@ -379,7 +367,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // fetching all showrooms
-
     const fetchShowroom = async () => {
         try {
             const response = await axios.get(`${backendUrl}/showroom`);
@@ -391,21 +378,18 @@ const BookingAdd: React.FC = () => {
     };
 
     //handle open modal for creating showroom
-
     const handleOpenModal = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         setModal2(true);
     };
 
     //handle close modal for creating showroom
-
     const handleCloseModal = async () => {
         setModal2(false);
         fetchShowroom();
     };
 
     // handling the input for the change dropoff location
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedName = e.target.value;
 
@@ -413,7 +397,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling the input for the change dropoff latitude and longitude
-
     const handleLatitudeAndLongitudeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const updatedValue = e.target.value;
 
@@ -421,7 +404,6 @@ const BookingAdd: React.FC = () => {
     };
 
     //   handling the traped location
-
     const handleTrappedLocationChange = (e: any) => {
         setSelectedServiceType(null);
         setSelectedEntity(null);
@@ -432,7 +414,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // getting service types
-
     const fetchServiceTypes = async () => {
         if (!totalDistance) {
             return
@@ -446,7 +427,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling the servicetype
-
     const handleServiceTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const serviceTypeId = e.target.value;
         const selectedService = serviceTypes.find((item) => item?._id === serviceTypeId);
@@ -458,9 +438,11 @@ const BookingAdd: React.FC = () => {
             fetchAndFilterProviders(serviceTypeId);
         }
     };
+
     useEffect(() => {
         fetchServiceTypes()
     }, [totalDistance])
+
     // Fetch drivers and apply filter
     const fetchAndFilterDrivers = async (serviceTypeId: any) => {
         if (!totalDistance) {
@@ -519,7 +501,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // opening modal for selecting driver and provider
-
     const openDriverModal = async () => {
         setModal6(true);
         // calulating the payable and expence amount (payment work)
@@ -571,7 +552,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // closing modal for selecting driver and provider
-
     const closeDriverModal = async () => {
         setModal6(false);
     };
@@ -601,7 +581,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling the servie category
-
     const handleServiceCategoryChange = (e: any) => {
         const selectedCategory = e.target.value;
         setServiceCategory(selectedCategory);
@@ -614,7 +593,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling set accident amount
-
     const handleAccidentOptionChange = (e: any) => {
         const selectedOption = e.target.value;
         setAccidentOption(selectedOption);
@@ -642,7 +620,6 @@ const BookingAdd: React.FC = () => {
     }, [selectedEntity, insuranceAmount]);
 
     // handling the selected vehicle type
-
     const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedVehicleType(event.target.value);
     };
@@ -652,7 +629,6 @@ const BookingAdd: React.FC = () => {
     const today = now.toISOString().slice(0, 16);
 
     // to adjustment value
-
     const handleAdjustment = () => {
         // Check if selectedEntity is null before accessing its properties
         if (selectedEntity === null) {
@@ -684,7 +660,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling the baselocation
-
     const options = sortedBaseLocations.map((location) => ({
         value: location?._id,
         label: `${location.baseLocation.charAt(0).toUpperCase() + location.baseLocation.slice(1)} - ${location.distance !== Number.MAX_SAFE_INTEGER ? `${location.distance.toFixed(2)} km` : 'Distance Unavailable'
@@ -704,7 +679,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // handling showroom
-
     const showroomOptions = showrooms.map((showroom) => ({
         value: showroom?._id,
         label: showroom.name.charAt(0).toUpperCase() + showroom.name.slice(1),
@@ -712,12 +686,14 @@ const BookingAdd: React.FC = () => {
         insurenceAmount: showroom.services.bodyShop.amount,
         name: showroom.name,
     }));
+
     showroomOptions.unshift({
         value: 'Lifting', label: 'Lifting',
         latitudeAndLongitude: '',
         insurenceAmount: 0,
         name: ''
     })
+
     const handleChangeShowroom = (selectedOption: any) => {
         if (selectedOption.value === 'Lifting') {
             setIsLifting(true)
@@ -741,7 +717,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // calculating the drive salary
-
     const calculateDriverSalary = () => {
         if (isLifting) {
             setDriverSalary(0);
@@ -783,7 +758,6 @@ const BookingAdd: React.FC = () => {
     }, [totalDriverDistence, selectedServiceType, selectedEntity]);
 
     // updating the amount if the traped location is out side of the road
-
     useEffect(() => {
         if (trappedLocation === 'outsideOfRoad' && updatedAmount !== null) {
             setTotalAmount(updatedAmount);
@@ -792,7 +766,6 @@ const BookingAdd: React.FC = () => {
 
 
     // handle create booking
-
     const handleSubmit = async (e: React.FormEvent) => {
         setLoading(true);
         e.preventDefault();
@@ -923,6 +896,7 @@ const BookingAdd: React.FC = () => {
             }
         }
     }
+
     // getting booking by id
     useEffect(() => {
         if (!uid) {
@@ -1012,8 +986,8 @@ const BookingAdd: React.FC = () => {
 
         fetchBookingById();
     }, [uid]);
-    // handling edit
 
+    // handling edit
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -1100,7 +1074,6 @@ const BookingAdd: React.FC = () => {
     };
 
     // validation for add or update driver
-
     const validate = (): boolean => {
         const formErrors: Record<string, string> = {};
 
@@ -1226,8 +1199,8 @@ const BookingAdd: React.FC = () => {
         Object.keys(formErrors).length === 0 ? null : setLoading(false);
         return Object.keys(formErrors).length === 0;
     };
-    // ref to scrolling 
 
+    // ref to scrolling 
     useEffect(() => {
         fetchCompanies();
         fetchBaselocation();
@@ -1316,7 +1289,7 @@ const BookingAdd: React.FC = () => {
                             </div>
                         )}
                         {/* File number  */}
-                        <div className="mt-4">
+                        <div className="mt-2">
                             <label htmlFor="file-number" className="block font-medium">
                                 File Number
                             </label>
@@ -1335,23 +1308,22 @@ const BookingAdd: React.FC = () => {
                         </div>
                         {/* --------------------------------- */}
 
-                        <div className="mt-4">
-                        </div>
+                        <div className="mt-2"></div>
 
                         {/* ---------------------- */}
-                        <div className="mb-6 pb-4 mt-4">
+                        <div className="pb-4 mt-2">
                             <h2 className="text-xl font-semibold text-gray-800 pb-1 relative inline-block">
                                 Location Details
                                 <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></span>  {/* Gradient underline */}
                             </h2>
                             <p className="text-gray-500 text-sm mt-2">Enter all location-related information</p>
                         </div>
-                        <div className="mt-4">
+
+                        <div className="mt-2">
                         </div>
 
-
                         {/* Location  */}
-                        <div className={styles.container}>
+                        <div >
                             <label htmlFor="location">Pickup Location</label>
                             <div className={styles.inputContainer}>
                                 <input
@@ -1489,14 +1461,14 @@ const BookingAdd: React.FC = () => {
                                 onChange={handleLatitudeAndLongitudeChange}
                             />
                         </div>
-                        <div className="mb-6 pb-4 mt-4">
+                        <div className="pb-4 mt-2">
                             <h2 className="text-xl font-semibold text-gray-800 pb-1 relative inline-block">
                                 Service Details
                                 <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></span>  {/* Gradient underline */}
                             </h2>
                             <p className="text-gray-500 text-sm mt-2">Enter all Service-related information</p>
                         </div>
-                        <div className="mt-4">
+                        <div className="mt-2">
                         </div>
                         {/* Total distance  */}
                         <div>
@@ -1829,13 +1801,13 @@ const BookingAdd: React.FC = () => {
                             <div className="mt-4">
                             </div>
                         )}
-                        <div className="mb-6 pb-4 mt-4">
+                        <div className="pb-4 mt-4">
                             <h2 className="text-xl font-semibold text-gray-800 pb-1 relative inline-block">
                                 Customer Details
                                 <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></span>  {/* Gradient underline */}
                             </h2>
                             <p className="text-gray-500 text-sm mt-2">Enter all Customer-related information</p>
-                        </div>  <div className="mt-4">
+                        </div>  <div className="mt-2">
                         </div>
                         <div>
                             <label htmlFor="customerName">Customer Name</label>
