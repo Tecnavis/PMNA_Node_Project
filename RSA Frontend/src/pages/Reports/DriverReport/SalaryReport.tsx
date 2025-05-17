@@ -556,15 +556,6 @@ const DriverSalaryReport = () => {
                             striped
                             minHeight={400}
                             fetching={isLoading}
-                            totalRecords={totalRecords}
-                            recordsPerPage={pageSize}
-                            page={page}
-                            onPageChange={(p) => setPage(p)}
-                            recordsPerPageOptions={[10, 20, 50]}
-                            onRecordsPerPageChange={(newPageSize) => {
-                                setPageSize(newPageSize);
-                                setPage(1);
-                            }}
                             records={[
                                 ...bookings.filter((booking) => booking._id),
                                 ...(Array.isArray(bookings) && bookings.length > 0
