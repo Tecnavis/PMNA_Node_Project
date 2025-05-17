@@ -313,7 +313,7 @@ const Index = () => {
 
             <div className="pt-5">
                 <div className="grid xl:grid-cols-1 gap-6 mb-6">
-                    <div className="grid xl:grid-cols-5 gap-4 mb-6">
+                    <div className="grid xl:grid-cols-4 gap-4 mb-6">
                         <div className={`panel bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6  ${blink ? 'animate-pulse' : ''}`}>
                             <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
                             <p className="text-2xl">{salesByCategory.series[0]}</p>
