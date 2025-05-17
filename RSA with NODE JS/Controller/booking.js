@@ -274,7 +274,7 @@ exports.createBookingNoAuth = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(bookingData.serviceType)) bookingData.serviceType = null;
 
         const newBooking = new Booking(bookingData);
-
+        bookingData.isWhatsappBooking = true
         await newBooking.save();
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
