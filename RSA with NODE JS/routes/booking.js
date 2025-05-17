@@ -9,7 +9,7 @@ const upload = require('../config/multer');
 router.post('/', jwt, controller.createBooking);
 
 //Route for getting approved bookings
-router.post('/no-auth', controller.createBookingNoAuth);
+router.post('/new-booking', controller.createBookingNoAuth);
 
 //Route for getting approved bookings
 router.get('/approvedbookings', jwt, controller.getApprovedBookings);

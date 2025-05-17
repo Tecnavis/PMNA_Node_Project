@@ -5,6 +5,7 @@ import { FiCheck, FiUploadCloud, FiX } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { axiosInstance } from '../../config/axiosConfig';
 
 interface Booking {
     _id?: string;
@@ -163,7 +164,7 @@ const removeInventoryImage = () => {
     // Handler for form submission
     const handleSubmit = async () => {
         setLoading(true)
-        if (requiredUploadedCount < 4) {
+        if (requiredUploadedCount < 3) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Incomplete Upload',
@@ -191,7 +192,7 @@ const removeInventoryImage = () => {
             });
 
             if (bookingData) {
-                await axios.put(`${backendUrl}/booking/${itemId}`, formData);
+                await axiosInstance.put(`${backendUrl}/booking/${itemId}`, formData);
                   // Then upload inventory image if exists
                   if (inventoryImage) {
                     const inventoryFormData = new FormData();
@@ -385,9 +386,9 @@ const removeInventoryImage = () => {
             </div>
             <button
     onClick={handleSubmit}
-    disabled={requiredUploadedCount  < 4 || !Boolean(inventoryUploaded) || !!loading}
+    disabled={requiredUploadedCount  < 3 || !Boolean(inventoryUploaded) || !!loading}
     className={`bg-red-500 text-white mt-6 px-6 py-3 font-semibold rounded-lg shadow-md w-full max-w-xs transition-colors duration-200 ${
-        requiredUploadedCount  < 4 || !inventoryUploaded ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+        requiredUploadedCount  < 3 || !inventoryUploaded ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
     }`}
 >
 
