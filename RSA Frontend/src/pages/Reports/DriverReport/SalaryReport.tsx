@@ -279,10 +279,10 @@ const DriverSalaryReport = () => {
                     driverId: id,
                     startDate,
                     endingDate,
-                    verified : true,
+                    verified: true,
                     search,
                     page,
-                    limit: pageSize
+                    limit: 10000000000
                 }
             });
 
@@ -309,14 +309,14 @@ const DriverSalaryReport = () => {
 
     };
 
-    const updateDateRange = (month: string, year: number) => {
-        const monthIndex = new Date(`${month} 1, ${year}`).getMonth(); // Convert month name to index
+    const updateDateRange = (month: string = 1, year: number) => {
+        const monthIndex = new Date(`${month === 'All Months' ? 1 : month} 1, ${year}`).getMonth(); // Convert month name to index
 
         // Start date: First day of the selected month
         const firstDay = new Date(year, monthIndex, 1);
 
         // End date: Last day of the selected month
-        const lastDay = new Date(year, monthIndex + 1, 0);
+        const lastDay = new Date(year, month === 'All Months' ? 12 : monthIndex + 1, 0);
 
         // Ensure proper formatting to "YYYY-MM-DD"
         setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
@@ -523,7 +523,7 @@ const DriverSalaryReport = () => {
                                         <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                             <h6 className="text-white-dark text-base dark:text-white-dark">
                                                 Balance
-                                                <span className="block text-base text-[#515365] dark:text-white-light">₹ {balanceSalary}</span>
+                                                <span className="block text-base text-[#515365] dark:text-white-light">₹ {driver?.cashInHand - totalCalculatedUpdatedTotalSalary}</span>
                                             </h6>
                                         </div>
                                     </div>
@@ -556,15 +556,6 @@ const DriverSalaryReport = () => {
                             striped
                             minHeight={400}
                             fetching={isLoading}
-                            totalRecords={totalRecords}
-                            recordsPerPage={pageSize}
-                            page={page}
-                            onPageChange={(p) => setPage(p)}
-                            recordsPerPageOptions={[10, 20, 50]}
-                            onRecordsPerPageChange={(newPageSize) => {
-                                setPageSize(newPageSize);
-                                setPage(1);
-                            }}
                             records={[
                                 ...bookings.filter((booking) => booking._id),
                                 ...(Array.isArray(bookings) && bookings.length > 0
