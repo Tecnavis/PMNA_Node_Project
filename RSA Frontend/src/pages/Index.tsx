@@ -97,7 +97,7 @@ const Index = () => {
         const data = response.data.bookingData[0]
         setExpiredRecords(response.data.records)
 
-        setBlink(data.newBookingsShowRoom.length > 0);
+        setBlink(data.newBookingsShowRoom > 0);
 
         setSalesByCategory({
             series: [data.newBookingsShowRoom, data.newBookingsOther, data.pendingBookings, data.completedBookings],
@@ -314,7 +314,7 @@ const Index = () => {
             <div className="pt-5">
                 <div className="grid xl:grid-cols-1 gap-6 mb-6">
                     <div className="grid xl:grid-cols-4 gap-6 mb-6">
-                        <div className={`panel bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6 ${blink ? 'animate-pulse' : ''}`}>
+                        <div className={`panel bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6  ${blink  ? 'animate-pulse' : ''}`}>
                                 <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
                                 <p className="text-2xl">{salesByCategory.series[0]}</p>
                         </div>
