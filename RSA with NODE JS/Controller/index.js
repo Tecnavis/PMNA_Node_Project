@@ -17,12 +17,7 @@ exports.dashboard = async (req, res) => {
                     newBookingsShowRoom: {
                         $sum: {
                             $cond: [
-                                {
-                                    $and: [
-                                        { $eq: ["$status", "Booking Added"] },
-                                        { $ne: ["$showroom", null] }
-                                    ]
-                                },
+                                { $and: [{ $eq: ["$status", "Booking Added"], $eq: ["$bookingStatus", "showroom"] }] },
                                 1,
                                 0
                             ]
@@ -31,7 +26,7 @@ exports.dashboard = async (req, res) => {
                     newBookingsOther: {
                         $sum: {
                             $cond: [
-                                { $and: [{ $eq: ["$status", "booking added"] }] },
+                                { $and: [{ $eq: ["$status", "Booking Added"] }] },
                                 1,
                                 0
                             ]
@@ -68,7 +63,16 @@ exports.dashboard = async (req, res) => {
                                 0
                             ]
                         }
-                    }
+                    },
+                    whatsappBooking: {
+                        $sum: {
+                            $cond: [
+                                { $and: [{ $eq: ["$status", "Booking Added"], $eq: ["$isWhatsappBooking", true] }] },
+                                1,
+                                0
+                            ]
+                        }
+                    },
                 }
             }
 

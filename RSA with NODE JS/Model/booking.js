@@ -52,6 +52,7 @@ const bookingSchema = new mongoose.Schema({
     vehicleNumber: { type: String },
     driverSalaryCheck: { type: Boolean },
     compnayAmountCheck: { type: Boolean },
+    isWhatsappBooking: { type: Boolean, default: false },
     remark: { type: String },
     totalPoints: { type: Number },
     serviceVehicleNumber: { type: String },
