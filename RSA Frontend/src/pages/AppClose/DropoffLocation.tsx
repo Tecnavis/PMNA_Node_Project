@@ -205,7 +205,7 @@ const removeInventoryImage = () => {
                     text: 'Your booking details have been successfully updated!',
                 });
             } else {
-                await axios.post(`${backendUrl}/booking`, formData);
+                await axiosInstance.post(`${backendUrl}/booking`, formData);
                 Swal.fire({
                     icon: 'success',
                     title: 'Booking Created',
@@ -227,14 +227,14 @@ const removeInventoryImage = () => {
 
                 if (result.isConfirmed) {
                     // If "Paid" is clicked
-                    await axios.put(`${backendUrl}/booking/${itemId}`, {
+                    await axiosInstance.put(`${backendUrl}/booking/${itemId}`, {
                         cashPending: false,
                         status: 'Vehicle Dropped',
                     });
                     navigate(`/paymentSettlement?itemId=${itemId}`);
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
                     // If "Not Paid" is clicked
-                    await axios.put(`${backendUrl}/booking/${itemId}`, {
+                    await axiosInstance.put(`${backendUrl}/booking/${itemId}`, {
                         cashPending: true,
                         status: 'Order Completed',
                     });
@@ -245,7 +245,7 @@ const removeInventoryImage = () => {
                 }
 
             } else if (bookingData?.workType === 'RSAWork') {
-                await axios.put(`${backendUrl}/booking/${itemId}`, {
+                await axiosInstance.put(`${backendUrl}/booking/${itemId}`, {
                     status: 'Order Completed',
                 });
                 navigate('/bookings');
