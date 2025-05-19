@@ -262,20 +262,39 @@ exports.createBookingNoAuth = async (req, res) => {
     try {
         const bookingData = req.body;
 
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/new-booking',
+            handler: 'createBookingNoAuth',
+        });
+
+        routeLogger.info({
+            doneBy: req?.user || 'unknown'
+        }, 'New Booking(Whatsapp API) creation process started...');
+
         // Handle the case where 'company' is an empty string
         if (!bookingData.company || bookingData.company === "") {
             bookingData.company = null; // Or you can delete the field entirely if required
         }
+
+        console.log(bookingData)
+        if (bookingData.fileNumber) {
+        }
+
 
         // Fetch driver details
         // Validate ObjectId
         if (!mongoose.Types.ObjectId.isValid(bookingData.baselocation)) bookingData.baselocation = null;
         if (!mongoose.Types.ObjectId.isValid(bookingData.showroom)) bookingData.showroom = null;
         if (!mongoose.Types.ObjectId.isValid(bookingData.serviceType)) bookingData.serviceType = null;
-
+        bookingData.isWhatsappBooking = true
         const newBooking = new Booking(bookingData);
 
         await newBooking.save();
+
+        routeLogger.info({
+            fileNumber: newBooking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'New Booking(Whatsapp API) created successfull.');
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
     } catch (error) {
@@ -368,7 +387,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
         if (search) {
 
             query._includeHidden = true;
-          
+
             search = search.trim();
 
             const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
@@ -555,7 +574,7 @@ exports.getAllBookings = async (req, res) => {
         }
         // Pagination and sorting by createdAt in descending order
         const total = await Booking.countDocuments(query);
-        const bookings = await Booking.find(query)
+        let bookings = await Booking.find(query)
             .populate('baselocation')
             .populate('showroom')
             .populate('serviceType')
@@ -648,10 +667,25 @@ exports.updateBooking = async (req, res) => {
     const { id } = req.params;
     const updatedData = req.body;
 
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/booking',
+        handler: 'updateBooking',
+    });
+
+    routeLogger.info({
+        doneBy: req.user || 'unknown'
+    }, 'Update Booking  process started...');
+
     try {
         // Fetch the existing booking
         const booking = await Booking.findById(id);
         if (!booking) {
+
+            routeLogger.info({
+                fileNumber: booking.fileNumber,
+                doneBy: req.user || 'unknown'
+            }, 'Update Booking  process started...');
+
             return res.status(404).json({ message: 'Booking not found' });
         }
 
@@ -673,6 +707,11 @@ exports.updateBooking = async (req, res) => {
             // Fetch driver details
             const driver = await Driver.findById(updatedData.driver);
             if (!driver) {
+
+                routeLogger.info({
+                    doneBy: req.user || 'unknown'
+                }, 'Driver not found...');
+
                 return res.status(404).json({ message: "Driver not found" });
             }
 
@@ -682,6 +721,11 @@ exports.updateBooking = async (req, res) => {
             );
 
             if (!selectedVehicle) {
+
+                routeLogger.info({
+                    doneBy: req.user || 'unknown'
+                }, 'Vehicle not found for the selected service type...');
+
                 return res.status(404).json({ message: "Vehicle not found for the selected service type" });
             }
 
@@ -764,6 +808,11 @@ exports.updateBooking = async (req, res) => {
             console.log('notificationResult', notificationResult)
         }
 
+        routeLogger.info({
+            fileNumber: updatedBooking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Booking updated successfully...');
+
         res.status(200).json({ message: 'Booking updated successfully', booking: updatedBooking });
     } catch (error) {
         console.error('Error updating booking:', error);
@@ -786,6 +835,15 @@ exports.updatePickupByAdmin = async (req, res) => {
             compnayAmountCheck,
             remark,
         } = req.body;
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/booking',
+            handler: 'updateBooking',
+        });
+
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'Update Booking pickup details process started...');
 
         // Update the booking details
         const updatedBooking = await Booking.findByIdAndUpdate(
@@ -816,6 +874,11 @@ exports.updatePickupByAdmin = async (req, res) => {
             status: updatedBooking.status
         })
 
+        routeLogger.info({
+            fileNumber: updatedBooking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Pickup Details updated successfully...');
+
         res.status(200).json({
             message: 'Booking updated successfully.',
             booking: updatedBooking,
@@ -837,6 +900,15 @@ exports.uploadImage = async (req, res) => {
 // remove the pickup image 
 exports.changePickupImages = async (req, res) => {
     const { id, index } = req.params;
+
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/booking',
+        handler: 'updateBooking',
+    });
+
+    routeLogger.info({
+        doneBy: req.user || 'unknown'
+    }, 'The process to update the pickup image for the booking has started....');
 
     if (!id) {
         return res.status(400).json({ message: "ID is required" });
@@ -866,6 +938,11 @@ exports.changePickupImages = async (req, res) => {
 
         await booking.save();
 
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Pickup image changes updated successfully...');
+
         res.status(200).json({
             message: "Image removed successfully",
             pickupImagePending: booking.pickupImagePending,
@@ -881,6 +958,16 @@ exports.addPickupImages = async (req, res) => {
     const { id } = req.params;
 
     try {
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/add-pickup-image',
+            handler: 'addPickupImages',
+        });
+
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to add the pickup image for the booking has started....');
+
         // Find the booking document by ID
         const booking = await Booking.findById(id);
         if (!booking) {
@@ -916,6 +1003,11 @@ exports.addPickupImages = async (req, res) => {
         // Save the updated booking
         await booking.save();
 
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Pickup images added successfully....');
+
         // Respond with the updated pickup images
         res.status(200).json({
             message: 'Pickup images added successfully',
@@ -932,6 +1024,15 @@ exports.addPickupImages = async (req, res) => {
 // remove the dropoff image 
 exports.changeDropoffImages = async (req, res) => {
     const { id, index } = req.params;
+
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/change-pickup-image',
+        handler: 'changeDropoffImages',
+    });
+
+    routeLogger.info({
+        doneBy: req.user || 'unknown'
+    }, 'The process to change the pickup image for the booking has started....');
 
     if (!id) {
         return res.status(400).json({ message: "ID is required" });
@@ -959,6 +1060,11 @@ exports.changeDropoffImages = async (req, res) => {
         booking.dropoffImages[index] = req?.file?.filename || booking.dropoffImages[index];
         await booking.save();
 
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'DropOf Image removed successfully....');
+
         res.status(200).json({
             message: "Image removed successfully",
             dropoffImagePending: booking.dropoffImagePending,
@@ -974,6 +1080,15 @@ exports.changeDropoffImages = async (req, res) => {
 exports.addDropoffImages = async (req, res) => {
 
     const { id } = req.params;
+
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/change-pickup-image',
+        handler: 'changeDropoffImages',
+    });
+
+    routeLogger.info({
+        doneBy: req.user || 'unknown'
+    }, 'The process to add the dropOf image for the booking has started....');
 
     try {
         // Find the booking document by ID
@@ -1011,6 +1126,11 @@ exports.addDropoffImages = async (req, res) => {
         // Save the updated booking
         await booking.save();
 
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'DropOff images added successfully....');
+
         // Respond with the updated dropoff images
         res.status(200).json({
             message: 'Dropoff images added successfully',
@@ -1029,6 +1149,15 @@ exports.updateFilenumber = async (req, res) => {
     const { fileNumber } = req.body;
     const { id } = req.params;
 
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/change-pickup-image',
+        handler: 'changeDropoffImages',
+    });
+
+    routeLogger.info({
+        doneBy: req.user || 'unknown'
+    }, 'The process to add the fileNumber for the booking has started....');
+
     try {
         // Find the booking by ID and update the fileNumber
         const booking = await Booking.findById(id);
@@ -1038,6 +1167,11 @@ exports.updateFilenumber = async (req, res) => {
 
         booking.fileNumber = fileNumber; // Update the fileNumber
         await booking.save(); // Save the updated booking
+
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Filenumber updated successfully....');
 
         res.status(200).json({ message: "Filenumber updated successfully" });
     } catch (error) {
@@ -1051,12 +1185,21 @@ exports.verifyBooking = async (req, res) => {
     try {
         const { id } = req.params;
 
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/verifyBooking',
+            handler: 'verifyBooking',
+        });
+
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to verify  the booking has started....');
+
         // Fetch the booking details
         const booking = await Booking.findById(id);
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-        
+
         if (booking.cashPending) {
             return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
         }
@@ -1139,6 +1282,11 @@ exports.verifyBooking = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found.' });
         }
 
+        routeLogger.info({
+            fileNumber: updatedBooking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Booking verified successfully....');
+
         res.status(200).json({
             message: 'Booking verified successfully.',
             booking: updatedBooking,
@@ -1153,6 +1301,16 @@ exports.verifyBooking = async (req, res) => {
 // posting feedback 
 exports.postFeedback = async (req, res) => {
     try {
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/create-feedback',
+            handler: 'postFeedback',
+        });
+
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to change the pickup image for the booking has started....');
+
         const { id } = req.params;
         const { feedback } = req.body;
 
@@ -1223,6 +1381,11 @@ exports.postFeedback = async (req, res) => {
             }
         }
 
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Feedback created success....');
+
         res.status(200).json({
             message: "Feedback and driver salary updated successfully",
             booking: updatedBooking
@@ -1238,6 +1401,15 @@ exports.postFeedback = async (req, res) => {
 exports.accountVerifying = async (req, res) => {
     const { id } = req.params
 
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/verify-accountant',
+        handler: 'accountVerifying',
+    });
+
+    routeLogger.info({
+        doneBy: req.user || 'unknown'
+    }, 'The process to verify the accountant for the booking has started....');
+
     try {
         const updatedBooking = await Booking.findByIdAndUpdate(
             id,
@@ -1250,8 +1422,13 @@ exports.accountVerifying = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found.' });
         }
 
+        routeLogger.info({
+            fileNumber: updatedBooking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Accountant verified successfully.....');
+
         res.status(200).json({
-            message: 'Accountant verified successfully.',
+            message: '',
             booking: updatedBooking,
         });
     } catch (error) {
@@ -1438,6 +1615,14 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 //Controller to settle booking amount 
 exports.settleAmount = async (req, res) => {
     try {
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/settle-amount',
+            handler: 'settleAmount',
+        });
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to settle amount the booking has started....');
+
         const { id } = req.params;
         const { partialAmount, receivedUser, role, receivedAmount } = req.body;
         const userId = req.user.id || req.user._id
@@ -1450,19 +1635,36 @@ exports.settleAmount = async (req, res) => {
             });
         }
 
-        if (role !== 'admin' && receivedUser === 'Staff') {
+        // Creating the receivedHistory object
+        const receivedHistory = {
+            role: receivedUser || 'Admin',
+            receivedUser: userId,
+            amount: receivedAmount || partialAmount
+        }
+
+        booking.receivedHistory.push(receivedHistory)
+
+        if (role !== 'admin' && receivedUser) {
             booking.receivedUserId = userId
             booking.receivedUser = 'Staff'
 
-            await Staff.findByIdAndUpdate(userId, {
+            const ReceivedUserModel = mongoose.model(receivedUser || "Admin");
+
+            //Update ReceivedUser cash in hand 
+            await ReceivedUserModel.findByIdAndUpdate(userId, {
                 $inc: {
                     cashInHand: partialAmount
                 }
-            })
+            });
         }
 
+        // Update partial or amount to booking
         if (booking.company) {
-            booking.receivedAmountByCompany += partialAmount;
+            const currentAmount = Number(booking.receivedAmountByCompany) || 0;
+            const amountToAdd = Number(partialAmount || receivedAmount) || 0;
+
+            booking.receivedAmountByCompany = currentAmount + amountToAdd;
+            booking.receivedAmount = amountToAdd
             if (booking.totalAmount <= booking.receivedAmountByCompany) {
                 booking.cashPending = false;
             }
@@ -1482,7 +1684,20 @@ exports.settleAmount = async (req, res) => {
             }
         }
 
+        // Condition for valide amount if the amount more thatn total amount this will handled
+        if (!booking.company && booking.totalAmount <= booking.partialAmount) {
+            booking.receivedAmount = booking.totalAmount;
+            booking.partialAmount = booking.receivedAmount;
+            booking.partialPayment = false;
+            booking.cashPending = false;
+        }
+
         await booking.save();
+
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Settle amount updated successfully....');
 
         return res.status(200).json({
             message: "Settle amount updated",
@@ -1498,6 +1713,16 @@ exports.settleAmount = async (req, res) => {
 //Controller for update booking as approved 
 exports.updateBookingApproved = async (req, res) => {
     try {
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/updateBookingApproved',
+            handler: 'updateBookingApproved',
+        });
+
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to approve the booking has started....');
+
         const { id } = req.params
 
         const booking = await Booking.findById(id)
@@ -1508,6 +1733,11 @@ exports.updateBookingApproved = async (req, res) => {
 
         booking.accountantVerified = true
         await booking.save()
+
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Booking approved successfully....');
 
         return res.status(200).json({
             message: "Booking updated successfully, approved"
@@ -1523,6 +1753,15 @@ exports.updateBookingApproved = async (req, res) => {
 //Controller for distribute received amount
 exports.distributeReceivedAmount = async (req, res) => {
     const { receivedAmount, driverId, bookingIds, workType = 'RSAWork' } = req.body;
+
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/distributeReceivedAmount',
+        handler: 'distributeReceivedAmount',
+    });
+
+    routeLogger.info({
+        doneBy: req.user || 'unknown'
+    }, 'The process to distributeReceivedAmount for the booking has started....');
 
     try {
         let remainingAmount = receivedAmount;
@@ -1583,6 +1822,10 @@ exports.distributeReceivedAmount = async (req, res) => {
             await deductRemainingFromAdvance(remainingAmount, driverId);
         }
 
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'Amount distributed successfully....');
+
         return res.status(200).json(
             { message: "Amount distributed successfully" }
         )
@@ -1597,6 +1840,16 @@ exports.distributeReceivedAmount = async (req, res) => {
 //Controller for udpate driver balance salary
 exports.updateBalanceSalary = async (req, res) => {
     const { bookingIds, totalAmount } = req.body
+
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/updateBalanceSalary',
+        handler: 'updateBalanceSalary',
+    });
+
+    routeLogger.info({
+        doneBy: req.user || 'unknown'
+    }, 'The process to update booking balance driver salary has started....');
+
     try {
         let amount = Number(totalAmount) || 0;
 
@@ -1616,6 +1869,11 @@ exports.updateBalanceSalary = async (req, res) => {
 
             if (amount <= 0) break;
         }
+
+        routeLogger.info({
+            bookingIds: bookingIds || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Driver balance salary updated successfully....');
 
         return res.status(200).json({
             message: "Driver balance salary updated successfully",
@@ -1845,6 +2103,15 @@ exports.cancelBooking = async (req, res) => {
         const { id } = req.params;
         const cancelData = req.body;
 
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/cancelBooking',
+            handler: 'cancelBooking',
+        });
+
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to cancel booking has started....');
+
         if (!cancelData.cancelReason || !cancelData.cancelKm) {
             return res.status(400).json({
                 message: 'All fields are required.',
@@ -1885,6 +2152,11 @@ exports.cancelBooking = async (req, res) => {
 
         await booking.save();
 
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Booking Canceled success.....');
+
         return res.status(200).json({
             message: "Booking Canceled.",
             success: true,
@@ -1900,6 +2172,15 @@ exports.cancelBooking = async (req, res) => {
 exports.inventoryBooking = async (req, res) => {
     try {
         const { id } = req.params;
+
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/inventoryBooking',
+            handler: 'inventoryBooking',
+        });
+
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to update inventory image has started....');
 
         if (!req.file || !req.file.filename) {
             return res.status(400).json({
@@ -1922,6 +2203,11 @@ exports.inventoryBooking = async (req, res) => {
         booking.inventoryImage = image;
         booking.inventoryImagePending = false
         await booking.save();
+
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Inventory image added success.....');
 
         return res.status(200).json({
             message: 'Inventory image added.',
