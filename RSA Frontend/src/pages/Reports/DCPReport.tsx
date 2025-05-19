@@ -84,6 +84,7 @@ export interface Driver {
     name: string;
     idNumber: string;
     cashInHand: number;
+    balanceAmount: number;
     driverSalary: number;
     advance: number;
     phone: string;
@@ -821,7 +822,7 @@ const MultipleTables = () => {
                                     title: 'Salary Amount',
                                     render: (driver: Driver) => (
                                         <div>
-                                            <div>₹{driver.driverSalary ? driver.driverSalary : 0}</div>
+                                            <div>₹{driver.balanceAmount ? driver.balanceAmount : 0}</div>
                                         </div>
                                     ),
                                 },
