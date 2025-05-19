@@ -389,15 +389,15 @@ const Status: React.FC = () => {
                                             <span className='w-1/2 text-end text-gray-500 dark:text-gray-300 pr-4'>{dateFormate(booking?.dropoffTime)} at {formattedTime(booking?.dropoffTime)}</span>
                                         </li>
                                         {booking?.partialPaymentRemark && (
-    <li className='w-full flex flex-row mt-3 border-b'>
-        <span className='w-1/2 font-semibold pl-4 text-violet-600 dark:text-violet-300'>
-            Partial Payment Remark:
-        </span>
-        <span className='w-1/2 text-end pr-4 text-red-600 italic dark:text-gray-300'>
-            {booking.partialPaymentRemark}
-        </span>
-    </li>
-)}
+                                            <li className='w-full flex flex-row mt-3 border-b'>
+                                                <span className='w-1/2 font-semibold pl-4 text-violet-600 dark:text-violet-300'>
+                                                    Partial Payment Remark:
+                                                </span>
+                                                <span className='w-1/2 text-end pr-4 text-red-600 italic dark:text-gray-300'>
+                                                    {booking.partialPaymentRemark}
+                                                </span>
+                                            </li>
+                                        )}
                                         <li className='w-full flex flex-row justify-center my-3 place-items-center'>
                                             <span className='w-1/2  font-semibold pl-4 mb-2 dark:text-white'>Status :</span>
                                             <span className='w-1/2 text-end pr-4 pt-1'>
@@ -424,7 +424,7 @@ const Status: React.FC = () => {
                                             )
                                         }
                                     </div>}
-    
+
 
                                     {booking.cashPending && <div className="flex justify-start my-5">
                                         <button
@@ -548,15 +548,19 @@ const Status: React.FC = () => {
                             />
                             <label className="mt-1">Driver</label>
                         </li>
-                        <li className="flex items-center gap-1">
-                            <input
-                                type="radio"
-                                name="role"
-                                value="Staff"
-                                onChange={handleRoleChange}
-                            />
-                            <label className="mt-1">Staff</label>
-                        </li>
+                        {
+                            role !== 'admin' && <>
+                                <li className="flex items-center gap-1">
+                                    <input
+                                        type="radio"
+                                        name="role"
+                                        value="Staff"
+                                        onChange={handleRoleChange}
+                                    />
+                                    <label className="mt-1">Staff</label>
+                                </li>
+                            </>
+                        }
                         <li className="flex items-center gap-1">
                             <input
                                 type="radio"
