@@ -83,14 +83,24 @@ async function calculateTotalSalary(driverId) {
         {
             $group: {
                 _id: null,
-                totalSalary: {
+                driverTotalSalary: {
                     $sum: '$driverSalary'
+                },
+                driverTotalTransferdSalary: {
+                    $sum: '$transferedSalary'
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                actualSalary: {
+                    $subtract: ['$driverTotalSalary', '$driverTotalTransferdSalary']
                 }
             }
         }
     ]);
-
-    return result[0]?.totalSalary || 0;
+    return result[0]?.actualSalary || 0;
 }
 // Update financial values in driver side
 async function updateDriverFinancials(driverId, advance = 0) {
