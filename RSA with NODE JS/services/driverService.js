@@ -131,9 +131,6 @@ async function updateDriverFinancials(driverId, advance = 0) {
 
 // Function for update driver balance amount (balance amount to give to admin)
 function calculateBalanceAmount(cashInHand, driverSalary) {
-    if (cashInHand <= 0 || cashInHand < driverSalary) {
-        return 0
-    }
     return cashInHand - driverSalary
 }
 // Calculating the current monthlyExpense
