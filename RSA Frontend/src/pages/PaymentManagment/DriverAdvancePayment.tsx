@@ -22,6 +22,7 @@ const AdvancePayment: React.FC = () => {
     const [inHandAmount, setInHandAmount] = useState<number>(0);
     const [receivedAmount, setReceivedAmount] = useState<string>('');
     const [remark, setRemark] = useState<string>('');
+    const [search, setSearch] = useState<string>('');
 
     const [tabIndex, setTabIndex] = useState(0);
     const printRef = useRef<HTMLDivElement>(null);
@@ -59,7 +60,8 @@ const AdvancePayment: React.FC = () => {
         try {
             const res = await axios.get(`${BASE_URL}/advance-payment`, {
                 params: {
-                    driverType: "Driver"
+                    driverType: "Driver",
+                    search: search
                 }
             })
             setAdvanceDetails(res.data.data);
@@ -128,7 +130,11 @@ const AdvancePayment: React.FC = () => {
 
     const fetchCashCollection = async () => {
         try {
-            const res = await axios.get(`${BASE_URL}/booking`)
+            const res = await axios.get(`${BASE_URL}/booking`, {
+                params: {
+                    search: search
+                }
+            })
             setBookings(res.data.bookings)
         } catch (error) {
 
@@ -137,7 +143,11 @@ const AdvancePayment: React.FC = () => {
 
     const fetchReceivedData = async () => {
         try {
-            const res = await axios.get(`${BASE_URL}/cash-received-details`)
+            const res = await axios.get(`${BASE_URL}/cash-received-details`, {
+                params: {
+                    search: search
+                }
+            })
             setReceivedDetails(res.data)
         } catch (error) {
 
@@ -203,6 +213,19 @@ const AdvancePayment: React.FC = () => {
     useEffect(() => {
         updateNetTotalAmount()
     }, [selectedDriver])
+
+    useEffect(() => {
+        setSearch('')
+    }, [selectedType])
+
+    useEffect(() => {
+        if (selectedType == 'advance') {
+            fetchAdvancePayment()
+        } else {
+            fetchCashCollection()
+            fetchReceivedData()
+        }
+    }, [search])
 
     return (
         <main className='flex flex-col items-center justify-center'>
@@ -381,7 +404,13 @@ const AdvancePayment: React.FC = () => {
                                             Print
                                         </button>)
                                 }
-                                <input type="text" placeholder='Search by Date, Driver, File Number or Received Amount' className='p-3 w-full rounded-md border-2 ' />
+                                <input
+                                    type="text"
+                                    placeholder='Search by Driver or File Number'
+                                    className='p-3 w-full rounded-md border-2 '
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
                             </div>
                             {selectedType === "advance" ? (
                                 <>

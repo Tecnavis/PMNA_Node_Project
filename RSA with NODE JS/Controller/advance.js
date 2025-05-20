@@ -136,14 +136,38 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc, userType) => {
 //Controller for get all advance
 exports.getAllAdvance = async (req, res) => {
     try {
-        const { driverType } = req.query;
+        const { driverType, search } = req.query;
 
         let allAdvance
+        const query = {};
+
+        if (search && search.trim()) {
+            const searchQuery = search.trim();
+            const regex = new RegExp(searchQuery, 'i');
+
+            const searchConditions = [
+                { filesNumbers: { $elemMatch: { $regex: regex } } },
+            ];
+
+            const [matchingDrivers, matchingProviders] = await Promise.all([
+                Driver.find({ name: regex }).select('_id').lean(),
+                Provider.find({ name: regex }).select('_id').lean(),
+            ]);
+
+            if (matchingDrivers.length > 0) {
+                searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
+            }
+            if (matchingProviders.length > 0) {
+                searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
+            }
+
+            query.$or = searchConditions;
+        }
 
         if (driverType === 'Driver') {
-            allAdvance = await Advance.find({ userModel: "Driver" }).sort({ createdAt: -1 }).populate('driver');
+            allAdvance = await Advance.find({ userModel: "Driver", ...query }).sort({ createdAt: -1 }).populate('driver');
         } else {
-            allAdvance = await Advance.find({ userModel: "Provider" }).sort({ createdAt: -1 }).populate('driver');
+            allAdvance = await Advance.find({ userModel: "Provider", ...query }).sort({ createdAt: -1 }).populate('driver');
         }
 
         if (!allAdvance) {

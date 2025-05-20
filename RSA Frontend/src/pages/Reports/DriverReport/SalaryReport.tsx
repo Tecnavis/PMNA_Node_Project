@@ -17,7 +17,7 @@ import IconEye from '../../../components/Icon/IconEye';
 import { MONTHS, MONTHS_NUMBER, YEARS_FOR_FILTER } from '../constant'
 import { axiosInstance as axios, BASE_URL } from '../../../config/axiosConfig';
 import IconPrinter from '../../../components/Icon/IconPrinter';
-import { handlePrint } from '../../../utils/PrintInvoice';
+import { handlePrint } from './SalaryPrint';
 import { Dialog, Transition } from '@headlessui/react';
 import { dateFormate, formattedTime } from '../../../utils/dateUtils';
 import IconCashBanknotes from '../../../components/Icon/IconCashBanknotes';
@@ -486,7 +486,7 @@ const DriverSalaryReport = () => {
                             </div>
                         </div>
                         {/* section for driver salary data (summary) */}
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                        <div className='grid grid-cols-1 md:grid-cols-2 gap-3' ref={printRef}>
                             {/* driver salary reports */}
                             <div className="space-y-4" >
                                 <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
@@ -543,11 +543,29 @@ const DriverSalaryReport = () => {
                 </div>
                 {/* Report Table */}
                 <div className="panel mt-6">
-                    <div className="flex md:items-center md:flex-row flex-col mb-5 ">
+                    <div className="flex justify-between md:items-center md:flex-row flex-col mb-5 ">
                         <div className=''>
                             <h3 className='text-lg font-semibold'>
                                 Driver Salary Details
                             </h3>
+                        </div>
+                        <div className='flex gap-1'>
+                            {/* <button className='btn btn-primary'
+                            onClick={handleGenerateInvoices}
+                            >Generate Invoice</button> */}
+                            <button
+                                className='btn btn-primary'
+                                onClick={() => handlePrint(
+                                    printRef,
+                                    selectedYear,
+                                    selectedMonth,
+                                    role,
+                                    driver,
+                                    bookings,
+                                    totalCalculatedUpdatedTotalSalary,
+                                    balanceSalary
+                                )}
+                            ><IconPrinter />Print</button>
                         </div>
                     </div>
                     <div className="datatables">

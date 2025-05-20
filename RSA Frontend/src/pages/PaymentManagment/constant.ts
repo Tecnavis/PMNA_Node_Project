@@ -45,6 +45,14 @@ export const colsForAdvance = [
             `${dateFormate(advanceDetails?.createdAt)} , ${formattedTime(advanceDetails?.createdAt)}`
     },
     {
+        title: "DRIVER NAME",
+        accessor: 'driver.name',
+        render: (advanceDetails: AdvanceData) =>
+            typeof advanceDetails?.driver === 'object' ?
+                advanceDetails?.driver?.name
+                : 'N/A'
+    },
+    {
         title: "File NUMBERS",
         accessor: 'filesNumbers',
         render: (advanceDetails: AdvanceData) =>
@@ -65,7 +73,7 @@ export const colsForAdvance = [
         accessor: 'driverSalary',
         render: (advanceDetails: AdvanceData) =>
             advanceDetails?.driverSalary?.length
-                ?advanceDetails.driverSalary.map(salary => `₹${salary}`).join(', ')
+                ? advanceDetails.driverSalary.map(salary => `₹${salary}`).join(', ')
                 : 'N/A'
     },
     {

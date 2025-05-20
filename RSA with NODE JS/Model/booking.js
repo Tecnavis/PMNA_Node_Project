@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const visibleFilter = require('../plugins/visibleFilter');
+const ReceivedHistorySchema = require('./receivedHistory');
 
 const bookingSchema = new mongoose.Schema({
     workType: { type: String },
@@ -96,8 +97,8 @@ const bookingSchema = new mongoose.Schema({
     },
     inventoryImagePending: { type: Boolean },
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' },
-    rewardAmount: { type: Number }
-
+    rewardAmount: { type: Number },
+    receivedHistory: [ReceivedHistorySchema],
 }, { timestamps: true });
 
 bookingSchema.plugin(visibleFilter);
