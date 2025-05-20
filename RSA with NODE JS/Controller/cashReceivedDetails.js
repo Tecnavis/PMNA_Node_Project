@@ -2,12 +2,13 @@ const ReceivedDetails = require('../Model/ReceivedDetails.js')
 const Driver = require('../Model/driver.js')
 const Booking = require('../Model/booking.js')
 const Advance = require('../Model/advance.js')
+const Provider = require('../Model/provider');
 
 
 exports.createReceivedDetails = async (req, res) => {
     try {
         const { amount, currentNetAmount, driver, receivedAmount, remark } = req.body;
-        
+
         if (!amount || !currentNetAmount || !driver || !receivedAmount) {
             return res.status(400).json({ message: 'All fields are required' });
         }
@@ -24,7 +25,7 @@ exports.createReceivedDetails = async (req, res) => {
         const bookings = await Booking.find({
             status: 'Order Completed',
             driver,
-            workType : 'PaymentWork',
+            workType: 'PaymentWork',
             $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
         }).sort({ createdAt: 1 })
         console.log("booking", bookings.length)
@@ -59,7 +60,7 @@ exports.createReceivedDetails = async (req, res) => {
             }
             const receivedDetails = await ReceivedDetails.create({
                 remark,
-                balance :newAdvance,
+                balance: newAdvance,
                 fileNumber: 'Advance Deduction',
                 currentNetAmount: 0,
                 amount: `Advance: ${driverAdvance}`,
@@ -75,7 +76,7 @@ exports.createReceivedDetails = async (req, res) => {
 
             const receivedDetails = await ReceivedDetails.create({
                 remark,
-                balance : balance,
+                balance: balance,
                 fileNumber: booking.fileNumber,
                 currentNetAmount: balance,
                 amount: booking.totalAmount,
@@ -94,8 +95,35 @@ exports.createReceivedDetails = async (req, res) => {
 
 exports.getAllReceivedDetails = async (req, res) => {
     try {
+
+        const { search } = req.query
+
+        const query = {};
+
+        if (search && search.trim()) {
+            const searchQuery = search.trim();
+            const regex = new RegExp(searchQuery, 'i');
+
+            const searchConditions = [
+                { fileNumber: regex },
+            ];
+
+            const [matchingDrivers, matchingProviders] = await Promise.all([
+                Driver.find({ name: regex }).select('_id').lean(),
+                Provider.find({ name: regex }).select('_id').lean(),
+            ]);
+
+            if (matchingDrivers.length > 0) {
+                searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
+            }
+            if (matchingProviders.length > 0) {
+                searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
+            }
+
+            query.$or = searchConditions;
+        }
         const receivedDetails = await ReceivedDetails
-            .find()
+            .find(query)
             .sort({ createdAt: -1 })
             .populate('driver')
 
