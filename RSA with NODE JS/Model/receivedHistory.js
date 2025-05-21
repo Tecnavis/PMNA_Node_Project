@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const receivedHistorySchema = new mongoose.Schema({
     role: {
         type: String,
-        enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff'],
+        enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff', "Driver"],
         required: true
     },
     receivedUser: {
