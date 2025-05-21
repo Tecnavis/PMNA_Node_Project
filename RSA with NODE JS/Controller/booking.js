@@ -1653,7 +1653,7 @@ exports.settleAmount = async (req, res) => {
             //Update ReceivedUser cash in hand 
             await ReceivedUserModel.findByIdAndUpdate(userId, {
                 $inc: {
-                    cashInHand: partialAmount
+                    cashInHand: Number(partialAmount || 0)
                 }
             });
         }
