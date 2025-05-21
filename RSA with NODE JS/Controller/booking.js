@@ -1646,7 +1646,7 @@ exports.settleAmount = async (req, res) => {
 
         if (role !== 'admin' && receivedUser) {
             booking.receivedUserId = userId
-            booking.receivedUser = 'Staff'
+            booking.receivedUser = receivedUser
 
             const ReceivedUserModel = mongoose.model(receivedUser || "Admin");
 
