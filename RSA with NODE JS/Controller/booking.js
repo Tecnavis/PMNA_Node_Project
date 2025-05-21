@@ -1646,9 +1646,9 @@ exports.settleAmount = async (req, res) => {
 
         if (role !== 'admin' && receivedUser) {
             booking.receivedUserId = userId
-            booking.receivedUser = 'Staff'
+            booking.receivedUser = receivedUser
 
-            const ReceivedUserModel = mongoose.model(receivedUser || "Admin");
+            const ReceivedUserModel = mongoose.model(receivedUser || "Driver");
 
             //Update ReceivedUser cash in hand 
             await ReceivedUserModel.findByIdAndUpdate(userId, {
