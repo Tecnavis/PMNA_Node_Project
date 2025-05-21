@@ -1648,7 +1648,7 @@ exports.settleAmount = async (req, res) => {
             booking.receivedUserId = userId
             booking.receivedUser = receivedUser
 
-            const ReceivedUserModel = mongoose.model(receivedUser || "Admin");
+            const ReceivedUserModel = mongoose.model(receivedUser || "Driver");
 
             //Update ReceivedUser cash in hand 
             await ReceivedUserModel.findByIdAndUpdate(userId, {
