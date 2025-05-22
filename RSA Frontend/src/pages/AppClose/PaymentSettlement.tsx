@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { FaMoneyBillWave, FaExchangeAlt } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { axiosInstance } from "../../config/axiosConfig";
 
 
 interface Booking {
@@ -76,7 +77,7 @@ export default function PaymentMethod() {
   console.log("itemId",itemId)
 useEffect(() => {
     if (itemId) {
-      axios
+      axiosInstance
         .get(`${backendUrl}/booking/${itemId}`)
         .then((response) => {
           
@@ -115,7 +116,7 @@ useEffect(() => {
       const updateData = { status: "Order Completed" };
   
       // Update the booking by sending a PUT request to the backend
-      await axios.put(`${backendUrl}/booking/${itemId}`, updateData);
+      await axiosInstance.put(`${backendUrl}/booking/${itemId}`, updateData);
   
       Swal.fire({
         icon: "success",
