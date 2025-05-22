@@ -69,6 +69,11 @@ export const colsForAdvance = [
                 : 'N/A'
     },
     {
+        title: "Total Salary",
+        accessor: 'transferdSalary',
+        render: (advanceDetails: AdvanceData) => advanceDetails.transferdSalary.reduce((total, salary) => total + salary, 0)
+    },
+    {
         title: "Driver Salary",
         accessor: 'driverSalary',
         render: (advanceDetails: AdvanceData) =>

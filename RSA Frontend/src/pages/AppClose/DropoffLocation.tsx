@@ -97,7 +97,7 @@ const DropoffUploadPage = () => {
     // Fetch existing booking data if itemId exists
     useEffect(() => {
         if (itemId) {
-            axios
+            axiosInstance
                 .get(`${backendUrl}/booking/${itemId}`)
                 .then((response) => {
                     const data = response.data as Booking;
@@ -197,7 +197,7 @@ const removeInventoryImage = () => {
                   if (inventoryImage) {
                     const inventoryFormData = new FormData();
                     inventoryFormData.append('image', inventoryImage);
-                    await axios.patch(`${backendUrl}/booking/inventory/${itemId}`, inventoryFormData);
+                    await axiosInstance.patch(`${backendUrl}/booking/inventory/${itemId}`, inventoryFormData);
                 }
                 Swal.fire({
                     icon: 'success',

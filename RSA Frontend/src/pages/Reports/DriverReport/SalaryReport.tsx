@@ -548,7 +548,7 @@ const DriverSalaryReport = () => {
                                         </div>
                                         <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                             <h6 className="text-white-dark text-base dark:text-white-dark">
-                                                {balanceSalary - (driver?.cashInHand || 0) >= 0 ? 'Balance to give' : 'Balance to get'}
+                                                {balanceSalary - (driver?.cashInHand || 0) >= 0 ? 'Balance to give to Driver' : 'Balance to get to office'}
                                                 <span className="block text-base text-[#515365] dark:text-white-light">
                                                     ₹ {Math.abs(balanceSalary - (driver?.cashInHand || 0))}
                                                 </span>
