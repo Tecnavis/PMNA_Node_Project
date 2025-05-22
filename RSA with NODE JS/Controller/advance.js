@@ -197,18 +197,18 @@ exports.getAllAdvance = async (req, res) => {
 
 exports.monthlyAdvance = asyncErrorHandler(async (req, res) => {
     const { id } = req.params
+    const { startDate, endingDate } = req.query;
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
+    const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
 
     const result = await Advance.aggregate([
         {
             $match: {
-                driver: id,
+                driver: new mongoose.Types.ObjectId(id),
                 createdAt: {
-                    $gte: startOfMonth,
-                    $lte: endOfMonth
+                    $gte: startOfDay,
+                    $lte: endOfDay
                 }
             }
         },
@@ -218,18 +218,12 @@ exports.monthlyAdvance = asyncErrorHandler(async (req, res) => {
                 monthlyAdvance: { $sum: '$addedAdvance' }
             }
         },
-        {
-            $project: {
-                _id: 0,
-                monthlyAdvance: 1
-            }
-        }
     ]);
 
     return res.status(StatusCodes.CREATED).json({
         success: true,
         data: {
-            monthlyAdvanceAmount : result[0]?.monthlyAdvance,
+            monthlyAdvanceAmount: result[0]?.monthlyAdvance || 0,
             monthlyAdvance: result
         },
         message: "Monthly advance retrieved successfully"
