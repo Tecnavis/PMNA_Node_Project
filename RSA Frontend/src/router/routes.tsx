@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+const TransactionList = lazy(() => import('../pages/SalaryTransaction'))
 const AddExecutive = lazy(() => import('../pages/MarketingExecutive/AddExecutive'))
 const ExecutiveShowroomsTable = lazy(() => import('../pages/MarketingExecutive/ShowroomList'))
 const LoggerPage = lazy(() => import('../pages/LogsPage/LoggerPage'))
@@ -415,6 +416,10 @@ const routes = [
     {
         path: '/marketing-executives/showroom',
         element: <ExecutiveShowroomsTable />,
+    },
+    {
+        path: '/transations/salary-transaction',
+        element: <TransactionList />,
     },
     {
         path: '/logs',

@@ -126,6 +126,7 @@ const SelectiveShowroomInvoice = () => {
                     <div className="flex-1">
                         <div className="space-y-1 text-white-dark">
                             <div>Issue For : <span className='text-black'> {booking[0]?.driver?.name || booking[0]?.provider?.name || ""}</span></div>
+                            <div>TransationId : <span className='text-black'> {location?.state?.transactionId || ""}</span></div>
                         </div>
                     </div>
                     <div className="flex justify-between sm:flex-row flex-col gap-6 lg:w-2/3">

@@ -17,7 +17,7 @@ exports.dashboard = async (req, res) => {
                     newBookingsShowRoom: {
                         $sum: {
                             $cond: [
-                                { $and: [{ $eq: ["$status", "Booking Added"], $eq: ["$bookingStatus", "showroom"] }] },
+                                { $and: [{ $eq: ["$status", "Booking Added"], $eq: ["$bookedByModel", "Showroom"] }] },
                                 1,
                                 0
                             ]

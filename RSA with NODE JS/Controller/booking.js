@@ -12,7 +12,7 @@ const Staff = require('../Model/staff');
 const agenda = require('../config/Agenda.config')()
 const LoggerFactory = require('../utils/logger/LoggerFactory');
 const NotificationService = require('../services/notification.service');
-
+const SalaryTransaction = require('../Model/salaryTransaction')
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
@@ -1842,7 +1842,7 @@ exports.distributeReceivedAmount = async (req, res) => {
 
 //Controller for udpate driver balance salary
 exports.updateBalanceSalary = async (req, res) => {
-    const { bookingIds, totalAmount } = req.body
+    const { bookingIds, totalAmount, DriverType = "Driver", transactionId } = req.body
 
     const routeLogger = LoggerFactory.createChildLogger({
         route: '/updateBalanceSalary',
@@ -1872,6 +1872,14 @@ exports.updateBalanceSalary = async (req, res) => {
 
             if (amount <= 0) break;
         }
+
+        const newSalaryTransaction = new SalaryTransaction({
+            driver: bookings[0].driver || bookings[0].provider,
+            userModel: DriverType,
+            transactionId,
+            amount: totalAmount
+        })
+        await newSalaryTransaction.save();
 
         routeLogger.info({
             bookingIds: bookingIds || 'unknown',
