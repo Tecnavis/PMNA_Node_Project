@@ -40,6 +40,8 @@ var pmnrRouter = require('./routes/pmnrReport')
 var expenseRouter = require('./routes/expense')
 var dieselExpensesRouter = require('./routes/dieselExpense')
 var executivesRouter = require('./routes/executive')
+var transactionsRouter = require('./routes/transaction.js')
+// var showroomVerification = require('./routes/ShowroomVerification.js')
 
 
 // Connect to database
@@ -105,6 +107,8 @@ app.use('/pmnr', pmnrRouter);
 app.use('/expense', expenseRouter);
 app.use('/diesel-expenses', dieselExpensesRouter);
 app.use('/marketing-executives', executivesRouter);
+app.use('/transactions', transactionsRouter);
+// app.use('/verification', showroomVerification);
 
 app.use(errorHandler);
 module.exports = app;
