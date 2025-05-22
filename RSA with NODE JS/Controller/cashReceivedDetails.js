@@ -3,6 +3,7 @@ const Driver = require('../Model/driver.js')
 const Booking = require('../Model/booking.js')
 const Advance = require('../Model/advance.js')
 const Provider = require('../Model/provider');
+const { default: mongoose } = require('mongoose');
 
 
 exports.createReceivedDetails = async (req, res) => {
@@ -96,9 +97,13 @@ exports.createReceivedDetails = async (req, res) => {
 exports.getAllReceivedDetails = async (req, res) => {
     try {
 
-        const { search } = req.query
+        const { search, driverId } = req.query
 
         const query = {};
+
+        if (driverId) {
+            query.driver = new mongoose.Types.ObjectId(driverId)
+        }
 
         if (search && search.trim()) {
             const searchQuery = search.trim();

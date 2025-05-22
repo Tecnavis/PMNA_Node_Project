@@ -23,6 +23,7 @@ import { dateFormate, formattedTime } from '../../../utils/dateUtils';
 import IconCashBanknotes from '../../../components/Icon/IconCashBanknotes';
 import { ROLES } from '../../../constants/roles';
 import { render } from 'react-dom';
+import { fetchMonthlyAdvance } from '../../../services/advanceService';
 
 const DriverSalaryReport = () => {
 
@@ -45,6 +46,7 @@ const DriverSalaryReport = () => {
     const [totalSalaryForSelectedBooking, setTotalSalaryForSelectedBooking] = useState(0);
     const [balanceSalary, setBalanceSalary] = useState(0);
     const [showSelectedBooking, setShowSelectedBookings] = useState<boolean>(false)
+    const [monthlyAdvanceAmount, setMonthlyAdvanceAmount] = useState<number>(0)
     // state for update transfer state
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [updatedSalary, setUpdatedSalary] = useState<Record<string, string>>({});
@@ -413,6 +415,17 @@ const DriverSalaryReport = () => {
         }
     }, [selectedBookings])
 
+    useEffect(() => {
+        if (driver?._id) {
+            getMonthlyAdvance()
+        }
+    }, [driver, startDate, endingDate])
+
+    const getMonthlyAdvance = async () => {
+        const data = await fetchMonthlyAdvance(driver?._id, startDate, endingDate)
+        setMonthlyAdvanceAmount(data?.data?.monthlyAdvanceAmount)
+    }
+
     return (
         <div>
             <div className="pt-5">
@@ -489,6 +502,19 @@ const DriverSalaryReport = () => {
                         <div className='grid grid-cols-1 md:grid-cols-2 gap-3' ref={printRef}>
                             {/* driver salary reports */}
                             <div className="space-y-4" >
+                                <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                                    <div className="flex items-center justify-between p-4 py-4">
+                                        <div className="grid place-content-center w-9 h-9 rounded-md bg-danger-light dark:bg-danger text-danger dark:text-secondary-light">
+                                            <IconShoppingBag />
+                                        </div>
+                                        <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                                            <h6 className="text-white-dark text-base font-bold  dark:text-white-dark">
+                                                Total Advance Amount
+                                                <span className="block text-base text-red-500 dark:text-white-light">{monthlyAdvanceAmount ? '₹' + monthlyAdvanceAmount : 'No advance payment made'}</span>
+                                            </h6>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
                                     <div className="flex items-center justify-between p-4 py-4">
                                         <div className="grid place-content-center w-9 h-9 rounded-md bg-secondary-light dark:bg-secondary text-secondary dark:text-secondary-light">

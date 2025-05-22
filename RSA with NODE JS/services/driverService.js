@@ -29,9 +29,12 @@ async function calculateNetTotalAmountInHand(driverId) {
         {
             $match: {
                 driver: driverId,
-                cashPending: false,
                 status: 'Order Completed',
-                workType: 'PaymentWork'
+                workType: 'PaymentWork',
+                $or: [
+                    { cashPending: false },
+                    { cashPending: { $exists: false } }
+                ]
             }
         },
         {
