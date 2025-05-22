@@ -23,6 +23,8 @@ import { dateFormate, formattedTime } from '../../../utils/dateUtils';
 import IconCashBanknotes from '../../../components/Icon/IconCashBanknotes';
 import { ROLES } from '../../../constants/roles';
 import { render } from 'react-dom';
+import { fetchMonthlyAdvance } from '../../../services/advanceService';
+import ReusableModal from '../../../components/modal';
 
 const ProviderSalaryReport = () => {
 
@@ -45,6 +47,9 @@ const ProviderSalaryReport = () => {
     const [totalSalaryForSelectedBooking, setTotalSalaryForSelectedBooking] = useState(0);
     const [balanceSalary, setBalanceSalary] = useState(0);
     const [showSelectedBooking, setShowSelectedBookings] = useState<boolean>(false)
+    const [monthlyAdvanceAmount, setMonthlyAdvanceAmount] = useState<number>(0)
+    const [transactionId, setTransactionId] = useState('');
+    const [transactionModal, setTransactionModal] = useState<boolean>(false)
     // state for update transfer state
     const [editingRowId, setEditingRowId] = useState<string | null>(null);
     const [updatedSalary, setUpdatedSalary] = useState<Record<string, string>>({});
@@ -279,7 +284,7 @@ const ProviderSalaryReport = () => {
                     providerId: id,
                     startDate,
                     endingDate,
-                    verified : true,    
+                    verified: true,
                     search,
                     page,
                     limit: pageSize
@@ -324,34 +329,53 @@ const ProviderSalaryReport = () => {
     };
 
     const handleUpdateDriverBalance = async () => {
-        try {
-            const res = await axios.patch(`${BASE_URL}/booking/settle-driver-balance-salary`, {
-                bookingIds: Array.from(selectedBookings.values()),
-                totalAmount: totalSalaryForSelectedBooking
-            });
+        // First show confirmation dialog
+        const confirmation = await Swal.fire({
+            title: "Are you sure?",
+            text: "You are about to update the driver's balance salary. This action cannot be undone.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Yes, update it!",
+            cancelButtonText: "Cancel"
+        });
 
-            Swal.fire({
-                title: "Success!",
-                text: "Driver balance salary updated successfully.",
-                icon: "success",
-                confirmButtonColor: "#3085d6",
-                confirmButtonText: "OK"
-            });
-            const selectBookings = bookings.filter((booking) => selectedBookings.has(booking._id))
-            navigate('/dcpreport/driverreport/salaryreport/selectiveInvoice', {
-                state: { bookings: selectBookings, role: "driver" }
-            });
+        // If user confirms, proceed with the update
+        if (confirmation.isConfirmed) {
+            try {
+                const res = await axios.patch(`${BASE_URL}/booking/settle-driver-balance-salary`, {
+                    bookingIds: Array.from(selectedBookings.values()),
+                    totalAmount: totalSalaryForSelectedBooking,
+                    transactionId,
+                    DriverType: "Provider"
+                });
 
-        } catch (error) {
-            console.error(error);
+                Swal.fire({
+                    title: "Success!",
+                    text: "Driver balance salary updated successfully.",
+                    icon: "success",
+                    confirmButtonColor: "#3085d6",
+                    confirmButtonText: "OK"
+                });
+                const selectBookings = bookings.filter((booking) => selectedBookings.has(booking._id))
+                navigate('/dcpreport/driverreport/salaryreport/selectiveInvoice', {
+                    state: { bookings: selectBookings, role: "driver", transactionId }
+                });
 
-            Swal.fire({
-                title: "Error!",
-                text: error.response?.data?.message || "Something went wrong!",
-                icon: "error",
-                confirmButtonColor: "#d33",
-                confirmButtonText: "Try Again"
-            });
+            } catch (error) {
+                console.error(error);
+
+                Swal.fire({
+                    title: "Error!",
+                    text: error.response?.data?.message || "Something went wrong!",
+                    icon: "error",
+                    confirmButtonColor: "#d33",
+                    confirmButtonText: "Try Again"
+                });
+            } finally {
+                setTransactionModal(false)
+            }
         }
     };
 
@@ -412,6 +436,21 @@ const ProviderSalaryReport = () => {
             setShowSelectedBookings(false)
         }
     }, [selectedBookings])
+
+    useEffect(() => {
+        if (driver?._id) {
+            getMonthlyAdvance()
+        }
+    }, [driver, startDate, endingDate])
+
+    const getMonthlyAdvance = async () => {
+        const data = await fetchMonthlyAdvance(driver?._id, startDate, endingDate)
+        setMonthlyAdvanceAmount(data?.data?.monthlyAdvanceAmount)
+    }
+
+    const handleSalaryTransation = async () => {
+        setTransactionModal(true)
+    }
 
     return (
         <div>
@@ -491,6 +530,19 @@ const ProviderSalaryReport = () => {
                             <div className="space-y-4" >
                                 <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
                                     <div className="flex items-center justify-between p-4 py-4">
+                                        <div className="grid place-content-center w-9 h-9 rounded-md bg-danger-light dark:bg-danger text-danger dark:text-secondary-light">
+                                            <IconShoppingBag />
+                                        </div>
+                                        <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                                            <h6 className="text-white-dark text-base font-bold  dark:text-white-dark">
+                                                Total Advance Amount
+                                                <span className="block text-base text-red-500 dark:text-white-light">{monthlyAdvanceAmount ? '₹' + monthlyAdvanceAmount : 'No advance payment made'}</span>
+                                            </h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                                    <div className="flex items-center justify-between p-4 py-4">
                                         <div className="grid place-content-center w-9 h-9 rounded-md bg-secondary-light dark:bg-secondary text-secondary dark:text-secondary-light">
                                             <IconShoppingBag />
                                         </div>
@@ -522,8 +574,10 @@ const ProviderSalaryReport = () => {
                                         </div>
                                         <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                             <h6 className="text-white-dark text-base dark:text-white-dark">
-                                                Balance
-                                                <span className="block text-base text-[#515365] dark:text-white-light">₹ {balanceSalary}</span>
+                                                {balanceSalary - (driver?.cashInHand || 0) >= 0 ? 'Balance to give to Driver' : 'Balance to get to office'}
+                                                <span className="block text-base text-[#515365] dark:text-white-light">
+                                                    ₹ {Math.abs(balanceSalary - (driver?.cashInHand || 0))}
+                                                </span>
                                             </h6>
                                         </div>
                                     </div>
@@ -619,7 +673,7 @@ const ProviderSalaryReport = () => {
                                 <div className='flex gap-1'>
                                     <button
                                         className='btn btn-primary'
-                                        onClick={handleUpdateDriverBalance}
+                                        onClick={handleSalaryTransation}
                                     >Confirm</button>
                                 </div>
                             </div>
@@ -692,6 +746,46 @@ const ProviderSalaryReport = () => {
                     </Dialog>
                 </Transition>
             </div>
+            <ReusableModal isOpen={transactionModal} onClose={() => setTransactionModal(false)} title='Enter Salary Details'>
+                <p className="mb-4">Total Salary: {totalSalaryForSelectedBooking}</p>
+
+                <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Total Salary Amount:</label>
+                    <input
+                        type="number"
+                        value={totalSalaryForSelectedBooking}
+                        onChange={(e) => setTotalSalaryForSelectedBooking(e.target.value)}
+                        placeholder="Enter amount"
+                        className="w-full p-2 border border-gray-300 rounded"
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label className="block text-sm font-medium mb-1">Transaction ID:</label>
+                    <input
+                        type="text"
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                        placeholder="Enter transaction ID"
+                        className="w-full p-2 border border-gray-300 rounded"
+                    />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                    <button
+                        onClick={() => setTransactionModal(false)}
+                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleUpdateDriverBalance}
+                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                        Confirm
+                    </button>
+                </div>
+            </ReusableModal>
         </div>
     );
 };

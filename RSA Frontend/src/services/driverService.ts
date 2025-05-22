@@ -17,3 +17,16 @@ export const getDriverForDropDown = async (): Promise<DriverDropdownItem[]> => {
         return [];
     }
 };
+
+// API service for fetching dieselExpenses
+export const getProviderForDropDown = async (): Promise<DriverDropdownItem[]> => {
+    try {
+        const response: AxiosResponse<{ data: DriverDropdownItem[] }> = await axios.get(
+            `${BASE_URL}/provider/drop-down`
+        );
+        return response.data.data;
+    } catch (error) {
+        handleApiError(error);
+        return [];
+    }
+};

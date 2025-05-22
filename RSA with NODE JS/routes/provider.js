@@ -13,6 +13,8 @@ router.get('/', controller.getAllProviders);
 // Get providre by filter 
 router.get('/filtered', jwt, controller.filtergetProviders);
 
+router.get('/drop-down',controller.getProvidersForDropdown);
+
 // Get a provider by ID
 router.get('/:id', jwt, controller.getProviderById);
 

@@ -262,3 +262,26 @@ exports.filtergetProviders = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.getProvidersForDropdown = async (req, res) => {
+  try {
+
+    const providers = await Provider.find().select('_id name').lean();
+
+    const dropdownData = providers.map(driver => ({
+      _id: driver._id,
+      label: driver.name,
+    }));
+
+    res.json({
+      success: true,
+      data: dropdownData
+    });
+  } catch (error) {
+    console.error('Driver dropdown fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch Provider dropdown data'
+    });
+  }
+};
