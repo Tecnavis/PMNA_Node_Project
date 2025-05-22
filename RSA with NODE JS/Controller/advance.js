@@ -4,6 +4,11 @@ const Booking = require('../Model/booking');
 const Driver = require('../Model/driver');
 const Provider = require('../Model/provider');
 
+const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
+
+const { StatusCodes } = require('http-status-codes');
+const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
+
 //Controller for creating new advance
 exports.createNewAdvance = async (req, res) => {
     const { remark, advance, driverId, type } = req.body
@@ -136,10 +141,14 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc, userType) => {
 //Controller for get all advance
 exports.getAllAdvance = async (req, res) => {
     try {
-        const { driverType, search } = req.query;
+        const { driverType, driverId, search } = req.query;
 
         let allAdvance
         const query = {};
+
+        if (driverId) {
+            query.driver = new mongoose.Types.ObjectId(driverId)
+        }
 
         if (search && search.trim()) {
             const searchQuery = search.trim();
@@ -153,12 +162,12 @@ exports.getAllAdvance = async (req, res) => {
                 Driver.find({ name: regex }).select('_id').lean(),
                 Provider.find({ name: regex }).select('_id').lean(),
             ]);
-
+            console.log('matchingDrivers, matchingProviders', matchingDrivers, matchingProviders)
             if (matchingDrivers.length > 0) {
                 searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
             }
             if (matchingProviders.length > 0) {
-                searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
+                searchConditions.push({ driver: { $in: matchingProviders.map(p => p._id) } });
             }
 
             query.$or = searchConditions;
@@ -185,3 +194,44 @@ exports.getAllAdvance = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 }
+
+exports.monthlyAdvance = asyncErrorHandler(async (req, res) => {
+    const { id } = req.params
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const result = await Advance.aggregate([
+        {
+            $match: {
+                driver: id,
+                createdAt: {
+                    $gte: startOfMonth,
+                    $lte: endOfMonth
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                monthlyAdvance: { $sum: '$addedAdvance' }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                monthlyAdvance: 1
+            }
+        }
+    ]);
+
+    return res.status(StatusCodes.CREATED).json({
+        success: true,
+        data: {
+            monthlyAdvanceAmount : result[0]?.monthlyAdvance,
+            monthlyAdvance: result
+        },
+        message: "Monthly advance retrieved successfully"
+    });
+})

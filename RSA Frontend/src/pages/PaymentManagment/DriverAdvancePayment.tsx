@@ -18,7 +18,6 @@ const AdvancePayment: React.FC = () => {
     const [amount, setAmount] = useState<number | ''>('');
     const [advanceDetails, setAdvanceDetails] = useState<AdvanceData[]>([]);
     const [receivedDetails, setReceivedDetails] = useState<ReceivedDetails[]>([]);
-    const [bookings, setBookings] = useState<Booking[]>([]);
     const [inHandAmount, setInHandAmount] = useState<number>(0);
     const [receivedAmount, setReceivedAmount] = useState<string>('');
     const [remark, setRemark] = useState<string>('');
@@ -61,6 +60,7 @@ const AdvancePayment: React.FC = () => {
             const res = await axios.get(`${BASE_URL}/advance-payment`, {
                 params: {
                     driverType: "Driver",
+                    driverId: selectedDriver,
                     search: search
                 }
             })
@@ -127,25 +127,12 @@ const AdvancePayment: React.FC = () => {
         }
     };
 
-
-    const fetchCashCollection = async () => {
-        try {
-            const res = await axios.get(`${BASE_URL}/booking`, {
-                params: {
-                    search: search
-                }
-            })
-            setBookings(res.data.bookings)
-        } catch (error) {
-
-        }
-    }
-
     const fetchReceivedData = async () => {
         try {
             const res = await axios.get(`${BASE_URL}/cash-received-details`, {
                 params: {
-                    search: search
+                    search: search,
+                    driverId: selectedDriver,
                 }
             })
             setReceivedDetails(res.data)
@@ -193,15 +180,18 @@ const AdvancePayment: React.FC = () => {
     }
     useEffect(() => {
         fetchDrivers()
-        fetchAdvancePayment()
-        fetchCashCollection()
-        fetchReceivedData()
     }, [])
+
+    useEffect(() => {
+        if (selectedType !== '' || selectedDriver !== '') {
+            fetchAdvancePayment()
+            fetchReceivedData()
+        }
+    }, [selectedType, selectedDriver])
 
     const updateNetTotalAmount = (driver?: Driver[]) => {
         if (driver?.length) {
             const inHandAmountForSelectedDriver = driver.filter((d) => d._id === selectedDriver)
-            console.log('inHandAmountForSelectedDriver', inHandAmountForSelectedDriver[0]?.cashInHand)
             setInHandAmount(inHandAmountForSelectedDriver[0]?.cashInHand)
         } else {
 
@@ -222,7 +212,6 @@ const AdvancePayment: React.FC = () => {
         if (selectedType == 'advance') {
             fetchAdvancePayment()
         } else {
-            fetchCashCollection()
             fetchReceivedData()
         }
     }, [search])

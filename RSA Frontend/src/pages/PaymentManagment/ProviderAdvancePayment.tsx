@@ -3,7 +3,6 @@ import { Tab } from '@headlessui/react';
 import { DataTable } from 'mantine-datatable';
 import { axiosInstance as axios, BASE_URL } from '../../config/axiosConfig';
 import Driver from '../Driver/Driver';
-import { Booking } from '../Bookings/Bookings';
 import IconPrinter from '../../components/Icon/IconPrinter';
 import { AdvanceDetailsTableColumn, CashCollectionDetailsTableColumn, colsForAdvance, ReceivedDetailsTableColumn } from './constant'
 import { AdvanceData, ReceivedDetails } from './types';
@@ -18,10 +17,10 @@ const AdvancePayment: React.FC = () => {
     const [amount, setAmount] = useState<number | ''>('');
     const [advanceDetails, setAdvanceDetails] = useState<AdvanceData[]>([]);
     const [receivedDetails, setReceivedDetails] = useState<ReceivedDetails[]>([]);
-    const [bookings, setBookings] = useState<Booking[]>([]);
     const [inHandAmount, setInHandAmount] = useState<number>(0);
     const [receivedAmount, setReceivedAmount] = useState<string>('');
     const [remark, setRemark] = useState<string>('');
+    const [search, setSearch] = useState<string>('');
 
     const [tabIndex, setTabIndex] = useState(0);
     const printRef = useRef<HTMLDivElement>(null);
@@ -59,7 +58,9 @@ const AdvancePayment: React.FC = () => {
         try {
             const res = await axios.get(`${BASE_URL}/advance-payment`, {
                 params: {
-                    driverType: "Provider"
+                    driverType: "Provider",
+                    driverId: selectedProvider,
+                    search: search
                 }
             })
             setAdvanceDetails(res.data.data);
@@ -125,19 +126,14 @@ const AdvancePayment: React.FC = () => {
         }
     };
 
-
-    const fetchCashCollection = async () => {
-        try {
-            const res = await axios.get(`${BASE_URL}/booking`)
-            setBookings(res.data.bookings)
-        } catch (error) {
-
-        }
-    }
-
     const fetchReceivedData = async () => {
         try {
-            const res = await axios.get(`${BASE_URL}/cash-received-details`)
+            const res = await axios.get(`${BASE_URL}/cash-received-details`, {
+                params: {
+                    search: search,
+                    driverId: selectedProvider,
+                }
+            })
             setReceivedDetails(res.data)
         } catch (error) {
 
@@ -184,7 +180,6 @@ const AdvancePayment: React.FC = () => {
     useEffect(() => {
         fetchProviders()
         fetchAdvancePayment()
-        fetchCashCollection()
         fetchReceivedData()
     }, [])
 
@@ -203,6 +198,30 @@ const AdvancePayment: React.FC = () => {
     useEffect(() => {
         updateNetTotalAmount()
     }, [selectedProvider])
+
+
+    useEffect(() => {
+        fetchProviders()
+    }, [])
+
+    useEffect(() => {
+        if (selectedType !== '' || selectedProvider !== '') {
+            fetchAdvancePayment()
+            fetchReceivedData()
+        }
+    }, [selectedType, selectedProvider])
+
+    useEffect(() => {
+        setSearch('')
+    }, [selectedType])
+
+    useEffect(() => {
+        if (selectedType == 'advance') {
+            fetchAdvancePayment()
+        } else {
+            fetchReceivedData()
+        }
+    }, [search])
 
     return (
         <main className='flex flex-col items-center justify-center'>
@@ -381,7 +400,13 @@ const AdvancePayment: React.FC = () => {
                                             Print
                                         </button>)
                                 }
-                                <input type="text" placeholder='Search by Date, Driver, File Number or Received Amount' className='p-3 w-full rounded-md border-2 ' />
+                                <input
+                                    type="text"
+                                    placeholder='Search by Driver or File Number'
+                                    className='p-3 w-full rounded-md border-2 '
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
                             </div>
                             {selectedType === "advance" ? (
                                 <>
