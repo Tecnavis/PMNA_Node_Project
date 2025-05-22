@@ -318,7 +318,7 @@ const Index = () => {
                             <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
                             <p className="text-2xl">{salesByCategory.series[0]}</p>
                         </div>
-                        <div className={`panel bg-gradient-to-r from-purple-400 to-purple-500 text-white rounded-lg shadow-lg p-6 `}>
+                        <div className={`panel bg-gradient-to-r from-purple-400 to-purple-500 text-white rounded-lg shadow-lg p-6 ${salesByCategory.series[4] > 0 && 'animate-pulse'}`}>
                             <h5 className="font-semibold text-lg mb-3">Whatsapp Booking</h5>
                             <p className="text-2xl">{salesByCategory.series[4]}</p>
                         </div>
