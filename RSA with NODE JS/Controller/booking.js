@@ -797,8 +797,11 @@ exports.updateBooking = async (req, res) => {
         });
 
         let receiver = updatedBooking.driver || updatedBooking.provider
+        let receiverOld = booking.driver._id || booking.provider._id
 
-        if (receiver.fcmToken) {
+        const isDifferentReceiver = receiver?._id?.toString() !== receiverOld?.toString();
+
+        if (receiver?.fcmToken && isDifferentReceiver) {
             const notificationResult = await NotificationService.sendNotification({
                 token: receiver?.fcmToken || '',
                 title: "Booking Edited",
