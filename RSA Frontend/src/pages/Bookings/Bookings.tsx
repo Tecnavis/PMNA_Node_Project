@@ -22,6 +22,8 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { TbCalendarCancel } from "react-icons/tb";
 import ReusableModal from '../../components/modal';
 import { APIForCancelApiResponse, updateCancelData } from '../../services/bookingService';
+import CancelBookingModal from './CancelBookingModal';
+import toast from 'react-hot-toast';
 
 
 interface Company {
@@ -469,7 +471,6 @@ const Bookings: React.FC = () => {
                                 if (items.cancelStatus) {
                                     fileNumberColor = '#a855f7'; // If the status is Rejected, color it red
                                 }
-
                                 return (
                                     <tr key={index}>
                                         <td>{index + 1}</td> {/* Index column */}
@@ -525,6 +526,19 @@ const Bookings: React.FC = () => {
                                                     <Tippy content="Edit">
                                                         <button type="button" onClick={() => navigate(`/add-booking/${items._id}`)}>
                                                             <IconPencil className="text-primary" /> {/* Edit icon */}
+                                                        </button>
+                                                    </Tippy>
+                                                </li>
+                                                <li>
+                                                    <Tippy content="Cancel Booking">
+                                                        <button>
+                                                            <CancelBookingModal
+                                                                bookingId={items._id || ""}
+                                                                onSuccess={() => {
+                                                                    fetchBookings();
+                                                                    toast.success("Booking canceled successfully");
+                                                                }}
+                                                            />
                                                         </button>
                                                     </Tippy>
                                                 </li>
