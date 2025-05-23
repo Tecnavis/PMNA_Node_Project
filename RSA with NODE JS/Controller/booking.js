@@ -1112,11 +1112,11 @@ exports.addDropoffImages = async (req, res) => {
         const totalImages = booking.dropoffImages.length + newImages.length; // For dropoff
 
         // If total images exceed the limit, return an error
-        if (totalImages > 6) {
-            return res.status(400).json({
-                message: `Limit exceeded. You can upload a maximum of 6 images for dropoff images. You already have ${booking.dropoffImages.length} images.`,
-            });
-        }
+        // if (totalImages > 6) {
+        //     return res.status(400).json({
+        //         message: `Limit exceeded. You can upload a maximum of 6 images for dropoff images. You already have ${booking.dropoffImages.length} images.`,
+        //     });
+        // }
 
         // Push new images to the pickupImages array
         booking.dropoffImages.push(...newImages);
