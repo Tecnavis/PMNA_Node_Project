@@ -110,12 +110,12 @@ async function updateDriverFinancials(driverId, advance = 0) {
     const netTotalAmount = await calculateNetTotalAmountInHand(driverId);
     const totalSalary = await calculateTotalSalary(driverId);
 
-    const balance = calculateBalanceAmount(netTotalAmount, totalSalary) || 0
     const expense = await calculateMonthlyExpense(driverId);
     const totalExpense = await calculateTotalExpense(driverId);
     const dieselExpense = await calculateMonthlyDieselExpense(driverId);
 
     const finalCashInHand = netTotalAmount + advance
+    const balance = calculateBalanceAmount(finalCashInHand, totalSalary) || 0
     const updatedDriver = await Driver.findByIdAndUpdate(
         driverId,
         {
