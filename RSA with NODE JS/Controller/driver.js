@@ -123,17 +123,16 @@ exports.filtergetDrivers = async (req, res) => {
 
     const drivers = await Driver.find(filter).populate('vehicle.serviceType');
 
-    // Update all drivers' financials and get the updated documents
-    const updatedDrivers = await Promise.all(
-      drivers.map(async (driver) => {
-        const advance = driver.advance || 0;
-        // Wait for each update to complete and return the updated driver
-        return await updateDriverFinancials(driver._id, advance);
-      })
+    await Promise.all(
+      drivers.map(driver =>
+        updateDriverFinancials(
+          driver._id,
+          drivers.filter(d => String(d._id) === String(driver._id))[0].advance || 0
+        )
+      )
     );
 
-    // Only send response after all updates are complete
-    res.json(updatedDrivers);
+    res.json(drivers);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -36,7 +36,7 @@ const ProviderSalaryReport = () => {
     const [totalRecords, setTotalRecords] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
 
-    const [selectedMonth, setSelectedMonth] = useState<string>(MONTHS_NUMBER[new Date().getMonth()]);
+    const [selectedMonth, setSelectedMonth] = useState<string>(new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date()));
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
     const [search, setSearch] = useState('');
     const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());
