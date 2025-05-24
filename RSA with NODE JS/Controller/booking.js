@@ -1689,7 +1689,6 @@ exports.settleAmount = async (req, res) => {
 
         // Condition for valide amount if the amount more thatn total amount this will handled
         if (!booking.company && booking.totalAmount <= booking.partialAmount) {
-            booking.receivedAmount = booking.totalAmount;
             booking.partialAmount = booking.receivedAmount;
             booking.partialPayment = false;
             booking.cashPending = false;
@@ -1742,7 +1741,6 @@ exports.settleAmountDriver = async (req, res) => {
             booking.partialAmount = partialAmount;
         }
         if (!booking.company && booking.totalAmount <= booking.partialAmount) {
-            booking.receivedAmount = booking.totalAmount;
             booking.partialAmount = booking.receivedAmount;
             booking.partialPayment = false;
             booking.cashPending = false;
