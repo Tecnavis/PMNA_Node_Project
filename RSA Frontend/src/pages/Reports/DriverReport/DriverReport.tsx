@@ -287,7 +287,7 @@ const DriverCashCollectionsReport = () => {
         {
             accessor: 'totalAmount',
             title: 'Payable Amount By Customer',
-            render: (record: Booking) => <div className='flex justify-center'>{record.workType === 'PaymentWork' ? record.totalAmount : "0.00"}</div>
+            render: (record: Booking) => <div className='flex justify-center'>{record.workType === 'PaymentWork' ? record.totalAmount : "0.00"}{record.cashPending && record.partialPayment && `(Partialy paid : ${record.partialAmount})`}</div>
         },
         {
             accessor: 'receivedAmount',
@@ -295,9 +295,7 @@ const DriverCashCollectionsReport = () => {
             render: (booking: Booking) => {
                 if (booking._id === 'total') {
                     return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
-                } else if (booking.cashPending && booking.partialPayment) {
-                    return <span className='flex justify-center items-center w-full ml-5 text-center text-red-500 font-semibold'>Partialy paid : {booking.partialAmount}</span>
-                } else if (booking.cashPending) {
+                }else if (booking.cashPending) {
                     return <span className='ml-5 flex justify-center items-center text-center w-full text-red-500'>Cash is pending...
                     </span>
                 } else if (booking.totalAmount == booking.receivedAmount) {
