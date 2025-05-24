@@ -41,6 +41,12 @@ const driverSchema = new mongoose.Schema({
   driverSalary: {
     type: Number,
   },
+  totalAdvance: {
+    type: Number,
+  },
+  totalSalary: {
+    type: Number,
+  },
   vehicle: [
     {
       serviceType: {

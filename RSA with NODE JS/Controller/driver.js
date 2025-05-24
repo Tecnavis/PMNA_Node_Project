@@ -122,7 +122,7 @@ exports.filtergetDrivers = async (req, res) => {
     }
 
     const drivers = await Driver.find(filter).populate('vehicle.serviceType');
-
+    
     // Update all drivers' financials and get the updated documents
     const updatedDrivers = await Promise.all(
       drivers.map(async (driver) => {

@@ -2,7 +2,9 @@ const Driver = require('../Model/driver');
 const Booking = require('../Model/booking');
 const Expense = require('../Model/expense');
 const DieselExpense = require('../Model/dieselExpense');
+const Advance = require('../Model/advance');
 const { distributeReceivedAmount } = require('./bookingService');
+const { default: mongoose } = require('mongoose');
 
 const getTotalDriverExpense = async (driverId) => {
     const result = await Expense.aggregate([
@@ -113,6 +115,8 @@ async function updateDriverFinancials(driverId, advance = 0) {
     const expense = await calculateMonthlyExpense(driverId);
     const totalExpense = await calculateTotalExpense(driverId);
     const dieselExpense = await calculateMonthlyDieselExpense(driverId);
+    const monthlySalary = await calculateMonthlySalary(driverId);
+    const monthlyAdvance = await calculateTotalAdvance(driverId);
 
     const finalCashInHand = netTotalAmount + advance
     const balance = calculateBalanceAmount(finalCashInHand, totalSalary) || 0
@@ -124,7 +128,9 @@ async function updateDriverFinancials(driverId, advance = 0) {
             balanceAmount: balance,
             dieselExpense,
             expense,
-            totalExpense
+            totalExpense,
+            totalSalary: monthlySalary,
+            totalAdvance: monthlyAdvance,
         },
         { new: true }
     );
@@ -228,6 +234,60 @@ async function calculateMonthlyDieselExpense(driverId) {
         }
     ]);
     return result[0]?.monthlyDieselExpense || 0;
+
+}
+async function calculateTotalAdvance(driverId) {
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const result = await Advance.aggregate([
+        {
+            $match: {
+                driver: new mongoose.Types.ObjectId(driverId),
+                userModel: "Driver",
+                createdAt: {
+                    $gte: startOfMonth,
+                    $lte: endOfMonth
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalMonthlyAdvance: { $sum: '$addedAdvance' }
+            }
+        },
+    ]);console.log('total advance',result)
+    return result[0]?.totalMonthlyAdvance || 0;
+
+}
+async function calculateMonthlySalary(driverId) {
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    
+    const result = await Booking.aggregate([
+        {
+            $match: {
+                driver: new mongoose.Types.ObjectId(driverId),
+                verified: true,
+                createdAt: {
+                    $gte: startOfMonth,
+                    $lte: endOfMonth
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalMonthlySalary: { $sum: '$driverSalary' }
+            }
+        },
+    ]);console.log('total salary ',result)
+    return result[0]?.totalMonthlySalary || 0;
 
 }
 
