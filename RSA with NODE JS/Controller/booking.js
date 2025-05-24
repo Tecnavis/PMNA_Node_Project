@@ -1694,7 +1694,59 @@ exports.settleAmount = async (req, res) => {
             booking.partialPayment = false;
             booking.cashPending = false;
         }
+        await booking.save();
 
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown'
+        }, 'Settle amount updated successfully....');
+
+        return res.status(200).json({
+            message: "Settle amount updated",
+            booking
+        });
+
+    } catch (error) {
+        console.error('Error settling booking amount:', error.message);
+        res.status(500).json({ message: 'Server error while settling booking amount.' });
+    }
+};
+
+//Controller to settle booking amount 
+exports.settleAmountDriver = async (req, res) => {
+    try {
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/settle-amount',
+            handler: 'settleAmount',
+        });
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to settle amount the booking has started....');
+
+        const { id } = req.params;
+        const { partialAmount, receivedUser } = req.body;
+
+        const booking = await Booking.findById(id);
+
+        if (!booking) {
+            return res.status(404).json({
+                message: 'Booking not found'
+            });
+        }
+
+        if (partialAmount === booking.totalAmount) {
+            booking.cashPending = false;
+        } else {
+            booking.cashPending = true;
+            booking.partialPayment = true
+            booking.partialAmount = partialAmount;
+        }
+        if (!booking.company && booking.totalAmount <= booking.partialAmount) {
+            booking.receivedAmount = booking.totalAmount;
+            booking.partialAmount = booking.receivedAmount;
+            booking.partialPayment = false;
+            booking.cashPending = false;
+        }
         await booking.save();
 
         routeLogger.info({
