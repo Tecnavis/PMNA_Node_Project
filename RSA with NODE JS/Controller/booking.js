@@ -611,11 +611,27 @@ exports.getAllBookings = async (req, res) => {
                 }
             }
         ]);
+        const aggregationResult2 = await Booking.aggregate([
+            {
+                $match: {
+                    ...query,
+                    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { partialPayment: true }),
+                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' })
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalPartialAmount: { $sum: "$partialAmount" }
+                }
+            }
+        ]);
 
         // Extract financial data from aggregation result
         const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
-        const balanceAmountToCollect = overallAmount - totalCollectedAmount;
+        let balanceAmountToCollect = overallAmount - totalCollectedAmount;
+        balanceAmountToCollect += aggregationResult2[0]?.totalPartialAmount || 0
         routeLogger.info({
             doneBy: req.user || 'unknown'
         }, 'Booking fetch success.');
