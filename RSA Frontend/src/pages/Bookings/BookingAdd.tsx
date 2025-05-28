@@ -1125,10 +1125,10 @@ const BookingAdd: React.FC = () => {
         }
 
         // Trapped location validation
-        if (!trappedLocation) {
-            formErrors.trappedLocation = 'Trapped location is required';
-            trapedLocationRef.current?.focus();
-        }
+        // if (!trappedLocation) {
+        //     formErrors.trappedLocation = 'Trapped location is required';
+        //     trapedLocationRef.current?.focus();
+        // }
 
         // Updated amount validation (conditional)
         if (trappedLocation === 'outsideOfRoad' && !updatedAmount) {
@@ -1188,9 +1188,9 @@ const BookingAdd: React.FC = () => {
         }
 
         // Vehicle type validation
-        if (!selectedVehicleType) {
-            formErrors.selectedVehicleType = 'Vehicle type is required';
-        }
+        // if (!selectedVehicleType) {
+        //     formErrors.selectedVehicleType = 'Vehicle type is required';
+        // }
 
         // Set errors in the state
         setErrors(formErrors);
@@ -1518,7 +1518,7 @@ const BookingAdd: React.FC = () => {
                                 />
                                 <span style={{ color: 'red' }}>Outside of the Road</span>
                             </label>
-                            {errors.trappedLocation && <p className="text-red-500">{errors.trappedLocation}</p>}
+                            {/* {errors.trappedLocation && <p className="text-red-500">{errors.trappedLocation}</p>} */}
                         </div>
                         {/* adjust value for the  outside of the road  */}
                         {trappedLocation === 'outsideOfRoad' && (
@@ -1879,7 +1879,7 @@ const BookingAdd: React.FC = () => {
                                     <option value="tank">Tank</option>
                                 </optgroup>
                             </select>
-                            {errors.selectedVehicleType && <p className="text-red-500">{errors.selectedVehicleType}</p>}
+                            {/* {errors.selectedVehicleType && <p className="text-red-500">{errors.selectedVehicleType}</p>} */}
                         </div>
                         <div>
                             <label htmlFor="brandName">Brand name </label>
