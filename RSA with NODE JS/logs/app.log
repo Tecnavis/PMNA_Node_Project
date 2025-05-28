@@ -33,3 +33,8 @@
 {"level":30,"timestamp":"2025-05-15T09:41:15.088Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"New Showroom Created"}
 {"level":30,"timestamp":"2025-05-15T09:41:15.193Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","showroomName":"Hadhi 23232Hassan","doneBy":{"id":"67e112a26d1d6bfc6e44b15a","user":{"name":"Admin-RSA@gmail.com"},"iat":1746528590},"message":"New Showroom added in database successfully."}
 {"level":30,"timestamp":"2025-05-15T09:44:15.586Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.5.1","pid":8024,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-28T08:06:37.625Z","env":"production","version":"0.0.0","env":"production","nodeVersion":"v22.14.0","pid":11676,"message":"Logger initialized successfully"}
+{"level":30,"timestamp":"2025-05-28T08:06:42.555Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-28T08:06:42.827Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":21,"message":"Showroom fetched successfully."}
+{"level":30,"timestamp":"2025-05-28T08:06:42.834Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","message":"Showroom fething..."}
+{"level":30,"timestamp":"2025-05-28T08:06:42.952Z","env":"production","version":"0.0.0","route":"/showroom","handler":"createShowroom","ShowroomCount":21,"message":"Showroom fetched successfully."}
