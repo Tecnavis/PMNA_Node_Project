@@ -819,7 +819,7 @@ const MultipleTables = () => {
                                 { accessor: 'cashInHand', title: 'Cash in Hand', render: (driver: Driver) => <div>₹{driver.cashInHand ? driver.cashInHand : 0}</div> },
                                 {
                                     accessor: 'driverSalary',
-                                    title: 'Salary Amount',
+                                    title: 'Balance To Get',
                                     render: (driver: Driver) => (
                                         <div>
                                             <div>₹{driver.balanceAmount ? driver.balanceAmount : 0}</div>
@@ -878,7 +878,7 @@ const MultipleTables = () => {
                                 { accessor: 'cashInHand', title: 'Cash in Hand', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
                                 {
                                     accessor: 'driverSalary',
-                                    title: 'Salary Amount',
+                                    title: 'Balance To Get',
                                     render: (provider: Provider) => (
                                         <div>
                                             <div>₹{provider.driverSalary ? provider.driverSalary : 0}</div>
@@ -899,9 +899,9 @@ const MultipleTables = () => {
                                             <button type="button" className="btn btn-primary px-2 py-1 text-xs" onClick={() => navigate(`/provider-report/salaryreport/${provider._id}`)}>
                                                 Salary
                                             </button>
-                                            <button type="button" className="btn btn-danger px-2 py-1 text-xs">
+                                            {/* <button type="button" className="btn btn-danger px-2 py-1 text-xs">
                                                 Expense
-                                            </button>
+                                            </button> */}
                                         </div>
                                     ),
                                 },

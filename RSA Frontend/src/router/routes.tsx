@@ -1,5 +1,7 @@
 import { lazy } from 'react';
 const TransactionList = lazy(() => import('../pages/SalaryTransaction'))
+const DriverTransactionList = lazy(() => import('../pages/SalaryTransactionDetails'))
+
 const AddExecutive = lazy(() => import('../pages/MarketingExecutive/AddExecutive'))
 const ExecutiveShowroomsTable = lazy(() => import('../pages/MarketingExecutive/ShowroomList'))
 const LoggerPage = lazy(() => import('../pages/LogsPage/LoggerPage'))
@@ -420,6 +422,10 @@ const routes = [
     {
         path: '/transations/salary-transaction',
         element: <TransactionList />,
+    },
+    {
+        path: '/driversalary-transaction',
+        element: <DriverTransactionList/>,
     },
     {
         path: '/logs',

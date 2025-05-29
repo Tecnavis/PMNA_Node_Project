@@ -23,6 +23,8 @@ import IconAt from '../Icon/IconAt';
 import IconAward from '../Icon/IconAward';
 import { ROLES } from '../../constants/roles'
 import { ImUserTie } from "react-icons/im";
+import IconMenuScrumboard from '../Icon/Menu/IconMenuScrumboard';
+import IconDollarSignCircle from '../Icon/IconDollarSignCircle';
 
 
 
@@ -410,7 +412,7 @@ const Sidebar = () => {
                             <li className="menu nav-item">
                                 <button type="button" className={`${currentMenu === 'transaction' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('transaction')}>
                                     <div className="flex items-center">
-                                        <IconAward className="group-hover:!text-primary shrink-0" />
+                                        <IconDollarSignCircle className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Transactions')}</span>
                                     </div>
 
@@ -424,6 +426,15 @@ const Sidebar = () => {
                                         {![ROLES.VERIFIER].includes(role) && (
                                             <li>
                                                 <NavLink to="/transations/salary-transaction">{t('Salary Transactions')}</NavLink>
+                                            </li>
+                                        )}
+                                    </ul>
+                                </AnimateHeight>
+                                 <AnimateHeight duration={300} height={currentMenu === 'transaction' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        {![ROLES.VERIFIER].includes(role) && (
+                                            <li>
+                                                <NavLink to="/driversalary-transaction">{t('Transactions Details')}</NavLink>
                                             </li>
                                         )}
                                     </ul>
