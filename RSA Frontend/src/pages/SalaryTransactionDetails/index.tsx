@@ -196,61 +196,87 @@ const [selectedYear, setSelectedYear] = useState<number | ''>(new Date().getFull
             </span>
         )
     },
-    { 
-        field: 'filesNumbers', 
-        header: 'File Numbers', 
-       render: (item: any) => (
-    <Tooltip title={item.filesNumbers?.join(', ') || 'No files'}>
-        <div className="flex flex-col gap-1">
-            {item.filesNumbers?.slice(0, 3).map((file: string, index: number) => (
-                <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                    {file}
-                </span>
-            ))}
-            {item.filesNumbers?.length > 3 && (
-                <span className="text-xs text-gray-500">+{item.filesNumbers.length - 3} more</span>
-            )}
-        </div>
-    </Tooltip>
-)
-    },
-    { 
-        field: 'driverSalary', 
-        header: 'Driver Salary (₹)', 
-        render: (item: any) => (
+ {
+    field: 'filesNumbers',
+    header: 'File Numbers',
+    render: (item: any) => (
+        <Tooltip title={item.filesNumbers?.join(', ') || 'No files'}>
             <div className="flex flex-col gap-1">
-                {item.driverSalary?.map((salary: number, index: number) => (
-                    <span key={index} className="text-xs">
+                {item.filesNumbers?.length ? (
+                    <>
+                        {item.filesNumbers.slice(0, 3).map((file: string, index: number) => (
+                            <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                {file}
+                            </span>
+                        ))}
+                        {item.filesNumbers.length > 3 && (
+                            <span className="text-xs text-gray-500">
+                                +{item.filesNumbers.length - 3} more
+                            </span>
+                        )}
+                    </>
+                ) : (
+                    <span className="text-xs font-medium text-blue-600">
+                        Added to advance
+                    </span>
+                )}
+            </div>
+        </Tooltip>
+    )
+},
+  { 
+    field: 'driverSalary', 
+    header: 'Driver Salary (₹)', 
+    render: (item: any) => (
+        <Tooltip 
+        title={item.driverSalary
+          ?.map((s: number) => `₹${s?.toLocaleString() || '0'}`)
+          .join(', ') || 'No salaries'
+        }>
+            <div className="flex flex-col gap-1">
+                {item.driverSalary?.slice(0, 3).map((salary: number, index: number) => (
+                    <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
                         ₹{salary?.toLocaleString() || '0'}
                     </span>
                 ))}
+                {item.driverSalary?.length > 3 && (
+                    <span className="text-xs text-gray-500">
+                        +{item.driverSalary.length - 3} more
+                    </span>
+                )}
             </div>
-        )
-    },
-    // { 
-    //     field: 'balanceSalary', 
-    //     header: 'Balance Salary (₹)', 
-    //     render: (item: any) => (
-    //         <div className="flex flex-col gap-1">
-    //             {item.balanceSalary?.map((salary: number, index: number) => (
-    //                 <span key={index} className="text-xs">
-    //                     ₹{salary?.toLocaleString() || '0'}
-    //                 </span>
-    //             ))}
-    //         </div>
-    //     )
-    // },
-    { 
+        </Tooltip>
+    )
+},
+       { 
         field: 'transferdSalary', 
         header: 'Transferred Salary (₹)', 
         render: (item: any) => (
+            // <div className="flex flex-col gap-1">
+            //     {item.transferdSalary?.map((salary: number, index: number) => (
+            //         <span key={index} className="text-xs">
+            //             ₹{salary?.toLocaleString() || '0'}
+            //         </span>
+            //     ))}
+            // </div>
+             <Tooltip 
+        title={item.transferdSalary
+          ?.map((s: number) => `₹${s?.toLocaleString() || '0'}`)
+          .join(', ') || 'No salaries'
+        }>
             <div className="flex flex-col gap-1">
-                {item.transferdSalary?.map((salary: number, index: number) => (
-                    <span key={index} className="text-xs">
+                {item.transferdSalary?.slice(0, 3).map((salary: number, index: number) => (
+                    <span key={index} className="text-xs bg-gray-100 px-2 py-1 rounded">
                         ₹{salary?.toLocaleString() || '0'}
                     </span>
                 ))}
+                {item.transferdSalary?.length > 3 && (
+                    <span className="text-xs text-gray-500">
+                        +{item.transferdSalary.length - 3} more
+                    </span>
+                )}
             </div>
+        </Tooltip>
         )
     },
     // { 
@@ -309,11 +335,11 @@ const receivedDetailsColumns = [
     },
  
      { 
-        field: 'driver.cashInHand', 
+        field: 'currentNetAmount', 
         header: 'Current Net (₹)', 
         render: (item: any) => (
             <span className="font-semibold">
-                ₹{(item.driver?.cashInHand || 0).toLocaleString()}
+                ₹{(item.currentNetAmount || 0).toLocaleString()}
             </span>
         )
     },

@@ -120,14 +120,30 @@ exports.getAllExpense = async (req, res) => {
            const { month, year } = req.query;
         const query = {};
 
-        // Month and Year filter
+         // Month and Year filter
         if (month && year) {
-            const startDate = new Date(year, month - 1, 1);
-            const endDate = new Date(year, month, 0, 23, 59, 59);
+            const monthNum = parseInt(month);
+            const yearNum = parseInt(year);
+            
+            if (isNaN(monthNum) || isNaN(yearNum)) {
+                return res.status(400).json({ message: 'Invalid month or year' });
+            }
+            
+            if (monthNum < 1 || monthNum > 12) {
+                return res.status(400).json({ message: 'Month must be between 1 and 12' });
+            }
+
+            const startDate = new Date(yearNum, monthNum - 1, 1);
+            const endDate = new Date(yearNum, monthNum, 0, 23, 59, 59);
             query.createdAt = { $gte: startDate, $lte: endDate };
         } else if (year) {
-            const startDate = new Date(year, 0, 1);
-            const endDate = new Date(year, 11, 31, 23, 59, 59);
+            const yearNum = parseInt(year);
+            if (isNaN(yearNum)) {
+                return res.status(400).json({ message: 'Invalid year' });
+            }
+
+            const startDate = new Date(yearNum, 0, 1);
+            const endDate = new Date(yearNum, 11, 31, 23, 59, 59);
             query.createdAt = { $gte: startDate, $lte: endDate };
         }
       const expense = await Expense
