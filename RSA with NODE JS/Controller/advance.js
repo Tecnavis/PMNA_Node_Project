@@ -141,7 +141,7 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc, userType) => {
 //Controller for get all advance
 exports.getAllAdvance = async (req, res) => {
     try {
-        const { driverType, driverId, search } = req.query;
+        const { driverType, driverId, search ,month, year} = req.query;
 
         let allAdvance
         const query = {};
@@ -149,7 +149,16 @@ exports.getAllAdvance = async (req, res) => {
         if (driverId) {
             query.driver = new mongoose.Types.ObjectId(driverId)
         }
-
+ // Month and Year filter
+        if (month && year) {
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0, 23, 59, 59);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        } else if (year) {
+            const startDate = new Date(year, 0, 1);
+            const endDate = new Date(year, 11, 31, 23, 59, 59);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        }
         if (search && search.trim()) {
             const searchQuery = search.trim();
             const regex = new RegExp(searchQuery, 'i');

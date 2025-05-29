@@ -117,8 +117,21 @@ exports.approve = async (req, res) => {
 // All expenses, newest first
 exports.getAllExpense = async (req, res) => { 
     try {
+           const { month, year } = req.query;
+        const query = {};
+
+        // Month and Year filter
+        if (month && year) {
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0, 23, 59, 59);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        } else if (year) {
+            const startDate = new Date(year, 0, 1);
+            const endDate = new Date(year, 11, 31, 23, 59, 59);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        }
       const expense = await Expense
-        .find()
+            .find(query)  // ← Use the query object here
         .sort({ createdAt: -1 })           // ← sort descending by createdAt
         .populate('driver');
   
