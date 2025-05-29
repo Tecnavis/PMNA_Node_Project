@@ -817,15 +817,22 @@ const MultipleTables = () => {
                                 },
                                 { accessor: 'idNumber', title: 'Driver ID', render: (driver: Driver) => <div>{driver.idNumber}</div> },
                                 { accessor: 'cashInHand', title: 'Cash in Hand', render: (driver: Driver) => <div>₹{driver.cashInHand ? driver.cashInHand : 0}</div> },
-                                {
-                                    accessor: 'driverSalary',
-                                    title: 'Balance To Get',
-                                    render: (driver: Driver) => (
-                                        <div>
-                                            <div>₹{driver.balanceAmount ? driver.balanceAmount : 0}</div>
-                                        </div>
-                                    ),
-                                },
+                                       {
+    accessor: 'driverSalary',
+    title: 'Balance To Get',
+    render: (driver: Driver) => {
+        const balance = driver.balanceAmount || 0;
+        const isNegative = balance < 0;
+        const absoluteValue = Math.abs(balance);
+        
+        return (
+            <div className={`font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+                ₹{absoluteValue.toLocaleString()}
+                {isNegative && ' (To Driver)'}  {/* Optional: Add "Dr" indicator for negative values */}
+            </div>
+        );
+    },
+},
 
                                 {
                                     accessor: 'action',
