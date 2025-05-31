@@ -817,22 +817,22 @@ const MultipleTables = () => {
                                 },
                                 { accessor: 'idNumber', title: 'Driver ID', render: (driver: Driver) => <div>{driver.idNumber}</div> },
                                 { accessor: 'cashInHand', title: 'Cash in Hand', render: (driver: Driver) => <div>₹{driver.cashInHand ? driver.cashInHand : 0}</div> },
-                                       {
-    accessor: 'driverSalary',
-    title: 'Balance To Get',
-    render: (driver: Driver) => {
-        const balance = driver.balanceAmount || 0;
-        const isNegative = balance < 0;
-        const absoluteValue = Math.abs(balance);
+//                                        {
+//     accessor: 'driverSalary',
+//     title: 'Balance To Get',
+//     render: (driver: Driver) => {
+//         const balance = driver.balanceAmount || 0;
+//         const isNegative = balance < 0;
+//         const absoluteValue = Math.abs(balance);
         
-        return (
-            <div className={`font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-                ₹{absoluteValue.toLocaleString()}
-                {isNegative && ' (To Driver)'}  {/* Optional: Add "Dr" indicator for negative values */}
-            </div>
-        );
-    },
-},
+//         return (
+//             <div className={`font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
+//                 ₹{absoluteValue.toLocaleString()}
+//                 {isNegative && ' (To Driver)'}  {/* Optional: Add "Dr" indicator for negative values */}
+//             </div>
+//         );
+//     },
+// },
 
                                 {
                                     accessor: 'action',
@@ -846,9 +846,9 @@ const MultipleTables = () => {
                                             <button type="button" className="btn btn-primary px-2 py-1 text-xs" onClick={() => navigate(`/dcpreport/driverreport/salaryreport/${driver._id}`)}>
                                                 Salary
                                             </button>
-                                            <button type="button" className="btn btn-danger px-2 py-1 text-xs" onClick={() => navigate(`/dcpreport/expence/${driver._id}`)}>
+                                            {/* <button type="button" className="btn btn-danger px-2 py-1 text-xs" onClick={() => navigate(`/dcpreport/expence/${driver._id}`)}>
                                                 Expense
-                                            </button>
+                                            </button> */}
                                         </div>
                                     ),
                                 },
@@ -883,16 +883,16 @@ const MultipleTables = () => {
                                 },
                                 { accessor: 'idNumber', title: 'Driver ID', render: (provider: Provider) => <div>{provider.idNumber}</div> },
                                 { accessor: 'cashInHand', title: 'Cash in Hand', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
-                                {
-                                    accessor: 'driverSalary',
-                                    title: 'Balance To Get',
-                                    render: (provider: Provider) => (
-                                        <div>
-                                            <div>₹{provider.driverSalary ? provider.driverSalary : 0}</div>
-                                        </div>
-                                    ),
-                                },
-                                { accessor: 'balanceAmount', title: 'Balance Amount', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
+                                // {
+                                //     accessor: 'driverSalary',
+                                //     title: 'Balance To Get',
+                                //     render: (provider: Provider) => (
+                                //         <div>
+                                //             <div>₹{provider.driverSalary ? provider.driverSalary : 0}</div>
+                                //         </div>
+                                //     ),
+                                // },
+                                // { accessor: 'balanceAmount', title: 'Balance Amount', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
 
                                 {
                                     accessor: 'action',
