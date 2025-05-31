@@ -372,11 +372,11 @@ const checkVehicleServiceStatus = async (booking) => {
 // Controller to get Order completed booking  by search query
 exports.getOrderCompletedBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10 } = req.query;
+        let { search, startDate, endDate, page = 1, limit = 10, all = false } = req.query;
 
-        // Convert page and limit to integers
-        page = parseInt(page, 10);
-        limit = parseInt(limit, 10);
+        // Convert page and limit based on 'all' flag
+        page = all ? 1 : parseInt(page, 10);
+        limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
 
         const query = {
             status: "Order Completed", // Filter only bookings with this status
@@ -436,15 +436,15 @@ exports.getOrderCompletedBookings = async (req, res) => {
             .populate('company')
             .populate('driver')
             .populate('provider')
-            .skip((page - 1) * limit)
+            .skip(all ? 0 : (page - 1) * limit) // Skip only if not fetching all
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
 
         res.status(200).json({
             total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            page: all ? 1 : page,
+            limit: all ? total : limit,
+            totalPages: all ? 1 : Math.ceil(total / limit),
             bookings,
         });
     } catch (error) {
@@ -475,12 +475,15 @@ exports.getAllBookings = async (req, res) => {
             providerId,
             companyId,
             verified,
-            staffId
+            staffId,
+                all = false // Add this new parameter
+
         } = req.query;
 
         // Convert page and limit to integers
-        page = parseInt(page, 10);
-        limit = parseInt(limit, 10);
+       page = all ? 1 : parseInt(page, 10);
+limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
+
 
         const query = {};
 
@@ -582,7 +585,7 @@ exports.getAllBookings = async (req, res) => {
             .populate('driver')
             .populate('provider')
             .populate('receivedUserId')
-            .skip((page - 1) * limit)
+    .skip(all ? 0 : (page - 1) * limit) // Skip only if not fetching all
             .limit(limit)
             .sort({ createdAt: -1 })
             .lean()
@@ -637,9 +640,9 @@ exports.getAllBookings = async (req, res) => {
         }, 'Booking fetch success.');
         return res.status(200).json({
             total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            page: all ? 1 : page,
+    limit: all ? total : limit,
+    totalPages: all ? 1 : Math.ceil(total / limit),
             bookings,
             balanceAmount,
             financials: {
@@ -1540,7 +1543,6 @@ exports.getApprovedBookings = async (req, res) => {
     }
 };
 
-// Controller to get Booking (based on status)
 exports.getAllBookingsBasedOnStatus = async (req, res) => {
     try {
         let { status = '', search, page = 1, limit = 10 } = req.query;
@@ -1550,37 +1552,20 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
         limit = parseInt(limit, 10);
 
         let query = {};
+        let statusConditions = {};
 
-        if (search) {
-            search = search.trim();
-
-            const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
-            const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
-
-            query.$or = [
-                { fileNumber: searchRegex },
-                { mob1: searchRegex },
-                { customerVehicleNumber: searchRegex },
-                { customerName: searchRegex },
-                { bookedByModel: searchRegex },
-                { driver: { $in: matchingDrivers.map(d => d._id) } },
-            ];
-        } else {
-
-            if (status === "Order Completed") {
-
-                query.$and = [
-                    { status: "Order Completed" },
-                    {
-                        $or: [
-                            { cashPending: false },
-                            { cashPending: { $exists: false } }
-                        ]
-                    }
-                ];
-
-            } else if (status === "OngoingBookings") {
-                query.status = {
+        // Handle status conditions first
+        if (status === "Order Completed") {
+            statusConditions = {
+                status: "Order Completed",
+                $or: [
+                    { cashPending: false },
+                    { cashPending: { $exists: false } }
+                ]
+            };
+        } else if (status === "OngoingBookings") {
+            statusConditions = {
+                status: {
                     $in: [
                         "Booking Added",
                         "called to customer",
@@ -1594,16 +1579,45 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
                         "Booking Added",
                         "Rejected"
                     ]
-                };
-                query.$or = [
+                },
+                $or: [
                     { cashPending: false },
                     { cashPending: { $exists: false } }
-                ];
-            } else if (status === "CashPendingBookings") {
-                query.cashPending = true
-            }
+                ]
+            };
+        } else if (status === "CashPendingBookings") {
+            statusConditions = { cashPending: true };
         }
 
+        // Handle search conditions
+        if (search) {
+            search = search.trim();
+            const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
+            const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
+
+            const searchConditions = {
+                $or: [
+                    { fileNumber: searchRegex },
+                    { mob1: searchRegex },
+                    { customerVehicleNumber: searchRegex },
+                    { customerName: searchRegex },
+                    { bookedByModel: searchRegex },
+                    { driver: { $in: matchingDrivers.map(d => d._id) } },
+                ]
+            };
+
+            // Combine search and status conditions with AND logic
+            if (Object.keys(statusConditions).length > 0) {
+                query.$and = [
+                    statusConditions,
+                    searchConditions
+                ];
+            } else {
+                query = searchConditions;
+            }
+        } else {
+            query = statusConditions;
+        }
 
         const total = await Booking.countDocuments(query);
 
@@ -1613,7 +1627,6 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
             .populate('serviceType')
             .populate('company')
             .populate('driver')
-            // .populate('provider')
             .skip((page - 1) * limit)
             .limit(limit)
             .sort({ createdAt: -1 });

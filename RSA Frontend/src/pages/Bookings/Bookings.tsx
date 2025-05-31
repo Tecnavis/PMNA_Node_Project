@@ -184,12 +184,14 @@ const Bookings: React.FC = () => {
         amountForCustomer: 0,
         cancelReason: '',
     });
+const [showingAll, setShowingAll] = useState(false);
+const [isLoading, setIsLoading] = useState(false);
 
 
-    const handlePageChange = (page: any) => {
-        setCurrentPage(page);
-        fetchBookings(page);
-    };
+  const handlePageChange = (page: any) => {
+    setCurrentPage(page);
+    fetchBookings(page, 10, false); // Explicitly set showAll to false
+};
 
     const navigate = useNavigate();
 
@@ -206,18 +208,27 @@ const Bookings: React.FC = () => {
     };
 
     // getting all bookings
-    const fetchBookings = async (page = 1, limit = 10) => {
+const fetchBookings = async (page = 1, limit = 10, showAll = false) => {
         try {
-            const response = await axios.get(`${backendUrl}/booking`, {
-                params: { search, page, limit, status: 'Order Completed' },
-            });
+                    setIsLoading(true);
+
+                 const params: any = { 
+            search, 
+            status: 'Order Completed',
+            ...(showAll ? { all: true } : { page, limit })
+        };
+
+        const response = await axios.get(`${backendUrl}/booking`, { params });
+
 
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
             setCurrentPage(response.data.page);
-        } catch (error) {
-            console.error('Error fetching bookings:', error);
-        }
+          } catch (error) {
+        console.error('Error fetching bookings:', error);
+    } finally {
+        setIsLoading(false);
+    }
     };
 
     // getting all company
@@ -581,38 +592,59 @@ const Bookings: React.FC = () => {
                     </table>
                 </div>
             </div>
-            <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                    >
-                        <GrPrevious />
-                    </button>
-                </li>
-                {Array.from({ length: totalPages }, (_, index) => (
-                    <li key={index}>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(index + 1)}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                                }`}
-                        >
-                            {index + 1}
-                        </button>
-                    </li>
-                ))}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                    >
-                        <GrNext />
-                    </button>
-                </li>
-            </ul>
+          <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
+    <li>
+        <button
+            type="button"
+            onClick={() => {
+                if (!showingAll) {
+                    handlePageChange(Math.max(1, currentPage - 1));
+                }
+            }}
+            disabled={showingAll}
+            className={`flex justify-center font-semibold p-2 rounded-full transition ${showingAll ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'} dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
+        >
+            <GrPrevious />
+        </button>
+    </li>
+    
+    {!showingAll && Array.from({ length: totalPages }, (_, index) => (
+        <li key={index}>
+            <button
+                type="button"
+                onClick={() => handlePageChange(index + 1)}
+                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+            >
+                {index + 1}
+            </button>
+        </li>
+    ))}
+    
+    <li>
+        <button
+            type="button"
+            onClick={() => fetchBookings(1, 10, !showingAll)}
+            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+        >
+            {showingAll ? 'Show Pages' : 'All'}
+        </button>
+    </li>
+    
+    <li>
+        <button
+            type="button"
+            onClick={() => {
+                if (!showingAll) {
+                    handlePageChange(Math.min(totalPages, currentPage + 1));
+                }
+            }}
+            disabled={showingAll}
+            className={`flex justify-center font-semibold p-2 rounded-full transition ${showingAll ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'} dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
+        >
+            <GrNext />
+        </button>
+    </li>
+</ul>
 
             <Transition appear show={modal5} as={Fragment}>
                 <Dialog as="div" open={modal5} onClose={() => setModal5(false)}>
