@@ -112,8 +112,8 @@ async function updateDriverFinancials(driverId, advance = 0) {
     const netTotalAmount = await calculateNetTotalAmountInHand(driverId);
     const totalSalary = await calculateTotalSalary(driverId);
 
-    const expense = await calculateMonthlyExpense(driverId);
-    const totalExpense = await calculateTotalExpense(driverId);
+    const totalExpense = await calculateMonthlyExpense(driverId);
+    const expense = await calculateTotalExpense(driverId);
     const dieselExpense = await calculateMonthlyDieselExpense(driverId);
     const monthlySalary = await calculateMonthlySalary(driverId);
     const monthlyAdvance = await calculateTotalAdvance(driverId);
