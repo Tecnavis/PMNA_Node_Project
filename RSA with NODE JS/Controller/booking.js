@@ -1591,6 +1591,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 
         // Handle search conditions
         if (search) {
+            query._includeHidden = true;
             search = search.trim();
             const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
             const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
