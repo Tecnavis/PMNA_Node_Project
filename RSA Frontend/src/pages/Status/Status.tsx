@@ -65,28 +65,38 @@ const Status: React.FC = () => {
         fetchBookings("", page);
     };
 
-    const fetchBookings = async (search: string = '', page: number = 1, limit: number = 10) => {
-        setLoader(true);
+    const fetchBookings = useCallback(
+        async (search: string = '', page: number = 1, limit: number = 10) => {
+            setLoader(true);
 
-        let status: string = tab === Tabs.CompletedBookings ? 'Order Completed' : tab === Tabs.CashPendingBookings ? Tabs.CashPendingBookings : Tabs.OngoingBookings;
+            let status: string = tab === Tabs.CompletedBookings
+                ? 'Order Completed'
+                : tab === Tabs.CashPendingBookings
+                    ? Tabs.CashPendingBookings
+                    : Tabs.OngoingBookings;
 
-        try {
-            const response = await axiosInstance.get(`/booking/status-based`, {
-                params: { page, limit, search, status }
-            });
+            console.log("Fetching =>", { search, status, tab });
 
-            setBookings(response.data.bookings);
-            setTotalPages(response.data.totalPages);
-            setCurrentPage(response.data.page);
+            try {
+                const response = await axiosInstance.get(`/booking/status-based`, {
+                    params: { page, limit, search, status }
+                });
 
-        } catch (error) {
-            console.error("Error fetching bookings", error);
-        } finally {
-            setLoader(false);
-        }
-    };
+                setBookings(response.data.bookings);
+                setTotalPages(response.data.totalPages);
+                setCurrentPage(response.data.page);
+            } catch (error) {
+                console.error("Error fetching bookings", error);
+            } finally {
+                setLoader(false);
+            }
+        }, [tab] // 👈 this is important to capture latest tab value
+    );
 
-    const debouncedFetchBookings = useCallback(debounce(fetchBookings, 1000), []);
+    const debouncedFetchBookings = useMemo(
+        () => debounce(fetchBookings, 1000),
+        [fetchBookings]
+    );
 
     const handleChangeTabs = (tabName: Tabs) => setTab(tabName);
 
@@ -272,6 +282,12 @@ const Status: React.FC = () => {
         setReceivedUser(e.target.value);
     };
 
+    useEffect(() => {
+        return () => {
+            debouncedFetchBookings.cancel();
+        };
+    }, [debouncedFetchBookings]);
+    
     return <div>
         <div className="container-fluid">
             <div className="row">
