@@ -314,19 +314,20 @@ const DriverSalaryReport = () => {
 
     };
 
-    const updateDateRange = (month: string = 1, year: number) => {
-        const monthIndex = new Date(`${month === 'All Months' ? 1 : month} 1, ${year}`).getMonth(); // Convert month name to index
-
-        // Start date: First day of the selected month
-        const firstDay = new Date(year, monthIndex, 1);
-
-        // End date: Last day of the selected month
-        const lastDay = new Date(year, month === 'All Months' ? 12 : monthIndex + 1, 0);
-
-        // Ensure proper formatting to "YYYY-MM-DD"
-        setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
-        setEndingDate(lastDay.toISOString().slice(0, 10));
-    };
+   const updateDateRange = (month: string = '1', year: number) => {
+    const monthIndex = new Date(`${month === 'All Months' ? 1 : month} 1, ${year}`).getMonth();
+    
+    // Start date: First day of the selected month
+    const firstDay = new Date(year, monthIndex, 1);
+    setStartDate(`${year}-${String(monthIndex + 1).padStart(2, '0')}-01`);
+    
+    // End date: Last day of the selected month
+    const lastDay = new Date(year, month === 'All Months' ? 12 : monthIndex + 1, 0);
+    
+    // Format the date correctly without timezone issues
+    const formattedEndDate = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+    setEndingDate(formattedEndDate);
+};
 
     const handleUpdateDriverBalance = async () => {
         // First show confirmation dialog
