@@ -174,6 +174,7 @@ const ApprovedBookings: React.FC = () => {
                             <tr>
                                 <th>#</th> {/* Index column */}
                                 <th>Created At</th>
+                                 <th>File Number</th>
                                 <th>Customer Name</th>
                                 <th>Mobile</th>
                                 <th>Service Type</th>
@@ -197,6 +198,8 @@ const ApprovedBookings: React.FC = () => {
                                     <tr key={index}>
                                         <td>{index + 1}</td> {/* Index column */}
                                         <td>{items.createdAt ? new Date(items.createdAt).toLocaleDateString('en-GB') : 'N/A'}</td>
+                                       <td>  {items.fileNumber}
+                                        </td>
                                         <td>
                                             {/* <div style={{ background: fileNumberColor, padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px' }}>
                                                 <p>{items.fileNumber}</p>
@@ -204,6 +207,7 @@ const ApprovedBookings: React.FC = () => {
                                             {/* File Number with conditional color */}
                                             {items.customerName}
                                         </td>
+                                        
                                         {/* {items.driver ? (
                                             <td>
                                                 {items.driver.name} <p style={{ color: '#9a9a9a' }}>{items.driver.phone}</p>

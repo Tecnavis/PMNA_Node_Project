@@ -1498,6 +1498,7 @@ exports.getApprovedBookings = async (req, res) => {
                 query.$or = [
                     { customerName: searchRegex }, // Replaced fileNumber with customerName
                     { mob1: searchRegex },
+                    { fileNumber: searchRegex },
                     { customerVehicleNumber: searchRegex },
                     { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },

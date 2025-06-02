@@ -121,7 +121,7 @@ const Sidebar = () => {
                                                 <NavLink to="/completedbookings">{t('Driver Completed Bookings')}</NavLink>
                                             </li>
                                         )}
-                                        {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                        {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.VERIFIER,ROLES.accountant].includes(role) && (
                                             <li>
                                                 <NavLink to="/approvedbookings">{t('Service Details')}</NavLink>
                                             </li>
