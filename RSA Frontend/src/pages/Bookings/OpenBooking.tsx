@@ -32,6 +32,7 @@ export interface Booking {
     cashPending?: boolean;
     dropoffImagePending?: boolean;
     pickupImagePending?: boolean;
+    accountantVerified?:boolean;
     inventoryImagePending?: boolean;
     company: {
         name: string;
@@ -757,6 +758,8 @@ const Preview = () => {
                                                             setEnlargedImage(url);
                                                         }}
                                                     />
+                                                                                                             {!booking?.accountantVerified == true && (
+
                                                     <label
                                                         className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block"
                                                     >
@@ -769,6 +772,7 @@ const Preview = () => {
                                                             id={`dropoff-image-${index}`}
                                                         />
                                                     </label>
+                                                                                                             )}
                                                 </div>
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
@@ -797,6 +801,7 @@ const Preview = () => {
                                                                 setEnlargedImage(url);
                                                             }}
                                                         />
+                                                         {!booking?.accountantVerified == true && (
                                                         <label
                                                             className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block"
                                                         >
@@ -809,6 +814,7 @@ const Preview = () => {
                                                                 id={`dropoff-image-${index}`}
                                                             />
                                                         </label>
+                                                         )}
                                                     </div>
                                                     <span className='text-xs'>
                                                         <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -

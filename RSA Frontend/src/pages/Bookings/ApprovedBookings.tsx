@@ -180,6 +180,8 @@ const ApprovedBookings: React.FC = () => {
                                 <th>Service Type</th>
                                 <th>Vehicle Number</th>
                                 <th>comments</th>
+                                                                <th>Actions</th>
+
                              
                             </tr>
                         </thead>
@@ -223,6 +225,13 @@ const ApprovedBookings: React.FC = () => {
                                         <td>{items.serviceType.serviceName.toUpperCase()}</td>
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
                                         <td>{items.comments}</td>
+                                          <td>
+                                                                                            <Tippy content="View More">
+                                                                                                <button type="button" onClick={() => navigate(`/openbooking/${items._id}`)}>
+                                                                                                    <IconEye className="text-secondary" />
+                                                                                                </button>
+                                                                                            </Tippy>
+                                                                                        </td>
                                     </tr>
                                 );
                             })}
