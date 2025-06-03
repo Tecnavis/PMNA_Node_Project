@@ -852,7 +852,6 @@ const Preview = () => {
                             )}
                         </Tab.Panels>
                     </Tab.Group>
-                    {/* --------------------------------------------------------------- */}
                     <div className="mt-8">
                         <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Inventory Sheet</h3>
 
