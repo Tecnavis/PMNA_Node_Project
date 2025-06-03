@@ -32,6 +32,7 @@ export interface Booking {
     cashPending?: boolean;
     dropoffImagePending?: boolean;
     pickupImagePending?: boolean;
+    accountantVerified?:boolean;
     inventoryImagePending?: boolean;
     company: {
         name: string;
@@ -757,6 +758,8 @@ const Preview = () => {
                                                             setEnlargedImage(url);
                                                         }}
                                                     />
+                                                                                                             {!booking?.accountantVerified == true && (
+
                                                     <label
                                                         className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block"
                                                     >
@@ -769,6 +772,7 @@ const Preview = () => {
                                                             id={`dropoff-image-${index}`}
                                                         />
                                                     </label>
+                                                                                                             )}
                                                 </div>
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
@@ -797,6 +801,7 @@ const Preview = () => {
                                                                 setEnlargedImage(url);
                                                             }}
                                                         />
+                                                         {!booking?.accountantVerified == true && (
                                                         <label
                                                             className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block"
                                                         >
@@ -809,6 +814,7 @@ const Preview = () => {
                                                                 id={`dropoff-image-${index}`}
                                                             />
                                                         </label>
+                                                         )}
                                                     </div>
                                                     <span className='text-xs'>
                                                         <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -
@@ -846,7 +852,6 @@ const Preview = () => {
                             )}
                         </Tab.Panels>
                     </Tab.Group>
-                    {/* --------------------------------------------------------------- */}
                     <div className="mt-8">
                         <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Inventory Sheet</h3>
 
@@ -864,6 +869,8 @@ const Preview = () => {
                                             <span className="text-white text-sm bg-green-500 px-2 py-1 rounded-full flex items-center">
                                                 <FiCheck className="mr-1" /> Verified Inventory
                                             </span>
+                                                                                                     {!booking?.accountantVerified == true && (
+
                                             <div className="flex gap-2">
                                                 <label className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors cursor-pointer">
                                                     <FiEdit2 size={18} />
@@ -882,6 +889,7 @@ const Preview = () => {
                                                     <FiZoomIn size={18} />
                                                 </button>
                                             </div>
+                                                                                                     )}
                                         </div>
                                     </div>
                                 </div>
