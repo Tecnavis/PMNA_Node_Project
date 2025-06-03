@@ -870,6 +870,8 @@ const Preview = () => {
                                             <span className="text-white text-sm bg-green-500 px-2 py-1 rounded-full flex items-center">
                                                 <FiCheck className="mr-1" /> Verified Inventory
                                             </span>
+                                                                                                     {!booking?.accountantVerified == true && (
+
                                             <div className="flex gap-2">
                                                 <label className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors cursor-pointer">
                                                     <FiEdit2 size={18} />
@@ -888,6 +890,7 @@ const Preview = () => {
                                                     <FiZoomIn size={18} />
                                                 </button>
                                             </div>
+                                                                                                     )}
                                         </div>
                                     </div>
                                 </div>
