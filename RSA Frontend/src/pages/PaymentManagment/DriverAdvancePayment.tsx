@@ -332,6 +332,8 @@ const AdvancePayment: React.FC = () => {
                 }
             </div>
             {/* Tabs and Tables */}
+                        {/* Tabs and Tables */}
+
             {
                 selectedType !== '' && <section className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5 overflow-x-auto">
                     <Tab.Group selectedIndex={tabIndex} onChange={setTabIndex}>
