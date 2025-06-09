@@ -9,7 +9,18 @@ import { AdvanceDetailsTableColumn, CashCollectionDetailsTableColumn, colsForAdv
 import { AdvanceData, ReceivedDetails } from './types';
 import './AdvancePayment.module.css'
 import Swal from 'sweetalert2';
-
+import { dateFormate } from '../../utils/dateUtils';
+const getColorForDateTime = (dateTimeString: string) => {
+  // Combine both date and time for hashing
+  let hash = 0;
+  for (let i = 0; i < dateTimeString.length; i++) {
+    hash = dateTimeString.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Generate a pastel color based on the full hash
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h}, 70%, 85%)`;
+};
 const AdvancePayment: React.FC = () => {
 
     const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -161,6 +172,7 @@ const AdvancePayment: React.FC = () => {
             }
 
             const res = await axios.post(`${BASE_URL}/cash-received-details`, {
+                totalAmount: receivedAmount,
                 amount: receivedAmount,
                 balance: ((Number(inHandAmount) || 0) - (Number(receivedAmount) || 0)),
                 currentNetAmount: inHandAmount,
@@ -412,6 +424,9 @@ const AdvancePayment: React.FC = () => {
                                             highlightOnHover
                                             columns={colsForAdvanceDetails}
                                             records={advanceDetails}
+                rowStyle={(record) => ({
+        backgroundColor: getColorForDateTime(record.createdAt.toString())
+    })}
                                         />
                                     </Tab.Panel>
                                     <Tab.Panel className="overflow-x-auto">
@@ -440,6 +455,9 @@ const AdvancePayment: React.FC = () => {
                                                 highlightOnHover
                                                 columns={colsForReceivedDetails}
                                                 records={receivedDetails}
+                  rowStyle={(record) => ({
+        backgroundColor: getColorForDateTime(record.createdAt.toString())
+    })}
                                             />
                                         </Tab.Panel>
                                     </div>
@@ -455,6 +473,9 @@ const AdvancePayment: React.FC = () => {
                                                 highlightOnHover
                                                 columns={colsForCashCollection}
                                                 records={receivedDetails}
+                    rowStyle={(record) => ({
+        backgroundColor: getColorForDateTime(record.createdAt.toString())
+    })}
                                             />
                                         </Tab.Panel>
                                     </div>

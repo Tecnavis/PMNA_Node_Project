@@ -8,7 +8,7 @@ const { default: mongoose } = require('mongoose');
 
 exports.createReceivedDetails = async (req, res) => {
     try {
-        const { amount, currentNetAmount, driver, receivedAmount, remark } = req.body;
+        const { amount, currentNetAmount, driver, receivedAmount, remark,totalAmount } = req.body;
 
         if (!amount || !currentNetAmount || !driver || !receivedAmount) {
             return res.status(400).json({ message: 'All fields are required' });
@@ -67,6 +67,7 @@ exports.createReceivedDetails = async (req, res) => {
                 amount: `Advance: ${driverAdvance}`,
                 driver: associateDriver._id,
                 receivedAmount: remainingAmount,
+                totalAmount: totalAmount
             });
         }
 
@@ -83,6 +84,7 @@ exports.createReceivedDetails = async (req, res) => {
                 amount: booking.totalAmount,
                 driver: associateDriver._id,
                 receivedAmount: currentReceivedAmount,
+                  totalAmount: totalAmount
             });
             console.log('receivedDetails ', receivedDetails)
         }
