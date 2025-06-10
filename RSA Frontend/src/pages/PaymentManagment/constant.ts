@@ -1,7 +1,18 @@
 import { dateFormate, formattedTime } from "../../utils/dateUtils";
 import { Booking } from "../Bookings/Bookings";
 import { AdvanceData, ReceivedDetails } from "./types";
-
+// ----------------------------
+const getColorForDateTime = (dateTimeString: string) => {
+  // Combine both date and time for hashing
+  let hash = 0;
+  for (let i = 0; i < dateTimeString.length; i++) {
+    hash = dateTimeString.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Generate a pastel color based on the full hash
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h}, 70%, 85%)`;
+};
 //Columns Titles
 export const AdvanceDetailsTableColumn = [
     {
@@ -41,9 +52,20 @@ export const colsForAdvance = [
     {
         title: "DATE AND TIME",
         accessor: 'addedAdvance',
-        render: (advanceDetails: AdvanceData) =>
-            `${dateFormate(advanceDetails?.createdAt)} , ${formattedTime(advanceDetails?.createdAt)}`
+        render: (advanceDetails: AdvanceData) =>{
+        const dateStr = dateFormate(advanceDetails?.createdAt as unknown as string);
+        const timeStr = formattedTime(advanceDetails?.createdAt as unknown as string); // ✅ No conflict
+        return `${dateStr} at ${timeStr}`;
     },
+    cellsStyle: (advanceDetails: AdvanceData) => {
+        const dateStr = dateFormate(advanceDetails?.createdAt as unknown as string);
+        const timeStr = formattedTime(advanceDetails?.createdAt as unknown as string); // ✅ No conflict
+        const fullDateTimeStr = `${dateStr} at ${timeStr}`;
+        return {
+            backgroundColor: getColorForDateTime(fullDateTimeStr)
+        };
+    }
+},
     {
         title: "DRIVER NAME",
         accessor: 'driver.name',
@@ -110,16 +132,32 @@ export const ReceivedDetailsTableColumn = [
         accessor: '_id',
         render: (_: any, index: number) => index + 1
     },
-    {
-        title: "DATE AND TIME",
-        accessor: 'createdAt',
-        render: (receivedDetails: ReceivedDetails) =>
-            `${dateFormate(receivedDetails?.createdAt)} at ${formattedTime(receivedDetails?.createdAt)}`
+   {
+    title: "DATE AND TIME",
+    accessor: 'createdAt',
+    render: (receivedDetails: ReceivedDetails) =>{
+        const dateStr = dateFormate(receivedDetails?.createdAt as unknown as string);
+        const timeStr = formattedTime(receivedDetails?.createdAt as unknown as string); // ✅ No conflict
+        return `${dateStr} at ${timeStr}`;
     },
+    cellsStyle: (receivedDetails: ReceivedDetails) => {
+        const dateStr = dateFormate(receivedDetails?.createdAt as unknown as string);
+        const timeStr = formattedTime(receivedDetails?.createdAt as unknown as string); // ✅ No conflict
+        const fullDateTimeStr = `${dateStr} at ${timeStr}`;
+        return {
+            backgroundColor: getColorForDateTime(fullDateTimeStr)
+        };
+    }
+},
     {
         title: "DRIVER NAME",
         accessor: 'driver.name',
         render: (booking: ReceivedDetails) => (booking.driver?.name || "N/A")
+    },
+       {
+        title: "AMOUNT FROM DRIVER",
+        accessor: 'totalAmount',
+        render: (receivedDetails: ReceivedDetails) => `₹ ${receivedDetails?.totalAmount || 0}`
     },
     {
         title: "RECEIVED AMOUNT",
@@ -139,12 +177,23 @@ export const CashCollectionDetailsTableColumn = [
         accessor: '_id',
         render: (_: any, index: number) => index + 1
     },
-    {
-        title: "DATE AND TIME",
-        accessor: 'createdAt',
-        render: (cashCollection: ReceivedDetails) =>
-            `${dateFormate(cashCollection?.createdAt as unknown as string)} at ${formattedTime(cashCollection?.createdAt as unknown as string)}`
+{
+    title: "DATE AND TIME",
+    accessor: 'createdAt',
+    render: (cashCollection: ReceivedDetails) => {
+        const dateStr = dateFormate(cashCollection?.createdAt as unknown as string);
+        const timeStr = formattedTime(cashCollection?.createdAt as unknown as string); // ✅ No conflict
+        return `${dateStr} at ${timeStr}`;
     },
+    cellsStyle: (cashCollection: ReceivedDetails) => {
+        const dateStr = dateFormate(cashCollection?.createdAt as unknown as string);
+        const timeStr = formattedTime(cashCollection?.createdAt as unknown as string); // ✅ No conflict
+        const fullDateTimeStr = `${dateStr} at ${timeStr}`;
+        return {
+            backgroundColor: getColorForDateTime(fullDateTimeStr)
+        };
+    }
+},
     {
         title: "DRIVER NAME",
         accessor: 'driver.name',
@@ -155,11 +204,16 @@ export const CashCollectionDetailsTableColumn = [
         accessor: 'fileNumber',
         render: (booking: ReceivedDetails) => (booking.fileNumber || "N/A")
     },
-    {
-        title: "INITIAL TOTAL AMOUNT IN HAND",
-        accessor: 'driver.cashInHand',
-        render: (cashCollection: ReceivedDetails) => `₹${cashCollection?.currentNetAmount || 0}`
+       {
+        title: "AMOUNT FROM DRIVER",
+        accessor: 'totalAmount',
+        render: (booking: ReceivedDetails) => `₹ ${booking?.totalAmount || 0}`
     },
+    // {
+    //     title: "INITIAL TOTAL AMOUNT IN HAND",
+    //     accessor: 'driver.cashInHand',
+    //     render: (cashCollection: ReceivedDetails) => `₹${cashCollection?.currentNetAmount || 0}`
+    // },
     {
         title: "BOOKING AMOUNT",
         accessor: 'totalAmount',

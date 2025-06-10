@@ -97,7 +97,28 @@ const driverSchema = new mongoose.Schema({
   totalExpense: {
     type: Number,
     default: 0
+  },
+  
+settlement: {
+    type: Boolean,
+    default: false
+  },
+  settlementCompletedDate: {
+    type: Date
+  },
+  lastSettlementAmount: {
+    type: Number
+  },
+  pendingExpensesCount: {
+    type: Number,
+    default: 0
+  },
+  totalPendingAmount: {
+    type: Number,
+    default: 0
   }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Driver', driverSchema);

@@ -20,6 +20,7 @@ export interface ReceivedDetails {
     amount: string;
     fileNumber: string;
     balance: string;
+    totalAmount:number;
     currentNetAmount: number;
     driver: { name: string };
     receivedAmount: number;

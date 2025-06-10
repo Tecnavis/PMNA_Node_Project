@@ -6,6 +6,8 @@ const ReceivedDetailsSchema = new mongoose.Schema({
     fileNumber: { type: String, required: true },
     balance: { type: String, required: true },
     currentNetAmount: { type: Number, required: true },
+        totalAmount: { type: Number, required: true },
+
     driver: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Driver'

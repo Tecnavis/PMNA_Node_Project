@@ -8,57 +8,52 @@ const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
 
 const { StatusCodes } = require('http-status-codes');
 const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
-
+// -----------------------------------------------
 //Controller for creating new advance
 exports.createNewAdvance = async (req, res) => {
-    const { remark, advance, driverId, type } = req.body
+    const { remark, advance, driverId, type } = req.body;
     try {
-
         if (!remark || !advance || !driverId || !type) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
-        let source
-        let userType = "Driver"
+        let source;
+        let userType = "Driver";
         source = await Driver.findById(driverId);
 
         if (!source) {
             source = await Provider.findById(driverId);
-            userType = 'Provider'
+            userType = 'Provider';
         }
 
         if (!source) {
-            userType = ''
+            userType = '';
             return res.status(404).json({ message: 'Driver or Provider not found' });
         }
 
-        // Fetch all advance entries for the driver
+        // Calculate current total advance without modifying historical records
         const previousAdvances = await Advance.find({ driver: driverId });
-
-        let existingAdvance = 0;
-        for (const adv of previousAdvances) {
-            existingAdvance += adv.advance;
-            adv.advance = 0;
-            await adv.save();
-        }
-        const newAdvance = existingAdvance + Number(advance);
-
-        // Create new advance document
+        const existingAdvance = previousAdvances.reduce((sum, adv) => sum + adv.advance, 0);
+        
+        // Calculate new total advance
+        const newAdvanceTotal = existingAdvance + Number(advance);
 
         // Update driver's total advance
-        source.advance = newAdvance;
+        source.advance = newAdvanceTotal;
         await source.save();
 
+        // Create new advance document with the added amount and new total
         const newAdvanceDoc = await Advance.create({
             driver: driverId,
-            addedAdvance: Number(advance),
-            advance: newAdvance,
+            addedAdvance: Number(advance),  // The amount being added in this transaction
+            advance: newAdvanceTotal,       // The new cumulative total
             type,
             userModel: userType,
             remark,
         });
 
         const advanceMoreData = await settleBookingsWithAdvance(driverId, newAdvanceDoc, userType);
+        
         // Update advance doc with settlement data
         newAdvanceDoc.filesNumbers = advanceMoreData.filesNumbers;
         newAdvanceDoc.driverSalary = advanceMoreData.driverSalary;
@@ -66,7 +61,13 @@ exports.createNewAdvance = async (req, res) => {
         newAdvanceDoc.transferdSalary = advanceMoreData.transferdSalary;
         await newAdvanceDoc.save();
 
-        res.status(200).json({ message: 'Advance saved and settlement done.', driver: source });
+        res.status(200).json({ 
+            message: 'Advance saved and settlement done.', 
+            driver: source,
+            previousAdvance: existingAdvance,
+            addedAdvance: Number(advance),
+            newAdvanceTotal
+        });
 
     } catch (error) {
         console.log(error);

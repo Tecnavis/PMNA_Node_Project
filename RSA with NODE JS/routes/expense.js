@@ -18,6 +18,7 @@ router.patch('/update-expense/:id', jwt, expenseController.approve);
 router.get('/get-expense/:id', jwt, expenseController.getExpenseById)
 
 router.get('/driver-expense/:id', jwt, expenseController.getAllExpenseForDriver)
-
+// Add this to your routes
+router.patch('/complete-settlement/:driverId', jwt, expenseController.completeSettlement);
 
 module.exports = router;
