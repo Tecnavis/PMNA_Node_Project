@@ -12,8 +12,8 @@ export interface IDieselExpense {
     images: string[];
     vehicleNumber?: string;
     expenceKm: number;
-    status: 'Pending' | 'Approved' | 'Rejected';
-    createdAt: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+      createdAt: string;
     updatedAt: string;
 }
 
@@ -36,5 +36,7 @@ export interface Expense {
   approve: boolean | null; // null = pending, true = approved, false = rejected
   driver: Driver;
   image: string;
+    status: 'pending' | 'approved' | 'rejected';
+
   createdAt: string;
 }

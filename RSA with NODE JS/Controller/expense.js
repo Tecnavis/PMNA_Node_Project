@@ -1,5 +1,9 @@
+const mongoose = require('mongoose');
+
 const Expense = require('../Model/expense')
 const Driver = require('../Model/driver');
+const Advance = require('../Model/advance');
+
 const { distributeReceivedAmount } = require('../services/bookingService');
 
 exports.createExpense = async (req, res) => {
@@ -212,5 +216,138 @@ exports.getAllExpenseForDriver = async (req, res) => {
     } catch (error) {
         console.error(error.message)
         return res.status(500).json({ message: 'Error fetching expense', error: error.message });
+    }
+}
+// --------------------------------------
+exports.completeSettlement = async (req, res) => {
+    let session;
+    try {
+        session = await mongoose.startSession();
+        session.startTransaction();
+
+        const { driverId } = req.params;
+        const { advanceAmount } = req.body;
+
+        // Get driver WITH LOCK to prevent concurrent modifications
+        const driver = await Driver.findById(driverId)
+            .session(session)
+            .select('cashInHand')
+            .lean();
+
+        if (!driver) {
+            await session.abortTransaction();
+            return res.status(404).json({ message: "Driver not found", success: false });
+        }
+
+        // Get pending expenses
+        const pendingExpenses = await Expense.find({
+            driver: driverId,
+            $or: [
+                { approve: { $exists: false } },
+                { approve: false }
+            ]
+        }).session(session);
+
+        if (pendingExpenses.length === 0) {
+            await session.abortTransaction();
+            return res.status(400).json({
+                message: "No pending expenses to settle",
+                success: false
+            });
+        }
+
+        // Calculate total pending amount
+        const totalPending = pendingExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+        let newCashInHand = driver.cashInHand;
+
+        // Handle advance if needed
+        if (advanceAmount && advanceAmount > 0) {
+            await Advance.create([{
+                driver: driverId,
+                addedAdvance: advanceAmount,
+                advance: advanceAmount,
+                type: 'settlement',
+                userModel: 'Driver',
+                remark: 'Advance for expense settlement'
+            }], { session });
+
+            newCashInHand += advanceAmount;
+        }
+
+        // Verify cash is sufficient
+        if (newCashInHand < totalPending) {
+            await session.abortTransaction();
+            return res.status(400).json({
+                message: `Insufficient funds. Need $${totalPending - newCashInHand} more`,
+                success: false,
+                requiredAmount: totalPending - newCashInHand
+            });
+        }
+
+        // APPROVE ALL EXPENSES
+        const updateResult = await Expense.updateMany(
+            { 
+                driver: driverId,
+                $or: [
+                    { approve: { $exists: false } },
+                    { approve: false }
+                ]
+            },
+            { $set: { 
+                approve: true, 
+                approvedDate: new Date(),
+                status: 'approved'
+            }},
+            { session }
+        );
+
+        // ATOMICALLY update driver's cash and settlement status
+        const updatedDriver = await Driver.findOneAndUpdate(
+            { _id: driverId, cashInHand: { $gte: totalPending } }, // Additional check
+            {
+                $set: {
+                    settlement: true,
+                    settlementCompletedDate: new Date()
+                },
+                $inc: { 
+                    cashInHand: -totalPending,
+                    totalExpense: totalPending
+                }
+            },
+            { 
+                new: true,
+                session,
+                runValidators: true 
+            }
+        );
+
+        if (!updatedDriver) {
+            await session.abortTransaction();
+            return res.status(400).json({
+                message: "Cash deduction failed - possible race condition",
+                success: false
+            });
+        }
+
+        await session.commitTransaction();
+        
+        return res.status(200).json({
+            message: "Settlement completed successfully",
+            success: true,
+            driverData: updatedDriver,
+            approvedExpensesCount: updateResult.modifiedCount,
+            amountDeducted: totalPending
+        });
+
+    } catch (error) {
+        if (session) await session.abortTransaction();
+        console.error('Settlement error:', error);
+        return res.status(500).json({ 
+            message: 'Error completing settlement', 
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    } finally {
+        if (session) session.endSession();
     }
 }
