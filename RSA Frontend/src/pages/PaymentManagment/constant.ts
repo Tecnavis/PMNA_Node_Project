@@ -1,19 +1,33 @@
 import { dateFormate, formattedTime } from "../../utils/dateUtils";
 import { Booking } from "../Bookings/Bookings";
 import { AdvanceData, ReceivedDetails } from "./types";
-// ----------------------------
-const getColorForDateTime = (dateTimeString: string) => {
-  // Combine both date and time for hashing
+const roundToNearestMinute = (date: Date) => {
+  const roundedDate = new Date(date);
+  roundedDate.setSeconds(0);
+  roundedDate.setMilliseconds(0);
+  return roundedDate;
+};
+
+// Modified color generation function to group similar times
+const getColorForDateTime = (dateTime: Date) => {
+  // Round to nearest minute to group similar times
+  const roundedDate = roundToNearestMinute(new Date(dateTime));
+  const dateStr = dateFormate(roundedDate.toISOString());
+  const timeStr = formattedTime(roundedDate.toISOString());
+  const roundedDateTimeStr = `${dateStr} at ${timeStr}`;
+  
+  // Generate consistent hash for rounded datetime
   let hash = 0;
-  for (let i = 0; i < dateTimeString.length; i++) {
-    hash = dateTimeString.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < roundedDateTimeStr.length; i++) {
+    hash = roundedDateTimeStr.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  // Generate a pastel color based on the full hash
+  // Generate a pastel color based on the rounded datetime
   const h = Math.abs(hash) % 360;
   return `hsl(${h}, 70%, 85%)`;
 };
 //Columns Titles
+
 export const AdvanceDetailsTableColumn = [
     {
         title: "SI",
@@ -49,23 +63,21 @@ export const AdvanceDetailsTableColumn = [
 //Columns Titles
 
 export const colsForAdvance = [
-    {
-        title: "DATE AND TIME",
-        accessor: 'addedAdvance',
-        render: (advanceDetails: AdvanceData) =>{
-        const dateStr = dateFormate(advanceDetails?.createdAt as unknown as string);
-        const timeStr = formattedTime(advanceDetails?.createdAt as unknown as string); // ✅ No conflict
-        return `${dateStr} at ${timeStr}`;
+   
+  {
+    title: "DATE AND TIME",
+    accessor: 'createdAt',
+    render: (advanceDetails: AdvanceData) => {
+      const dateStr = dateFormate(advanceDetails?.createdAt as unknown as string);
+      const timeStr = formattedTime(advanceDetails?.createdAt as unknown as string);
+      return `${dateStr} at ${timeStr}`;
     },
     cellsStyle: (advanceDetails: AdvanceData) => {
-        const dateStr = dateFormate(advanceDetails?.createdAt as unknown as string);
-        const timeStr = formattedTime(advanceDetails?.createdAt as unknown as string); // ✅ No conflict
-        const fullDateTimeStr = `${dateStr} at ${timeStr}`;
-        return {
-            backgroundColor: getColorForDateTime(fullDateTimeStr)
-        };
+      return {
+        backgroundColor: getColorForDateTime(new Date(advanceDetails.createdAt))
+      };
     }
-},
+  },
     {
         title: "DRIVER NAME",
         accessor: 'driver.name',
@@ -132,23 +144,21 @@ export const ReceivedDetailsTableColumn = [
         accessor: '_id',
         render: (_: any, index: number) => index + 1
     },
-   {
+ 
+  {
     title: "DATE AND TIME",
     accessor: 'createdAt',
-    render: (receivedDetails: ReceivedDetails) =>{
-        const dateStr = dateFormate(receivedDetails?.createdAt as unknown as string);
-        const timeStr = formattedTime(receivedDetails?.createdAt as unknown as string); // ✅ No conflict
-        return `${dateStr} at ${timeStr}`;
+    render: (receivedDetails: ReceivedDetails) => {
+      const dateStr = dateFormate(receivedDetails?.createdAt as unknown as string);
+      const timeStr = formattedTime(receivedDetails?.createdAt as unknown as string);
+      return `${dateStr} at ${timeStr}`;
     },
     cellsStyle: (receivedDetails: ReceivedDetails) => {
-        const dateStr = dateFormate(receivedDetails?.createdAt as unknown as string);
-        const timeStr = formattedTime(receivedDetails?.createdAt as unknown as string); // ✅ No conflict
-        const fullDateTimeStr = `${dateStr} at ${timeStr}`;
-        return {
-            backgroundColor: getColorForDateTime(fullDateTimeStr)
-        };
+      return {
+        backgroundColor: getColorForDateTime(new Date(receivedDetails.createdAt))
+      };
     }
-},
+  },
     {
         title: "DRIVER NAME",
         accessor: 'driver.name',
@@ -177,23 +187,20 @@ export const CashCollectionDetailsTableColumn = [
         accessor: '_id',
         render: (_: any, index: number) => index + 1
     },
-{
+ {
     title: "DATE AND TIME",
     accessor: 'createdAt',
     render: (cashCollection: ReceivedDetails) => {
-        const dateStr = dateFormate(cashCollection?.createdAt as unknown as string);
-        const timeStr = formattedTime(cashCollection?.createdAt as unknown as string); // ✅ No conflict
-        return `${dateStr} at ${timeStr}`;
+      const dateStr = dateFormate(cashCollection?.createdAt as unknown as string);
+      const timeStr = formattedTime(cashCollection?.createdAt as unknown as string);
+      return `${dateStr} at ${timeStr}`;
     },
     cellsStyle: (cashCollection: ReceivedDetails) => {
-        const dateStr = dateFormate(cashCollection?.createdAt as unknown as string);
-        const timeStr = formattedTime(cashCollection?.createdAt as unknown as string); // ✅ No conflict
-        const fullDateTimeStr = `${dateStr} at ${timeStr}`;
-        return {
-            backgroundColor: getColorForDateTime(fullDateTimeStr)
-        };
+      return {
+        backgroundColor: getColorForDateTime(new Date(cashCollection.createdAt))
+      };
     }
-},
+  },
     {
         title: "DRIVER NAME",
         accessor: 'driver.name',

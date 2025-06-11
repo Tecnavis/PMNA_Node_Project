@@ -1550,11 +1550,14 @@ exports.getApprovedBookings = async (req, res) => {
 
 exports.getAllBookingsBasedOnStatus = async (req, res) => {
     try {
-        let { status = '', search, page = 1, limit = 10 } = req.query;
+        let { status = '', search, page = 1, limit = 10, showAll = false } = req.query;
 
         // Convert page and limit to integers
         page = parseInt(page, 10);
         limit = parseInt(limit, 10);
+        if (showAll === 'true') {
+            limit = 1000000; // Or use Number.MAX_SAFE_INTEGER for all records
+        }
 
         let query = {};
         let statusConditions = {};
@@ -1633,16 +1636,17 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
             .populate('serviceType')
             .populate('company')
             .populate('driver')
-            .skip((page - 1) * limit)
+             .skip(showAll === 'true' ? 0 : (page - 1) * limit) // Skip only if not showing all
             .limit(limit)
             .sort({ createdAt: -1 });
 
         res.status(200).json({
             bookings,
             total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+             page: showAll === 'true' ? 1 : page,
+            limit: showAll === 'true' ? total : limit,
+            totalPages: showAll === 'true' ? 1 : Math.ceil(total / limit),
+            showAll: showAll === 'true'
         });
     } catch (error) {
         console.error('Error fetching bookings:', error.message);
