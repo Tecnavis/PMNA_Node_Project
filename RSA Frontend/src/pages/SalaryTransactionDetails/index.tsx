@@ -336,7 +336,7 @@ const receivedDetailsColumns = [
  
      { 
         field: 'totalAmount', 
-        header: 'Current Net (₹)', 
+        header: 'Amount From DRIVER (₹)', 
         render: (item: any) => (
             <span className="font-semibold">
                 ₹{(item.totalAmount || 0).toLocaleString()}
