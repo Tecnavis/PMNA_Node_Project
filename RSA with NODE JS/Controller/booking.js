@@ -1462,12 +1462,15 @@ exports.accountVerifying = async (req, res) => {
 //Fetch approved bookings
 exports.getApprovedBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10 } = req.query;
+        let { search, startDate, endDate, page = 1, limit = 10 , showAll = false} = req.query;
 
         // Convert page and limit to integers
         page = parseInt(page, 10);
         limit = parseInt(limit, 10);
-
+ // If showAll is true, set limit to a very high number
+        if (showAll === 'true') {
+            limit = 1000000; // Or use Number.MAX_SAFE_INTEGER for all records
+        }
         // Base query for approved bookings
         const query = {
             status: "Order Completed", // Filter only bookings with this status
@@ -1534,9 +1537,10 @@ exports.getApprovedBookings = async (req, res) => {
         res.status(200).json({
             total,
             page,
-            limit,
-            totalPages: Math.ceil(total / limit),
+            limit: showAll === 'true' ? total : limit, // Return actual limit used
+            totalPages: showAll === 'true' ? 1 : Math.ceil(total / limit),
             bookings,
+            showAll: showAll === 'true'
         });
     } catch (error) {
         console.error('Error fetching approved bookings:', error);

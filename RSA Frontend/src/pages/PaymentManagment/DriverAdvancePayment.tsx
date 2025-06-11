@@ -152,25 +152,38 @@ const AdvancePayment: React.FC = () => {
         }
     }
 
-    const settleReceivedAmount = async () => {
-        try {
-            if (!receivedAmount || !remark.trim()) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top',
-                    icon: 'warning', // or 'success', 'error', 'info'
-                    title: 'All fields are required',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    // background: '#fff',
-                    customClass: {
-                        popup: 'small-toast'
-                    }
-                });
-                return
-            }
+   const settleReceivedAmount = async () => {
+    try {
+        if (!receivedAmount || !remark.trim()) {
+            Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'warning',
+                title: 'All fields are required',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'small-toast'
+                }
+            });
+            return;
+        }
 
+        // Add confirmation dialog
+        const confirmation = await Swal.fire({
+            title: 'Are you sure?',
+            text: `You are about to settle ₹${receivedAmount}. This action cannot be undone.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, settle it!',
+            cancelButtonText: 'Cancel'
+        });
+
+        // If user confirms, proceed with the API call
+        if (confirmation.isConfirmed) {
             const res = await axios.post(`${BASE_URL}/cash-received-details`, {
                 totalAmount: receivedAmount,
                 amount: receivedAmount,
@@ -179,17 +192,43 @@ const AdvancePayment: React.FC = () => {
                 driver: selectedDriver,
                 receivedAmount,
                 remark
-            })
-            fetchReceivedData()
-            setRemark('')
-            setReceivedAmount('')
-        } catch (error: any) {
-            console.error("erro settling the received amount", error.message)
-            if (error instanceof Error) {
-                console.error("Error settling the received amount:", error.message);
-            }
+            });
+            
+            fetchReceivedData();
+            setRemark('');
+            setReceivedAmount('');
+            
+            // Show success message
+            Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'success',
+                title: 'Amount settled successfully!',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        }
+    } catch (error: any) {
+        console.error("Error settling the received amount", error.message);
+        
+        // Show error message
+        Swal.fire({
+            toast: true,
+            position: 'top',
+            icon: 'error',
+            title: 'Failed to settle amount',
+            text: error.message || 'Something went wrong',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+        
+        if (error instanceof Error) {
+            console.error("Error settling the received amount:", error.message);
         }
     }
+}
     useEffect(() => {
         fetchDrivers()
     }, [])
