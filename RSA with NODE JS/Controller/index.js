@@ -98,6 +98,7 @@ exports.dashboard = async (req, res) => {
 
             if (!record.emiDue && isWithinNext7Days(record.emiExpiryDate)) {
                 expiredFields.push({
+                    _id: record._id,
                     type: "EMI",
                     vehicleNumber: record.vehicleNumber,
                     expiryDate: record.emiExpiryDate,
@@ -105,6 +106,7 @@ exports.dashboard = async (req, res) => {
             }
             if (!record.insuranceDue && isWithinNext7Days(record.insuranceExpiryDate)) {
                 expiredFields.push({
+                    _id: record._id,
                     type: "Insurance",
                     vehicleNumber: record.vehicleNumber,
                     expiryDate: record.insuranceExpiryDate,
@@ -112,6 +114,7 @@ exports.dashboard = async (req, res) => {
             }
             if (!record.pollutionDue && isWithinNext7Days(record.pollutionExpiryDate)) {
                 expiredFields.push({
+                    _id: record._id,
                     type: "Pollution",
                     vehicleNumber: record.vehicleNumber,
                     expiryDate: record.pollutionExpiryDate,
@@ -119,6 +122,7 @@ exports.dashboard = async (req, res) => {
             }
             if (!record.taxDue && isWithinNext7Days(record.taxExpiryDate)) {
                 expiredFields.push({
+                    _id: record._id,
                     type: "Tax",
                     vehicleNumber: record.vehicleNumber,
                     expiryDate: record.taxExpiryDate,

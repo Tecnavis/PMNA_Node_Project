@@ -15,11 +15,11 @@ const expenseSchema = new mongoose.Schema({
     },
     approve: {
         type: Boolean,
-       
+
     },
-      approvedDate: {
-    type: Date
-  },
+    approvedDate: {
+        type: Date
+    },
     driver: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Driver',
@@ -29,11 +29,7 @@ const expenseSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-  image: {
-    type: String,
-    required: true,
-  },
-   status: { // Recommended additional field
+    status: { // Recommended additional field
         type: String,
         enum: ['pending', 'approved', 'rejected'],
         default: 'pending'

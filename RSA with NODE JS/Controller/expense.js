@@ -94,10 +94,10 @@ exports.approve = async (req, res) => {
 
         const driver = await Driver.findById(expense.driver)
 
-        
+
         driver.cashInHand -= expense.amount
         await driver.save()
-        
+
         if (expense.amount > 0) {
             await distributeReceivedAmount(driver._id, expense.amount, "Driver Total Expense.")
         }
@@ -119,20 +119,20 @@ exports.approve = async (req, res) => {
 // controllers/expenseController.js
 
 // All expenses, newest first
-exports.getAllExpense = async (req, res) => { 
+exports.getAllExpense = async (req, res) => {
     try {
-           const { month, year } = req.query;
+        const { month, year } = req.query;
         const query = {};
 
-         // Month and Year filter
+        // Month and Year filter
         if (month && year) {
             const monthNum = parseInt(month);
             const yearNum = parseInt(year);
-            
+
             if (isNaN(monthNum) || isNaN(yearNum)) {
                 return res.status(400).json({ message: 'Invalid month or year' });
             }
-            
+
             if (monthNum < 1 || monthNum > 12) {
                 return res.status(400).json({ message: 'Month must be between 1 and 12' });
             }
@@ -150,40 +150,40 @@ exports.getAllExpense = async (req, res) => {
             const endDate = new Date(yearNum, 11, 31, 23, 59, 59);
             query.createdAt = { $gte: startDate, $lte: endDate };
         }
-      const expense = await Expense
+        const expense = await Expense
             .find(query)  // ← Use the query object here
-        .sort({ createdAt: -1 })           // ← sort descending by createdAt
-        .populate('driver');
-  
-      return res.status(200).json({
-        message: "All Expenses are fetched successfully",
-        success: true,
-        expenseData: expense
-      });
+            .sort({ createdAt: -1 })           // ← sort descending by createdAt
+            .populate('driver');
+
+        return res.status(200).json({
+            message: "All Expenses are fetched successfully",
+            success: true,
+            expenseData: expense
+        });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Error fetching expense', error: error.message });
+        console.error(error);
+        return res.status(500).json({ message: 'Error fetching expense', error: error.message });
     }
-  };
-  
-  exports.getAllPendingExpense = async (req, res) => {
+};
+
+exports.getAllPendingExpense = async (req, res) => {
     try {
-      const pendingExpense = await Expense
-        .find({ approve: { $exists: false } })
-        .sort({ createdAt: -1 })           // ← same here
-        .populate('driver');
-  
-      return res.status(200).json({
-        message: "All Pending Expenses are fetched successfully",
-        success: true,
-        expenseData: pendingExpense
-      });
+        const pendingExpense = await Expense
+            .find({ approve: { $exists: false } })
+            .sort({ createdAt: -1 })           // ← same here
+            .populate('driver');
+
+        return res.status(200).json({
+            message: "All Pending Expenses are fetched successfully",
+            success: true,
+            expenseData: pendingExpense
+        });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Error fetching pending expenses', error: error.message });
+        console.error(error);
+        return res.status(500).json({ message: 'Error fetching pending expenses', error: error.message });
     }
-  };
-  
+};
+
 
 exports.getExpenseById = async (req, res) => {
     try {
@@ -220,22 +220,17 @@ exports.getAllExpenseForDriver = async (req, res) => {
 }
 // --------------------------------------
 exports.completeSettlement = async (req, res) => {
-    let session;
     try {
-        session = await mongoose.startSession();
-        session.startTransaction();
 
         const { driverId } = req.params;
         const { advanceAmount } = req.body;
 
         // Get driver WITH LOCK to prevent concurrent modifications
         const driver = await Driver.findById(driverId)
-            .session(session)
             .select('cashInHand')
             .lean();
 
         if (!driver) {
-            await session.abortTransaction();
             return res.status(404).json({ message: "Driver not found", success: false });
         }
 
@@ -246,10 +241,9 @@ exports.completeSettlement = async (req, res) => {
                 { approve: { $exists: false } },
                 { approve: false }
             ]
-        }).session(session);
+        })
 
         if (pendingExpenses.length === 0) {
-            await session.abortTransaction();
             return res.status(400).json({
                 message: "No pending expenses to settle",
                 success: false
@@ -262,21 +256,19 @@ exports.completeSettlement = async (req, res) => {
 
         // Handle advance if needed
         if (advanceAmount && advanceAmount > 0) {
-            await Advance.create([{
+            const newAdvance = await Advance.create([{
                 driver: driverId,
                 addedAdvance: advanceAmount,
                 advance: advanceAmount,
                 type: 'settlement',
                 userModel: 'Driver',
                 remark: 'Advance for expense settlement'
-            }], { session });
-
+            }]);
             newCashInHand += advanceAmount;
         }
 
         // Verify cash is sufficient
         if (newCashInHand < totalPending) {
-            await session.abortTransaction();
             return res.status(400).json({
                 message: `Insufficient funds. Need $${totalPending - newCashInHand} more`,
                 success: false,
@@ -286,50 +278,51 @@ exports.completeSettlement = async (req, res) => {
 
         // APPROVE ALL EXPENSES
         const updateResult = await Expense.updateMany(
-            { 
+            {
                 driver: driverId,
                 $or: [
                     { approve: { $exists: false } },
                     { approve: false }
                 ]
             },
-            { $set: { 
-                approve: true, 
-                approvedDate: new Date(),
-                status: 'approved'
-            }},
-            { session }
+            {
+                $set: {
+                    approve: true,
+                    approvedDate: new Date(),
+                    status: 'approved'
+                }
+            },
         );
 
         // ATOMICALLY update driver's cash and settlement status
         const updatedDriver = await Driver.findOneAndUpdate(
-            { _id: driverId, cashInHand: { $gte: totalPending } }, // Additional check
+            { _id: driverId }, // Additional check
             {
                 $set: {
                     settlement: true,
                     settlementCompletedDate: new Date()
                 },
-                $inc: { 
+                $inc: {
                     cashInHand: -totalPending,
                     totalExpense: totalPending
                 }
             },
-            { 
+            {
                 new: true,
-                session,
-                runValidators: true 
+                runValidators: true
             }
         );
 
         if (!updatedDriver) {
-            await session.abortTransaction();
             return res.status(400).json({
                 message: "Cash deduction failed - possible race condition",
                 success: false
             });
         }
 
-        await session.commitTransaction();
+        if (totalPending > 0 && !advanceAmount) {
+            await distributeReceivedAmount(driverId, totalPending, "Driver Completed Expense Settlement.")
+        }
         
         return res.status(200).json({
             message: "Settlement completed successfully",
@@ -340,14 +333,11 @@ exports.completeSettlement = async (req, res) => {
         });
 
     } catch (error) {
-        if (session) await session.abortTransaction();
         console.error('Settlement error:', error);
-        return res.status(500).json({ 
-            message: 'Error completing settlement', 
+        return res.status(500).json({
+            message: 'Error completing settlement',
             error: error.message,
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
-    } finally {
-        if (session) session.endSession();
     }
 }
