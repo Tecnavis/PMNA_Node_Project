@@ -1,5 +1,6 @@
 const Booking = require('../Model/booking')
 const Driver = require('../Model/driver.js')
+const Advance = require('../Model/advance.js')
 const ReceivedDetails = require('../Model/ReceivedDetails.js')
 
 exports.distributeReceivedAmount = async (driver, receivedAmount, remark) => {
@@ -8,7 +9,7 @@ exports.distributeReceivedAmount = async (driver, receivedAmount, remark) => {
         if (!associateDriver) {
             return res.status(404).json({ message: 'Driver not found' });
         }
-        console.log('found driver', associateDriver.name)
+
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
 
@@ -17,9 +18,9 @@ exports.distributeReceivedAmount = async (driver, receivedAmount, remark) => {
             status: 'Order Completed',
             driver,
             workType: 'PaymentWork',
-            $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
+            cashPending: false
         }).sort({ createdAt: 1 })
-        console.log("booking", bookings.length)
+
         const updatedBookings = bookings.map(async (booking) => {
 
             const bookingBalance = booking.totalAmount - (booking.receivedAmount || 0);
@@ -31,12 +32,12 @@ exports.distributeReceivedAmount = async (driver, receivedAmount, remark) => {
                 selectedBookingIds.push(booking._id);
                 await booking.save();
             }
-            console.log('received amount decremnet ', remainingAmount)
+
             return booking
         })
 
         if (remainingAmount > 0) {
-            console.log("still remain the recedvvined amount", remainingAmount)
+
             const currentAdvance = associateDriver.advance || 0;
             const newAdvance = currentAdvance - remainingAmount
             associateDriver.advance = newAdvance;
@@ -57,6 +58,7 @@ exports.distributeReceivedAmount = async (driver, receivedAmount, remark) => {
                 amount: `Advance: ${driverAdvance}`,
                 driver: associateDriver._id,
                 receivedAmount: remainingAmount,
+                totalAmount: receivedAmount
             });
         }
 
@@ -73,12 +75,13 @@ exports.distributeReceivedAmount = async (driver, receivedAmount, remark) => {
                 amount: booking.totalAmount,
                 driver: associateDriver._id,
                 receivedAmount: currentReceivedAmount,
+                totalAmount: receivedAmount
             });
-            console.log('receivedDetails ', receivedDetails)
+
         }
 
         return { message: 'Received amount updated successfully' }
     } catch (error) {
-        console.log(error,'error from booking service.js ')
+        console.log(error, 'error from booking service.js ')
     }
 }

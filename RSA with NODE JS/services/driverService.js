@@ -213,7 +213,7 @@ async function calculateMonthlyDieselExpense(driverId) {
         {
             $match: {
                 driver: driverId,
-                status: 'Approved',
+                status: 'approved',
                 createdAt: {
                     $gte: startOfMonth,
                     $lte: endOfMonth
@@ -259,7 +259,7 @@ async function calculateTotalAdvance(driverId) {
                 totalMonthlyAdvance: { $sum: '$addedAdvance' }
             }
         },
-    ]);console.log('total advance',result)
+    ]);
     return result[0]?.totalMonthlyAdvance || 0;
 
 }
@@ -286,7 +286,7 @@ async function calculateMonthlySalary(driverId) {
                 totalMonthlySalary: { $sum: '$driverSalary' }
             }
         },
-    ]);console.log('total salary ',result)
+    ]);
     return result[0]?.totalMonthlySalary || 0;
 
 }
