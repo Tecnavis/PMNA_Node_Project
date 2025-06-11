@@ -105,12 +105,18 @@ const ApprovedBookings: React.FC = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
-
-    const handlePageChange = (page: any) => {
+   const [totalRecords, setTotalRecords] = useState(0);
+    const [showAll, setShowAll] = useState(false);
+    const [limit, setLimit] = useState(10);
+     const handlePageChange = (page: number, useShowAll = showAll) => {
         setCurrentPage(page);
-        fetchBookings('', page); // Pass the current page
+        fetchBookings('', page, useShowAll ? 'all' : limit);
     };
-
+  const toggleShowAll = () => {
+        const newShowAll = !showAll;
+        setShowAll(newShowAll);
+        handlePageChange(1, newShowAll); // Reset to page 1 when toggling
+    };
     const navigate = useNavigate();
 
     // checking the token
@@ -128,21 +134,30 @@ const ApprovedBookings: React.FC = () => {
 
     // getting all bookings
 
-    const fetchBookings = async (searchTerm = '', page = 1, limit = 10) => {
+       const fetchBookings = async (searchTerm = '', page = 1, limitParam: number | 'all' = limit) => {
         try {
-            const response = await axios.get(`${backendUrl}/booking/approvedbookings`, {
-                params: { search: searchTerm, page, limit },
-            });
+            const params: any = { 
+                search: searchTerm, 
+                page,
+                limit: limitParam === 'all' ? undefined : limitParam,
+                showAll: limitParam === 'all' ? true : undefined
+            };
+            
+            const response = await axios.get(`${backendUrl}/booking/approvedbookings`, { params });
+            
             setBookings(response.data.bookings);
-            setTotalPages(response.data.totalPages);
+            setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
+            setTotalRecords(response.data.total);
             setCurrentPage(response.data.page);
+            setShowAll(response.data.showAll || false);
+            
+            if (typeof limitParam === 'number') {
+                setLimit(limitParam);
+            }
         } catch (error) {
             console.error('Error fetching bookings:', error);
         }
     };
-
-   
-
 
 
     useEffect(() => {
@@ -241,36 +256,69 @@ const ApprovedBookings: React.FC = () => {
             </div>
             <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
                 <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                    >
-                        <GrPrevious />
-                    </button>
-                </li>
-                {Array.from({ length: totalPages }, (_, index) => (
-                    <li key={index}>
-                        <button
+                   <button
                             type="button"
-                            onClick={() => handlePageChange(index + 1)}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1 || showAll}
+                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                                currentPage === 1 || showAll ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
                             }`}
                         >
-                            {index + 1}
+                            <GrPrevious />
+                        </button>
+                </li>
+               {!showAll && Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                        // Show only a subset of pages (e.g., 5) for better UX
+                        let pageNum;
+                        if (totalPages <= 5) {
+                            pageNum = index + 1;
+                        } else if (currentPage <= 3) {
+                            pageNum = index + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + index;
+                        } else {
+                            pageNum = currentPage - 2 + index;
+                        }
+                        
+                        return (
+                            <li key={index}>
+                                <button
+                                    type="button"
+                                    onClick={() => handlePageChange(pageNum)}
+                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                                        currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                                    }`}
+                                >
+                                    {pageNum}
+                                </button>
+                            </li>
+                        );
+                    })}
+                    
+                    <li>
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages || showAll}
+                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                                currentPage === totalPages || showAll ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            }`}
+                        >
+                            <GrNext />
                         </button>
                     </li>
-                ))}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                    >
-                        <GrNext />
-                    </button>
-                </li>
+                    
+                    <li>
+                        <button
+                            type="button"
+                            onClick={toggleShowAll}
+                            className={`flex justify-center font-semibold px-4 py-2 rounded-full transition ${
+                                showAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            }`}
+                        >
+                            {showAll ? 'Pages' : 'All'}
+                        </button>
+                    </li>
             </ul>
 
          

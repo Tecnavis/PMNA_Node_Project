@@ -335,11 +335,11 @@ const receivedDetailsColumns = [
     },
  
      { 
-        field: 'currentNetAmount', 
+        field: 'totalAmount', 
         header: 'Current Net (₹)', 
         render: (item: any) => (
             <span className="font-semibold">
-                ₹{(item.currentNetAmount || 0).toLocaleString()}
+                ₹{(item.totalAmount || 0).toLocaleString()}
             </span>
         )
     },

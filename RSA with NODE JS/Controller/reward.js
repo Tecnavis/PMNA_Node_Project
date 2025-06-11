@@ -269,11 +269,14 @@ exports.getAllredemationsBaseUserType = async (req, res) => {
         message: "Not redeems done yet",
       });
     }
+// Sort redemptions by points from lowest to highest
+    const sortedRedemptions = redemptions.sort((a, b) => a.points - b.points);
+
 
     return res.status(200).json({
       message: "Redemtions fetched success",
       success: true,
-      data: redemptions
+      data: sortedRedemptions
     })
   } catch (error) {
     console.log(error.message)
