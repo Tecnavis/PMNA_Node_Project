@@ -27,6 +27,7 @@ exports.createReceivedDetails = async (req, res) => {
             status: 'Order Completed',
             driver,
             workType: 'PaymentWork',
+             cashPending: false,
             $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
         }).sort({ createdAt: 1 })
         console.log("booking", bookings.length)
