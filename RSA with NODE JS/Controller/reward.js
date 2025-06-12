@@ -177,10 +177,9 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor) => {
       if (reward.stock <= 0) throw new Error('This reward is out of stock');
 
       let useAblePoints = user.rewardPoints
-    
+
       if (reward.pointsRequired > useAblePoints) {
-          throw new Error(`Insufficient points. Available points (${useAblePoints})`);
-        
+        throw new Error(`Insufficient points. Available points (${useAblePoints})`);
       }
 
       historyRedeem = new Redemption({
@@ -269,7 +268,7 @@ exports.getAllredemationsBaseUserType = async (req, res) => {
         message: "Not redeems done yet",
       });
     }
-// Sort redemptions by points from lowest to highest
+    // Sort redemptions by points from lowest to highest
     const sortedRedemptions = redemptions.sort((a, b) => a.points - b.points);
 
 
@@ -334,5 +333,42 @@ exports.getAllRedeemableRewards = async (req, res) => {
       message: error.message || 'Failed to fetch redeemable rewards',
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
+  }
+};
+
+exports.redeemShowroomPoint = async (req, res) => {
+  const { showroomId } = req.params;
+
+  try {
+    const showroom = await Showroom.findById(showroomId);
+
+    if (!showroom) {
+      throw new Error('Invalid showroom.');
+    }
+
+    if (showroom.rewardPoints <= 0) {
+      throw new Error(`Insufficient points. Available points (${showroom.rewardPoints})`);
+    }
+
+    const usablePoints = showroom.rewardPoints / 2;
+    showroom.rewardPoints -= usablePoints;
+
+    showroom.save()
+
+    return res.status(200).json({
+      message: 'Reward point redeemed successfully',
+      rewardUsed: usablePoints,
+      updatedShowroom: showroom,
+    });
+
+  } catch (error) {
+
+    console.error('[REDEEM ERROR]', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+    
   }
 };

@@ -16,6 +16,8 @@ import { getDistance } from '../../services/olaMapApi';
 import { DUMMY_SHOWROOM } from './constant';
 import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/themes/material_blue.css';
+import toast from 'react-hot-toast';
+import { redeemShowroomReward } from '../../services/rewardService';
 
 export interface Company {
     _id: string;
@@ -65,6 +67,7 @@ export interface Showroom {
             selected: boolean;
         };
     };
+    rewardPoints: number
 }
 
 export interface Driver {
@@ -146,6 +149,14 @@ export interface SelectedEntity {
     details?: any;
 }
 
+type ShowroomOptions = {
+    value: string,
+    label: string,
+    points: number,
+    latitudeAndLongitude: string,
+    insurenceAmount: number,
+    name: string
+}
 
 const BookingAdd: React.FC = () => {
 
@@ -190,6 +201,7 @@ const BookingAdd: React.FC = () => {
     const [comments, setComments] = useState<string>('');
     const [companies, setCompanies] = useState<Company[]>([]);
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
+    const [showroom, setShowroom] = useState<string>();
     const [baseLocations, setBaseLocations] = useState<Baselocation[]>([]);
     const [sortedBaseLocations, setSortedBaseLocations] = useState<ExtendedBaselocation[]>([]);
     const [fileNumber, setFileNumber] = useState<string>('');
@@ -198,6 +210,8 @@ const BookingAdd: React.FC = () => {
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
     const [modal6, setModal6] = useState(false);
     const [isLifting, setIsLifting] = useState(false);
+    const [rewardAmount, setRewardAmount] = useState<number>(0);
+    const [bookingRewardAmount, setBookingRewardAmount] = useState<number | null>(null);
     // -------------------------------------------------------
     const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>();
     const [selectedBaseLocation, setSelectedBaseLocation] = useState<{ id: string; latitudeAndLongitude: string } | null>(null);
@@ -681,6 +695,7 @@ const BookingAdd: React.FC = () => {
     // handling showroom
     const showroomOptions = showrooms.map((showroom) => ({
         value: showroom?._id,
+        points: showroom.rewardPoints,
         label: showroom.name.charAt(0).toUpperCase() + showroom.name.slice(1),
         latitudeAndLongitude: showroom?.latitudeAndLongitude,
         insurenceAmount: showroom.services.bodyShop.amount,
@@ -689,6 +704,7 @@ const BookingAdd: React.FC = () => {
 
     showroomOptions.unshift({
         value: 'Lifting', label: 'Lifting',
+        points: 0,
         latitudeAndLongitude: '',
         insurenceAmount: 0,
         name: ''
@@ -764,12 +780,10 @@ const BookingAdd: React.FC = () => {
         }
     }, [trappedLocation, updatedAmount]);
 
-
     // handle create booking
     const handleSubmit = async (e: React.FormEvent) => {
         setLoading(true);
         e.preventDefault();
-
 
         if (workType === 'RSAWork' && selectedCompany) {
             if (selectedCompany.creditLimitAmount < cashInHand) {
@@ -787,10 +801,7 @@ const BookingAdd: React.FC = () => {
             }
         }
 
-
-        console.log("started submiting")
         if (validate()) {
-            console.log("started submiting")
 
             const data = {
                 workType: workType,
@@ -801,6 +812,7 @@ const BookingAdd: React.FC = () => {
                 latitudeAndLongitude: latitudeAndLongitude,
                 baselocation: selectedBaseLocation?.id ?? '',
                 ...(isLifting ? {} : { showroom: selectedShowroom?.id ?? '' }),
+                ...(rewardAmount > 0 && { rewardAmount: rewardAmount }),
                 totalDistence: totalDistance,
                 dropoffLocation: selectedShowroom?.name ?? '',
                 dropoffLatitudeAndLongitude: selectedShowroom?.latitudeAndLongitude ?? '',
@@ -827,7 +839,6 @@ const BookingAdd: React.FC = () => {
                 mob2: mob2,
                 customerVehicleNumber: customerVehicleNumber,
                 companyName: selectedCompany?.name ?? '',
-
                 vehicleType: selectedVehicleType,
                 brandName: brandName,
                 comments: comments,
@@ -840,13 +851,17 @@ const BookingAdd: React.FC = () => {
                 dateNow: new Date().toISOString()
             };
 
-
             try {
                 const response = await axios.post(`${backendUrl}/booking`, data, {
                     headers: {
                         'Content-Type': 'application/json',
                     },
                 });
+
+                if(rewardAmount > 0){
+                    await redeemShowroomReward(data.showroom || '')
+                }
+
                 if (response.status === 400 || response.status === 401) {
                     Swal.fire({
                         icon: 'warning',
@@ -904,15 +919,13 @@ const BookingAdd: React.FC = () => {
             return;
         }
 
-
         const fetchBookingById = async () => {
             try {
                 const response = await axios.get(`${backendUrl}/booking/${uid}`);
                 const data = response.data;
 
-                console.log('data', data);
-
                 // Set fields with fallback values
+                setBookingRewardAmount(data.rewardAmount || 0)
                 setWorkType(data.workType || '');
                 setPickupDate(data.pickupDate || '');
                 setSelectedCompany(data.company || null);
@@ -939,6 +952,7 @@ const BookingAdd: React.FC = () => {
 
                     return prev ? { ...prev, ...showroomData } : showroomData;
                 });
+                setShowroom(data.showroom?._id)
                 setTrappedLocation(data.trapedLocation || '');
                 setUpdatedAmout(data.updatedAmount || '');
                 setSelectedServiceType(data.serviceType || '');
@@ -977,7 +991,7 @@ const BookingAdd: React.FC = () => {
                 setBrandName(data.brandName || '');
                 setComments(data.comments || '');
                 setComments(data.comments || '');
-
+                setRewardAmount(data.rewardAmount || 0);
 
             } catch (error) {
                 console.error('Error fetching booking data:', error);
@@ -999,6 +1013,7 @@ const BookingAdd: React.FC = () => {
                 location: location,
                 latitudeAndLongitude: latitudeAndLongitude,
                 baselocation: selectedBaseLocation?.id ?? '',
+                ...(rewardAmount > 0 && { rewardAmount: rewardAmount }),
                 showroom: selectedShowroom?.id ?? '',
                 totalDistence: totalDistance,
                 dropoffLocation: selectedShowroom?.name ?? '',
@@ -1041,6 +1056,10 @@ const BookingAdd: React.FC = () => {
                         'Content-Type': 'application/json',
                     },
                 });
+
+                if(rewardAmount > 0 && (bookingRewardAmount !== rewardAmount) && selectedShowroom?.id !== showroom){
+                    await redeemShowroomReward(data.showroom || '')
+                }
 
                 Swal.fire({
                     icon: 'success',
@@ -1199,6 +1218,51 @@ const BookingAdd: React.FC = () => {
         Object.keys(formErrors).length === 0 ? null : setLoading(false);
         return Object.keys(formErrors).length === 0;
     };
+
+    const handleRedeem = async (showroomOption: ShowroomOptions) => {
+
+        if (uid && rewardAmount && showroomOption.value === showroom) {
+            toast.error(`Reward point already redeemed for ${showroomOption.name} showroom`, {
+                position: "top-center",
+                duration: 5000,
+            });
+            return
+        }
+
+        const toastId = toast.loading(`Processing redemption for ${showroomOption.name}...`, {
+            duration: Infinity,
+        });
+
+        try {
+
+            // Validate points (example)
+            if (showroomOption.points <= 0) {
+                throw new Error("Insufficient points for redemption");
+                return
+            }
+
+            const usablePoints = showroomOption.points / 2
+            setRewardAmount(usablePoints);
+
+            toast.success(`Successfully redeemed points for ${showroomOption.name}!`, {
+                id: toastId,
+                position: 'top-center',
+                duration: 5000,
+            });
+
+        } catch (error: any) {
+            console.error('Redemption error:', error);
+
+            toast.error(
+                error.message || `Failed to redeem points for ${showroomOption.name}`,
+                {
+                    id: toastId,
+                    position: 'top-center',
+                    duration: 10000,
+                }
+            );
+        }
+    }
 
     // ref to scrolling 
     useEffect(() => {
@@ -1392,11 +1456,11 @@ const BookingAdd: React.FC = () => {
                                         onChange={handleChangeShowroom}
                                         value={selectedShowroom ? showroomOptions.find((option) => option.value === selectedShowroom.id) : null}
                                         placeholder="Select a service center..."
-                                        isSearchable={true} // Enables search functionality
+                                        isSearchable={true}
                                         styles={{
                                             singleValue: (provided, state) => ({
                                                 ...provided,
-                                                color: state.data.value === 'Lifting' || state.data.name === 'Dummy Showroom' ? '#ef4444' : 'black', // Red if Lifting
+                                                color: state.data.value === 'Lifting' || state.data.name === 'Dummy Showroom' ? '#ef4444' : 'black',
                                             }),
                                             option: (provided, state) => ({
                                                 ...provided,
@@ -1404,6 +1468,40 @@ const BookingAdd: React.FC = () => {
                                                 fontWeight: state.data.value === 'Lifting' || state.data.name === 'Dummy Showroom' ? 'bold' : '',
                                             }),
                                         }}
+                                        formatOptionLabel={(option) => (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                                <div>{option.label}</div>
+                                                {option.value !== 'Lifting' && option.name !== 'Dummy Showroom' && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <span>points: {option?.points || 0}</span>
+                                                        {
+                                                            selectedShowroom?.id === option.value && (
+
+                                                                <button
+                                                                    type='button'
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                        handleRedeem(option);
+                                                                    }}
+                                                                    style={{
+                                                                        padding: '2px 8px',
+                                                                        background: '#3b82f6',
+                                                                        color: 'white',
+                                                                        border: 'none',
+                                                                        borderRadius: '4px',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '12px'
+                                                                    }}
+                                                                >
+                                                                    Redeem
+                                                                </button>
+                                                            )
+                                                        }
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%' }}>
@@ -1731,6 +1829,13 @@ const BookingAdd: React.FC = () => {
                             <div>
                                 <p ref={totalAmountRef}>Payable Amount (with insurance)</p> <h4 style={{ fontSize: 'x-large', color: 'blue' }}> ₹{totalAmount !== null ? totalAmount : 0}</h4>
                             </div>
+                            {
+                                rewardAmount !== 0 && (
+                                    <div>
+                                        <p ref={totalAmountRef}>Payable Amount (with reward points)</p> <h4 style={{ fontSize: 'x-large', color: 'blue' }}> ₹{totalAmount !== null ? totalAmount - rewardAmount : 0}</h4>
+                                    </div>
+                                )
+                            }
                         </div>
                     </div>
                 )}
