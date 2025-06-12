@@ -6,6 +6,8 @@ const Leaves = require('../Model/leaves');
 const Booking = require('../Model/booking');
 const { sendOtp, verifyOtp } = require('../services/otpService');
 const { updateDriverFinancials } = require('../services/driverService');
+const Expense = require('../Model/expense'); // Adjust path as needed
+const Advance = require('../Model/advance'); // If you use advances
 
 
 exports.createDriver = async (req, res) => {
@@ -297,4 +299,112 @@ exports.getDriversForDropdown = async (req, res) => {
       message: 'Failed to fetch driver dropdown data'
     });
   }
+};
+exports.completeSettlement = async (req, res) => {
+    try {
+        // Verify all required models are available
+        if (!Driver || !Expense || !Advance) {
+            throw new Error('Database models not properly initialized');
+        }
+
+        const { driverId } = req.params;
+        const { advanceAmount = 0 } = req.body;
+
+        // Verify driver exists
+        const driver = await Driver.findById(driverId);
+        if (!driver) {
+            return res.status(404).json({ 
+                success: false,
+                message: "Driver not found"
+            });
+        }
+
+        // Check for pending expenses
+        let pendingExpenses = [];
+        let totalPending = 0;
+        
+        try {
+            pendingExpenses = await Expense.find({
+                driver: driverId,
+                $or: [
+                    { approve: { $exists: false } },
+                    { approve: false }
+                ]
+            });
+            totalPending = pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+        } catch (expenseError) {
+            console.error('Error fetching expenses:', expenseError);
+            throw new Error('Failed to process expenses');
+        }
+
+        // Prepare update data
+        const updateData = {
+            previousSettlementCompletedDate: driver.settlementCompletedDate,
+            settlementCompletedDate: new Date(),
+            settlement: true
+        };
+
+        // Handle pending expenses if any
+        if (pendingExpenses.length > 0) {
+            if (driver.cashInHand < totalPending) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient funds. Need $${totalPending - driver.cashInHand} more`,
+                    requiredAmount: totalPending - driver.cashInHand
+                });
+            }
+
+            await Expense.updateMany(
+                { _id: { $in: pendingExpenses.map(e => e._id) } },
+                { 
+                    $set: { 
+                        approve: true,
+                        approvedDate: new Date(),
+                        status: 'approved'
+                    }
+                }
+            );
+
+            updateData.$inc = {
+                cashInHand: -totalPending,
+                totalExpense: totalPending
+            };
+        }
+
+        // Handle advance if provided
+        if (advanceAmount > 0) {
+            await Advance.create({
+                driver: driverId,
+                addedAdvance: advanceAmount,
+                advance: advanceAmount,
+                type: 'settlement',
+                userModel: 'Driver',
+                remark: 'Advance for expense settlement'
+            });
+
+            updateData.$inc = updateData.$inc || {};
+            updateData.$inc.cashInHand = (updateData.$inc.cashInHand || 0) + advanceAmount;
+        }
+
+        // Update driver
+        const updatedDriver = await Driver.findByIdAndUpdate(
+            driverId,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Settlement completed successfully",
+            driver: updatedDriver
+        });
+
+    } catch (error) {
+        console.error('Settlement error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error completing settlement',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
 };
