@@ -95,6 +95,13 @@ exports.createBooking = async (req, res) => {
 
         }
 
+        if (
+            bookingData.totalAmount &&
+            bookingData.rewardAmount 
+        ) {
+            bookingData.totalAmount -= bookingData.rewardAmount;
+        }
+
         const newBooking = new Booking(bookingData);
         await newBooking.save();
 
@@ -786,13 +793,10 @@ exports.updateBooking = async (req, res) => {
 
         // If the total ammount changed then check with redeemed if redeem for this booking
         if (
-            updatedData.totalAmount &&
-            booking.rewardAmount &&
-            booking.totalAmount !== updatedData.totalAmount
+            booking.rewardAmount !== updatedData.rewardAmount
         ) {
-            updatedData.totalAmount -= booking.rewardAmount;
+            updatedData.totalAmount -= Number(updatedData.rewardAmount) || 0;
         }
-
 
         const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
             .populate('baselocation') // Populate related documents

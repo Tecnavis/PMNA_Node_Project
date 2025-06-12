@@ -37,3 +37,13 @@ export const getRedeemedHistory = async (userType: string, userId: string): Prom
         return [];
     }
 };
+export const redeemShowroomReward = async (showroomId: string): Promise<any[]> => {
+    try {
+        const response: AxiosResponse<any> = await axios.patch(
+            `${BASE_URL}/reward/showroom-redeem/${showroomId}`);
+        return response.data.data;
+    } catch (error) {
+        handleApiError(error);
+        return [];
+    }
+};
