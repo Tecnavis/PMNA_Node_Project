@@ -56,6 +56,7 @@ const Status: React.FC = () => {
     const [selectedResponses, setSelectedResponses] = useState<{ [key: string]: string }>({});
     const [selectedBookingId, setSelectedBookingId] = useState<string>('');
     const [receivedUser, setReceivedUser] = useState<string>('');
+const [showAll, setShowAll] = useState(false);
 
     const navigate = useNavigate();
     const role = localStorage.getItem('role') || ''
@@ -79,25 +80,34 @@ const Status: React.FC = () => {
 
             try {
                 const response = await axiosInstance.get(`/booking/status-based`, {
-                    params: { page, limit, search, status }
-                });
+                      params: { 
+                    page, 
+                    limit: showAll ? undefined : limit, 
+                    search, 
+                    status,
+                    showAll
+                }
+            });
 
                 setBookings(response.data.bookings);
-                setTotalPages(response.data.totalPages);
-                setCurrentPage(response.data.page);
+            setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
+            setCurrentPage(response.data.page);
             } catch (error) {
                 console.error("Error fetching bookings", error);
             } finally {
                 setLoader(false);
             }
-        }, [tab] // 👈 this is important to capture latest tab value
+    }, [tab, showAll] // Add showAll to dependencies
     );
 
     const debouncedFetchBookings = useMemo(
         () => debounce(fetchBookings, 1000),
         [fetchBookings]
     );
-
+const toggleShowAll = () => {
+    setShowAll(!showAll);
+    fetchBookings("", 1, 10); // Reset to page 1 when toggling
+};
     const handleChangeTabs = (tabName: Tabs) => setTab(tabName);
 
     const handlePaymentSettlement = (record: Booking) => {
@@ -461,44 +471,82 @@ const Status: React.FC = () => {
                     } */}
                 </div>
                 {/* Pagination */}
-                {
-                    bookings.length > 0 && <ul className="flex justify-center items-center space-x-2 mt-4">
-                        <li>
-                            <button
-                                type="button"
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                className="flex justify-center font-semibold p-2 rounded-full transition bg-gray-300 text-gray-700 hover:bg-gray-400 disabled:opacity-50"
-                                disabled={currentPage === 1}
-                            >
-                                <GrPrevious />
-                            </button>
-                        </li>
-                        {Array.from({ length: totalPages }, (_, index) => (
-                            <li key={index}>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePageChange(index + 1)}
-                                    className={`px-4 py-2 rounded-full transition ${currentPage === index + 1
-                                        ? "bg-blue-500 text-white"
-                                        : "bg-gray-200 text-gray-700 hover:bg-blue-300"
-                                        }`}
-                                >
-                                    {index + 1}
-                                </button>
-                            </li>
-                        ))}
-                        <li>
-                            <button
-                                type="button"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                className="flex justify-center font-semibold p-2 rounded-full transition bg-gray-300 text-gray-700 hover:bg-gray-400 disabled:opacity-50"
-                                disabled={currentPage === totalPages}
-                            >
-                                <GrNext />
-                            </button>
-                        </li>
-                    </ul>
-                }
+              {
+    bookings.length > 0 && (
+        <div className="flex flex-col items-center mt-4">
+            <div className="flex justify-center items-center space-x-2 mb-2">
+                <button
+                    type="button"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                        currentPage === 1 || showAll
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                    }`}
+                    disabled={currentPage === 1 || showAll}
+                >
+                    <GrPrevious />
+                </button>
+                
+                {!showAll && Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                    // Show only a subset of pages for better UX
+                    let pageNum;
+                    if (totalPages <= 5) {
+                        pageNum = index + 1;
+                    } else if (currentPage <= 3) {
+                        pageNum = index + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + index;
+                    } else {
+                        pageNum = currentPage - 2 + index;
+                    }
+                    
+                    return (
+                        <button
+                            key={index}
+                            type="button"
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`px-4 py-2 rounded-full transition ${
+                                currentPage === pageNum
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-200 text-gray-700 hover:bg-blue-300"
+                            }`}
+                        >
+                            {pageNum}
+                        </button>
+                    );
+                })}
+                
+                <button
+                    type="button"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                        currentPage === totalPages || showAll
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                    }`}
+                    disabled={currentPage === totalPages || showAll}
+                >
+                    <GrNext />
+                </button>
+            </div>
+            
+            <button
+                type="button"
+                onClick={toggleShowAll}
+                className={`mt-2 px-4 py-2 rounded-full transition ${
+                    showAll
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-green-300"
+                }`}
+            >
+                {showAll ? "Pages" : "All"}
+            </button>
+            
+           
+        </div>
+    )
+}
                 <ReactModal
                     isOpen={showPaymentModal}
                     onRequestClose={() => {

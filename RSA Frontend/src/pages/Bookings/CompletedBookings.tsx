@@ -16,6 +16,7 @@ import IconEye from '../../components/Icon/IconEye';
 import IconMapPin from '../../components/Icon/IconMapPin';
 import { GrPrevious } from 'react-icons/gr';
 import { GrNext } from 'react-icons/gr';
+import { ROLES } from '../../constants/roles';
 
 interface Company {
     _id: string;
@@ -135,6 +136,7 @@ const CompletedBookings: React.FC = () => {
     const [totalPages, setTotalPages] = useState(0);
  const [showingAll, setShowingAll] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
+    const role = localStorage.getItem('role') || ''
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
@@ -317,15 +319,17 @@ const CompletedBookings: React.FC = () => {
                                                         </button>
                                                     </Tippy>
                                                 </li>
-                                                {items.feedbackCheck && (
-                                                    <li>
-                                                        <Tippy content="Accountantant verify">
-                                                            <button type="button">
-                                                                <RiVerifiedBadgeFill size={25} className="text-success" onClick={() => handleAccountantVerify(items._id)} />
-                                                            </button>
-                                                        </Tippy>
-                                                    </li>
-                                                )}
+                                                 {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.accountant].includes(role) && (
+    items.feedbackCheck && (
+        <li>
+            <Tippy content="Accountant verify">
+                <button type="button">
+                    <RiVerifiedBadgeFill size={25} className="text-success" onClick={() => handleAccountantVerify(items._id)} />
+                </button>
+            </Tippy>
+        </li>
+    )
+)}
                                             </ul>
                                         </td>
                                     </tr>
