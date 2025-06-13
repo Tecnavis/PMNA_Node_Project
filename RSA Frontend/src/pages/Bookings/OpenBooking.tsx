@@ -32,7 +32,7 @@ export interface Booking {
     cashPending?: boolean;
     dropoffImagePending?: boolean;
     pickupImagePending?: boolean;
-    accountantVerified?:boolean;
+    accountantVerified?: boolean;
     inventoryImagePending?: boolean;
     company: {
         name: string;
@@ -287,7 +287,6 @@ const Preview = () => {
         setCompanyAmountIsChecked((prev) => !prev);
     };
 
-
     // handling pickup and dropoff images
 
     const handleImageChange = async (e: ChangeEvent<HTMLInputElement>, type: 'pickup' | 'dropoff') => {
@@ -344,17 +343,12 @@ const Preview = () => {
 
     //Removing pickup images
 
-    const handleChangePickupImage = async (
-        e: React.ChangeEvent<HTMLInputElement>,
-        index: number
-    ) => {
+    const handleChangePickupImage = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
         try {
-
             const files = e.target.files;
             if (!files || files.length === 0) {
-
-                return
-            };
+                return;
+            }
 
             const file = files[0];
 
@@ -367,7 +361,7 @@ const Preview = () => {
                 },
             });
             setPickuptImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
-            fetchBookingById()
+            fetchBookingById();
         } catch (error: unknown) {
             console.error('Error deleting image:', error);
             alert('Failed to delete the image.');
@@ -375,16 +369,12 @@ const Preview = () => {
     };
     //Removing dropoff images
 
-    const handleChangeDropoffImage = async (
-        e: React.ChangeEvent<HTMLInputElement>,
-        index: number
-    ) => {
+    const handleChangeDropoffImage = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
         try {
             const files = e.target.files;
             if (!files || files.length === 0) {
-
-                return
-            };
+                return;
+            }
 
             const file = files[0];
 
@@ -397,7 +387,7 @@ const Preview = () => {
                 },
             });
             setDropoffImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
-            fetchBookingById()
+            fetchBookingById();
         } catch (error: unknown) {
             console.error('Error deleting image:', error);
             alert('Failed to delete the image.');
@@ -507,7 +497,6 @@ const Preview = () => {
     const closeFeedbackModal = async () => {
         setModal6(false);
     };
-
 
     // Verifying booking
 
@@ -631,19 +620,19 @@ const Preview = () => {
         if (!enlargedImage) return;
 
         fetch(enlargedImage)
-            .then(response => response.blob())
-            .then(blob => {
+            .then((response) => response.blob())
+            .then((blob) => {
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
+                const a = document.createElement('a');
                 a.href = url;
-                a.download = "downloaded-image.jpg";
+                a.download = 'downloaded-image.jpg';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             })
-            .catch(error => console.error("Error downloading the image:", error));
-    }
+            .catch((error) => console.error('Error downloading the image:', error));
+    };
 
     useEffect(() => {
         gettingToken();
@@ -725,8 +714,9 @@ const Preview = () => {
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${
+                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Pickup Details
                                     </button>
@@ -736,8 +726,9 @@ const Preview = () => {
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${
+                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Dropoff Details
                                     </button>
@@ -752,28 +743,26 @@ const Preview = () => {
                                             {pickupImageUrls?.map((url, index) => (
                                                 <div>
                                                     <img
-                                                        src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
+                                                        src={url}
+                                                        alt={`pickup-${index}`}
+                                                        style={{ width: '100px', height: '100px', objectFit: 'contain' }}
                                                         className="w-16 h-16 hover:cursor-pointer"
                                                         onClick={() => {
                                                             setEnlargedImage(url);
                                                         }}
                                                     />
-                                                                                                             {!booking?.accountantVerified == true && (
-
-                                                    <label
-                                                        className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block"
-                                                    >
-                                                        Change
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            onChange={(e) => handleChangePickupImage(e, index)}
-                                                            id={`dropoff-image-${index}`}
-                                                        />
-                                                    </label>
-                                                                                                             )}
+                                                    
+                                                    {!booking?.accountantVerified == true && (
+                                                        <label className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block">
+                                                            Change
+                                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleChangePickupImage(e, index)} id={`dropoff-image-${index}`} />
+                                                        </label>
+                                                    )}
+                                                     <span className="text-xs">
+                                                        <span> {dateFormate(booking?.pickupTime as unknown as string)}</span> -<span>{formattedTime(booking?.pickupTime as unknown as string)}</span>
+                                                    </span>
                                                 </div>
+                                                
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
                                                 <div></div>
@@ -792,34 +781,34 @@ const Preview = () => {
                                     <div className="flex items-start pt-5">
                                         <div className="flex items-center justify-center gap-6">
                                             {dropoffImageUrls.map((url, index) => (
-                                                <div key={index} className='flex flex-col justify-center items-center p-1'>
+                                                <div key={index} className="flex flex-col justify-center items-center p-1">
                                                     <div>
                                                         <img
-                                                            src={url} alt={`pickup-${index}`} style={{ width: '100px', height: '100px', objectFit: 'contain' }}
+                                                            src={url}
+                                                            alt={`pickup-${index}`}
+                                                            style={{ width: '100px', height: '100px', objectFit: 'contain' }}
                                                             className="w-16 h-16 hover:cursor-pointer"
                                                             onClick={() => {
                                                                 setEnlargedImage(url);
                                                             }}
                                                         />
-                                                         {!booking?.accountantVerified == true && (
-                                                        <label
-                                                            className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block"
-                                                        >
-                                                            Change
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                className="hidden"
-                                                                onChange={(e) => handleChangeDropoffImage(e, index)}
-                                                                id={`dropoff-image-${index}`}
-                                                            />
-                                                        </label>
-                                                         )}
-                                                    </div>
-                                                    <span className='text-xs'>
-                                                        <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -
-                                                        <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
+                                                        {!booking?.accountantVerified == true && (
+                                                            <label className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block">
+                                                                Change
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    className="hidden"
+                                                                    onChange={(e) => handleChangeDropoffImage(e, index)}
+                                                                    id={`dropoff-image-${index}`}
+                                                                />
+                                                            </label>
+                                                        )}
+                                                          <span className="text-xs">
+                                                        <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -<span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
                                                     </span>
+                                                    </div>
+                                                  
                                                 </div>
                                             ))}
 
@@ -836,17 +825,13 @@ const Preview = () => {
                                 </div>
                             </Tab.Panel>
                             {enlargedImage && (
-                                <div
-                                    className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000]"
-                                    onClick={() => setEnlargedImage(null)}
-                                >
+                                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[1000]" onClick={() => setEnlargedImage(null)}>
                                     <div className="relative">
-                                        <IoIosCloseCircleOutline
-                                            className="absolute -top-2 -right-2 text-white text-4xl cursor-pointer "
-                                            onClick={() => setEnlargedImage(null)}
-                                        />
+                                        <IoIosCloseCircleOutline className="absolute -top-2 -right-2 text-white text-4xl cursor-pointer " onClick={() => setEnlargedImage(null)} />
                                         <img src={enlargedImage} alt="Enlarged" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg" />
-                                        <button className='text-white w-full py-2 rounded-md mt-1  bg-primary' onClick={handleDownloadImage}>Download</button>
+                                        <button className="text-white w-full py-2 rounded-md mt-1  bg-primary" onClick={handleDownloadImage}>
+                                            Download
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -869,31 +854,22 @@ const Preview = () => {
                                             <span className="text-white text-sm bg-green-500 px-2 py-1 rounded-full flex items-center">
                                                 <FiCheck className="mr-1" /> Verified Inventory
                                             </span>
-                                                                                                     {!booking?.accountantVerified == true && (
-
-                                            <div className="flex gap-2">
-                                                <label className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors cursor-pointer">
-                                                    <FiEdit2 size={18} />
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*,.pdf"
-                                                        className="hidden"
-                                                        onChange={handleInventoryImageUpload}
-                                                        disabled={isUploadingInventory}
-                                                    />
-                                                </label>
-                                                <button
-                                                    onClick={() => setEnlargedImage(inventoryImageUrl)}
-                                                    className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors"
-                                                >
-                                                    <FiZoomIn size={18} />
-                                                </button>
-                                            </div>
-                                                                                                     )}
+                                         
+                                                <div className="flex gap-2">
+                                                       {!booking?.accountantVerified == true && (
+                                                    <label className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors cursor-pointer">
+                                                        <FiEdit2 size={18} />
+                                                        <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleInventoryImageUpload} disabled={isUploadingInventory} />
+                                                    </label>
+                                                       )}
+                                                    <button onClick={() => setEnlargedImage(inventoryImageUrl)} className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors">
+                                                        <FiZoomIn size={18} />
+                                                    </button>
+                                                </div>
+                                            
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         ) : (
                             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-center">
@@ -906,7 +882,11 @@ const Preview = () => {
                                         <span className="flex items-center">
                                             <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                ></path>
                                             </svg>
                                             Uploading...
                                         </span>
@@ -916,13 +896,7 @@ const Preview = () => {
                                             Upload Inventory Sheet
                                         </span>
                                     )}
-                                    <input
-                                        type="file"
-                                        accept="image/*,.pdf"
-                                        className="hidden"
-                                        onChange={handleInventoryImageUpload}
-                                        disabled={isUploadingInventory}
-                                    />
+                                    <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleInventoryImageUpload} disabled={isUploadingInventory} />
                                 </label>
                             </div>
                         )}
@@ -940,21 +914,21 @@ const Preview = () => {
                                     {/* Booking Id */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Booking ID</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{removePrefix(booking?.fileNumber) || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{removePrefix(booking?.fileNumber) || 'N/A'}</td>
                                     </tr>
 
                                     {/* Pickup date */}
                                     {booking?.pickupDate && (
                                         <tr>
                                             <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Date</td>
-                                            <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.pickupDate) || "N/A"}</td>
+                                            <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.pickupDate) || 'N/A'}</td>
                                         </tr>
                                     )}
 
                                     {/* Edited Person */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Edited Person</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.bookedBy || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.bookedBy || 'N/A'}</td>
                                     </tr>
 
                                     {/* Compnay */}
@@ -980,87 +954,91 @@ const Preview = () => {
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Traped Location</td>
 
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.trapedLocation || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.trapedLocation || 'N/A'}</td>
                                     </tr>
 
                                     {/* Service center  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Center</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.showroom?.name || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.showroom?.name || 'N/A'}</td>
                                     </tr>
 
                                     {/* File number  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>File Number</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.fileNumber || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.fileNumber || 'N/A'}</td>
                                     </tr>
 
                                     {/* Customer name  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Customer Name</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.customerName || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.customerName || 'N/A'}</td>
                                     </tr>
 
                                     {/* Driver name  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Driver Name</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                            {booking?.driver ?
-                                                booking?.driver?.name :
-                                                booking?.provider ?
-                                                    booking.provider?.name :
-                                                    booking?.dummyDriverName ? booking?.dummyDriverName : booking?.dummyProviderName ? booking?.dummyProviderName : "No Driver And No Provider found"}
+                                            {booking?.driver
+                                                ? booking?.driver?.name
+                                                : booking?.provider
+                                                ? booking.provider?.name
+                                                : booking?.dummyDriverName
+                                                ? booking?.dummyDriverName
+                                                : booking?.dummyProviderName
+                                                ? booking?.dummyProviderName
+                                                : 'No Driver And No Provider found'}
                                         </td>
                                     </tr>
 
                                     {/* Driver total distence  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Driver Total Distence</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.totalDriverDistence || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.totalDriverDistence || 'N/A'}</td>
                                     </tr>
 
                                     {/* Driver salary  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Driver Salary</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                            <p style={{ color: 'red', fontWeight: 'bold', fontSize: 'large' }}>{booking?.driverSalary || "N/A"}</p>
+                                            <p style={{ color: 'red', fontWeight: 'bold', fontSize: 'large' }}>{booking?.driverSalary || 'N/A'}</p>
                                         </td>
                                     </tr>
 
                                     {/* Customer vehicle number  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Customer Vehicle Number</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.customerVehicleNumber || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.customerVehicleNumber || 'N/A'}</td>
                                     </tr>
 
                                     {/* Brand name  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Brand Name</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.brandName || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.brandName || 'N/A'}</td>
                                     </tr>
 
                                     {/* Mobile 1  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Mobile 1</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.mob1 || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.mob1 || 'N/A'}</td>
                                     </tr>
 
                                     {/* Mobile 2  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Mobile 2</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.mob2 || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.mob2 || 'N/A'}</td>
                                     </tr>
 
                                     {/* Start location  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Start Location</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.baselocation?.baseLocation || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.baselocation?.baseLocation || 'N/A'}</td>
                                     </tr>
 
                                     {/* Pickup location  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Location</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.location || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.location || 'N/A'}</td>
                                     </tr>
 
                                     {/* Dropoff location  */}
@@ -1072,7 +1050,7 @@ const Preview = () => {
                                     {/* Distence  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Distence</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.totalDistence || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.totalDistence || 'N/A'}</td>
                                     </tr>
 
                                     {/* Service type  */}
@@ -1084,23 +1062,23 @@ const Preview = () => {
                                     {/* Service vehicle number  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Vehicle number</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.vehicleNumber || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.vehicleNumber || 'N/A'}</td>
                                     </tr>
 
                                     {/*Service Category  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Service Category</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.serviceCategory || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.serviceCategory || 'N/A'}</td>
                                     </tr>
                                     {/*Insurance amount  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Insurance Amount</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.insuranceAmount || "0"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.insuranceAmount || '0'}</td>
                                     </tr>
                                     {/*Comments  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Comments</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.comments || "N/A"}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{booking?.comments || 'N/A'}</td>
                                     </tr>
                                 </>
                             )}
@@ -1120,8 +1098,8 @@ const Preview = () => {
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Time</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                            <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleDateString()}</span> -
-                                            <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || "")).toLocaleTimeString()}</span>
+                                            <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || '')).toLocaleDateString()}</span> -
+                                            <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || '')).toLocaleTimeString()}</span>
                                         </td>
                                     </tr>
                                     {/* Dropoff time  */}
@@ -1142,10 +1120,12 @@ const Preview = () => {
                 <div className="grid sm:grid-cols-1 grid-cols-1 px-4 mt-6 gap-5">
                     {/* Notes section goes here */}
                     <BookingNotes role={role} id={id || ''} />
-                    <div className='w-full border mt-8'></div>
+                    <div className="w-full border mt-8"></div>
                     <div className="ltr:text-right rtl:text-left space-y-2 my-1 md:my-6">
                         <div className="flex items-center justify-center font-semibold text-lg">
-                            <div className="flex-1">Payable Amount by Customer/Company :<span className='text-red-500 ml-2'>₹ {booking?.totalAmount}</span> </div>
+                            <div className="flex-1">
+                                Payable Amount by Customer/Company :<span className="text-red-500 ml-2">₹ {booking?.totalAmount}</span>{' '}
+                            </div>
                             {/* <div className="w-[37%]" style={{ color: 'red' }}>
                                 
                             </div> */}
@@ -1378,14 +1358,7 @@ const Preview = () => {
             </Transition>
 
             {/* modal for feedback  */}
-            <FeedbackModal
-                feedbacks={feedbacks}
-                isOpen={modal6}
-                onChange={handleOptionChange}
-                onClose={closeFeedbackModal}
-                selectedResponses={selectedResponses}
-                onSubmit={handleSubmitFeedback}
-            />
+            <FeedbackModal feedbacks={feedbacks} isOpen={modal6} onChange={handleOptionChange} onClose={closeFeedbackModal} selectedResponses={selectedResponses} onSubmit={handleSubmitFeedback} />
         </div>
     );
 };
