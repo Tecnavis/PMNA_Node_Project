@@ -106,6 +106,9 @@ settlement: {
   settlementCompletedDate: {
     type: Date
   },
+  previousSettlementCompletedDate: {
+    type: Date
+  },
   lastSettlementAmount: {
     type: Number
   },

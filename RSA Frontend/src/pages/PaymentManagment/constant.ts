@@ -27,7 +27,7 @@ const getColorForDateTime = (dateTime: Date) => {
   return `hsl(${h}, 70%, 85%)`;
 };
 //Columns Titles
-
+// --------------------------------------
 export const AdvanceDetailsTableColumn = [
     {
         title: "SI",

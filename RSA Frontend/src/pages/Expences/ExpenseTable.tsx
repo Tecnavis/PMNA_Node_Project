@@ -83,7 +83,7 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
 })}
                                 </td>
 <td className="px-4 py-3 capitalize">
-  {expense.status || (expense.approve === true ? "approved" : expense.approve === false ? "rejected" : "pending")}
+                                <td className="px-4 py-3 capitalize">{expense.approve ? "Approved" : "Rejected"}</td>
 </td>
 
 

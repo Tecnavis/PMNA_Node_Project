@@ -149,10 +149,12 @@ const MultipleTables = () => {
     const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
     const [pendingExpenses, setPendingExpenses] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    // -----------------------------------------------------
     const [showAdvanceModal, setShowAdvanceModal] = useState(false);
     const [advanceAmount, setAdvanceAmount] = useState(0);
     const [requiredAmount, setRequiredAmount] = useState(0);
+    // ---------------------------------------------
+    const [showNoExpensesModal, setShowNoExpensesModal] = useState(false);
+const [processingSettlement, setProcessingSettlement] = useState(false);
     useEffect(() => {
         setPage(1);
     }, [pageSize]);
@@ -252,6 +254,11 @@ const MultipleTables = () => {
             const driverPendingExpenses = response.data.expenseData.filter(
                 (expense: any) => expense.driver._id === driver._id
             );
+ if (driverPendingExpenses.length === 0) {
+            // Show the no expenses modal instead of window.confirm
+            setShowNoExpensesModal(true);
+            return;
+        }
 
             setPendingExpenses(driverPendingExpenses);
             setShowSettlementModal(true);
@@ -262,7 +269,55 @@ const MultipleTables = () => {
             setLoading(false);
         }
     };
+const handleCompleteEmptySettlement = async () => {
+    try {
+        if (!selectedDriver) {
+            toast.error('No driver selected');
+            return;
+        }
 
+        setProcessingSettlement(true);
+        
+        const response = await axios.post(
+            `${backendUrl}/driver/complete-settlement/${selectedDriver._id}`,
+            { advanceAmount: 0 },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            }
+        );
+
+        if (response.data.success) {
+            toast.success(response.data.message || "Settlement completed successfully");
+            fetchDrivers();
+        } else {
+            toast.error(response.data.message || "Failed to complete settlement");
+        }
+    } catch (error: any) {
+        console.error('Full error:', error);
+        let errorMessage = 'Error completing settlement';
+        
+        if (error.response) {
+            errorMessage = error.response.data?.error?.message || 
+                          error.response.data?.message || 
+                          `Server error: ${error.response.status}`;
+            
+            console.error('Server response:', error.response.data);
+            toast.error(errorMessage);
+        } else if (error.request) {
+            console.error('No response received:', error.request);
+            toast.error('No response from server - check your connection');
+        } else {
+            console.error('Request setup error:', error.message);
+            toast.error('Request failed to send');
+        }
+    } finally {
+        setProcessingSettlement(false);
+        setShowNoExpensesModal(false);
+    }
+};
     const handleApproveAll = async () => {
         let loadingToast: string | undefined;
 
@@ -543,6 +598,31 @@ const MultipleTables = () => {
                         ]}
                     />
                 </div>
+                {showNoExpensesModal && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-4">No Pending Expenses</h3>
+            <p className="mb-4">This driver has no pending expenses. Would you like to mark the settlement as complete?</p>
+            
+            <div className="flex justify-end space-x-3">
+                <button
+                    onClick={() => setShowNoExpensesModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                    disabled={processingSettlement}
+                >
+                    Cancel
+                </button>
+                <button
+                    onClick={handleCompleteEmptySettlement}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    disabled={processingSettlement}
+                >
+                    {processingSettlement ? 'Processing...' : 'Mark Complete'}
+                </button>
+            </div>
+        </div>
+    </div>
+)}
                 {showSettlementModal && (
                     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
                         <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col border border-gray-100">

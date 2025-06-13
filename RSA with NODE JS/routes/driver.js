@@ -18,5 +18,6 @@ router.post('/send-otp', driverController.sendOtp);
 
 // OTP verify and login
 router.post('/verify-login', driverController.verifyOTP);
+router.post('/complete-settlement/:driverId', driverController.completeSettlement);
 
 module.exports = router;

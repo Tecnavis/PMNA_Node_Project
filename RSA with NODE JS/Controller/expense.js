@@ -218,7 +218,7 @@ exports.getAllExpenseForDriver = async (req, res) => {
         return res.status(500).json({ message: 'Error fetching expense', error: error.message });
     }
 }
-// --------------------------------------
+// -----------------------------------------------------------
 exports.completeSettlement = async (req, res) => {
     try {
 
@@ -243,10 +243,26 @@ exports.completeSettlement = async (req, res) => {
             ]
         })
 
-        if (pendingExpenses.length === 0) {
-            return res.status(400).json({
-                message: "No pending expenses to settle",
-                success: false
+          if (pendingExpenses.length === 0) {
+            const updatedDriver = await Driver.findByIdAndUpdate(
+                driverId,
+                {
+                    $set: {
+                        previousSettlementCompletedDate: driver.settlementCompletedDate,
+                        settlementCompletedDate: new Date(),
+                        settlement: true
+                    }
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            );
+
+            return res.status(200).json({
+                message: "Settlement marked as completed (no pending expenses)",
+                success: true,
+                driverData: updatedDriver
             });
         }
 
@@ -300,6 +316,8 @@ exports.completeSettlement = async (req, res) => {
             {
                 $set: {
                     settlement: true,
+            previousSettlementCompletedDate: driver.settlementCompletedDate, // Use the actual date
+
                     settlementCompletedDate: new Date()
                 },
                 $inc: {
