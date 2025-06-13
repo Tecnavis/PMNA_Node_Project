@@ -1,8 +1,7 @@
-// /components/reward/RewardCard.tsx
 // @ts-ignore
-import { Card, Text, Badge, Button, Group } from '@mantine/core';
+import { Card, Text, Badge, Group } from '@mantine/core';
 import { IReward } from '../../interface/reward';
-import { BASE_URL } from '../../config/axiosConfig';
+import { IMAGE_URL } from '../../config/axiosConfig';
 
 interface Props {
     reward: IReward;
@@ -19,7 +18,7 @@ const RewardCard: React.FC<Props> = ({ reward, userPoints, onSelect }) => {
         <Card shadow="md" radius="lg" p="lg" className="hover:shadow-xl hover:scale-[1.02]" onClick={() => canRedeem && onSelect(reward)} withBorder>
             <Card.Section style={{
                 height: 160,
-                background: `url(${BASE_URL}images/${reward.image}) center/cover no-repeat`
+                background: `url(${IMAGE_URL}${reward.image}) center/cover no-repeat`
             }} />
             <Group position="apart" mt="md">
                 <Text weight={600}>{reward.name}</Text>
@@ -32,14 +31,8 @@ const RewardCard: React.FC<Props> = ({ reward, userPoints, onSelect }) => {
                     currency: 'INR',
                 }).format(reward.price)}</Badge>
                 <button
-                className='btn btn-primary w-full'
-                    // fullWidth
-                    // mt="md"
-                    // radius="md"
-                    // variant={canRedeem ? 'filled' : 'outline'}
-                    // color={canRedeem ? 'green' : 'gray'}
+                    className='btn btn-primary w-full'
                     disabled={!canRedeem}
-                    
                 >
                     {outOfStock
                         ? 'Out of Stock'

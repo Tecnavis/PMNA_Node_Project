@@ -43,3 +43,17 @@ export interface GetllAllRedeemReponseType {
     success: boolean,
     data: IRedemption[]
 }
+
+export interface Address {
+    fullName :string,
+    phone:string,
+    whatsappNumber:string,
+    email:string,
+    addressLine1:string,
+    addressLine2:string,
+    state:string
+    city:string
+    pinCode:string
+    country:string
+    addressType: "Home" | "Work" | "Other"
+}

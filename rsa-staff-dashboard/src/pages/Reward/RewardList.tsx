@@ -1,4 +1,3 @@
-// /components/reward/RewardList.tsx
 // @ts-ignore
 import { Grid, Text } from '@mantine/core';
 import { IReward } from '../../interface/reward';
