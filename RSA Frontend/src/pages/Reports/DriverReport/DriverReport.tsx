@@ -375,8 +375,14 @@ const DriverCashCollectionsReport = () => {
                     return (
                         <div className='text-center'>0</div>
                     );
+                    
                 }
-
+  if (booking.receivedUser == 'Staff') {
+                    return (
+                        <div className='text-center'>0</div>
+                    );
+                    
+                }
                 const effectiveReceivedAmount = booking.receivedAmount || 0;
                 return (
                     <span className={`text-red-500 flex item-center  justify-center  text-center`}>
@@ -455,7 +461,7 @@ const DriverCashCollectionsReport = () => {
             setEndingDate(end);
         }
     };
-
+// --------------------------------
 
     const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {
