@@ -822,7 +822,7 @@ exports.updateBooking = async (req, res) => {
 
         // If the total ammount changed then check with redeemed if redeem for this booking
         if (
-            booking.rewardAmount !== updatedData.rewardAmount
+            booking.rewardAmount !== updatedData.rewardAmount && updatedData.totalAmount
         ) {
             updatedData.totalAmount -= Number(updatedData.rewardAmount) || 0;
         }

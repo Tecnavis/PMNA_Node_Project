@@ -341,7 +341,8 @@ exports.completeSettlement = async (req, res) => {
         const updateData = {
             previousSettlementCompletedDate: driver.settlementCompletedDate,
             settlementCompletedDate: new Date(),
-            settlement: true
+            settlement: true,
+            advance: 0,
         };
 
         // Handle pending expenses if any
