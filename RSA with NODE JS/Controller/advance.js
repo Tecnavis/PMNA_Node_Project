@@ -33,20 +33,24 @@ exports.createNewAdvance = async (req, res) => {
 
         // Calculate current total advance without modifying historical records
         const previousAdvances = await Advance.find({ driver: driverId });
-        const existingAdvance = previousAdvances.reduce((sum, adv) => sum + adv.advance, 0);
         
-        // Calculate new total advance
-        const newAdvanceTotal = existingAdvance + Number(advance);
+        let existingAdvance = 0;
+        for (const adv of previousAdvances) {
+            existingAdvance += adv.advance;
+            adv.advance = 0;
+            await adv.save();
+        }
+        const newAdvance = existingAdvance + Number(advance);
 
         // Update driver's total advance
-        source.advance = newAdvanceTotal;
+        source.advance = newAdvance;
         await source.save();
 
         // Create new advance document with the added amount and new total
         const newAdvanceDoc = await Advance.create({
             driver: driverId,
             addedAdvance: Number(advance),  // The amount being added in this transaction
-            advance: newAdvanceTotal,       // The new cumulative total
+            advance: newAdvance,       // The new cumulative total
             type,
             userModel: userType,
             remark,
@@ -66,7 +70,7 @@ exports.createNewAdvance = async (req, res) => {
             driver: source,
             previousAdvance: existingAdvance,
             addedAdvance: Number(advance),
-            newAdvanceTotal
+            newAdvanceTotal:newAdvance
         });
 
     } catch (error) {
