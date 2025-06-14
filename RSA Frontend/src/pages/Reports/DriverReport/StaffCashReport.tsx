@@ -477,11 +477,12 @@ const Profile = () => {
     useEffect(() => {
         const updatedValues: Record<string, number> = {};
         bookings.forEach((booking) => {
-            updatedValues[booking._id] = calculateBalance(
-                parseFloat(booking.receivedAmountStaff?.toString() || "0"),
-                booking.givenAmountByStaff,
-                booking.receivedUser
-            );
+            // updatedValues[booking._id] = calculateBalance(
+            //     parseFloat(booking.receivedAmountStaff?.toString() || "0"),
+            //     booking.givenAmountByStaff,
+            //     booking.receivedUser
+            // );
+            updatedValues[booking._id] = booking.givenAmountByStaff;
         });
         setInputValues(updatedValues);
     }, [bookings]);
