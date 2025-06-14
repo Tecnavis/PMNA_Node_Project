@@ -464,7 +464,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
 exports.getAllBookings = async (req, res) => {
     const routeLogger = LoggerFactory.createChildLogger({
         route: '/booking',
-        handler: 'createBooking',
+        handler: 'getAllBookings',
     });
     try {
         let {
@@ -598,7 +598,12 @@ limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
             .lean()
 
         const balanceAmount = bookings.reduce((total, booking) => {
-            return total + booking.receivedAmount;
+            if (forStaffReport) {
+                return booking.receivedUser === 'Staff' 
+                    ? total + (booking.givenAmountByStaff || 0)
+                    : total;
+            }
+            return total + (booking.receivedAmount || 0);
         }, 0);
         query.workType = { $ne: 'RSAWork' };
 
@@ -607,26 +612,49 @@ limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
             {
                 $match: {
                     ...query,
+                    
                     ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
-                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' })
+                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
+                                ...(forDriverReport && { receivedUser: { $ne: 'Staff' } }),
+                                                                ...(forStaffReport && { receivedUser: { $eq: 'Staff' } })
+
+
                 }
             },
             {
-                $group: {
-                    _id: null,
-                    totalCollected: {
-                        $sum: forCompanyReport ? "$receivedAmountByCompany" : "$receivedAmount"
-                    },
-                    totalOverall: { $sum: "$totalAmount" }
+                 $group: {
+            _id: null,
+            totalCollected: {
+                $sum: forStaffReport 
+                ? "$givenAmountByStaff"  // For staff reports, sum givenAmountByStaff
+                : forDriverReport 
+                    ? "$receivedAmount" 
+                    : forCompanyReport 
+                        ? "$receivedAmountByCompany" 
+                        : "$receivedAmount"
+        },
+            totalOverall: { 
+                $sum: forStaffReport
+                ? "$receivedAmountStaff"  // For staff reports, sum receivedAmountStaff
+                : {
+                    $cond: [
+                        { $ne: ["$receivedUser", "Staff"] },
+                        "$totalAmount",
+                        0
+                    ]
                 }
             }
-        ]);
+        }
+    }
+]);
         const aggregationResult2 = await Booking.aggregate([
             {
                 $match: {
                     ...query,
                     ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { partialPayment: true }),
-                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' })
+                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
+                                ...(forDriverReport && { receivedUser: { $ne: 'Staff' } })
+
                 }
             },
             {
@@ -643,7 +671,8 @@ limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
         let balanceAmountToCollect = overallAmount - totalCollectedAmount;
         balanceAmountToCollect += aggregationResult2[0]?.totalPartialAmount || 0
         routeLogger.info({
-            doneBy: req.user || 'unknown'
+            doneBy: req.user || 'unknown',
+            reportType: forStaffReport ? 'staff' : forDriverReport ? 'driver' : forCompanyReport ? 'company' : 'general'
         }, 'Booking fetch success.');
         return res.status(200).json({
             total,
@@ -1693,6 +1722,7 @@ exports.settleAmount = async (req, res) => {
         if (role !== 'admin' && receivedUser) {
             booking.receivedUserId = userId
             booking.receivedUser = receivedUser
+    booking.receivedAmountStaff = partialAmount || receivedAmount  // Changed from 'amount'
 
             const ReceivedUserModel = mongoose.model(receivedUser || "Driver");
 
@@ -1753,7 +1783,85 @@ exports.settleAmount = async (req, res) => {
         res.status(500).json({ message: 'Server error while settling booking amount.' });
     }
 };
+// Controller for settling staff amounts
+exports.settleStaffAmount = async (req, res) => {
+    try {
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/settle-staff-amount',
+            handler: 'settleStaffAmount',
+        });
+        routeLogger.info({
+            doneBy: req.user || 'admin' // Admin is always handling staff settlements
+        }, 'Staff settlement process started');
 
+        const { id } = req.params;
+        const { givenAmountByStaff } = req.body;
+        
+        // Validate input
+        if (isNaN(givenAmountByStaff)) {
+            return res.status(400).json({
+                message: 'Invalid amount provided'
+            });
+        }
+
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({
+                message: 'Booking not found'
+            });
+        }
+
+        // Validate staff-specific conditions
+        if (booking.receivedUser !== 'Staff') {
+            return res.status(400).json({
+                message: 'This booking is not assigned to staff'
+            });
+        }
+
+        // Update staff-specific fields
+        booking.givenAmountByStaff = Number(givenAmountByStaff);
+        
+        // Check if fully settled
+        if (booking.givenAmountByStaff >= booking.receivedAmountStaff) {
+            booking.givenAmountByStaff = booking.receivedAmountStaff; // Prevent overpayment
+            booking.cashPending = false;
+            booking.partialPayment = false;
+        } else {
+            booking.cashPending = true;
+            booking.partialPayment = true;
+        }
+
+        // No receivedHistory needed as per requirements
+        // Admin is always the receiver in this case
+
+        await booking.save();
+
+        routeLogger.info({
+            bookingId: booking._id,
+            fileNumber: booking.fileNumber,
+            amountSettled: booking.givenAmountByStaff
+        }, 'Staff amount settled successfully');
+
+        return res.status(200).json({
+            message: "Staff amount settled successfully",
+            booking: {
+                _id: booking._id,
+                fileNumber: booking.fileNumber,
+                receivedAmountStaff: booking.receivedAmountStaff,
+                givenAmountByStaff: booking.givenAmountByStaff,
+                balance: booking.receivedAmountStaff - booking.givenAmountByStaff,
+                cashPending: booking.cashPending
+            }
+        });
+
+    } catch (error) {
+        console.error('Error settling staff amount:', error.message);
+        res.status(500).json({ 
+            message: 'Server error while settling staff amount',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
 //Controller to settle booking amount 
 exports.settleAmountDriver = async (req, res) => {
     try {

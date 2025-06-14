@@ -6,15 +6,20 @@ async function calculateNetTotalAmountInHand(staffId) {
         {
             $match: {
                 receivedUserId: staffId,
+                receivedUser:Staff,
                 cashPending: false,
                 status: 'Order Completed',
                 workType: 'PaymentWork'
             }
         },
-        {
+              {
             $group: {
                 _id: null,
-                netTotalAmount: { $sum: '$receivedAmount' }
+                netTotalAmount: { 
+                    $sum: { 
+                        $subtract: ['$receivedAmountStaff', '$givenAmountByStaff'] 
+                    } 
+                }
             }
         }
     ]);

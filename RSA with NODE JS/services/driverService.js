@@ -44,8 +44,10 @@ async function calculateNetTotalAmountInHand(driverId) {
                 _id: null,
                 netTotalAmount: {
                     $sum: {
-                        $subtract: ['$totalAmount', '$receivedAmount']
-                    }
+ $subtract: [
+                            { $subtract: ['$totalAmount', '$receivedAmount'] },
+                            { $ifNull: ['$receivedAmountStaff', 0] }
+                        ]                    }
                 }
             }
         }
