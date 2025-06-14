@@ -130,16 +130,19 @@ const Profile = () => {
                 }
             });
 
-            const data = response.data
-            const totalBalanceCalculated = (data.bookings || []).reduce(
-                (total, booking) => total + (booking.totalAmount - booking.receivedAmount),
-                0
-            );
+           const { data } = response;
+      const bookingsWithTotal = [...data.bookings];
+      
+      // Calculate balances for each booking
+      const initialInputValues: Record<string, number> = {};
+      bookingsWithTotal.forEach(booking => {
+        initialInputValues[booking._id] = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
+      });
 
-            setTotalBalance(totalBalanceCalculated);
-            setBookings(data.bookings);
-            setTotalBalance(data.balanceAmount || 0);
-            setTotalRecords(data.total);
+      setInputValues(initialInputValues);
+      setBookings(bookingsWithTotal);
+      setTotalBalance(data.balanceAmount || 0);
+      setTotalRecords(data.total);
             setFilterData({
                 balanceAmountToCollect: data.financials.balanceAmountToCollect,
                 overallAmount: data.financials.overallAmount,
@@ -152,7 +155,7 @@ const Profile = () => {
         }
     }
 
-    const updateInputValues = (bookingId: string, value: number) => {
+     const updateInputValues = (bookingId: string, value: number) => {
         setInputValues((prev) => ({
             ...prev,
             [bookingId]: value,
@@ -197,7 +200,28 @@ const Profile = () => {
             })
         }
     };
+ const handleUpdateAmount = async (id: string) => {
+    const updatingBooking = bookings.find(b => b._id === id);
+    if (!updatingBooking) return;
 
+    const givenAmountByStaff = inputValues[id];
+    if (!givenAmountByStaff || givenAmountByStaff <= 0) {
+      Swal.fire('Error!', 'Please enter a valid amount', 'error');
+      return;
+    }
+
+    try {
+      setLoadingStates(prev => ({ ...prev, [id]: true }));
+      await axios.patch(`${backendUrl}/booking/sattle-amount-staff/${id}`, { givenAmountByStaff });
+      await fetchBookings();
+      Swal.fire('Success!', 'Amount updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating amount:', error);
+      Swal.fire('Error!', 'Failed to update amount', 'error');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [id]: false }));
+    }
+  };
     const cols = [
         {
             accessor: '_id',
@@ -207,37 +231,35 @@ const Profile = () => {
             render: (_: Booking, index: number) => index + 1
         },
         {
-            accessor: 'selectall',
-            title: (
-                <label className="flex items-center mt-2">
-                    <input
-                        type="checkbox"
-                        name="selectAll"
-                        className="mr-2"
-                        onChange={handleSelectAll}
-                    />
-                    <span>Select All</span>
-                </label>
-            ),
-            render: (record: Booking) =>
-                record._id !== 'total' ? <input
-                    type="checkbox"
-                    disabled={record.approve}
-                    checked={selectedBookings.has(record._id)}
-                    onChange={() => {
-                        if (record.approve) return; // Prevent state update if disabled
-                        setSelectedBookings((prevSelected) => {
-                            const updatedSelection = new Set(prevSelected);
-                            if (updatedSelection.has(record._id)) {
-                                updatedSelection.delete(record._id);
-                            } else {
-                                updatedSelection.add(record._id);
-                            }
-                            return updatedSelection;
-                        });
-                    }}
-                /> : null
-        },
+      accessor: 'selectall',
+      title: (
+        <label className="flex items-center mt-2">
+          <input
+            type="checkbox"
+            checked={selectedBookings.size === bookings.length && bookings.length > 0}
+            onChange={handleSelectAll}
+            className="mr-2"
+          />
+          <span>Select All</span>
+        </label>
+      ),
+           render: (record: Booking) => (
+        <input
+          type="checkbox"
+          disabled={record.approve}
+          checked={selectedBookings.has(record._id)}
+          onChange={() => {
+            if (record.approve) return;
+            const newSelection = new Map(selectedBookings);
+            if (newSelection.has(record._id)) {
+              newSelection.delete(record._id);
+            } else {
+              newSelection.set(record._id, record);
+            }
+            setSelectedBookings(newSelection);
+          }}
+        />  )
+    },
         {
             accessor: 'createdAt',
             title: 'Date',
@@ -259,109 +281,96 @@ const Profile = () => {
             render: (record: Booking) => <div className='flex justify-center'>{record.customerVehicleNumber}</div>
         },
         {
-            accessor: 'totalAmount',
-            title: 'Payable Amount By Staff',
-            render: (record: Booking) => {
-                if (record._id === 'total') {
-                    return null
-                } else {
-                    return <div className='flex justify-center'>{record.workType === 'PaymentWork' ? record.totalAmount : "0.00"}</div>
-                }
-            }
-        },
-        {
-            accessor: 'receivedAmount',
-            title: 'Amount Received From The Staff',
-            render: (booking: Booking) => {
-                if (booking._id === 'total') {
-                    return <span className=' font-semibold text-lg w-full flex justify-center text-center'>Total</span>
-                } else if (booking.totalAmount == booking.receivedAmount) {
-                    return <div className='text-center flex item-center  justify-center'>{booking.receivedAmount}</div>
-                } else {
-                    return (<td key={booking._id} >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center' }} className='text-center'>
-                            {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                                <span className={`text-center ${booking.receivedUser === "Staff" ? 'text-green-600' : 'text-red-500'} `} >{booking.receivedUser === "Staff" ? "Staff Received" : "No Need"}</span>
-                            ) : (
-                                <>
-                                    <input
-                                        type="text"
-                                        value={inputValues[booking._id] || ""}
-                                        onChange={(e) => updateInputValues(booking._id, +e.target.value)}
-                                        style={{
-                                            border: '1px solid #d1d5db',
-                                            borderRadius: '0.25rem',
-                                            padding: '0.25rem 0.5rem',
-                                            marginRight: '0.5rem',
-                                        }}
-                                        disabled={booking.approve}
-                                        min="0"
-                                    />
-                                    <button
-                                        onClick={() => [ROLES.VERIFIER].includes(role) ? null : handleUpdateAmount(booking._id)}
-                                        disabled={booking.approve || loadingStates[booking._id]}
-                                        style={{
-                                            backgroundColor:
-                                                Number(
-                                                    calculateBalance(
-                                                        parseFloat(booking.totalAmount?.toString() || '0'),
-                                                        inputValues[booking._id] || booking.receivedAmount || '0',
-                                                        booking.receivedUser
-                                                    )
-                                                ) === 0
-                                                    ? '#28a745' // Green for zero balance
-                                                    : '#dc3545', // Red for non-zero balance
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '0.25rem',
-                                            padding: '0.3rem',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        {loadingStates[booking._id] ? 'Loading...' : 'OK'}
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </td >)
-                }
-            }
-        },
-        {
-            accessor: 'balance',
-            title: 'Balance',
-            render: (booking: Booking) => {
-                if (booking._id === 'total') {
-                    return (
-                        <div className="font-semibold text-lg text-blue-600 flex item-center  justify-center  text-center">
-                            {bookings.reduce((total, booking) => total + booking.totalAmount - booking.receivedAmount, 0)}
-                        </div>
-                    );
-                }
+      accessor: 'receivedAmountStaff',
+      title: 'Payable Amount',
+      className: 'text-right',
+      render: (record: Booking) => (
+        <div className="text-right">
+          {record.workType === 'PaymentWork' 
+            ? (record.receivedAmountStaff?.toFixed(2) || "0.00")
+            : "0.00"}
+        </div>
+      )
+    },
+   {
+  accessor: 'givenAmountByStaff',
+  title: 'Amount Received From The Staff',
+  render: (booking: Booking) => {
+    if (booking._id === 'total') {
+      return <span className='font-semibold text-lg w-full flex justify-center text-center'>Total</span>;
+    }
+    
+    
+    return (
+      <div className='flex justify-center items-center text-center w-full'>
+        {booking.workType === 'RSAWork' ? (
+          <span className='flex justify-center items-center text-center w-full text-gray-500'>
+            Not Applicable
+          </span>
+        ) : (
+          <>
+            <input
+              type="number"
+              value={inputValues[booking._id] || booking.givenAmountByStaff || 0}
+              onChange={(e) => updateInputValues(booking._id, +e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1 mr-2 w-24"
+              disabled={booking.approve}
+              min="0"
+              step="0.01"
+            />
+            <button
+              onClick={() => handleUpdateAmount(booking._id)}
+              disabled={booking.approve || loadingStates[booking._id]}
+              className={`px-3 py-1 rounded text-white ${
+                calculateBalance(
+                  booking.receivedAmountStaff,
+                  inputValues[booking._id] || booking.givenAmountByStaff || 0
+                ) === 0
+                  ? 'bg-green-500 hover:bg-green-600'
+                  : 'bg-red-500 hover:bg-red-600'
+              }`}
+            >
+              {loadingStates[booking._id] ? '...' : 'OK'}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+},
+    {
+      accessor: 'balance',
+      title: 'Balance',
+      className: 'text-right',
+      render: (booking: Booking) => {
+        const balance = calculateBalance(
+          booking.receivedAmountStaff,
+          booking.givenAmountByStaff
+        );
+        
+        return (
+          <div className={`text-right ${
+            balance === 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {booking.workType === 'RSAWork' ? '0.00' : balance.toFixed(2)}
+          </div>
+        );
+      }
+    },
+    {
+      accessor: 'actions',
+      title: 'Actions',
+      render: (record: Booking) => (
+        <button 
+          onClick={() => navigate(`/openbooking/${record._id}`)}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          <IconEye />
+        </button>
+      )
+    }
+  ];
 
-                const effectiveReceivedAmount = booking.receivedAmount || 0;
-                return (
-                    <span className={`text-red-500 flex item-center  justify-center  text-center`}>
-                        {
-                            booking.workType === 'RSAWork'
-                                ? '0.00'
-                                : (booking.totalAmount - booking.receivedAmount)
-                        }
-                    </span>
-                );
-            }
-        },
-
-        {
-            accessor: 'viewmore',
-            title: 'View More',
-            render: (record: Booking) =>
-                record._id !== 'total' ?
-                    <div className='flex justify-center' onClick={() => navigate(`/openbooking/${record._id}`)}> <IconEye /></div>
-                    :
-                    null
-        }
-    ];
 
     const handleMonth = (month: string) => {
         setSelectedMonth(month);
@@ -395,36 +404,34 @@ const Profile = () => {
     };
 
 
-    const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
-        if (receivedUser === "Staff") {
-            return 0;
-        }
+    const calculateBalance = (amount: string | number, givenAmountByStaff: string | number, receivedUser?: string) => {
+       
         const parsedAmount = Number(amount) || 0; // Convert to number safely
-        const parsedReceivedAmount = Number(receivedAmount) || 0;
+        const parsedReceivedAmount = Number(givenAmountByStaff) || 0;
         const balance = parsedAmount - parsedReceivedAmount;
 
         return balance; // Always return a string
     };
 
-    const handleUpdateAmount = async (id: string) => {
-        const updatingBooking = bookings.filter((booking) => booking._id === id)
-        const receivedAmount = inputValues[id]
+    // const handleUpdateAmount = async (id: string) => {
+    //     const updatingBooking = bookings.filter((booking) => booking._id === id)
+    //     const givenAmountByStaff = inputValues[id]
 
-        if (!receivedAmount || receivedAmount <= 0) return;
+    //     if (!givenAmountByStaff || givenAmountByStaff <= 0) return;
 
-        if ((updatingBooking.totalAmount - updatingBooking.receivedAmount) === 0) {
-            Swal.fire('Error!', 'Full amount receved successfully.', 'error');
-        }
+    //     if ((updatingBooking.receivedAmountStaff - updatingBooking.givenAmountByStaff) === 0) {
+    //         Swal.fire('Error!', 'Full amount receved successfully.', 'error');
+    //     }
 
-        try {
-            const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { receivedAmount });
-            fetchBookings();
-            Swal.fire('Balance!', 'The booking balance amount updated.', 'success');
-        } catch (error) {
-            console.error('Error updatebalnce amount:', error);
-            Swal.fire('Error!', 'Failed to update balance amount in booking.', 'error');
-        }
-    }
+    //     try {
+    //         const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { givenAmountByStaff });
+    //         fetchBookings();
+    //         Swal.fire('Balance!', 'The booking balance amount updated.', 'success');
+    //     } catch (error) {
+    //         console.error('Error updatebalnce amount:', error);
+    //         Swal.fire('Error!', 'Failed to update balance amount in booking.', 'error');
+    //     }
+    // }
 
 
     // Calculate the total selected bookings
@@ -435,8 +442,8 @@ const Profile = () => {
             if (!booking) return;
 
             // If receivedUser is "Staff", amount should be 0
-            const amountToUse = booking.receivedUser === "Staff" ? 0 : booking.totalAmount;
-            const receivedAmount = booking.receivedUser === "Staff" ? 0 : booking.receivedAmount;
+            const amountToUse =  booking.receivedAmountStaff;
+            const receivedAmount =booking.givenAmountByStaff;
             const balance = amountToUse - receivedAmount;
 
             totalBalances += isNaN(balance) ? 0 : balance;
@@ -471,8 +478,8 @@ const Profile = () => {
         const updatedValues: Record<string, number> = {};
         bookings.forEach((booking) => {
             updatedValues[booking._id] = calculateBalance(
-                parseFloat(booking.totalAmount?.toString() || "0"),
-                booking.receivedAmount,
+                parseFloat(booking.receivedAmountStaff?.toString() || "0"),
+                booking.givenAmountByStaff,
                 booking.receivedUser
             );
         });

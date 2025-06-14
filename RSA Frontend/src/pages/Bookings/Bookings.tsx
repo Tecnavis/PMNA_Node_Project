@@ -70,6 +70,8 @@ export interface Booking {
     companyBooking: boolean,// new prop
     approve: boolean,// new prop
     feedbackCheck: boolean,// new prop
+    receivedAmountStaff?:number;
+    givenAmountByStaff?:number;
     verified: boolean,// new prop
     accountantVerified: boolean,// new prop
     transferedSalary: number,// new prop
