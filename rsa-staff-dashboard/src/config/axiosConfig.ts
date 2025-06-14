@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResp
 import { useNavigate } from 'react-router-dom';
 
 export const BASE_URL: string = import.meta.env.VITE_BACKEND_URL;
+export const IMAGE_URL: string = import.meta.env.VITE_CLOUD_IMAGE;
 
 // Create an Axios instance
 export const axiosInstance: AxiosInstance = axios.create({

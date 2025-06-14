@@ -6,6 +6,10 @@ const Driver = require('../Model/driver');
 const Showroom = require('../Model/showroom');
 const Redemption = require('../Model/redemption');
 const { default: mongoose } = require('mongoose');
+const { createAddress } = require('../services/address.service');
+const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
+const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
+const { StatusCodes } = require('http-status-codes');
 
 // Create a new reward
 exports.createReward = async (req, res) => {
@@ -114,7 +118,8 @@ exports.deleteReward = async (req, res) => {
 };
 
 exports.redeemReward = async (req, res) => {
-  const { rewardId = '', rewardFor, userId, bookingId = '' } = req.query;
+  const { rewardId = '', rewardFor, userId, bookingId = '', staffId, userType, address } = req.query;
+
   try {
 
     let redemption
@@ -122,7 +127,7 @@ exports.redeemReward = async (req, res) => {
     if (rewardFor === 'Showroom') {
       redemption = await manageRewardRedeemForShowroom(userId, bookingId);
     } else {
-      redemption = await manageRewardRedeem(rewardId, userId, rewardFor);
+      redemption = await manageRewardRedeem(rewardId, userId || staffId, rewardFor || userType, address);
     }
 
     return res.status(201).json({
@@ -141,7 +146,7 @@ exports.redeemReward = async (req, res) => {
 };
 
 
-const manageRewardRedeem = async (rewardId, userId, rewardFor) => {
+const manageRewardRedeem = async (rewardId, userId, rewardFor, address) => {
   const session = await mongoose.startSession();
   let historyRedeem = null;
 
@@ -173,6 +178,7 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor) => {
 
       if (!reward) throw new Error('Reward not found');
       if (!user) throw new Error('Staff member not found');
+      if (rewardFor === 'ShowroomStaff' && !address) throw new Error('Address is missing.');
       if (reward.rewardFor !== rewardFor) throw new Error(`This reward is not available for ${rewardFor}`);
       if (reward.stock <= 0) throw new Error('This reward is out of stock');
 
@@ -181,12 +187,21 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor) => {
       if (reward.pointsRequired > useAblePoints) {
         throw new Error(`Insufficient points. Available points (${useAblePoints})`);
       }
+      
+      let addressId
+      if (address) {
+        addressId = await createAddress(address)
+      }
 
       historyRedeem = new Redemption({
         reward: reward._id,
         user: user._id,
         redeemByModel: rewardFor
       });
+
+      if (addressId) {
+        historyRedeem.address = addressId
+      }
 
       reward.stock -= 1;
       user.rewardPoints -= reward.pointsRequired;
@@ -369,6 +384,99 @@ exports.redeemShowroomPoint = async (req, res) => {
       message: error.message || 'Internal server error',
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
-    
+
   }
 };
+
+// Get All redemptions
+exports.getAllRedeems = asyncErrorHandler(async (req, res) => {
+  
+  const redeems = await Redemption.find()
+    .populate('reward')
+    .populate('address')
+    .sort({ createdAt: -1 });
+
+  
+  const populatedRedeems = await Promise.all(
+    redeems.map(async (redemption) => {
+      if (redemption.user && redemption.redeemByModel) {
+        const userModel = mongoose.model(redemption.redeemByModel);
+        const user = await userModel.findById(redemption.user);
+        return {
+          ...redemption.toObject(),
+          user: user
+        };
+      }
+      return redemption;
+    })
+  );
+
+  if (!populatedRedeems || populatedRedeems.length === 0) {
+    throw new NotFoundError('No redemptions found');
+  }
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    message: "All redeems fetched successfully",
+    data: populatedRedeems,
+  });
+});
+
+// Approve redeem by id
+exports.approveRedeemById = asyncErrorHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    throw new BadRequestError('Redemption id is missing.');
+  }
+
+  const redemption = await Redemption.findById(id);
+  if (!redemption) {
+    throw new NotFoundError('Redemption not found');
+  }
+
+  if (redemption.approval) {
+    throw new ConflictError('Redemption is already approved');
+  }
+
+  const updatedRedemption = await Redemption.findByIdAndUpdate(
+    id,
+    {
+      approval: true,
+    },
+    { new: true, runValidators: true }
+  );
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Redemption approved successfully",
+    data: updatedRedemption,
+  });
+});
+
+exports.rejectRedeemById = asyncErrorHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    throw new BadRequestError('Redemption id is missing.');
+  }
+
+  const redemption = await Redemption.findById(id);
+  if (!redemption) {
+    throw new NotFoundError('Redemption not found');
+  }
+
+  const updatedRedemption = await Redemption.findByIdAndUpdate(
+    id,
+    {
+      approval: false,
+    },
+    { new: true }
+  );
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Redemption rejected successfully",
+    data: updatedRedemption,
+  });
+});

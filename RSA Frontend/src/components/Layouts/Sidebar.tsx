@@ -384,6 +384,9 @@ const Sidebar = () => {
                                             <li>
                                                 <NavLink to="/reward">{t('Rewards')}</NavLink>
                                             </li>
+                                            <li>
+                                                <NavLink to="/redeems">{t('Redeems')}</NavLink>
+                                            </li>
                                         </ul>
                                     </AnimateHeight>
                                 </li>

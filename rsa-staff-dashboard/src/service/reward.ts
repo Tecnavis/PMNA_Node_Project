@@ -2,7 +2,7 @@ import { AxiosResponse } from "axios";
 import { axiosInstance as axios } from "../config/axiosConfig";
 import { BASE_URL } from "../config/axiosConfig";
 import { handleApiError } from "../utils/errorHandler";
-import { GetllAllRedeemReponseType, IReward } from "../interface/reward";
+import { Address, GetllAllRedeemReponseType, IReward } from "../interface/reward";
 
 // API service for fetching showroom by ID
 export const getRewards = async (
@@ -17,7 +17,6 @@ export const getRewards = async (
             },
         }
     );
-    console.log(response.data)
     return response.data;
 };
 // API service for fetching showroom by ID
@@ -43,7 +42,8 @@ export const getRedeems = async (
 export const redeemReward = async (
     id: string,
     staffId:string,
-    userType:string
+    userType:string,
+    address?:Address
 ):
     Promise<any> => {
     try {
@@ -51,9 +51,10 @@ export const redeemReward = async (
             `${BASE_URL}reward/redeem-reward`,
             {
                 params: {
-                    id,
+                    rewardId:id,
                     staffId,
-                    userType
+                    userType,
+                    address
                 }
             }
         );

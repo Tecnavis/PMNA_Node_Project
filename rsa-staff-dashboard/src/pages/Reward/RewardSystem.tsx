@@ -1,4 +1,3 @@
-// /components/reward/RewardSystem.tsx
 import React, { useState, useEffect } from 'react';
 // @ts-ignore
 import { Tabs, Modal, Group, Badge, Text, Space, Divider, LoadingOverlay } from '@mantine/core';
@@ -6,14 +5,14 @@ import { useDisclosure } from '@mantine/hooks';
 import Swal from 'sweetalert2';
 import { getShowroomStaffProfile } from '../../service/showroom';
 import { getRewards, getRedeems, redeemReward } from '../../service/reward';
-import { IReward, IRedemption } from '../../interface/reward';
+import { IReward, IRedemption, Address } from '../../interface/reward';
 import { IShowroomStaff } from '../../interface/staff';
-import { BASE_URL } from '../../config/axiosConfig';
 import RewardList from './RewardList';
 import RedemptionHistory from './RedemptionHistory';
 import { MdOutlineRedeem } from 'react-icons/md';
 import IconClock from '../../components/Icon/IconClock';
 import { CLOUD_IMAGE } from '../../constants/status';
+import AddressForm from '../Components/AddressForm';
 
 const RewardSystem: React.FC = () => {
     const [rewards, setRewards] = useState<IReward[]>([]);
@@ -25,6 +24,8 @@ const RewardSystem: React.FC = () => {
     const [selectedReward, setSelectedReward] = useState<IReward | null>(null);
     const [opened, { open, close }] = useDisclosure(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
+    const [openAddressModal, setOpenAddressModal] = useState<boolean>(false);
+    const [address, setAddress] = useState<Address | null>(null);
     const [page, setPage] = useState(1);
     const pageSize = 8;
 
@@ -67,6 +68,7 @@ const RewardSystem: React.FC = () => {
             console.error("Profile load failed", error);
         }
     };
+
     useEffect(() => {
         init();
     }, []);
@@ -81,22 +83,34 @@ const RewardSystem: React.FC = () => {
         if (selectedReward) open();
     }, [selectedReward]);
 
-    const handleRedeem = async () => {
+    const handleAddress = async () => {
+        setOpenAddressModal(true)
+    }
+
+    const handleSubmitAddress = async (address: Address) => {
+
+        setOpenAddressModal(false)
+
         if (!selectedReward || !staff) return;
+
         setConfirmLoading(true);
+
         try {
-            await redeemReward(selectedReward._id, staff._id, 'ShowroomStaff');
+
+            await redeemReward(selectedReward._id, staff._id, 'ShowroomStaff', address);
             Swal.fire({ icon: 'success', title: 'Success', text: 'Reward redeemed successfully' });
+
             fetchRedeems();
             close();
             setSelectedReward(null);
             init()
-        } catch (err:any) {
+
+        } catch (err: any) {
             Swal.fire({ icon: 'error', title: 'Error', text: err.message || 'Redemption failed' });
         } finally {
             setConfirmLoading(false);
         }
-    };
+    }
 
     return (
         <div className='panel'>
@@ -148,11 +162,16 @@ const RewardSystem: React.FC = () => {
                         </Group>
                         <Space h="xl" />
                         <Group position="right" mt="md">
-                            <button onClick={handleRedeem} className="btn btn-primary">Confirm Redemption</button>
+                            <button onClick={handleAddress} className="btn btn-primary">Confirm Redemption</button>
                         </Group>
                     </div>
                 )}
             </Modal>
+
+            {/* Address form */}
+            <AddressForm handleClose={handleSubmitAddress} open={openAddressModal} cancel={() => {
+                setOpenAddressModal(false)
+            }} />
         </div>
     );
 };

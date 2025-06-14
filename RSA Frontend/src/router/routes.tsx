@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+const Redeems = lazy(() => import('../pages/Rewards/Redeems'))
 const TransactionList = lazy(() => import('../pages/SalaryTransaction'))
 const DriverTransactionList = lazy(() => import('../pages/SalaryTransactionDetails'))
 
@@ -373,6 +374,10 @@ const routes = [
     {
         path: '/reward-details',
         element: <RewardDetails />,
+    },
+    {
+        path: '/redeems',
+        element: <Redeems />,
     },
     {
         path: '/Status',

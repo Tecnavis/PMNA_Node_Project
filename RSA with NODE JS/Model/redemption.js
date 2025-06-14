@@ -15,6 +15,14 @@ const redemptionSchema = new mongoose.Schema({
         type: String,
         enum: ['Showroom', 'ShowroomStaff', 'Staff', "Driver"]
     },
+    approval: {
+        type: Boolean,
+        default: false
+    },
+    address: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Address',
+    }
 }, { timestamps: true });
 
 const Redemption = mongoose.model('Redemption', redemptionSchema);
