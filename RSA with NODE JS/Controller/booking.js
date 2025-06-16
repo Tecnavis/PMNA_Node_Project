@@ -13,6 +13,10 @@ const agenda = require('../config/Agenda.config')()
 const LoggerFactory = require('../utils/logger/LoggerFactory');
 const NotificationService = require('../services/notification.service');
 const SalaryTransaction = require('../Model/salaryTransaction')
+const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
+const { StatusCodes } = require('http-status-codes');
+const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
+
 
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
@@ -97,7 +101,7 @@ exports.createBooking = async (req, res) => {
 
         if (
             bookingData.totalAmount &&
-            bookingData.rewardAmount 
+            bookingData.rewardAmount
         ) {
             bookingData.totalAmount -= bookingData.rewardAmount;
         }
@@ -295,7 +299,7 @@ exports.createBookingNoAuth = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(bookingData.serviceType)) bookingData.serviceType = null;
         bookingData.isWhatsappBooking = true
         const newBooking = new Booking(bookingData);
-        
+
         await newBooking.save();
 
         routeLogger.info({
@@ -483,13 +487,13 @@ exports.getAllBookings = async (req, res) => {
             companyId,
             verified,
             staffId,
-                all = false // Add this new parameter
+            all = false // Add this new parameter
 
         } = req.query;
 
         // Convert page and limit to integers
-       page = all ? 1 : parseInt(page, 10);
-limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
+        page = all ? 1 : parseInt(page, 10);
+        limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
 
 
         const query = {};
@@ -592,14 +596,14 @@ limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
             .populate('driver')
             .populate('provider')
             .populate('receivedUserId')
-    .skip(all ? 0 : (page - 1) * limit) // Skip only if not fetching all
+            .skip(all ? 0 : (page - 1) * limit) // Skip only if not fetching all
             .limit(limit)
             .sort({ createdAt: -1 })
             .lean()
 
         const balanceAmount = bookings.reduce((total, booking) => {
             if (forStaffReport) {
-                return booking.receivedUser === 'Staff' 
+                return booking.receivedUser === 'Staff'
                     ? total + (booking.givenAmountByStaff || 0)
                     : total;
             }
@@ -612,48 +616,48 @@ limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
             {
                 $match: {
                     ...query,
-                    
+
                     ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
                     ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
-                                ...(forDriverReport && { receivedUser: { $ne: 'Staff' } }),
-                                                                ...(forStaffReport && { receivedUser: { $eq: 'Staff' } })
+                    ...(forDriverReport && { receivedUser: { $ne: 'Staff' } }),
+                    ...(forStaffReport && { receivedUser: { $eq: 'Staff' } })
 
 
                 }
             },
             {
-                 $group: {
-            _id: null,
-            totalCollected: {
-                $sum: forStaffReport 
-                ? "$givenAmountByStaff"  // For staff reports, sum givenAmountByStaff
-                : forDriverReport 
-                    ? "$receivedAmount" 
-                    : forCompanyReport 
-                        ? "$receivedAmountByCompany" 
-                        : "$receivedAmount"
-        },
-            totalOverall: { 
-                $sum: forStaffReport
-                ? "$receivedAmountStaff"  // For staff reports, sum receivedAmountStaff
-                : {
-                    $cond: [
-                        { $ne: ["$receivedUser", "Staff"] },
-                        "$totalAmount",
-                        0
-                    ]
+                $group: {
+                    _id: null,
+                    totalCollected: {
+                        $sum: forStaffReport
+                            ? "$givenAmountByStaff"  // For staff reports, sum givenAmountByStaff
+                            : forDriverReport
+                                ? "$receivedAmount"
+                                : forCompanyReport
+                                    ? "$receivedAmountByCompany"
+                                    : "$receivedAmount"
+                    },
+                    totalOverall: {
+                        $sum: forStaffReport
+                            ? "$receivedAmountStaff"  // For staff reports, sum receivedAmountStaff
+                            : {
+                                $cond: [
+                                    { $ne: ["$receivedUser", "Staff"] },
+                                    "$totalAmount",
+                                    0
+                                ]
+                            }
+                    }
                 }
             }
-        }
-    }
-]);
+        ]);
         const aggregationResult2 = await Booking.aggregate([
             {
                 $match: {
                     ...query,
                     ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { partialPayment: true }),
                     ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
-                                ...(forDriverReport && { receivedUser: { $ne: 'Staff' } })
+                    ...(forDriverReport && { receivedUser: { $ne: 'Staff' } })
 
                 }
             },
@@ -677,8 +681,8 @@ limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
         return res.status(200).json({
             total,
             page: all ? 1 : page,
-    limit: all ? total : limit,
-    totalPages: all ? 1 : Math.ceil(total / limit),
+            limit: all ? total : limit,
+            totalPages: all ? 1 : Math.ceil(total / limit),
             bookings,
             balanceAmount,
             financials: {
@@ -1495,12 +1499,12 @@ exports.accountVerifying = async (req, res) => {
 //Fetch approved bookings
 exports.getApprovedBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10 , showAll = false} = req.query;
+        let { search, startDate, endDate, page = 1, limit = 10, showAll = false } = req.query;
 
         // Convert page and limit to integers
         page = parseInt(page, 10);
         limit = parseInt(limit, 10);
- // If showAll is true, set limit to a very high number
+        // If showAll is true, set limit to a very high number
         if (showAll === 'true') {
             limit = 1000000; // Or use Number.MAX_SAFE_INTEGER for all records
         }
@@ -1669,14 +1673,14 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
             .populate('serviceType')
             .populate('company')
             .populate('driver')
-             .skip(showAll === 'true' ? 0 : (page - 1) * limit) // Skip only if not showing all
+            .skip(showAll === 'true' ? 0 : (page - 1) * limit) // Skip only if not showing all
             .limit(limit)
             .sort({ createdAt: -1 });
 
         res.status(200).json({
             bookings,
             total,
-             page: showAll === 'true' ? 1 : page,
+            page: showAll === 'true' ? 1 : page,
             limit: showAll === 'true' ? total : limit,
             totalPages: showAll === 'true' ? 1 : Math.ceil(total / limit),
             showAll: showAll === 'true'
@@ -1722,7 +1726,7 @@ exports.settleAmount = async (req, res) => {
         if (role !== 'admin' && receivedUser) {
             booking.receivedUserId = userId
             booking.receivedUser = receivedUser
-    booking.receivedAmountStaff = partialAmount || receivedAmount  // Changed from 'amount'
+            booking.receivedAmountStaff = partialAmount || receivedAmount  // Changed from 'amount'
 
             const ReceivedUserModel = mongoose.model(receivedUser || "Driver");
 
@@ -1796,7 +1800,7 @@ exports.settleStaffAmount = async (req, res) => {
 
         const { id } = req.params;
         const { givenAmountByStaff } = req.body;
-        
+
         // Validate input
         if (isNaN(givenAmountByStaff)) {
             return res.status(400).json({
@@ -1820,7 +1824,7 @@ exports.settleStaffAmount = async (req, res) => {
 
         // Update staff-specific fields
         booking.givenAmountByStaff = Number(givenAmountByStaff);
-        
+
         // Check if fully settled
         if (booking.givenAmountByStaff >= booking.receivedAmountStaff) {
             booking.givenAmountByStaff = booking.receivedAmountStaff; // Prevent overpayment
@@ -1856,7 +1860,7 @@ exports.settleStaffAmount = async (req, res) => {
 
     } catch (error) {
         console.error('Error settling staff amount:', error.message);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Server error while settling staff amount',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
@@ -1991,10 +1995,10 @@ exports.distributeReceivedAmount = async (req, res) => {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
 
                 booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
-                 // Set the receivedUser and receivedUserId fields for staff
+                // Set the receivedUser and receivedUserId fields for staff
                 booking.receivedUser = 'Staff';
                 booking.receivedUserId = new mongoose.Types.ObjectId(userId);
-                
+
                 remainingAmount -= appliedAmount;
                 selectedBookingIds.push(booking._id);
 
@@ -2437,3 +2441,35 @@ exports.inventoryBooking = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+// Controller for settle cash pending booking
+exports.settleCashPendingBooking = asyncErrorHandler(async (req, res) => {
+    const bookingId = req.params.id;
+
+    if (!bookingId) {
+        throw new BadRequestError('BookingId is required.');
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+        throw new NotFoundError('Booking not found');
+    }
+
+    if (!booking.cashPending) {
+        throw new BadRequestError('No cash pending to settle - this booking is already cleared');
+    }
+
+    booking.cashPending = false;
+    booking.partialPayment = false;
+    booking.discountAmount = booking.totalAmount - (booking.partialAmount || 0);
+    booking.totalAmount -= booking.discountAmount;
+
+    await booking.save()
+
+    return res.status(StatusCodes.CREATED).json({
+        success: true,
+        data: booking,
+        message: "Booking discount created successfully"
+    });
+})

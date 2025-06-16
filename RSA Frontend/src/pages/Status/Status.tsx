@@ -1,23 +1,29 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ReactModal from 'react-modal'
+import { debounce } from 'lodash';
+import { Socket } from 'socket.io-client';
+import Swal from 'sweetalert2';
+import axios, { AxiosError } from 'axios';
+import toast from 'react-hot-toast';
+import { GrNext, GrPrevious } from 'react-icons/gr';
 import { Booking } from '../Bookings/Bookings';
 import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
 import IconArrowLeft from '../../components/Icon/IconArrowLeft';
 import IconBarChart from '../../components/Icon/IconBarChart';
 import { formattedTime, dateFormate } from '../../utils/dateUtils'
-import { useNavigate } from 'react-router-dom';
 import IconClock from '../../components/Icon/IconClock';
 import BookingSkeleton from '../../components/Skeleton/BookingSkeleton';
 import IconListCheck from '../../components/Icon/IconListCheck';
-import { GrNext, GrPrevious } from 'react-icons/gr';
-import ReactModal from 'react-modal'
-import { debounce } from 'lodash';
 import { connectSocket, disconnectSocket } from '../../utils/socket';
-import { Socket } from 'socket.io-client';
 import FeedbackModal from '../Bookings/FeedbackModal';
 import Feedbacks from '../Feedback/Feedback';
-import Swal from 'sweetalert2';
-import axios from 'axios';
 
+type ApiError = {
+    success: false;
+    errorCode: string;
+    errors: Array<{ message: string }>;
+};
 export interface SocketData {
     type: 'update' | 'newBooking';
     bookingId: string;
@@ -56,7 +62,8 @@ const Status: React.FC = () => {
     const [selectedResponses, setSelectedResponses] = useState<{ [key: string]: string }>({});
     const [selectedBookingId, setSelectedBookingId] = useState<string>('');
     const [receivedUser, setReceivedUser] = useState<string>('');
-const [showAll, setShowAll] = useState(false);
+    const [showAll, setShowAll] = useState(false);
+    const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
     const navigate = useNavigate();
     const role = localStorage.getItem('role') || ''
@@ -80,40 +87,77 @@ const [showAll, setShowAll] = useState(false);
 
             try {
                 const response = await axiosInstance.get(`/booking/status-based`, {
-                      params: { 
-                    page, 
-                    limit: showAll ? undefined : limit, 
-                    search, 
-                    status,
-                    showAll
-                }
-            });
+                    params: {
+                        page,
+                        limit: showAll ? undefined : limit,
+                        search,
+                        status,
+                        showAll
+                    }
+                });
 
                 setBookings(response.data.bookings);
-            setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
-            setCurrentPage(response.data.page);
+                setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
+                setCurrentPage(response.data.page);
             } catch (error) {
                 console.error("Error fetching bookings", error);
             } finally {
                 setLoader(false);
             }
-    }, [tab, showAll] // Add showAll to dependencies
+        }, [tab, showAll] // Add showAll to dependencies
     );
 
     const debouncedFetchBookings = useMemo(
         () => debounce(fetchBookings, 1000),
         [fetchBookings]
     );
-const toggleShowAll = () => {
-    setShowAll(!showAll);
-    fetchBookings("", 1, 10); // Reset to page 1 when toggling
-};
+    const toggleShowAll = () => {
+        setShowAll(!showAll);
+        fetchBookings("", 1, 10); // Reset to page 1 when toggling
+    };
     const handleChangeTabs = (tabName: Tabs) => setTab(tabName);
 
     const handlePaymentSettlement = (record: Booking) => {
         setSelectedBooking(record);
         setPaymentAmount(((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.receivedAmount ?? 0)));
         setShowPaymentModal(true);
+    };
+
+    const handleSettleCashPending = async (bookingId: string) => {
+        setIsProcessing(bookingId);
+
+        const toastId = toast.loading('Processing cash settlement...');
+
+        try {
+            const response = await axios.patch(`${BASE_URL}/booking/settle-cash-pending/${bookingId}`);
+
+            toast.success(response.data.message || 'Cash pending settled successfully!', {
+                id: toastId,
+            });
+
+            fetchBookings()
+
+        } catch (error) {
+            const axiosError = error as AxiosError<ApiError>;
+
+            // Default error message
+            let errorMessage = 'Failed to settle cash pending';
+
+            if (axiosError.response) {
+                // Use the first error message from the API response
+                errorMessage = axiosError.response.data.errors[0]?.message || errorMessage;
+
+            } else if (axiosError.request) {
+                errorMessage = 'Network error - please check your connection';
+            }
+
+            toast.error(errorMessage, {
+                id: toastId,
+                duration: 5000,
+            });
+        } finally {
+            setIsProcessing(null);
+        }
     };
 
     const handleSavePayment = async () => {
@@ -297,7 +341,7 @@ const toggleShowAll = () => {
             debouncedFetchBookings.cancel();
         };
     }, [debouncedFetchBookings]);
-    
+
     return <div>
         <div className="container-fluid">
             <div className="row">
@@ -452,13 +496,36 @@ const toggleShowAll = () => {
                                     </div>}
 
 
-                                    {booking.cashPending && <div className="flex justify-start my-5">
+                                    {booking.cashPending && <div className="flex justify-between my-5">
                                         <button
                                             onClick={() => handlePaymentSettlement(booking)}
                                             className='text-white mb-10 mx-4 flex justify-between items-center gap-2 bg-blue-500 px-10 py-1 rounded-md text-md hover:bg-blue-600'
                                         >
                                             Settle Payment
                                             <IconArrowLeft />
+                                        </button>
+                                        <button
+                                            onClick={() => handleSettleCashPending(booking._id)}
+                                            disabled={isProcessing === booking._id}
+                                            className={`text-white mb-10 mx-4 flex justify-between items-center gap-2 px-10 py-1 rounded-md text-md ${isProcessing === booking._id
+                                                ? 'bg-gray-500 cursor-not-allowed'
+                                                : 'bg-red-500 hover:bg-red-600'
+                                                }`}
+                                        >
+                                            {isProcessing === booking._id ? (
+                                                <span className="flex items-center">
+                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Processing...
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    Settle Cash Pending
+                                                    <IconArrowLeft />
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                     }
@@ -471,82 +538,78 @@ const toggleShowAll = () => {
                     } */}
                 </div>
                 {/* Pagination */}
-              {
-    bookings.length > 0 && (
-        <div className="flex flex-col items-center mt-4">
-            <div className="flex justify-center items-center space-x-2 mb-2">
-                <button
-                    type="button"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                        currentPage === 1 || showAll
-                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
-                    }`}
-                    disabled={currentPage === 1 || showAll}
-                >
-                    <GrPrevious />
-                </button>
-                
-                {!showAll && Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-                    // Show only a subset of pages for better UX
-                    let pageNum;
-                    if (totalPages <= 5) {
-                        pageNum = index + 1;
-                    } else if (currentPage <= 3) {
-                        pageNum = index + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + index;
-                    } else {
-                        pageNum = currentPage - 2 + index;
-                    }
-                    
-                    return (
-                        <button
-                            key={index}
-                            type="button"
-                            onClick={() => handlePageChange(pageNum)}
-                            className={`px-4 py-2 rounded-full transition ${
-                                currentPage === pageNum
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-gray-200 text-gray-700 hover:bg-blue-300"
-                            }`}
-                        >
-                            {pageNum}
-                        </button>
-                    );
-                })}
-                
-                <button
-                    type="button"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                        currentPage === totalPages || showAll
-                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
-                    }`}
-                    disabled={currentPage === totalPages || showAll}
-                >
-                    <GrNext />
-                </button>
-            </div>
-            
-            <button
-                type="button"
-                onClick={toggleShowAll}
-                className={`mt-2 px-4 py-2 rounded-full transition ${
-                    showAll
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-green-300"
-                }`}
-            >
-                {showAll ? "Pages" : "All"}
-            </button>
-            
-           
-        </div>
-    )
-}
+                {
+                    bookings.length > 0 && (
+                        <div className="flex flex-col items-center mt-4">
+                            <div className="flex justify-center items-center space-x-2 mb-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    className={`flex justify-center font-semibold p-2 rounded-full transition ${currentPage === 1 || showAll
+                                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                        : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                                        }`}
+                                    disabled={currentPage === 1 || showAll}
+                                >
+                                    <GrPrevious />
+                                </button>
+
+                                {!showAll && Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                                    // Show only a subset of pages for better UX
+                                    let pageNum;
+                                    if (totalPages <= 5) {
+                                        pageNum = index + 1;
+                                    } else if (currentPage <= 3) {
+                                        pageNum = index + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + index;
+                                    } else {
+                                        pageNum = currentPage - 2 + index;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={index}
+                                            type="button"
+                                            onClick={() => handlePageChange(pageNum)}
+                                            className={`px-4 py-2 rounded-full transition ${currentPage === pageNum
+                                                ? "bg-blue-500 text-white"
+                                                : "bg-gray-200 text-gray-700 hover:bg-blue-300"
+                                                }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+
+                                <button
+                                    type="button"
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    className={`flex justify-center font-semibold p-2 rounded-full transition ${currentPage === totalPages || showAll
+                                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                        : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                                        }`}
+                                    disabled={currentPage === totalPages || showAll}
+                                >
+                                    <GrNext />
+                                </button>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={toggleShowAll}
+                                className={`mt-2 px-4 py-2 rounded-full transition ${showAll
+                                    ? "bg-green-500 text-white"
+                                    : "bg-gray-200 text-gray-700 hover:bg-green-300"
+                                    }`}
+                            >
+                                {showAll ? "Pages" : "All"}
+                            </button>
+
+
+                        </div>
+                    )
+                }
                 <ReactModal
                     isOpen={showPaymentModal}
                     onRequestClose={() => {

@@ -100,6 +100,7 @@ const bookingSchema = new mongoose.Schema({
     inventoryImagePending: { type: Boolean },
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' },
     rewardAmount: { type: Number },
+    discountAmount: { type: Number },
     receivedHistory: [ReceivedHistorySchema],
 }, { timestamps: true });
 
