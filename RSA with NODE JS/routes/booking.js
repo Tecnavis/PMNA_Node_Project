@@ -89,4 +89,7 @@ router.patch('/settle-amount-driver/:id', jwt, controller.settleAmountDriver);
 //Route to approve booking
 router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
 
+//Route to approve booking
+router.patch('/settle-cash-pending/:id', jwt, controller.settleCashPendingBooking);
+
 module.exports = router;
