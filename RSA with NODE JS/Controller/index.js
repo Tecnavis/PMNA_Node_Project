@@ -80,14 +80,24 @@ exports.dashboard = async (req, res) => {
         const newBookings = await Bookings.aggregate(pipeline);
 
         const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
         const sevenDaysLater = new Date();
         sevenDaysLater.setDate(today.getDate() + 7);
+        sevenDaysLater.setHours(23, 59, 59, 999); // Set to end of day
 
-        //Fetching the data from database in javascript json formate
-        const expiredRecords = await TaxInsurance.find({}).lean();
+        // Fetch all records that have any expiry date within the next 7 days
+        const records = await TaxInsurance.find({
+            $or: [
+                { emiExpiryDate: { $lte: sevenDaysLater, $gte: today }, emiDue: false },
+                { insuranceExpiryDate: { $lte: sevenDaysLater, $gte: today }, insuranceDue: false, insuranceDueDismissed: false },
+                { pollutionExpiryDate: { $lte: sevenDaysLater, $gte: today }, pollutionDue: false, pollutionDueDismissed: false },
+                { taxExpiryDate: { $lte: sevenDaysLater, $gte: today }, taxDue: false, taxDueDismissed: false }
+            ]
+        }).lean();
 
         //Create individual array item for expired records
-        const filteredRecords = expiredRecords.flatMap((record) => {
+        const filteredRecords = records.flatMap((record) => {
 
             const expiredFields = [];
 
@@ -96,7 +106,7 @@ exports.dashboard = async (req, res) => {
                 return date >= today || date <= sevenDaysLater;
             };
 
-            if (!record.emiDue && isWithinNext7Days(record.emiExpiryDate)) {
+            if (!record.emiDue && !record.emiDue && new Date(record.emiExpiryDate) >= today && new Date(record.emiExpiryDate) <= sevenDaysLater) {
                 expiredFields.push({
                     _id: record._id,
                     type: "EMI",
@@ -104,7 +114,8 @@ exports.dashboard = async (req, res) => {
                     expiryDate: record.emiExpiryDate,
                 });
             }
-            if (!record.insuranceDue && isWithinNext7Days(record.insuranceExpiryDate)) {
+            if (!record.insuranceDue && !record.insuranceDueDismissed &&
+                new Date(record.insuranceExpiryDate) >= today && new Date(record.insuranceExpiryDate) <= sevenDaysLater) {
                 expiredFields.push({
                     _id: record._id,
                     type: "Insurance",
@@ -112,7 +123,8 @@ exports.dashboard = async (req, res) => {
                     expiryDate: record.insuranceExpiryDate,
                 });
             }
-            if (!record.pollutionDue && isWithinNext7Days(record.pollutionExpiryDate)) {
+            if (!record.pollutionDue && !record.pollutionDueDismissed &&
+                new Date(record.pollutionExpiryDate) >= today && new Date(record.pollutionExpiryDate) <= sevenDaysLater) {
                 expiredFields.push({
                     _id: record._id,
                     type: "Pollution",
@@ -120,7 +132,8 @@ exports.dashboard = async (req, res) => {
                     expiryDate: record.pollutionExpiryDate,
                 });
             }
-            if (!record.taxDue && isWithinNext7Days(record.taxExpiryDate)) {
+            if (!record.taxDue && !record.taxDueDismissed &&
+                new Date(record.taxExpiryDate) >= today && new Date(record.taxExpiryDate) <= sevenDaysLater) {
                 expiredFields.push({
                     _id: record._id,
                     type: "Tax",
