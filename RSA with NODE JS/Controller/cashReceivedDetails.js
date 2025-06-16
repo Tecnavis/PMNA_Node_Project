@@ -11,10 +11,10 @@ exports.createReceivedDetails = async (req, res) => {
     try {
         const { amount, currentNetAmount, driver, receivedAmount, remark,totalAmount } = req.body;
   const userId = req.user.id || req.user._id;
-        const receivedUser = req.user.role; // Assuming role is stored in the user object
+        const receivedUser = req.user.role || req.user?.user?.role; // Assuming role is stored in the user object
         const receivedUserId = userId; // The user creating the record
 
-        if (!amount || !currentNetAmount || !driver || !receivedAmount) {
+        if (!amount  || !driver || !receivedAmount) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
