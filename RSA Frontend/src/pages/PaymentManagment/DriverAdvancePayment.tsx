@@ -32,7 +32,10 @@ const AdvancePayment: React.FC = () => {
     const [inHandAmount, setInHandAmount] = useState<number>(0);
     const [receivedAmount, setReceivedAmount] = useState<string>('');
     const [remark, setRemark] = useState<string>('');
+        const [receivedUserId, setReceivedUserId] = useState<string>('');
+
     const [search, setSearch] = useState<string>('');
+    const role = localStorage.getItem('role');
 
     const [tabIndex, setTabIndex] = useState(0);
     const printRef = useRef<HTMLDivElement>(null);
@@ -191,7 +194,10 @@ const AdvancePayment: React.FC = () => {
                 currentNetAmount: inHandAmount,
                 driver: selectedDriver,
                 receivedAmount,
-                remark
+                remark,
+                receivedUser:role,
+
+                receivedUserId,
             });
             
             fetchReceivedData();

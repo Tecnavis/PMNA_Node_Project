@@ -1953,10 +1953,11 @@ exports.updateBookingApproved = async (req, res) => {
         })
     }
 }
-
+// ------------------------------------------------
 //Controller for distribute received amount
 exports.distributeReceivedAmount = async (req, res) => {
     const { receivedAmount, driverId, bookingIds, workType = 'RSAWork' } = req.body;
+    const userId = req.user.id || req.user._id; // Get the staff user ID from the request
 
     const routeLogger = LoggerFactory.createChildLogger({
         route: '/distributeReceivedAmount',
@@ -1971,7 +1972,6 @@ exports.distributeReceivedAmount = async (req, res) => {
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
 
-        const userId = req.user_id || req.user?.id;
 
         let receivedField = workType === 'PaymentWork' ? '$receivedAmountByCompany' : '$receivedAmount';
 
@@ -1991,12 +1991,17 @@ exports.distributeReceivedAmount = async (req, res) => {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
 
                 booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+                 // Set the receivedUser and receivedUserId fields for staff
+                booking.receivedUser = 'Staff';
+                booking.receivedUserId = new mongoose.Types.ObjectId(userId);
+                
                 remainingAmount -= appliedAmount;
+                selectedBookingIds.push(booking._id);
 
-                if (workType === 'PaymentWork') {
-                    booking.receivedUserId = new mongoose.Types.ObjectId(userId);
-                    booking.receivedUser = 'Staff'
-                }
+                // if (workType === 'PaymentWork') {
+                //     booking.receivedUserId = new mongoose.Types.ObjectId(userId);
+                //     booking.receivedUser = 'Staff'
+                // }
 
                 selectedBookingIds.push(booking._id);
 
