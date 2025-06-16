@@ -343,7 +343,7 @@ const handleCompleteEmptySettlement = async () => {
                             <h3 className="font-bold text-lg mb-2">Insufficient Funds</h3>
                             <p>Driver has ${currentCash.toFixed(2)} but needs ${totalPending.toFixed(2)}</p>
                             <p className="font-bold mt-2">Shortage: ${shortage.toFixed(2)}</p>
-                            <p className="mt-2">Would you like to provide an advance?</p>
+                            <p className="mt-2">Would you like to provide an amount?</p>
                         </div>
                         <div className="flex justify-end space-x-2 mt-4">
                             <button
@@ -353,7 +353,7 @@ const handleCompleteEmptySettlement = async () => {
                                 }}
                                 className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                             >
-                                Add Advance
+                                Add Amount
                             </button>
                             <button
                                 onClick={() => toast.dismiss(t.id)}
@@ -753,7 +753,7 @@ const handleCompleteEmptySettlement = async () => {
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
                         <div className="p-6">
-                            <h3 className="text-xl font-bold mb-4">Provide Advance</h3>
+                            <h3 className="text-xl font-bold mb-4">Provide Amount</h3>
 
                             <div className="mb-6">
                                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -767,7 +767,7 @@ const handleCompleteEmptySettlement = async () => {
                                     </div>
                                 </div>
 
-                                <label className="block mb-2 font-medium">Advance Amount</label>
+                                <label className="block mb-2 font-medium">Providing Amount</label>
                                 <input
                                     type="number"
                                     value={advanceAmount}
@@ -835,7 +835,7 @@ const handleCompleteEmptySettlement = async () => {
                                     }}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                                 >
-                                    Add Advance & Continue
+                                    Add Amount & Continue
                                 </button>
                             </div>
                         </div>

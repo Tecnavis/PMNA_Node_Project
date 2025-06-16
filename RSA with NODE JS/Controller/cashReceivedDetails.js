@@ -4,11 +4,15 @@ const Booking = require('../Model/booking.js')
 const Advance = require('../Model/advance.js')
 const Provider = require('../Model/provider');
 const { default: mongoose } = require('mongoose');
+const Staff = require('../Model/staff');
 
-
+// ----------------------
 exports.createReceivedDetails = async (req, res) => {
     try {
         const { amount, currentNetAmount, driver, receivedAmount, remark,totalAmount } = req.body;
+  const userId = req.user.id || req.user._id;
+        const receivedUser = req.user.role; // Assuming role is stored in the user object
+        const receivedUserId = userId; // The user creating the record
 
         if (!amount || !currentNetAmount || !driver || !receivedAmount) {
             return res.status(400).json({ message: 'All fields are required' });
@@ -37,7 +41,15 @@ exports.createReceivedDetails = async (req, res) => {
 
             if (remainingAmount > 0 && bookingBalance > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
-                booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+    if (receivedUser === 'Staff') {
+        // For Staff payments:
+        booking.receivedAmount = 0; // Set receivedAmount to 0 for Staff
+        booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + appliedAmount;
+    } else {
+        // For non-Staff payments (Admin, etc.):
+        booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+    }                   booking.receivedUser = receivedUser; // Set receivedUser
+                booking.receivedUserId = new mongoose.Types.ObjectId(receivedUserId); // Set receivedUserId
                 remainingAmount -= appliedAmount;
                 selectedBookingIds.push(booking._id);
                 await booking.save();
@@ -68,7 +80,10 @@ exports.createReceivedDetails = async (req, res) => {
                 amount: `Advance: ${driverAdvance}`,
                 driver: associateDriver._id,
                 receivedAmount: remainingAmount,
-                totalAmount: totalAmount
+                totalAmount: totalAmount,
+                receivedUser,
+
+                receivedUserId,
             });
         }
 
@@ -85,7 +100,10 @@ exports.createReceivedDetails = async (req, res) => {
                 amount: booking.totalAmount,
                 driver: associateDriver._id,
                 receivedAmount: currentReceivedAmount,
-                  totalAmount: totalAmount
+                  totalAmount: totalAmount,
+                receivedUser,
+
+                receivedUserId,
             });
             console.log('receivedDetails ', receivedDetails)
         }
@@ -148,5 +166,62 @@ exports.getAllReceivedDetails = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+// Controller/cashReceivedDetails.js
+
+exports.getStaffReceivedDetails = async (req, res) => {
+    try {
+        const { staffId } = req.params;
+        const { month, year, search } = req.query;
+
+        // Validate staffId
+        if (!mongoose.Types.ObjectId.isValid(staffId)) {
+            return res.status(400).json({ message: 'Invalid staff ID' });
+        }
+
+        const query = {
+            receivedUserId: new mongoose.Types.ObjectId(staffId),
+            receivedUser: 'Staff' // Ensure we only get staff records
+        };
+
+        // Date filtering
+        if (month && year) {
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0, 23, 59, 59);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        } else if (year) {
+            const startDate = new Date(year, 0, 1);
+            const endDate = new Date(year, 11, 31, 23, 59, 59);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        }
+
+        // Search functionality
+        if (search && search.trim()) {
+            const searchQuery = search.trim();
+            const regex = new RegExp(searchQuery, 'i');
+            
+            query.$or = [
+                { fileNumber: regex },
+                { remark: regex },
+                { amount: regex }
+            ];
+        }
+
+        const receivedDetails = await ReceivedDetails.find(query)
+            .sort({ createdAt: -1 })
+            .populate('driver')
+            .populate({
+                path: 'receivedUserId',
+                select: 'name' // Only get staff name
+            });
+
+        res.status(200).json(receivedDetails);
+    } catch (error) {
+        console.error('Error fetching staff received details:', error);
+        res.status(500).json({ 
+            message: 'Internal Server Error',
+            error: error.message 
+        });
     }
 };

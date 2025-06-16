@@ -364,13 +364,13 @@ const DriverCashCollectionsReport = () => {
                     );
                 }
 
-                if (booking.cashPending && booking.partialPayment) {
-                    return <span className={`text-red-500 flex item-center  justify-center  text-center`}>{
-                            '0.00'
-                    }
-                    </span>
-                }
-
+    //               if (booking.cashPending && booking.partialPayment) {
+    //   return (
+    //     <span className="text-red-500 flex items-center justify-center text-center">
+    //       {`(Partially paid: ${booking.partialAmount})`}
+    //     </span>
+    //   );
+    // }
                 if (booking.cashPending) {
                     return (
                         <div className='text-center'>0</div>
@@ -383,16 +383,19 @@ const DriverCashCollectionsReport = () => {
                     );
                     
                 }
-                const effectiveReceivedAmount = booking.receivedAmount || 0;
-                return (
-                    <span className={`text-red-500 flex item-center  justify-center  text-center`}>
-                        {
-                            booking.workType === 'RSAWork'
-                                ? '0.00'
-                                : (booking.totalAmount - booking.receivedAmount)
-                        }
-                    </span>
-                );
+               const effectiveReceivedAmount = booking.receivedAmount || 0;
+const effectivePartialAmount = booking.partialAmount || 0;
+return (
+    <span className={`text-red-500 flex item-center justify-center text-center`}>
+        {
+            booking.workType === 'RSAWork'
+                ? '0.00'
+                : booking.cashPending && booking.partialPayment
+                    ? (booking.totalAmount - effectivePartialAmount)
+                    : (booking.totalAmount - effectiveReceivedAmount)
+        }
+    </span>
+);
             }
         },
         {
