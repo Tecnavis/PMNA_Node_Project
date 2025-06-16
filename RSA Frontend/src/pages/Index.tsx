@@ -10,8 +10,10 @@ import Swal from "sweetalert2";
 import { VehicleRecord } from './VehicleDetails/VehicleCompliance';
 import { BASE_URL } from '../config/axiosConfig';
 import { ROLES } from '../constants/roles';
+import AddVehicleCompliance from './VehicleDetails/addVehicleCompliance';
 
 interface Record {
+    _id: string,
     type: string,
     expiryDate: string,
     vehicleNumber: string,
@@ -21,6 +23,8 @@ const Index = () => {
 
     const [blink, setBlink] = useState<boolean>(false);
     const [role, setRole] = useState<string>('');
+    const [recordId, setRecordId] = useState<string>('');
+    const [openRenewal, setOpenRenewal] = useState<boolean>(false);
     const [expiredRecords, setExpiredRecords] = useState<Record[]>([]);
     const [exceededRecords, setExceededRecords] = useState<VehicleRecord[]>([]);
 
@@ -294,9 +298,10 @@ const Index = () => {
         return dateObj > currentDate;
     };
 
-    useEffect(() => {
-        console.log(role, 'role')
-    }, [role])
+    const handleRenewal = (recordId: string) => {
+        setRecordId(recordId)
+        setOpenRenewal(true)
+    }
 
     return (
         <div className="container mx-auto p-6 bg-cover bg-center bg-no-repeat">
@@ -366,14 +371,24 @@ const Index = () => {
                                                 </span>
                                             )
                                         }
-                                        {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (
-                                            <button
-                                                className="bg-pink-500 text-white rounded-md py-2 px-3"
-                                                onClick={() => handleDismissRecord(record)}
-                                            >
-                                                Dismiss
-                                            </button>
-                                        )}
+                                        <div className='flex flex-row gap-1'>
+                                            {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (
+                                                <button
+                                                    className="btn btn-danger text-white rounded-md py-2 px-3"
+                                                    onClick={() => handleDismissRecord(record)}
+                                                >
+                                                    Dismiss
+                                                </button>
+                                            )}
+                                            {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (
+                                                <button
+                                                    className="btn btn-primary text-white rounded-md py-2 px-3"
+                                                    onClick={()=>handleRenewal(record._id)}
+                                                >
+                                                    Renewal
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -417,6 +432,17 @@ const Index = () => {
                             </div>
                         </div>
                     </div>
+                    <AddVehicleCompliance
+                        open={openRenewal}
+                        handleClose={() => {
+                            setOpenRenewal(false)
+                            setRecordId('')
+                        }}
+                        fetchComplianceDetails={()=> fetchServiceKmExceededVehicle()
+                        }
+                        isEditMode={true}
+                        id={recordId}
+                    />
                 </div>
             </div>
         </div>
