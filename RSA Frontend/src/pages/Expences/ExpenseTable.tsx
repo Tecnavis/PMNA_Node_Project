@@ -19,7 +19,7 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
     CLOUD_IMAGE,
 }) => {
     return (
-        <div className="overflow-x-auto my-10">
+        <div className="overflow-x-auto my-2">
             <table className="min-w-full text-sm text-left text-gray-600 bg-white shadow-md border rounded">
                 <thead className="bg-indigo-50 border-b text-indigo-700">
                     <tr>

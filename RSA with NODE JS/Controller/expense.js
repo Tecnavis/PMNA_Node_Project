@@ -121,7 +121,7 @@ exports.approve = async (req, res) => {
 // All expenses, newest first
 exports.getAllExpense = async (req, res) => {
     try {
-        const { month, year } = req.query;
+        const { month, year, search } = req.query;
         const query = {};
 
         // Month and Year filter
@@ -150,6 +150,19 @@ exports.getAllExpense = async (req, res) => {
             const endDate = new Date(yearNum, 11, 31, 23, 59, 59);
             query.createdAt = { $gte: startDate, $lte: endDate };
         }
+
+        // Add search functionality (new)
+        if (search && search.trim() !== '') {
+            const drivers = await Driver.find({
+                name: { $regex: search, $options: 'i' }
+            }).select('_id');
+
+            query.$or = [
+                { description: { $regex: search, $options: 'i' } },
+                { driver: { $in: drivers.map(d => d._id) } }
+            ];
+        }
+
         const expense = await Expense
             .find(query)  // ← Use the query object here
             .sort({ createdAt: -1 })           // ← sort descending by createdAt
@@ -243,7 +256,7 @@ exports.completeSettlement = async (req, res) => {
             ]
         })
 
-          if (pendingExpenses.length === 0) {
+        if (pendingExpenses.length === 0) {
             const updatedDriver = await Driver.findByIdAndUpdate(
                 driverId,
                 {
@@ -316,7 +329,7 @@ exports.completeSettlement = async (req, res) => {
             {
                 $set: {
                     settlement: true,
-            previousSettlementCompletedDate: driver.settlementCompletedDate, // Use the actual date
+                    previousSettlementCompletedDate: driver.settlementCompletedDate, // Use the actual date
 
                     settlementCompletedDate: new Date()
                 },
@@ -341,7 +354,7 @@ exports.completeSettlement = async (req, res) => {
         if (totalPending > 0 && !advanceAmount) {
             await distributeReceivedAmount(driverId, totalPending, "Driver Completed Expense Settlement.")
         }
-        
+
         return res.status(200).json({
             message: "Settlement completed successfully",
             success: true,

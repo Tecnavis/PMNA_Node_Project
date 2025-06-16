@@ -92,10 +92,14 @@ export const fetchPendingExpenses = async (): Promise<Expense[]> => {
     }
 };
 
-export const fetchExpenses = async (): Promise<Expense[]> => {
+export const fetchExpenses = async (search:string): Promise<Expense[]> => {
     try {
         const response = await axios.get(
-            `${BASE_URL}/expense`
+            `${BASE_URL}/expense`,{
+                params:{
+                    search
+                }
+            }
         );
         return response.data.expenseData;
     } catch (error) {

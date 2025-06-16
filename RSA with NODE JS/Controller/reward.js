@@ -54,7 +54,7 @@ exports.getAllRewards = async (req, res) => {
       filter.rewardFor = rewardFor;
     }
     // Fetch rewards based on the filter
-    const rewards = await Reward.find(filter);
+    const rewards = await Reward.find(filter).sort({ pointsRequired: -1 });
     res.status(200).json(rewards);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -187,7 +187,7 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor, address) => {
       if (reward.pointsRequired > useAblePoints) {
         throw new Error(`Insufficient points. Available points (${useAblePoints})`);
       }
-      
+
       let addressId
       if (address) {
         addressId = await createAddress(address)
@@ -390,13 +390,12 @@ exports.redeemShowroomPoint = async (req, res) => {
 
 // Get All redemptions
 exports.getAllRedeems = asyncErrorHandler(async (req, res) => {
-  
+
   const redeems = await Redemption.find()
     .populate('reward')
     .populate('address')
     .sort({ createdAt: -1 });
 
-  
   const populatedRedeems = await Promise.all(
     redeems.map(async (redemption) => {
       if (redemption.user && redemption.redeemByModel) {
