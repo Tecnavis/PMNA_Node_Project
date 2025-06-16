@@ -7,6 +7,12 @@ const ReceivedDetailsSchema = new mongoose.Schema({
     balance: { type: String, required: true },
     currentNetAmount: { type: Number, required: true },
         totalAmount: { type: Number, required: true },
+ receivedUser: {
+    type: String,
+    enum: ['Admin', 'Staff'],
+    required: true
+},
+    receivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
 
     driver: {
         type: mongoose.Schema.Types.ObjectId,

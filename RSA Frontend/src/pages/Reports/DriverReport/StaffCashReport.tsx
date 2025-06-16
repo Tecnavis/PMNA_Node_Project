@@ -45,6 +45,20 @@ interface Staff {
     cashInHand?: number;
     role?: string; // Add role as a top-level property
 }
+interface ReceivedDetail {
+    _id: string;
+    amount: string;
+    remark: string;
+    fileNumber: string;
+    balance: string;
+    currentNetAmount: number;
+    totalAmount: number;
+    receivedUser: string;
+    receivedUserId: string;
+    driver: Driver;
+    createdAt: string;
+    // Add other fields as needed
+}
 const Profile = () => {
 
     const [staff, setStaff] = useState<Staff | null>(null);
@@ -79,7 +93,8 @@ const Profile = () => {
     const [pageSize, setPageSize] = useState(10);
     const [totalRecords, setTotalRecords] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
-
+const [receivedDetails, setReceivedDetails] = useState<ReceivedDetail[]>([]);
+const [receivedDetailsLoading, setReceivedDetailsLoading] = useState(false);
     const { id } = useParams();
     const navigate = useNavigate();
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
@@ -95,7 +110,30 @@ const Profile = () => {
             navigate('/auth/boxed-signin');
         }
     };
-
+const fetchStaffReceivedDetails = async () => {
+    setReceivedDetailsLoading(true);
+    try {
+        const response = await axios.get(`${backendUrl}/cash-received-details/staff/${id}`, {
+            params: {
+                month: MONTHS.indexOf(selectedMonth) + 1, // Convert month name to number
+                year: selectedYear,
+                // Add search param if needed
+            }
+        });
+        setReceivedDetails(response.data);
+    } catch (error) {
+        console.error('Error fetching staff received details:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to fetch received details',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    } finally {
+        setReceivedDetailsLoading(false);
+    }
+};
     // Fetch staff profile details from backend
     const getStaff = async () => {
         try {
@@ -110,6 +148,7 @@ const Profile = () => {
     useEffect(() => {
         gettingToken();
         getStaff();
+          fetchStaffReceivedDetails();
     }, [id]);
 
     //Fetch booking related driverID
@@ -267,6 +306,13 @@ const Profile = () => {
                 ? new Date(record.createdAt).toLocaleDateString()
                 : ""
         },
+          {
+            accessor: 'createdAt',
+            title: 'ReceDate',
+            render: (record: receivedDetails) => record.createdAt
+                ? new Date(record.createdAt).toLocaleDateString()
+                : ""
+        },
         {
             accessor: 'fileNumber',
             title: 'File Number',
@@ -280,6 +326,18 @@ const Profile = () => {
             headerClassName: 'text-center',
             render: (record: Booking) => <div className='flex justify-center'>{record.customerVehicleNumber}</div>
         },
+            {
+      accessor: 'totalAmount',
+      title: 'Booking Amount',
+      className: 'text-right',
+      render: (record: Booking) => (
+        <div className="text-right">
+          {record.workType === 'PaymentWork' 
+            ? (record.totalAmount?.toFixed(2) || "0.00")
+            : "0.00"}
+        </div>
+      )
+    },
         {
       accessor: 'receivedAmountStaff',
       title: 'Payable Amount',

@@ -8,7 +8,7 @@ const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
 
 const { StatusCodes } = require('http-status-codes');
 const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
-// -----------------------------------------------
+// -----------------------------------------
 //Controller for creating new advance
 exports.createNewAdvance = async (req, res) => {
     const { remark, advance, driverId, type } = req.body;
