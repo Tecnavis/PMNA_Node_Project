@@ -496,7 +496,7 @@ const Status: React.FC = () => {
                                     </div>}
 
 
-                                    {booking.cashPending && <div className="flex justify-between my-5">
+                                    {booking.cashPending && booking.partialPayment && <div className="flex justify-between my-5">
                                         <button
                                             onClick={() => handlePaymentSettlement(booking)}
                                             className='text-white mb-10 mx-4 flex justify-between items-center gap-2 bg-blue-500 px-10 py-1 rounded-md text-md hover:bg-blue-600'
