@@ -38,10 +38,10 @@ export const getRedeemedHistory = async (userType: string, userId: string): Prom
         return [];
     }
 };
-export const redeemShowroomReward = async (showroomId: string): Promise<any[]> => {
+export const redeemShowroomReward = async (showroomId: string, rewardAmount: number): Promise<any[]> => {
     try {
         const response: AxiosResponse<any> = await axios.patch(
-            `${BASE_URL}/reward/showroom-redeem/${showroomId}`);
+            `${BASE_URL}/reward/showroom-redeem/${showroomId}`, { rewardAmount });
         return response.data.data;
     } catch (error) {
         handleApiError(error);
@@ -70,7 +70,7 @@ export const approveRedeem = async (redeemId: string): Promise<IRedemption> => {
         return response.data.data;
     } catch (error) {
         handleApiError(error);
-        throw error; 
+        throw error;
     }
 };
 
@@ -86,6 +86,6 @@ export const rejectRedeem = async (redeemId: string): Promise<IRedemption> => {
         return response.data.data;
     } catch (error) {
         handleApiError(error);
-        throw error; 
+        throw error;
     }
 };

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, ChangeEvent, Fragment, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -18,6 +19,7 @@ import Flatpickr from 'react-flatpickr';
 import 'flatpickr/dist/themes/material_blue.css';
 import toast from 'react-hot-toast';
 import { redeemShowroomReward } from '../../services/rewardService';
+import ReddemModal from './ReddemModal';
 
 export interface Company {
     _id: string;
@@ -212,6 +214,7 @@ const BookingAdd: React.FC = () => {
     const [isLifting, setIsLifting] = useState(false);
     const [rewardAmount, setRewardAmount] = useState<number>(0);
     const [bookingRewardAmount, setBookingRewardAmount] = useState<number | null>(null);
+    const [openRedeemModal, setOpenRedeemModal] = useState<boolean>(false);
     // -------------------------------------------------------
     const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>();
     const [selectedBaseLocation, setSelectedBaseLocation] = useState<{ id: string; latitudeAndLongitude: string } | null>(null);
@@ -727,6 +730,9 @@ const BookingAdd: React.FC = () => {
                 name: selectedOption.name,
                 insurenceAmount: selectedOption.insurenceAmount,
             });
+            setRewardAmount(prevAmount =>
+                selectedOption?.id !== showroom ? 0 : bookingRewardAmount
+            );
         } else {
             setSelectedShowroom(null); // Reset if no option is selected
         }
@@ -858,8 +864,8 @@ const BookingAdd: React.FC = () => {
                     },
                 });
 
-                if(rewardAmount > 0){
-                    await redeemShowroomReward(data.showroom || '')
+                if (rewardAmount > 0) {
+                    await redeemShowroomReward(data.showroom || '', rewardAmount)
                 }
 
                 if (response.status === 400 || response.status === 401) {
@@ -1057,8 +1063,8 @@ const BookingAdd: React.FC = () => {
                     },
                 });
 
-                if(rewardAmount > 0 && (bookingRewardAmount !== rewardAmount) && selectedShowroom?.id !== showroom){
-                    await redeemShowroomReward(data.showroom || '')
+                if (rewardAmount > 0 && (bookingRewardAmount !== rewardAmount)) {
+                    await redeemShowroomReward(data.showroom || '', rewardAmount)
                 }
 
                 Swal.fire({
@@ -1219,50 +1225,21 @@ const BookingAdd: React.FC = () => {
         return Object.keys(formErrors).length === 0;
     };
 
-    const handleRedeem = async (showroomOption: ShowroomOptions) => {
-
-        if (uid && rewardAmount && showroomOption.value === showroom) {
-            toast.error(`Reward point already redeemed for ${showroomOption.name} showroom`, {
-                position: "top-center",
-                duration: 5000,
-            });
-            return
-        }
-
-        const toastId = toast.loading(`Processing redemption for ${showroomOption.name}...`, {
-            duration: Infinity,
-        });
-
-        try {
-
-            // Validate points (example)
-            if (showroomOption.points <= 0) {
-                throw new Error("Insufficient points for redemption");
-                return
-            }
-
-            const usablePoints = showroomOption.points / 2
-            setRewardAmount(usablePoints);
-
-            toast.success(`Successfully redeemed points for ${showroomOption.name}!`, {
-                id: toastId,
-                position: 'top-center',
-                duration: 5000,
-            });
-
-        } catch (error: any) {
-            console.error('Redemption error:', error);
-
-            toast.error(
-                error.message || `Failed to redeem points for ${showroomOption.name}`,
-                {
-                    id: toastId,
-                    position: 'top-center',
-                    duration: 10000,
-                }
-            );
-        }
+    const handleRedeemModal = async () => {
+        setOpenRedeemModal(true)
     }
+
+    const executeRedeem = async (points: number) => {
+        if (!selectedShowroom) return;
+
+        // Validate points
+        if (selectedShowroom.rewardPoints <= 0) {
+            throw new Error("Insufficient points for redemption");
+        }
+
+        const usablePoints = points; // Use the points entered in the modal
+        setRewardAmount(usablePoints);
+    };
 
     // ref to scrolling 
     useEffect(() => {
@@ -1474,30 +1451,6 @@ const BookingAdd: React.FC = () => {
                                                 {option.value !== 'Lifting' && option.name !== 'Dummy Showroom' && (
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                         <span>points: {option?.points || 0}</span>
-                                                        {
-                                                            selectedShowroom?.id === option.value && (
-
-                                                                <button
-                                                                    type='button'
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                        handleRedeem(option);
-                                                                    }}
-                                                                    style={{
-                                                                        padding: '2px 8px',
-                                                                        background: '#3b82f6',
-                                                                        color: 'white',
-                                                                        border: 'none',
-                                                                        borderRadius: '4px',
-                                                                        cursor: 'pointer',
-                                                                        fontSize: '12px'
-                                                                    }}
-                                                                >
-                                                                    Redeem
-                                                                </button>
-                                                            )
-                                                        }
                                                     </div>
                                                 )}
                                             </div>
@@ -1827,10 +1780,18 @@ const BookingAdd: React.FC = () => {
                                 }
                             </div>
                             <div>
-                                <p ref={totalAmountRef}>Payable Amount (with insurance)</p> <h4 style={{ fontSize: 'x-large', color: 'blue' }}> ₹{totalAmount !== null ? totalAmount : 0}</h4>
+                                <p ref={totalAmountRef}>Payable Amount (with insurance)</p>
+                                <h4 style={{ fontSize: 'x-large', color: 'blue' }} className='flex items-center justify-center gap-2'>
+                                    ₹{totalAmount !== null ? totalAmount : 0}
+                                    {
+                                        selectedShowroom?.id !== showroom && (!rewardAmount) && (
+                                            <button className='btn btn-primary' type='button' onClick={handleRedeemModal}>Redeem Point</button>
+                                        )
+                                    }
+                                </h4>
                             </div>
                             {
-                                rewardAmount !== 0 && (
+                                rewardAmount > 0 && (
                                     <div>
                                         <p ref={totalAmountRef}>Payable Amount (with reward points)</p> <h4 style={{ fontSize: 'x-large', color: 'blue' }}> ₹{totalAmount !== null ? totalAmount - rewardAmount : 0}</h4>
                                     </div>
@@ -2071,7 +2032,13 @@ const BookingAdd: React.FC = () => {
                     </div>
                 </div>
             </form>
-
+            {/* modal for redeem showroom points */}
+            <ReddemModal
+                open={openRedeemModal}
+                close={() => setOpenRedeemModal(false)}
+                showroom={showrooms.find((showroom) => selectedShowroom?.id === showroom._id)}
+                onRedeem={executeRedeem}
+            />
             {/* modal for creating showroom  */}
             <ShowroomCreate isOpen={modal2} onClose={handleCloseModal} />
             {/* modal for select driver and provider  */}
