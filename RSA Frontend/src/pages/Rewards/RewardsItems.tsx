@@ -117,25 +117,51 @@ function RewardsItem() {
     }
   };
 
-  // Handle deleting a reward
   const handleDeleteReward = async (_id: number) => {
+    // Confirmation dialog
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'No, cancel',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
+      // Show loading indicator
+      Swal.fire({
+        title: 'Deleting...',
+        html: 'Please wait while we delete the reward',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       const response = await axios.delete(`${BASE_URL}/reward/${_id}`);
 
       if (response.status === 200) {
-        fetchRewards()
-        Swal.fire({
+        await Swal.fire({
           icon: 'success',
-          title: 'Success!',
-          text: 'Reward deleted successfully.',
+          title: 'Deleted!',
+          text: 'Reward has been deleted.',
+          timer: 2000,
+          showConfirmButton: false
         });
+        fetchRewards();
       }
     } catch (error: any) {
-      console.error('Error deleted reward:', error);
-      Swal.fire({
+      console.error('Error deleting reward:', error);
+      await Swal.fire({
         icon: 'error',
         title: 'Error!',
-        text: error.response?.data?.message || 'Failed to deleted reward. Please try again.',
+        text: error.response?.data?.message || 'Failed to delete reward. Please try again.',
       });
     }
   };

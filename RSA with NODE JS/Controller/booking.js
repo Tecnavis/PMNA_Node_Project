@@ -829,6 +829,7 @@ exports.updateBooking = async (req, res) => {
             booking.rewardAmount !== updatedData.rewardAmount && updatedData.totalAmount
         ) {
             updatedData.totalAmount -= Number(updatedData.rewardAmount) || 0;
+            updatedData.rewardAmount = Number(updatedData.rewardAmount) || 0;
         }
 
         const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
