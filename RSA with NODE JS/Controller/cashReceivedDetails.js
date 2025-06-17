@@ -6,7 +6,6 @@ const Provider = require('../Model/provider');
 const { default: mongoose } = require('mongoose');
 const Staff = require('../Model/staff');
 
-// ----------------------
 exports.createReceivedDetails = async (req, res) => {
     try {
         const { amount, currentNetAmount, driver, receivedAmount, remark,totalAmount } = req.body;
