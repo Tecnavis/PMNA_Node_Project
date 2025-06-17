@@ -3,6 +3,7 @@ import styles from '../ServiceType/serviceType.module.css';
 import { REWAR_CATEGORYS } from './RewardsItems';
 import { BASE_URL } from '../../config/axiosConfig';
 import { Link } from 'react-router-dom';
+import Swal from 'sweetalert2'
 
 export interface Reward {
     name?: string;
@@ -90,6 +91,7 @@ const RewardForm: React.FC<RewardFormProps> = ({ isEditMode, rewardToEdit, onClo
         } : initialFormState
     );
     const [errors, setErrors] = useState<FormErrors>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
     // Validate form fields
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
@@ -105,10 +107,56 @@ const RewardForm: React.FC<RewardFormProps> = ({ isEditMode, rewardToEdit, onClo
     };
 
     // Handle form submission
-    const handleSubmit = () => {
-        if (validateForm()) {
-            onSubmit(formState, rewardToEdit?._id || 0);
+    const handleSubmit = async () => {
+        if (!validateForm()) return;
+
+        try {
+            // Show confirmation dialog
+            const result = await Swal.fire({
+                title: `${isEditMode ? 'Update' : 'Add'} Confirmation`,
+                text: `Are you sure you want to ${isEditMode ? 'update' : 'add'} reward?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: `Yes, ${isEditMode ? 'update' : 'add'} it!`,
+                cancelButtonText: 'No, cancel',
+                reverseButtons: true
+            });
+
+            if (!result.isConfirmed) return;
+
+            setIsSubmitting(true);
+
+            // Show loading alert
+            Swal.fire({
+                title: `${isEditMode ? 'Updating' : 'Adding'}...`,
+                html: 'Please wait while we process your request',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            await onSubmit(formState, rewardToEdit?._id || 0);
+
+            // Show success message
+            await Swal.fire({
+                title: 'Success!',
+                text: `Item ${isEditMode ? 'updated' : 'added'} successfully`,
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+
             onClose();
+        } catch (error:any) {
+            // Show error message
+            await Swal.fire({
+                title: 'Error!',
+                text: error.message || `Failed to ${isEditMode ? 'update' : 'add'} item`,
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -235,8 +283,16 @@ const RewardForm: React.FC<RewardFormProps> = ({ isEditMode, rewardToEdit, onClo
                     type="button"
                     className={`btn ${isEditMode ? 'btn-info' : 'btn-success'}`}
                     onClick={handleSubmit}
+                    disabled={isSubmitting}
                 >
-                    {isEditMode ? 'Update' : 'Add'}
+                    {isSubmitting ? (
+                        <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            {isEditMode ? 'Updating...' : 'Adding...'}
+                        </>
+                    ) : (
+                        isEditMode ? 'Update' : 'Add'
+                    )}
                 </button>
             </div>
         </div>

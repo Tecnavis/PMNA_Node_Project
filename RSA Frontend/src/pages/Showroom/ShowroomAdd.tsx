@@ -10,6 +10,7 @@ import statesData from './states-and-districts.json';
 import styles from './showroomAdd.module.css';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { getAllExecutives } from '../../services';
+import Loader from '../../components/loader';
 
 const ShowroomAdd: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -714,12 +715,26 @@ const ShowroomAdd: React.FC = () => {
 
                         <div className="sm:col-span-2 mt-3">
                             {uid ? (
-                                <button type="button" className="btn btn-info mt-5" onClick={handleUpdate}>
-                                    Update
+                                <button type="button" className="btn btn-info mt-5" onClick={handleUpdate} disabled={loading}>
+                                    {
+                                        loading ?
+                                            (
+                                                <Loader />
+                                            )
+                                            :
+                                            'Update'
+                                    }
                                 </button>
                             ) : (
-                                <button type="button" className="btn btn-success mt-5" onClick={handleSubmit}>
-                                    Save
+                                <button type="button" className="btn btn-success mt-5" onClick={handleSubmit} disabled={loading}>
+                                    {
+                                        loading ?
+                                            (
+                                                <Loader />
+                                            )
+                                            :
+                                            'Save'
+                                    }
                                 </button>
                             )}
                         </div>

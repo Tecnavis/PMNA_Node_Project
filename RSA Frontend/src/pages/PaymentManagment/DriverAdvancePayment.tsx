@@ -10,16 +10,17 @@ import { AdvanceData, ReceivedDetails } from './types';
 import './AdvancePayment.module.css'
 import Swal from 'sweetalert2';
 import { dateFormate } from '../../utils/dateUtils';
+import Loader from '../../components/loader';
 const getColorForDateTime = (dateTimeString: string) => {
-  // Combine both date and time for hashing
-  let hash = 0;
-  for (let i = 0; i < dateTimeString.length; i++) {
-    hash = dateTimeString.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  // Generate a pastel color based on the full hash
-  const h = Math.abs(hash) % 360;
-  return `hsl(${h}, 70%, 85%)`;
+    // Combine both date and time for hashing
+    let hash = 0;
+    for (let i = 0; i < dateTimeString.length; i++) {
+        hash = dateTimeString.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Generate a pastel color based on the full hash
+    const h = Math.abs(hash) % 360;
+    return `hsl(${h}, 70%, 85%)`;
 };
 const AdvancePayment: React.FC = () => {
 
@@ -31,8 +32,9 @@ const AdvancePayment: React.FC = () => {
     const [receivedDetails, setReceivedDetails] = useState<ReceivedDetails[]>([]);
     const [inHandAmount, setInHandAmount] = useState<number>(0);
     const [receivedAmount, setReceivedAmount] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [remark, setRemark] = useState<string>('');
-        const [receivedUserId, setReceivedUserId] = useState<string>('');
+    const [receivedUserId, setReceivedUserId] = useState<string>('');
 
     const [search, setSearch] = useState<string>('');
     const role = localStorage.getItem('role');
@@ -112,6 +114,7 @@ const AdvancePayment: React.FC = () => {
         });
 
         if (result.isConfirmed) {
+            setIsSubmitting(true)
             try {
                 await axios.post(`${BASE_URL}/advance-payment`, {
                     advance: amount,
@@ -137,6 +140,8 @@ const AdvancePayment: React.FC = () => {
                     text: 'Error settling advance payment. Try again.',
                 });
                 console.error('Advance payment error:', error);
+            } finally {
+                setIsSubmitting(false)
             }
         }
     };
@@ -155,86 +160,89 @@ const AdvancePayment: React.FC = () => {
         }
     }
 
-   const settleReceivedAmount = async () => {
-    try {
-        if (!receivedAmount || !remark.trim()) {
+    const settleReceivedAmount = async () => {
+        try {
+            if (!receivedAmount || !remark.trim()) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top',
+                    icon: 'warning',
+                    title: 'All fields are required',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    customClass: {
+                        popup: 'small-toast'
+                    }
+                });
+                return;
+            }
+
+            // Add confirmation dialog
+            const confirmation = await Swal.fire({
+                title: 'Are you sure?',
+                text: `You are about to settle ₹${receivedAmount}. This action cannot be undone.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, settle it!',
+                cancelButtonText: 'Cancel'
+            });
+
+            // If user confirms, proceed with the API call
+            if (confirmation.isConfirmed) {
+                setIsSubmitting(true)
+                const res = await axios.post(`${BASE_URL}/cash-received-details`, {
+                    totalAmount: receivedAmount,
+                    amount: receivedAmount,
+                    balance: ((Number(inHandAmount) || 0) - (Number(receivedAmount) || 0)),
+                    currentNetAmount: inHandAmount,
+                    driver: selectedDriver,
+                    receivedAmount,
+                    remark,
+                    receivedUser: role,
+
+                    receivedUserId,
+                });
+
+                fetchReceivedData();
+                setRemark('');
+                setReceivedAmount('');
+
+                // Show success message
+                Swal.fire({
+                    toast: true,
+                    position: 'top',
+                    icon: 'success',
+                    title: 'Amount settled successfully!',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
+        } catch (error: any) {
+            console.error("Error settling the received amount", error.message);
+
+            // Show error message
             Swal.fire({
                 toast: true,
                 position: 'top',
-                icon: 'warning',
-                title: 'All fields are required',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'small-toast'
-                }
-            });
-            return;
-        }
-
-        // Add confirmation dialog
-        const confirmation = await Swal.fire({
-            title: 'Are you sure?',
-            text: `You are about to settle ₹${receivedAmount}. This action cannot be undone.`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, settle it!',
-            cancelButtonText: 'Cancel'
-        });
-
-        // If user confirms, proceed with the API call
-        if (confirmation.isConfirmed) {
-            const res = await axios.post(`${BASE_URL}/cash-received-details`, {
-                totalAmount: receivedAmount,
-                amount: receivedAmount,
-                balance: ((Number(inHandAmount) || 0) - (Number(receivedAmount) || 0)),
-                currentNetAmount: inHandAmount,
-                driver: selectedDriver,
-                receivedAmount,
-                remark,
-                receivedUser:role,
-
-                receivedUserId,
-            });
-            
-            fetchReceivedData();
-            setRemark('');
-            setReceivedAmount('');
-            
-            // Show success message
-            Swal.fire({
-                toast: true,
-                position: 'top',
-                icon: 'success',
-                title: 'Amount settled successfully!',
+                icon: 'error',
+                title: 'Failed to settle amount',
+                text: error.message || 'Something went wrong',
                 showConfirmButton: false,
                 timer: 3000,
                 timerProgressBar: true
             });
-        }
-    } catch (error: any) {
-        console.error("Error settling the received amount", error.message);
-        
-        // Show error message
-        Swal.fire({
-            toast: true,
-            position: 'top',
-            icon: 'error',
-            title: 'Failed to settle amount',
-            text: error.message || 'Something went wrong',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
-        
-        if (error instanceof Error) {
-            console.error("Error settling the received amount:", error.message);
+
+            if (error instanceof Error) {
+                console.error("Error settling the received amount:", error.message);
+            }
+        } finally {
+            setIsSubmitting(false)
         }
     }
-}
     useEffect(() => {
         fetchDrivers()
     }, [])
@@ -371,13 +379,21 @@ const AdvancePayment: React.FC = () => {
                         <button
                             className="w-full btn btn-primary py-3 rounded-md"
                             onClick={selectedType === 'advance' ? createAdvancePayment : settleReceivedAmount}
+                            disabled={isSubmitting}
                         >
-                            {selectedType === 'advance' ? 'Add And Settle Amount' : 'Settle Received Amount'}
+                            {
+                                isSubmitting ? (
+                                    <Loader />
+                                ) : (
+                                    /* Show normal button text when not submitting */
+                                    selectedType === 'advance' ? 'Add And Settle Amount' : 'Settle Received Amount'
+                                )
+                            }
                         </button></>)
                 }
             </div>
             {/* Tabs and Tables */}
-                        {/* Tabs and Tables */}
+            {/* Tabs and Tables */}
 
             {
                 selectedType !== '' && <section className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5 overflow-x-auto">
@@ -471,9 +487,9 @@ const AdvancePayment: React.FC = () => {
                                             highlightOnHover
                                             columns={colsForAdvanceDetails}
                                             records={advanceDetails}
-                rowStyle={(record) => ({
-        backgroundColor: getColorForDateTime(record.createdAt.toString())
-    })}
+                                            rowStyle={(record) => ({
+                                                backgroundColor: getColorForDateTime(record.createdAt.toString())
+                                            })}
                                         />
                                     </Tab.Panel>
                                     <Tab.Panel className="overflow-x-auto">
@@ -502,9 +518,9 @@ const AdvancePayment: React.FC = () => {
                                                 highlightOnHover
                                                 columns={colsForReceivedDetails}
                                                 records={receivedDetails}
-                  rowStyle={(record) => ({
-        backgroundColor: getColorForDateTime(record.createdAt.toString())
-    })}
+                                                rowStyle={(record) => ({
+                                                    backgroundColor: getColorForDateTime(record.createdAt.toString())
+                                                })}
                                             />
                                         </Tab.Panel>
                                     </div>
@@ -520,9 +536,9 @@ const AdvancePayment: React.FC = () => {
                                                 highlightOnHover
                                                 columns={colsForCashCollection}
                                                 records={receivedDetails}
-                    rowStyle={(record) => ({
-        backgroundColor: getColorForDateTime(record.createdAt.toString())
-    })}
+                                                rowStyle={(record) => ({
+                                                    backgroundColor: getColorForDateTime(record.createdAt.toString())
+                                                })}
                                             />
                                         </Tab.Panel>
                                     </div>

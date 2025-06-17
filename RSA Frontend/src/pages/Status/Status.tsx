@@ -62,6 +62,7 @@ const Status: React.FC = () => {
     const [selectedResponses, setSelectedResponses] = useState<{ [key: string]: string }>({});
     const [selectedBookingId, setSelectedBookingId] = useState<string>('');
     const [receivedUser, setReceivedUser] = useState<string>('');
+    const [query, setQuery] = useState<string>('');
     const [showAll, setShowAll] = useState(false);
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
@@ -74,7 +75,7 @@ const Status: React.FC = () => {
     };
 
     const fetchBookings = useCallback(
-        async (search: string = '', page: number = 1, limit: number = 10) => {
+        async (search: string = query, page: number = 1, limit: number = 10) => {
             setLoader(true);
 
             let status: string = tab === Tabs.CompletedBookings
@@ -354,7 +355,10 @@ const Status: React.FC = () => {
                     <div className="flex-grow sm:w-auto w-full ml-3">
                         <input
                             type="text"
-                            onChange={(e) => debouncedFetchBookings(e.target.value)}
+                            onChange={(e) => {
+                                debouncedFetchBookings(e.target.value)
+                                setQuery(e.target.value)
+                            }}
                             placeholder="Search..."
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
                         />
