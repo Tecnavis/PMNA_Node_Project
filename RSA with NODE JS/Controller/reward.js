@@ -353,6 +353,7 @@ exports.getAllRedeemableRewards = async (req, res) => {
 
 exports.redeemShowroomPoint = async (req, res) => {
   const { showroomId } = req.params;
+  const { rewardAmount } = req.body;
 
   try {
     const showroom = await Showroom.findById(showroomId);
@@ -365,7 +366,7 @@ exports.redeemShowroomPoint = async (req, res) => {
       throw new Error(`Insufficient points. Available points (${showroom.rewardPoints})`);
     }
 
-    const usablePoints = showroom.rewardPoints / 2;
+    const usablePoints = rewardAmount;
     showroom.rewardPoints -= usablePoints;
 
     showroom.save()

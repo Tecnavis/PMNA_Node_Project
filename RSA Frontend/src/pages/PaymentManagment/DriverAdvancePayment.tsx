@@ -10,6 +10,7 @@ import { AdvanceData, ReceivedDetails, CashCollectionDetails } from './types';
 import './AdvancePayment.module.css';
 import Swal from 'sweetalert2';
 import { dateFormate } from '../../utils/dateUtils';
+import Loader from '../../components/loader';
 const getColorForDateTime = (dateTimeString: string) => {
     // Combine both date and time for hashing
     let hash = 0;
@@ -32,6 +33,7 @@ const AdvancePayment: React.FC = () => {
 
     const [inHandAmount, setInHandAmount] = useState<number>(0);
     const [receivedAmount, setReceivedAmount] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [remark, setRemark] = useState<string>('');
     const [receivedUserId, setReceivedUserId] = useState<string>('');
 
@@ -114,6 +116,7 @@ const AdvancePayment: React.FC = () => {
         });
 
         if (result.isConfirmed) {
+            setIsSubmitting(true)
             try {
                 await axios.post(`${BASE_URL}/advance-payment`, {
                     advance: amount,
@@ -139,6 +142,8 @@ const AdvancePayment: React.FC = () => {
                     text: 'Error settling advance payment. Try again.',
                 });
                 console.error('Advance payment error:', error);
+            } finally {
+                setIsSubmitting(false)
             }
         }
     };
@@ -184,6 +189,7 @@ const AdvancePayment: React.FC = () => {
                 return;
             }
 
+
             // Add confirmation dialog
             const confirmation = await Swal.fire({
                 title: 'Are you sure?',
@@ -193,6 +199,7 @@ const AdvancePayment: React.FC = () => {
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
                 confirmButtonText: 'Yes, settle it!',
+
                 cancelButtonText: 'Cancel',
             });
 
@@ -202,6 +209,7 @@ const AdvancePayment: React.FC = () => {
                     totalAmount: receivedAmount,
                     amount: receivedAmount,
                     balance: (Number(inHandAmount) || 0) - (Number(receivedAmount) || 0),
+
                     currentNetAmount: inHandAmount,
                     driver: selectedDriver,
                     receivedAmount,
@@ -264,6 +272,7 @@ const AdvancePayment: React.FC = () => {
             });
         }
     };
+
     useEffect(() => {
         fetchDrivers();
     }, []);
@@ -399,11 +408,22 @@ const AdvancePayment: React.FC = () => {
                             />
                         </div>
 
-                        <button className="w-full btn btn-primary py-3 rounded-md" onClick={selectedType === 'advance' ? createAdvancePayment : settleReceivedAmount}>
-                            {selectedType === 'advance' ? 'Add And Settle Amount' : 'Settle Received Amount'}
-                        </button>
-                    </>
-                )}
+
+                        <button
+                            className="w-full btn btn-primary py-3 rounded-md"
+                            onClick={selectedType === 'advance' ? createAdvancePayment : settleReceivedAmount}
+                            disabled={isSubmitting}
+                        >
+                            {
+                                isSubmitting ? (
+                                    <Loader />
+                                ) : (
+                                    /* Show normal button text when not submitting */
+                                    selectedType === 'advance' ? 'Add And Settle Amount' : 'Settle Received Amount'
+                                )
+                            }
+                        </button></>)
+                }
             </div>
             {/* Tabs and Tables */}
             {/* Tabs and Tables */}
@@ -497,6 +517,7 @@ const AdvancePayment: React.FC = () => {
                                             records={advanceDetails}
                                             rowStyle={(record) => ({
                                                 backgroundColor: getColorForDateTime(record.createdAt.toString()),
+
                                             })}
                                         />
                                     </Tab.Panel>
@@ -517,7 +538,9 @@ const AdvancePayment: React.FC = () => {
                                                 columns={colsForReceivedDetails}
                                                 records={receivedDetails}
                                                 rowStyle={(record) => ({
+
                                                     backgroundColor: getColorForDateTime(record.createdAt.toString()),
+
                                                 })}
                                             />
                                         </Tab.Panel>
@@ -534,6 +557,7 @@ const AdvancePayment: React.FC = () => {
                                                 records={cashCollectionDetails}
                                                 rowStyle={(record) => ({
                                                     backgroundColor: getColorForDateTime(record.createdAt.toString()),
+
                                                 })}
                                             />
                                         </Tab.Panel>

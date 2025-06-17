@@ -14,6 +14,7 @@ import FeedbackModal from './FeedbackModal';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { FiAlertTriangle, FiCheck, FiZoomIn } from 'react-icons/fi';
 import { FiUpload, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import moment from 'moment';
 
 export interface Booking {
     _id: string;
@@ -266,10 +267,7 @@ const Preview = () => {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
 
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-
-        return `${day}/${month}/${year} ${hours}:${minutes}`;
+        return `${day}/${month}/${year}`;
     };
 
     //   removing prefix fro booking id
@@ -714,9 +712,8 @@ const Preview = () => {
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${
-                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Pickup Details
                                     </button>
@@ -726,9 +723,8 @@ const Preview = () => {
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${
-                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Dropoff Details
                                     </button>
@@ -751,18 +747,18 @@ const Preview = () => {
                                                             setEnlargedImage(url);
                                                         }}
                                                     />
-                                                    
+
                                                     {!booking?.accountantVerified == true && (
                                                         <label className="mt-2 bg-blue-500 py-1 px-2 w-full rounded-md text-white text-center cursor-pointer inline-block">
                                                             Change
                                                             <input type="file" accept="image/*" className="hidden" onChange={(e) => handleChangePickupImage(e, index)} id={`dropoff-image-${index}`} />
                                                         </label>
                                                     )}
-                                                     <span className="text-xs">
+                                                    <span className="text-xs">
                                                         <span> {dateFormate(booking?.pickupTime as unknown as string)}</span> -<span>{formattedTime(booking?.pickupTime as unknown as string)}</span>
                                                     </span>
                                                 </div>
-                                                
+
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
                                                 <div></div>
@@ -804,11 +800,11 @@ const Preview = () => {
                                                                 />
                                                             </label>
                                                         )}
-                                                          <span className="text-xs">
-                                                        <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -<span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
-                                                    </span>
+                                                        <span className="text-xs">
+                                                            <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -<span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
+                                                        </span>
                                                     </div>
-                                                  
+
                                                 </div>
                                             ))}
 
@@ -854,19 +850,19 @@ const Preview = () => {
                                             <span className="text-white text-sm bg-green-500 px-2 py-1 rounded-full flex items-center">
                                                 <FiCheck className="mr-1" /> Verified Inventory
                                             </span>
-                                         
-                                                <div className="flex gap-2">
-                                                       {!booking?.accountantVerified == true && (
+
+                                            <div className="flex gap-2">
+                                                {!booking?.accountantVerified == true && (
                                                     <label className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors cursor-pointer">
                                                         <FiEdit2 size={18} />
                                                         <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleInventoryImageUpload} disabled={isUploadingInventory} />
                                                     </label>
-                                                       )}
-                                                    <button onClick={() => setEnlargedImage(inventoryImageUrl)} className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors">
-                                                        <FiZoomIn size={18} />
-                                                    </button>
-                                                </div>
-                                            
+                                                )}
+                                                <button onClick={() => setEnlargedImage(inventoryImageUrl)} className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors">
+                                                    <FiZoomIn size={18} />
+                                                </button>
+                                            </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -908,7 +904,9 @@ const Preview = () => {
                                     {/* Work Type */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Date And Time</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.createdAt)}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                            {formatDate(booking?.createdAt)} - {new Date(booking?.createdAt ?? (booking?.createdAt || '')).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}
+                                        </td>
                                     </tr>
 
                                     {/* Booking Id */}
@@ -982,12 +980,12 @@ const Preview = () => {
                                             {booking?.driver
                                                 ? booking?.driver?.name
                                                 : booking?.provider
-                                                ? booking.provider?.name
-                                                : booking?.dummyDriverName
-                                                ? booking?.dummyDriverName
-                                                : booking?.dummyProviderName
-                                                ? booking?.dummyProviderName
-                                                : 'No Driver And No Provider found'}
+                                                    ? booking.provider?.name
+                                                    : booking?.dummyDriverName
+                                                        ? booking?.dummyDriverName
+                                                        : booking?.dummyProviderName
+                                                            ? booking?.dummyProviderName
+                                                            : 'No Driver And No Provider found'}
                                         </td>
                                     </tr>
 
@@ -1098,14 +1096,15 @@ const Preview = () => {
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Pickup Time</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                            <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || '')).toLocaleDateString()}</span> -
-                                            <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || '')).toLocaleTimeString()}</span>
+                                            <span>{formatDate(booking?.pickupTime)}</span> - <span>{new Date(booking?.pickupTime ?? (booking?.pickupDate || '')).toLocaleTimeString()}</span>
                                         </td>
                                     </tr>
                                     {/* Dropoff time  */}
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Dropoff Time</td>
-                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>{formatDate(booking?.dropoffTime)}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '8px' }}>
+                                            {formatDate(booking?.dropoffTime)} - <span>{new Date(booking?.pickupTime ?? (booking?.dropoffTime || '')).toLocaleTimeString()}</span>
+                                        </td>
                                     </tr>
                                     {/* Remark */}
                                     <tr>

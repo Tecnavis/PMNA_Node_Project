@@ -74,8 +74,9 @@ const Showroom: React.FC = () => {
     const [showroomId, setShowroomId] = useState<string>('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
+    const [totalCount, setTotalCount] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
-
+    const [showAllMode, setShowAllMode] = useState(false);
     const navigate = useNavigate();
 
     // checking the token
@@ -101,6 +102,7 @@ const Showroom: React.FC = () => {
             setFilteredShowrooms(response.data.data);
             setTotalPages(response.data.totalPages);
             setCurrentPage(response.data.page);
+            setTotalCount(response.data.totalCount);
         } catch (error) {
             console.error('Error fetching showroom staff:', error);
         }
@@ -621,76 +623,101 @@ const Showroom: React.FC = () => {
                         type="button"
                         onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                         className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                        disabled={currentPage === 1}
+                        disabled={currentPage === 1 || showAllMode}
                     >
                         <GrPrevious />
                     </button>
                 </li>
 
-                {/* Always show first page */}
+                {/* Page numbers - hide when in showAll mode */}
+                {!showAllMode && (
+                    <>
+                        {/* Always show first page */}
+                        <li>
+                            <button
+                                type="button"
+                                onClick={() => handlePageChange(1)}
+                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                            >
+                                1
+                            </button>
+                        </li>
+
+                        {/* Show ellipsis if current page is far from start */}
+                        {currentPage > 4 && totalPages > 7 && (
+                            <li className="flex items-end">
+                                <span className="px-1">...</span>
+                            </li>
+                        )}
+
+                        {/* Middle pages - dynamic range */}
+                        {Array.from({ length: Math.min(5, totalPages - 2) }, (_, i) => {
+                            let pageNum;
+                            if (currentPage < 4) {
+                                pageNum = i + 2;
+                            } else if (currentPage > totalPages - 3) {
+                                pageNum = totalPages - 4 + i;
+                            } else {
+                                pageNum = currentPage - 2 + i;
+                            }
+
+                            if (pageNum > 1 && pageNum < totalPages) {
+                                return (
+                                    <li key={pageNum}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handlePageChange(pageNum)}
+                                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    </li>
+                                );
+                            }
+                            return null;
+                        })}
+
+                        {/* Show ellipsis if current page is far from end */}
+                        {currentPage < totalPages - 3 && totalPages > 7 && (
+                            <li className="flex items-end">
+                                <span className="px-1">...</span>
+                            </li>
+                        )}
+
+                        {/* Always show last page if there's more than 1 page */}
+                        {totalPages > 1 && (
+                            <li>
+                                <button
+                                    type="button"
+                                    onClick={() => handlePageChange(totalPages)}
+                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === totalPages ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                                >
+                                    {totalPages}
+                                </button>
+                            </li>
+                        )}
+                    </>
+                )}
+
+                {/* Show All / Paginated toggle button */}
                 <li>
                     <button
                         type="button"
-                        onClick={() => handlePageChange(1)}
-                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
+                        onClick={() => {
+                            if (showAllMode) {
+                                // Return to paginated view (first page)
+                                fetchShowroom(searchTerm, 1, 10);
+                            } else {
+                                // Show all (using a reasonable large number)
+                                fetchShowroom(searchTerm, 1, totalCount);
+                            }
+                            setShowAllMode(!showAllMode);
+                        }}
+                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${showAllMode ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
                     >
-                        1
+                        {showAllMode ? 'Show Paginated' : 'Show All'}
                     </button>
                 </li>
-
-                {/* Show ellipsis if current page is far from start */}
-                {currentPage > 4 && totalPages > 7 && (
-                    <li className="flex items-end">
-                        <span className="px-1">...</span>
-                    </li>
-                )}
-
-                {/* Middle pages - dynamic range */}
-                {Array.from({ length: Math.min(5, totalPages - 2) }, (_, i) => {
-                    let pageNum;
-                    if (currentPage < 4) {
-                        pageNum = i + 2; // Show pages 2-6 when near start
-                    } else if (currentPage > totalPages - 3) {
-                        pageNum = totalPages - 4 + i; // Show last pages when near end
-                    } else {
-                        pageNum = currentPage - 2 + i; // Show pages around current
-                    }
-
-                    if (pageNum > 1 && pageNum < totalPages) {
-                        return (
-                            <li key={pageNum}>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePageChange(pageNum)}
-                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                                >
-                                    {pageNum}
-                                </button>
-                            </li>
-                        );
-                    }
-                    return null;
-                })}
-
-                {/* Show ellipsis if current page is far from end */}
-                {currentPage < totalPages - 3 && totalPages > 7 && (
-                    <li className="flex items-end">
-                        <span className="px-1">...</span>
-                    </li>
-                )}
-
-                {/* Always show last page if there's more than 1 page */}
-                {totalPages > 1 && (
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(totalPages)}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === totalPages ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                        >
-                            {totalPages}
-                        </button>
-                    </li>
-                )}
 
                 {/* Next Button */}
                 <li>
@@ -698,7 +725,7 @@ const Showroom: React.FC = () => {
                         type="button"
                         onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                         className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                        disabled={currentPage === totalPages}
+                        disabled={currentPage === totalPages || showAllMode}
                     >
                         <GrNext />
                     </button>
