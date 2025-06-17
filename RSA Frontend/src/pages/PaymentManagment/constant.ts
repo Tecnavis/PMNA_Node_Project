@@ -1,6 +1,6 @@
 import { dateFormate, formattedTime } from "../../utils/dateUtils";
 import { Booking } from "../Bookings/Bookings";
-import { AdvanceData, ReceivedDetails } from "./types";
+import { AdvanceData, CashCollectionDetails, ReceivedDetails } from "./types";
 const roundToNearestMinute = (date: Date) => {
   const roundedDate = new Date(date);
   roundedDate.setSeconds(0);
@@ -165,6 +165,11 @@ export const ReceivedDetailsTableColumn = [
         render: (booking: ReceivedDetails) => (booking.driver?.name || "N/A")
     },
        {
+        title: "FILE NUMBER",
+        accessor: 'fileNumber',
+        render: (receivedDetails: ReceivedDetails) => (receivedDetails?.fileNumber || "N/A")
+    },
+       {
         title: "AMOUNT FROM DRIVER",
         accessor: 'totalAmount',
         render: (receivedDetails: ReceivedDetails) => `₹ ${receivedDetails?.totalAmount || 0}`
@@ -190,50 +195,42 @@ export const CashCollectionDetailsTableColumn = [
  {
     title: "DATE AND TIME",
     accessor: 'createdAt',
-    render: (cashCollection: ReceivedDetails) => {
-      const dateStr = dateFormate(cashCollection?.createdAt as unknown as string);
-      const timeStr = formattedTime(cashCollection?.createdAt as unknown as string);
+    render: (cashCollectionDetails: CashCollectionDetails) => {
+      const dateStr = dateFormate(cashCollectionDetails?.createdAt as unknown as string);
+      const timeStr = formattedTime(cashCollectionDetails?.createdAt as unknown as string);
       return `${dateStr} at ${timeStr}`;
     },
-    cellsStyle: (cashCollection: ReceivedDetails) => {
+    cellsStyle: (cashCollectionDetails: CashCollectionDetails) => {
       return {
-        backgroundColor: getColorForDateTime(new Date(cashCollection.createdAt))
+        backgroundColor: getColorForDateTime(new Date(cashCollectionDetails.createdAt))
       };
     }
   },
     {
         title: "DRIVER NAME",
         accessor: 'driver.name',
-        render: (booking: ReceivedDetails) => (booking.driver?.name || "N/A")
+        render: (booking: CashCollectionDetails) => (booking.driver?.name || "N/A")
     },
-    {
-        title: "FILE NUMBER",
-        accessor: 'fileNumber',
-        render: (booking: ReceivedDetails) => (booking.fileNumber || "N/A")
+     {
+        title: "CURRENT CASH IN HAND",
+        accessor: 'currentCashInHand',
+        render: (booking: CashCollectionDetails) => `₹ ${booking?.currentCashInHand || 0}`
     },
        {
         title: "AMOUNT FROM DRIVER",
-        accessor: 'totalAmount',
-        render: (booking: ReceivedDetails) => `₹ ${booking?.totalAmount || 0}`
+        accessor: 'totalDriverAmount',
+        render: (booking: CashCollectionDetails) => `₹ ${booking?.totalDriverAmount || 0}`
     },
-    // {
-    //     title: "INITIAL TOTAL AMOUNT IN HAND",
-    //     accessor: 'driver.cashInHand',
-    //     render: (cashCollection: ReceivedDetails) => `₹${cashCollection?.currentNetAmount || 0}`
-    // },
-    {
-        title: "BOOKING AMOUNT",
-        accessor: 'totalAmount',
-        render: (cashCollection: ReceivedDetails) => `₹${cashCollection?.amount || 0}`
-    },
-    {
-        title: "COLLECTED AMOUNT",
-        accessor: 'receivedAmount',
-        render: (cashCollection: ReceivedDetails) => `₹${cashCollection?.receivedAmount || 0}`
-    },
+//    {
+//     title: "FILE NUMBERS",
+//     accessor: 'fileNumbers',
+//     render: (cashCollection: CashCollectionDetails) => (
+//         cashCollection.fileNumbers?.join(', ') || 'N/A'
+//     )
+// },
     {
         title: "BALANCE",
         accessor: 'balance',
-        render: (cashCollection: ReceivedDetails) => cashCollection.balance
+        render: (cashCollection: CashCollectionDetails) => cashCollection.balance
     },
 ];

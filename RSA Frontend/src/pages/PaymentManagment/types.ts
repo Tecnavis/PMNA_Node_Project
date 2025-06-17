@@ -27,3 +27,20 @@ export interface ReceivedDetails {
     createdAt: string;
     remark?: string;
 }
+export interface CashCollectionDetails {
+    _id: string;
+    fileNumbers: string[]; // Array of file numbers
+    balance: string;       // String representation of balance
+    currentCashInHand: number;
+    totalDriverAmount: number;
+    driver: { 
+        _id: string;      // Typically include the ID
+        name: string 
+    };
+    receivedUser: string;  // Enum would be better if limited values
+    receivedUserId?: string; // Optional if not always present
+    receivedAmount: number;
+    createdAt: string | Date; // Can be string or Date object
+    updatedAt?: string | Date; // Optional if using timestamps
+    remark?: string;       // Optional remark field
+}
