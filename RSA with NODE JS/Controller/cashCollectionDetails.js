@@ -35,7 +35,6 @@ exports.createCashCollectionDetails = async (req, res) => {
         // Create cash collection record only
         const cashCollection = await CashCollectionDetails.create({
             driver: driverId,
-            fileNumbers: [], // Empty since we're not processing bookings here
             balance: (cashInHand - totalAmount).toString(),
             currentCashInHand: cashInHand,
             totalDriverAmount: totalAmount,
@@ -90,7 +89,6 @@ exports.getAllCashCollectionDetails = async (req, res) => {
             const regex = new RegExp(searchQuery, 'i');
 
             const searchConditions = [
-                { 'fileNumbers': { $in: [regex] } }, // Searching in fileNumbers array
                 { remark: regex },
                 { balance: regex }
             ];

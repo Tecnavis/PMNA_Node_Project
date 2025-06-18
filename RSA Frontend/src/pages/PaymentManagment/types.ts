@@ -17,19 +17,24 @@ export interface AdvanceData {
 
 export interface ReceivedDetails {
     _id: string;
-    amount: string;
     fileNumber: string;
     balance: string;
-    totalAmount:number;
     currentNetAmount: number;
-    driver: { name: string };
+    amount: string ;
+    driver: {
+        _id: string;
+        name: string;
+    };
     receivedAmount: number;
-    createdAt: string;
+    totalAmount?: number;
+    receivedUser: string;
+    receivedUserId?: string;
+    createdAt: string | Date;
+    updatedAt?: string | Date;
     remark?: string;
 }
 export interface CashCollectionDetails {
     _id: string;
-    fileNumbers: string[]; // Array of file numbers
     balance: string;       // String representation of balance
     currentCashInHand: number;
     totalDriverAmount: number;
