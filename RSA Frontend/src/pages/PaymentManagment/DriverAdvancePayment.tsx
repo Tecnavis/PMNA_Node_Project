@@ -43,12 +43,10 @@ const AdvancePayment: React.FC = () => {
     const [tabIndex, setTabIndex] = useState(0);
     const printRef = useRef<HTMLDivElement>(null);
 
-    // creating columns
-    const colsForAdvanceDetails = AdvanceDetailsTableColumn.map((col) => col);
-
-    const colsForCashCollection = CashCollectionDetailsTableColumn.map((col) => col);
-    const colsForReceivedDetails = ReceivedDetailsTableColumn.map((col) => col);
-
+    // In your component
+const colsForAdvanceDetails = AdvanceDetailsTableColumn;
+const colsForCashCollection = CashCollectionDetailsTableColumn; 
+const colsForReceivedDetails = ReceivedDetailsTableColumn;
     const handlePrint = () => {
         if (!printRef.current) return;
 
@@ -471,7 +469,7 @@ const AdvancePayment: React.FC = () => {
                                                         before:transition-all before:duration-700 hover:text-gray-700 hover:before:w-full
                                     `}
                                     >
-                                        Received Details
+                                        Cash Collection
                                     </Tab>
                                     <Tab
                                         as="button"
@@ -483,7 +481,7 @@ const AdvancePayment: React.FC = () => {
                                                         before:transition-all before:duration-700 hover:text-gray-700 hover:before:w-full
                                 `}
                                     >
-                                        Cash Collection
+                                        Received Details
                                     </Tab>
                                 </>
                             )}
@@ -529,16 +527,15 @@ const AdvancePayment: React.FC = () => {
                                 <>
                                     <div ref={tabIndex === 0 ? printRef : null} className="">
                                         <h1 className="hidden print:block text-2xl font-bold text-center mb-2">Received Details</h1>
-                                        <Tab.Panel className="overflow-x-auto">
+                                           <Tab.Panel className="overflow-x-auto">
                                             <DataTable
                                                 withBorder
                                                 withColumnBorders
                                                 striped
                                                 highlightOnHover
-                                                columns={colsForReceivedDetails}
-                                                records={receivedDetails}
+                                                columns={colsForCashCollection}
+                                                records={cashCollectionDetails}
                                                 rowStyle={(record) => ({
-
                                                     backgroundColor: getColorForDateTime(record.createdAt.toString()),
 
                                                 })}
@@ -553,8 +550,8 @@ const AdvancePayment: React.FC = () => {
                                                 withColumnBorders
                                                 striped
                                                 highlightOnHover
-                                                columns={colsForCashCollection}
-                                                records={cashCollectionDetails}
+                                                columns={colsForReceivedDetails}
+                                                records={receivedDetails}
                                                 rowStyle={(record) => ({
                                                     backgroundColor: getColorForDateTime(record.createdAt.toString()),
 
