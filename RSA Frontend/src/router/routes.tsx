@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import AttendanceRoute from '../pages/Attendance/Index';
 const Redeems = lazy(() => import('../pages/Rewards/Redeems'))
 const TransactionList = lazy(() => import('../pages/SalaryTransaction'))
 const DriverTransactionList = lazy(() => import('../pages/SalaryTransactionDetails'))
@@ -397,7 +398,7 @@ const routes = [
     },
     {
         path: '/attendance',
-        element: role === 'admin' || role === '' ? <AdminAttendance /> : <StaffAttendance />,
+        element: <AttendanceRoute/>
     },
     {
         path: '/appBooking',
