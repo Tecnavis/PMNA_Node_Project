@@ -8,7 +8,17 @@ import { AdvanceDetailsTableColumn, CashCollectionDetailsTableColumn, colsForAdv
 import { AdvanceData, ReceivedDetails } from './types';
 import './AdvancePayment.module.css'
 import Swal from 'sweetalert2';
+const getColorForDateTime = (dateTimeString: string) => {
+    // Combine both date and time for hashing
+    let hash = 0;
+    for (let i = 0; i < dateTimeString.length; i++) {
+        hash = dateTimeString.charCodeAt(i) + ((hash << 5) - hash);
+    }
 
+    // Generate a pastel color based on the full hash
+    const h = Math.abs(hash) % 360;
+    return `hsl(${h}, 70%, 85%)`;
+};
 const AdvancePayment: React.FC = () => {
 
     const [providers, setProviders] = useState<Driver[]>([]);
@@ -25,11 +35,12 @@ const AdvancePayment: React.FC = () => {
     const [tabIndex, setTabIndex] = useState(0);
     const printRef = useRef<HTMLDivElement>(null);
 
-    // creating columns 
-    const colsForAdvanceDetails = AdvanceDetailsTableColumn.map((col) => col)
-    const colsForCashCollection = CashCollectionDetailsTableColumn.map((col) => col)
-    const colsForReceivedDetails = ReceivedDetailsTableColumn.map((col) => col)
-
+   // creating columns
+       const colsForAdvanceDetails = AdvanceDetailsTableColumn.map((col) => col);
+   
+       const colsForCashCollection = CashCollectionDetailsTableColumn.map((col) => col);
+       const colsForReceivedDetails = ReceivedDetailsTableColumn.map((col) => col);
+   
     const handlePrint = () => {
         if (!printRef.current) return;
 
@@ -327,16 +338,16 @@ const AdvancePayment: React.FC = () => {
                 }
             </div>
             {/* Tabs and Tables */}
-            {
-                selectedType !== '' && <section className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5 overflow-x-auto">
+            {selectedType !== '' && (
+                <section className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5 overflow-x-auto">
                     <Tab.Group selectedIndex={tabIndex} onChange={setTabIndex}>
                         <Tab.List className="mt-5 flex justify-evenly w-full">
-                            {selectedType === "advance" ? (
+                            {selectedType === 'advance' ? (
                                 <>
                                     <Tab
                                         as="button"
                                         className={({ selected }) => `
-                                                        ${selected ? "text-gray-700 !outline-none before:!w-full bg-gray-100" : ""} 
+                                                        ${selected ? 'text-gray-700 !outline-none before:!w-full bg-gray-100' : ''} 
                                                         relative flex justify-center text-3xl w-full p-3 rounded   
                                                         before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
                                                         before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
@@ -348,7 +359,7 @@ const AdvancePayment: React.FC = () => {
                                     <Tab
                                         as="button"
                                         className={({ selected }) => `
-                                                        ${selected ? "text-gray-700 !outline-none before:!w-full bg-gray-100" : ""} 
+                                                        ${selected ? 'text-gray-700 !outline-none before:!w-full bg-gray-100' : ''} 
                                                         relative flex justify-center text-3xl w-full p-3 rounded   
                                                         before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
                                                         before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
@@ -363,7 +374,7 @@ const AdvancePayment: React.FC = () => {
                                     <Tab
                                         as="button"
                                         className={({ selected }) => `
-                                                        ${selected ? "text-gray-700 !outline-none before:!w-full bg-gray-100" : ""} 
+                                                        ${selected ? 'text-gray-700 !outline-none before:!w-full bg-gray-100' : ''} 
                                                         relative flex justify-center text-3xl w-full p-3 rounded   
                                                         before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
                                                         before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
@@ -375,7 +386,7 @@ const AdvancePayment: React.FC = () => {
                                     <Tab
                                         as="button"
                                         className={({ selected }) => `
-                                                        ${selected ? "text-gray-700 !outline-none before:!w-full bg-gray-100" : ""} 
+                                                        ${selected ? 'text-gray-700 !outline-none before:!w-full bg-gray-100' : ''} 
                                                         relative flex justify-center text-3xl w-full p-3 rounded
                                                         before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
                                                         before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
@@ -388,27 +399,22 @@ const AdvancePayment: React.FC = () => {
                             )}
                         </Tab.List>
                         <Tab.Panels className="mt-5">
-                            <div className='my-5 flex flex-row gap-2'>
-                                {
-                                    selectedType !== 'advance' && (
-                                        <button
-                                            type="button"
-                                            className="btn btn-primary gap-2"
-                                            onClick={handlePrint}
-                                        >
-                                            <IconPrinter />
-                                            Print
-                                        </button>)
-                                }
+                            <div className="my-5 flex flex-row gap-2">
+                                {selectedType !== 'advance' && (
+                                    <button type="button" className="btn btn-primary gap-2" onClick={handlePrint}>
+                                        <IconPrinter />
+                                        Print
+                                    </button>
+                                )}
                                 <input
                                     type="text"
-                                    placeholder='Search by Driver or File Number'
-                                    className='p-3 w-full rounded-md border-2 '
+                                    placeholder="Search by Driver or File Number"
+                                    className="p-3 w-full rounded-md border-2 "
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
                             </div>
-                            {selectedType === "advance" ? (
+                            {selectedType === 'advance' ? (
                                 <>
                                     <Tab.Panel className="overflow-x-auto">
                                         <DataTable
@@ -419,26 +425,20 @@ const AdvancePayment: React.FC = () => {
                                             highlightOnHover
                                             columns={colsForAdvanceDetails}
                                             records={advanceDetails}
+                                            rowStyle={(record) => ({
+                                                backgroundColor: getColorForDateTime(record.createdAt.toString()),
+
+                                            })}
                                         />
                                     </Tab.Panel>
                                     <Tab.Panel className="overflow-x-auto">
-                                        <DataTable
-                                            minHeight={300}
-                                            withBorder
-                                            withColumnBorders
-                                            striped
-                                            highlightOnHover
-                                            columns={colsForAdvance}
-                                            records={advanceDetails}
-                                        />
+                                        <DataTable minHeight={300} withBorder withColumnBorders striped highlightOnHover columns={colsForAdvance} records={advanceDetails} />
                                     </Tab.Panel>
                                 </>
                             ) : (
                                 <>
-                                    <div ref={tabIndex === 0 ? printRef : null} className=''>
-                                        <h1 className="hidden print:block text-2xl font-bold text-center mb-2">
-                                            Received Details
-                                        </h1>
+                                    <div ref={tabIndex === 0 ? printRef : null} className="">
+                                        <h1 className="hidden print:block text-2xl font-bold text-center mb-2">Received Details</h1>
                                         <Tab.Panel className="overflow-x-auto">
                                             <DataTable
                                                 withBorder
@@ -447,13 +447,16 @@ const AdvancePayment: React.FC = () => {
                                                 highlightOnHover
                                                 columns={colsForReceivedDetails}
                                                 records={receivedDetails}
+                                                rowStyle={(record) => ({
+
+                                                    backgroundColor: getColorForDateTime(record.createdAt.toString()),
+
+                                                })}
                                             />
                                         </Tab.Panel>
                                     </div>
-                                    <div ref={tabIndex === 1 ? printRef : null} className='w-full overflow-x-auto print:overflow-visible print:w-full print:whitespace-normal print:text-sm'>
-                                        <h1 className="hidden print:block text-2xl font-bold text-center mb-2">
-                                            Cash Collection
-                                        </h1>
+                                    {/* <div ref={tabIndex === 1 ? printRef : null} className="w-full overflow-x-auto print:overflow-visible print:w-full print:whitespace-normal print:text-sm">
+                                        <h1 className="hidden print:block text-2xl font-bold text-center mb-2">Cash Collection</h1>
                                         <Tab.Panel className="overflow-x-auto">
                                             <DataTable
                                                 withBorder
@@ -461,16 +464,20 @@ const AdvancePayment: React.FC = () => {
                                                 striped
                                                 highlightOnHover
                                                 columns={colsForCashCollection}
-                                                records={receivedDetails}
+                                                records={cashCollectionDetails}
+                                                rowStyle={(record) => ({
+                                                    backgroundColor: getColorForDateTime(record.createdAt.toString()),
+
+                                                })}
                                             />
                                         </Tab.Panel>
-                                    </div>
+                                    </div> */}
                                 </>
                             )}
                         </Tab.Panels>
                     </Tab.Group>
                 </section>
-            }
+            )}
         </main>
     )
 }
