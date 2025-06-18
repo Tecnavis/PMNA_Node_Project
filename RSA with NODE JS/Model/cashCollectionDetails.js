@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const CashCollectionDetailsSchema = new mongoose.Schema({
-    fileNumbers: { type: [String], required: true }, // Fixed array definition
     balance: { type: String, required: true },
     currentCashInHand: { type: Number, required: true },
     totalDriverAmount: { type: Number, required: true },
