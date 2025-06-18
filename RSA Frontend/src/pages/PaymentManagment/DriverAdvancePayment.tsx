@@ -238,7 +238,7 @@ const AdvancePayment: React.FC = () => {
                 setInHandAmount(0);
                 // setSelectedDriver('');
                 // setSelectedType('');
-
+// -----------
                 Swal.fire({
                     title: 'Settlement Complete!',
                     html: `
