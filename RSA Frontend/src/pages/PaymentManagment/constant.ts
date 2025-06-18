@@ -1,3 +1,4 @@
+import { DataTableColumn } from "mantine-datatable";
 import { dateFormate, formattedTime } from "../../utils/dateUtils";
 import { Booking } from "../Bookings/Bookings";
 import { AdvanceData, CashCollectionDetails, ReceivedDetails } from "./types";
@@ -28,7 +29,7 @@ const getColorForDateTime = (dateTime: Date) => {
 };
 //Columns Titles
 // --------------------------------------
-export const AdvanceDetailsTableColumn = [
+export const AdvanceDetailsTableColumn: DataTableColumn<AdvanceData>[] = [
     {
         title: "SI",
         accessor: '_id',
@@ -62,7 +63,7 @@ export const AdvanceDetailsTableColumn = [
 ];
 //Columns Titles
 
-export const colsForAdvance = [
+export const colsForAdvance: DataTableColumn<AdvanceData>[] = [
    
   {
     title: "DATE AND TIME",
@@ -138,7 +139,7 @@ export const colsForAdvance = [
 ];
 //Columns Titles
 
-export const ReceivedDetailsTableColumn = [
+export const ReceivedDetailsTableColumn: DataTableColumn<ReceivedDetails>[] = [
     {
         title: "SI",
         accessor: '_id',
@@ -186,7 +187,7 @@ export const ReceivedDetailsTableColumn = [
 ];
 //Columns Titles
 
-export const CashCollectionDetailsTableColumn = [
+export const CashCollectionDetailsTableColumn: DataTableColumn<CashCollectionDetails>[] = [
     {
         title: "SI",
         accessor: '_id',
