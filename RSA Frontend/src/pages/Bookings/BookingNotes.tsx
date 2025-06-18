@@ -27,12 +27,7 @@ const BookingNotes: React.FC<BookingNotes> = ({ role, id }) => {
             const data = res.data
             setNotes(data.data)
         } catch (error) {
-            sweetAlert.fire({
-                title: 'Error!',
-                text: 'Failed to fetch notes',
-                icon: 'error',
-                confirmButtonText: 'OK'
-            })
+            console.log("No booking note found")
         } finally {
             setIsLoading(false)
         }
