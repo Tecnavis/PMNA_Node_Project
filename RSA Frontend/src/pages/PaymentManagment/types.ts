@@ -26,8 +26,6 @@ export interface ReceivedDetails {
     receivedAmount: number;
     createdAt: string;
     remark?: string;
-    fileNumbers: string[];
-    currentCashInHand: number;
 }
 export interface CashCollectionDetails {
     _id: string;
