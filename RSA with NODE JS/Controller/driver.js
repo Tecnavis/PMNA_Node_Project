@@ -300,6 +300,7 @@ exports.getDriversForDropdown = async (req, res) => {
     });
   }
 };
+// ------------------------------------
 exports.completeSettlement = async (req, res) => {
     try {
         // Verify all required models are available

@@ -21,7 +21,8 @@ import {
     DocumentTextIcon,
     CheckCircleIcon,
     ArrowPathIcon,
-    CurrencyDollarIcon
+    CurrencyDollarIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 interface Company {
@@ -245,31 +246,38 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
         fetchCompanies(searchCompnies);
     }, [searchDriver, searchProviders, searchCompnies]);
     // Add these functions
-    const handleSettleClick = async (driver: Driver) => {
-        try {
-            setSelectedDriver(driver);
-            setLoading(true);
+  const handleSettleClick = async (driver: Driver) => {
+    try {
+        setSelectedDriver(driver);
+        setLoading(true);
 
-            // Fetch pending expenses for this driver
-            const response = await axios.get(`${backendUrl}/expense/pending`);
-            const driverPendingExpenses = response.data.expenseData.filter(
-                (expense: any) => expense.driver._id === driver._id
-            );
- if (driverPendingExpenses.length === 0) {
-            // Show the no expenses modal instead of window.confirm
+        // Fetch pending expenses for this driver
+        const response = await axios.get(`${backendUrl}/expense/pending`);
+        const driverPendingExpenses = response.data.expenseData.filter(
+            (expense: any) => expense.driver._id === driver._id
+        );
+
+        // Check if there's truly nothing to settle
+        const hasNegativeBalance = driver.balanceAmount < 0;
+        const hasPendingExpenses = driverPendingExpenses.length > 0;
+        
+        // Only show "no expenses" modal if no expenses AND no negative balance
+        if (!hasPendingExpenses && !hasNegativeBalance) {
             setShowNoExpensesModal(true);
             return;
         }
 
-            setPendingExpenses(driverPendingExpenses);
-            setShowSettlementModal(true);
-        } catch (error) {
-            console.error('Error fetching pending expenses:', error);
-            // Handle error (show toast/notification)
-        } finally {
-            setLoading(false);
-        }
-    };
+        // Otherwise, show settlement modal (will handle negative balance case)
+        setPendingExpenses(driverPendingExpenses);
+        setShowSettlementModal(true);
+    } catch (error) {
+        console.error('Error fetching pending expenses:', error);
+        toast.error('Failed to fetch settlement data');
+    } finally {
+        setLoading(false);
+    }
+};
+    // -------------------------------------------------------------------------------------------
 const handleCompleteEmptySettlement = async () => {
     try {
         if (!selectedDriver) {
@@ -319,96 +327,58 @@ const handleCompleteEmptySettlement = async () => {
         setShowNoExpensesModal(false);
     }
 };
-    const handleApproveAll = async () => {
-        let loadingToast: string | undefined;
+// ------------------------------------------------------
+ const handleApproveAll = async () => {
+    let loadingToast: string | undefined;
 
-        try {
-            setLoading(true);
+    try {
+        setLoading(true);
 
-            if (!selectedDriver) {
-                toast.error('No driver selected');
-                return;
-            }
+        if (!selectedDriver) {
+            toast.error('No driver selected');
+            return;
+        }
 
-            const totalPending = pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-            const currentCash = selectedDriver.cashInHand || 0;
+        const totalPendingExpenses = pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+        const balanceAmount = selectedDriver.balanceAmount || 0;
+        const currentCash = selectedDriver.cashInHand || 0;
+        
+        // Calculate total amount needed
+        const totalAmountNeeded = balanceAmount < 0 
+            ? (pendingExpenses.length > 0 ? totalPendingExpenses + Math.abs(balanceAmount) : Math.abs(balanceAmount))
+            : totalPendingExpenses;
 
-            if (currentCash < totalPending) {
-                const shortage = totalPending - currentCash;
-                setRequiredAmount(shortage);
+        // Check if cashInHand exactly equals balanceAmount (negative balance case)
+        const exactBalanceMatch = balanceAmount < 0 && currentCash === Math.abs(balanceAmount);
+        if (currentCash < totalAmountNeeded && !exactBalanceMatch) {
+            const shortage = totalAmountNeeded - currentCash;
+            setRequiredAmount(shortage);
 
-                // Create a custom toast with buttons
-                const toastId = toast.custom((t) => (
-                    <div className="bg-white rounded-lg shadow-lg p-4 w-full max-w-md">
-                        <div className="text-left">
-                            <h3 className="font-bold text-lg mb-2">Insufficient Funds</h3>
-                            <p>Driver has ${currentCash.toFixed(2)} but needs ${totalPending.toFixed(2)}</p>
-                            <p className="font-bold mt-2">Shortage: ${shortage.toFixed(2)}</p>
-                            <p className="mt-2">Would you like to provide an amount?</p>
-                        </div>
-                        <div className="flex justify-end space-x-2 mt-4">
-                            <button
-                                onClick={() => {
-                                    setShowAdvanceModal(true);
-                                    toast.dismiss(t.id);
-                                }}
-                                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                                Add Amount
-                            </button>
-                            <button
-                                onClick={() => toast.dismiss(t.id)}
-                                className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                ));
-
-                return;
-            }
-
+            // Create a custom toast with buttons
             const toastId = toast.custom((t) => (
                 <div className="bg-white rounded-lg shadow-lg p-4 w-full max-w-md">
-                    <h3 className="font-bold text-lg mb-2">Confirm Settlement</h3>
-                    <p className="mb-4">Approve {pendingExpenses.length} expenses totaling ${totalPending.toFixed(2)}?</p>
-                    <div className="flex justify-end space-x-2">
+                    <div className="text-left">
+                        <h3 className="font-bold text-lg mb-2">Insufficient Funds</h3>
+                        <p className="mb-1">Driver has ${currentCash.toFixed(2)} but needs ${totalAmountNeeded.toFixed(2)}</p>
+                        {balanceAmount < 0 && (
+                            <p className="text-sm text-gray-600">
+                                {pendingExpenses.length > 0 
+                                    ? `(Includes ${totalPendingExpenses.toFixed(2)} expenses + ${Math.abs(balanceAmount).toFixed(2)} balance)`
+                                    : `(Balance settlement)`}
+                            </p>
+                        )}
+                        <p className="font-bold mt-2">Shortage: ${shortage.toFixed(2)}</p>
+                        <p className="mt-2">Would you like to provide an amount?</p>
+                    </div>
+                    <div className="flex justify-end space-x-2 mt-4">
                         <button
-                            onClick={async () => {
+                            onClick={() => {
+                                setShowAdvanceModal(true);
                                 toast.dismiss(t.id);
-                                loadingToast = toast.loading('Processing...');
-
-                                try {
-                                    // Call the complete settlement endpoint
-                                    const response = await axios.patch(
-                                        `${backendUrl}/expense/complete-settlement/${selectedDriver?._id}`,
-                                        { advanceAmount: 0 } // No advance unless specified
-                                    );
-
-                                    if (response.data.success) {
-                                        toast.success(`Approved ${pendingExpenses.length} expenses successfully!`);
-                                        fetchDrivers(); // Refresh data
-                                        setShowSettlementModal(false);
-                                    } else {
-                                        toast.error(response.data.message);
-                                    }
-                                } catch (error) {
-                                    let errorMessage = 'There was an error completing the settlement.';
-                                    if (axios.isAxiosError(error)) {
-                                        errorMessage = error.response?.data?.message || error.message;
-                                    } else if (error instanceof Error) {
-                                        errorMessage = error.message;
-                                    }
-                                    toast.error(errorMessage);
-                                } finally {
-                                    if (loadingToast) toast.dismiss(loadingToast);
-                                    setLoading(false);
-                                }
                             }}
                             className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
                         >
-                            Confirm
+                            Add Amount
                         </button>
                         <button
                             onClick={() => toast.dismiss(t.id)}
@@ -418,14 +388,187 @@ const handleCompleteEmptySettlement = async () => {
                         </button>
                     </div>
                 </div>
-            ), { duration: Infinity });
+            ));
 
-        } catch (error) {
-            // ... existing error handling ...
-        } finally {
-            setLoading(false);
+            return;
         }
-    };
+
+        const toastId = toast.custom((t) => (
+            <div className="bg-white rounded-lg shadow-lg p-4 w-full max-w-md">
+                <h3 className="font-bold text-lg mb-2">Confirm Settlement</h3>
+                <div className="mb-4 space-y-1">
+                    {pendingExpenses.length > 0 && (
+                        <p>Approve {pendingExpenses.length} expenses totaling ${totalPendingExpenses.toFixed(2)}</p>
+                    )}
+                    {balanceAmount < 0 && (
+                        <p className={pendingExpenses.length > 0 ? "text-sm text-gray-600" : ""}>
+                            {pendingExpenses.length > 0 
+                                ? `+ ${Math.abs(balanceAmount).toFixed(2)} balance settlement`
+                                : `Balance settlement: ${Math.abs(balanceAmount).toFixed(2)}`}
+                        </p>
+                    )}
+                    <p className="font-bold">Total: ${totalAmountNeeded.toFixed(2)}</p>
+                </div>
+                 <div className="flex justify-end space-x-2">
+                <button
+                    onClick={async () => {
+                        toast.dismiss(t.id);
+                        loadingToast = toast.loading('Processing...');
+
+                        try {
+                            // First handle the expenses if any
+                            if (pendingExpenses.length > 0) {
+                                const expenseResponse = await axios.patch(
+                                    `${backendUrl}/expense/complete-settlement/${selectedDriver?._id}`,
+                                    { advanceAmount: 0 }
+                                );
+                                if (!expenseResponse.data.success) {
+                                    throw new Error(expenseResponse.data.message || "Failed to settle expenses");
+                                }
+                            }
+
+                            // Then handle the balance amount if negative
+                            if (balanceAmount < 0) {
+                                const balanceToSettle = Math.abs(balanceAmount);
+                                
+                                if (exactBalanceMatch) {
+                                    // Special case: cashInHand exactly equals balanceAmount
+                                    try {
+                                        const cashReceivedResponse = await axios.post(
+                                            `${backendUrl}/cash-received-details`,
+                                            {
+                                                driver: selectedDriver._id,
+                                                amount: balanceToSettle,
+                                                receivedAmount: balanceToSettle,
+                                                totalAmount: balanceToSettle,
+                                                currentNetAmount: 0,
+                                                remark: 'Balance settlement from cash in hand',
+                                                // Add other required fields from your backend
+                                            },
+                                            {
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                                }
+                                            }
+                                        );
+
+                                        if (!cashReceivedResponse.data?.success) {
+                                            throw new Error(cashReceivedResponse.data?.message || "Failed to record cash received");
+                                        }
+                                    } catch (error) {
+                                        console.error('Cash received details error:', error);
+                                        if (axios.isAxiosError(error)) {
+                                            console.error('Response data:', error.response?.data);
+                                        }
+                                        throw error;
+                                    }
+                                } 
+                                    else if (currentCash >= totalAmountNeeded) {
+                                        // If we have enough cash, distribute the balance amount
+                                        const distributeResponse = await axios.patch(
+                                            `${backendUrl}/driver/distribute-amount`,
+                                            {
+                                                driverId: selectedDriver._id,
+                                                receivedAmount: balanceToSettle,
+                                                workType: 'PaymentWork'
+                                            }
+                                        );
+
+                                        if (!distributeResponse.data.success) {
+                                            throw new Error(distributeResponse.data.message || "Failed to distribute balance amount");
+                                        }
+                                    } else if (currentCash < Math.abs(balanceAmount)) {
+                                        // Case 2: Not enough cash for balance - create advance and distribute
+                                        // Step 1: Create advance
+                                        const advanceResponse = await axios.post(
+                                            `${backendUrl}/advance-payment`,
+                                            {
+                                                driverId: selectedDriver._id,
+                                                amount: balanceToSettle,
+                                                description: "Balance settlement advance"
+                                            }
+                                        );
+
+                                        if (!advanceResponse.data.success) {
+                                            throw new Error(advanceResponse.data.message || "Failed to create advance for balance");
+                                        }
+
+                                        // Step 2: Distribute the advance
+                                        const distributeResponse = await axios.patch(
+                                            `${backendUrl}/driver/distribute-amount`,
+                                            {
+                                                driverId: selectedDriver._id,
+                                                receivedAmount: balanceToSettle,
+                                                workType: 'PaymentWork'
+                                            }
+                                        );
+
+                                        if (!distributeResponse.data.success) {
+                                            throw new Error(distributeResponse.data.message || "Failed to distribute advance amount");
+                                        }
+                                    } else {
+                                        // Case 3: Partial cash - use available cash first
+                                        const cashToUse = currentCash - (pendingExpenses.length > 0 ? totalPendingExpenses : 0);
+                                        if (cashToUse > 0) {
+                                            const distributeResponse = await axios.patch(
+                                                `${backendUrl}/driver/distribute-amount`,
+                                                {
+                                                    driverId: selectedDriver._id,
+                                                    receivedAmount: cashToUse,
+                                                    workType: 'PaymentWork'
+                                                }
+                                            );
+
+                                            if (!distributeResponse.data.success) {
+                                                throw new Error(distributeResponse.data.message || "Failed to distribute partial balance amount");
+                                            }
+                                        }
+                                    }
+                                }
+
+                                toast.success(`Settlement completed successfully!`);
+                                fetchDrivers(); // Refresh data
+                                setShowSettlementModal(false);
+                            } catch (error) {
+                                let errorMessage = 'There was an error completing the settlement.';
+                                if (axios.isAxiosError(error)) {
+                                    errorMessage = error.response?.data?.message || error.message;
+                                } else if (error instanceof Error) {
+                                    errorMessage = error.message;
+                                }
+                                toast.error(errorMessage);
+                            } finally {
+                                if (loadingToast) toast.dismiss(loadingToast);
+                                setLoading(false);
+                            }
+                        }}
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                        Confirm
+                    </button>
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        ), { duration: Infinity });
+
+    } catch (error) {
+        let errorMessage = 'An unexpected error occurred';
+        if (axios.isAxiosError(error)) {
+            errorMessage = error.response?.data?.message || error.message;
+        } else if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        toast.error(errorMessage);
+    } finally {
+        setLoading(false);
+    }
+};
     return (
         <div>
             {![ROLES.VERIFIER].includes(role) && (
@@ -624,8 +767,8 @@ const handleCompleteEmptySettlement = async () => {
         </div>
     </div>
 )}
-                {showSettlementModal && (
-                    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+               {showSettlementModal && (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col border border-gray-100">
             {/* Compact Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-white sticky top-0">
@@ -634,13 +777,14 @@ const handleCompleteEmptySettlement = async () => {
                         <h3 className="text-lg font-bold">Settle Expenses: {selectedDriver?.name}</h3>
                         <span className="text-sm bg-white/30 px-2 py-1 rounded flex items-center">
                             <CashIcon className="h-4 w-4 mr-1" />
-                            {selectedDriver?.cashInHand?.toFixed(2)}(Cash In Hand)
+                            ${selectedDriver?.cashInHand?.toFixed(2)} (Cash In Hand)
                         </span>
-                        {/* Add balance amount display here */}
                         {selectedDriver?.balanceAmount !== undefined && (
-                            <span className={`text-sm px-2 py-1 rounded flex items-center ${selectedDriver.balanceAmount < 0 ? 'bg-red-500/90' : 'bg-green-500/90'}`}>
+                            <span className={`text-sm px-2 py-1 rounded flex items-center ${
+                                selectedDriver.balanceAmount < 0 ? 'bg-red-500/90' : 'bg-green-500/90'
+                            }`}>
                                 <CurrencyDollarIcon className="h-4 w-4 mr-1" />
-                                {selectedDriver.balanceAmount < 0 ? '-' : ''}{Math.abs(selectedDriver.balanceAmount).toFixed(2)}
+                                {selectedDriver.balanceAmount < 0 ? '-' : ''}${Math.abs(selectedDriver.balanceAmount).toFixed(2)}
                                 {selectedDriver.balanceAmount < 0 ? ' (To Driver)' : ' (To Company)'}
                             </span>
                         )}
@@ -654,108 +798,131 @@ const handleCompleteEmptySettlement = async () => {
                 </div>
             </div>
 
-                            {/* Content Area with Scroll */}
-                            <div className="flex-1 overflow-y-auto p-4">
-                                {loading ? (
-                                    <div className="flex flex-col items-center justify-center h-full">
-                                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mb-3"></div>
-                                        <p className="text-gray-600 text-sm">Processing settlement...</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {/* Compact Table */}
-                                        <div className="overflow-auto rounded-lg border border-gray-200 mb-4">
-                                            <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                                <thead className="bg-gray-50">
-                                                    <tr>
-                                                        <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                                        <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                                                        <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                                        <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="bg-white divide-y divide-gray-200">
-                                                    {pendingExpenses.length > 0 ? (
-                                                        pendingExpenses.map((expense) => (
-                                                            <tr key={expense._id} className="hover:bg-gray-50">
-                                                                <td className="px-3 py-2 whitespace-nowrap">
-                                                                    {new Date(expense.createdAt).toLocaleDateString('en-US', {
-                                                                        month: 'short',
-                                                                        day: 'numeric'
-                                                                    })}
-                                                                </td>
-                                                                <td className="px-3 py-2 max-w-[160px] truncate">
-                                                                    {expense.description}
-                                                                </td>
-                                                                <td className="px-3 py-2 whitespace-nowrap font-medium">
-                                                                    ${expense.amount?.toFixed(2)}
-                                                                </td>
-                                                                <td className="px-3 py-2 whitespace-nowrap">
-                                                                    <span className="px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                                        Pending
-                                                                    </span>
-                                                                </td>
-                                                            </tr>
-                                                        ))
-                                                    ) : (
-                                                        <tr>
-                                                            <td colSpan={4} className="px-3 py-4 text-center text-sm text-gray-500">
-                                                                No pending expenses found
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        {/* Compact Summary */}
-                                        <div className="bg-blue-50 rounded-lg p-3 mb-4 flex justify-between items-center text-sm">
-                                            <div>
-                                                <span className="font-medium text-gray-700">Pending: </span>
-                                                <span className="text-gray-600">{pendingExpenses.length} items</span>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="font-bold text-blue-600">
-                                                    ${pendingExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0).toFixed(2)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Sticky Footer */}
-                            <div className="sticky bottom-0 bg-white border-t border-gray-200 p-3">
-                                <div className="flex justify-end space-x-3">
-                                    <button
-                                        onClick={() => setShowSettlementModal(false)}
-                                        className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                        disabled={loading}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleApproveAll}
-                                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                                        disabled={loading || pendingExpenses.length === 0}
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <ArrowPathIcon className="animate-spin h-3.5 w-3.5 mr-1.5" />
-                                                Processing...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircleIcon className="h-4 w-4 mr-1.5" />
-                                                Approve All
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+            {/* Content Area with Scroll */}
+            <div className="flex-1 overflow-y-auto p-4">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center h-full">
+                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mb-3"></div>
+                        <p className="text-gray-600 text-sm">Processing settlement...</p>
                     </div>
+                ) : (
+                    <>
+                        {/* Only show expenses table if there are expenses */}
+                        {pendingExpenses.length > 0 && (
+                            <div className="overflow-auto rounded-lg border border-gray-200 mb-4">
+                                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                            <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                            <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                            <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {pendingExpenses.map((expense) => (
+                                            <tr key={expense._id} className="hover:bg-gray-50">
+                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                    {new Date(expense.createdAt).toLocaleDateString('en-US', {
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })}
+                                                </td>
+                                                <td className="px-3 py-2 max-w-[160px] truncate">
+                                                    {expense.description}
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap font-medium">
+                                                    ${expense.amount?.toFixed(2)}
+                                                </td>
+                                                <td className="px-3 py-2 whitespace-nowrap">
+                                                    <span className="px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                                        Pending
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                      {/* Show message if no expenses but negative balance */}
+{pendingExpenses.length === 0 && selectedDriver && selectedDriver.balanceAmount !== undefined && selectedDriver.balanceAmount < 0 && (
+    <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+        <p className="text-yellow-800 flex items-center">
+            <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+            No pending expenses, but driver has negative balance to settle
+        </p>
+    </div>
+)}
+
+{/* Compact Summary */}
+<div className="bg-blue-50 rounded-lg p-3 mb-4 flex justify-between items-center text-sm">
+    <div>
+        {pendingExpenses.length > 0 && (
+            <div>
+                <span className="font-medium text-gray-700">Pending: </span>
+                <span className="text-gray-600">{pendingExpenses.length} items</span>
+            </div>
+        )}
+        {selectedDriver && selectedDriver.balanceAmount !== undefined && selectedDriver.balanceAmount < 0 && (
+            <div>
+                <span className="font-medium text-gray-700">Balance Due: </span>
+                <span className="text-red-600">
+                    ${Math.abs(selectedDriver.balanceAmount).toFixed(2)} (To Driver)
+                </span>
+            </div>
+        )}
+    </div>
+    <div className="text-right">
+        <span className="font-bold text-blue-600">
+            ${(
+                pendingExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0) +
+                (selectedDriver && selectedDriver.balanceAmount !== undefined && selectedDriver.balanceAmount < 0 
+                    ? Math.abs(selectedDriver.balanceAmount) 
+                    : 0)
+            ).toFixed(2)}
+        </span>
+    </div>
+</div>
+
+                     
+                    </>
                 )}
+            </div>
+
+            {/* Sticky Footer */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 p-3">
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={() => setShowSettlementModal(false)}
+                        className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        disabled={loading}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleApproveAll}
+                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                        disabled={loading || (pendingExpenses.length === 0 && (selectedDriver?.balanceAmount === undefined || selectedDriver.balanceAmount >= 0))}
+                    >
+                        {loading ? (
+                            <>
+                                <ArrowPathIcon className="animate-spin h-3.5 w-3.5 mr-1.5" />
+                                Processing...
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircleIcon className="h-4 w-4 mr-1.5" />
+                                Approve All
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
             </div>
 
             {showAdvanceModal && (
