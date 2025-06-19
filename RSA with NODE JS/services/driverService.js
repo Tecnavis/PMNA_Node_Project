@@ -28,7 +28,7 @@ const getTotalDriverExpense = async (driverId) => {
 async function calculateNetTotalAmountInHand(driverId) {
 
     const result = await Booking.aggregate([
-        {
+         {
             $match: {
                 driver: driverId,
                 status: 'Order Completed',
@@ -36,6 +36,15 @@ async function calculateNetTotalAmountInHand(driverId) {
                 $or: [
                     { cashPending: false },
                     { cashPending: { $exists: false } }
+                ],
+                // Add this condition to exclude Staff-received bookings
+                $and: [
+                    {
+                        $or: [
+                            { receivedUser: { $ne: 'Staff' } },
+                            { receivedUser: { $exists: false } }
+                        ]
+                    }
                 ]
             }
         },
