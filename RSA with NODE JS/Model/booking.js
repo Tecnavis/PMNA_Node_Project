@@ -70,6 +70,8 @@ const bookingSchema = new mongoose.Schema({
         }
     ],
     verified: { type: Boolean },
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+verifiedAt: Date,
     feedbackCheck: { type: Boolean },
     accountantVerified: { type: Boolean },
     cashPending: { type: Boolean },

@@ -14,7 +14,6 @@ import FeedbackModal from './FeedbackModal';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { FiAlertTriangle, FiCheck, FiZoomIn } from 'react-icons/fi';
 import { FiUpload, FiEdit2, FiTrash2 } from 'react-icons/fi';
-import moment from 'moment';
 
 export interface Booking {
     _id: string;

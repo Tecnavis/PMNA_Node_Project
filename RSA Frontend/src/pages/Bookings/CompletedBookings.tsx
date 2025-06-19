@@ -17,6 +17,12 @@ import IconMapPin from '../../components/Icon/IconMapPin';
 import { GrPrevious } from 'react-icons/gr';
 import { GrNext } from 'react-icons/gr';
 import { ROLES } from '../../constants/roles';
+interface VerifiedByUser {
+    _id: string;
+    name: string;
+    email?: string;
+}
+
 
 interface Company {
     _id: string;
@@ -51,7 +57,9 @@ interface Booking {
     dummyProviderName: string;
     dummyDriverName: string;
     verified: boolean;
-    feedbackCheck: boolean;
+      verifiedAt?: Date;
+    verifiedBy?: VerifiedByUser; 
+      feedbackCheck: boolean;
     customerVehicleNumber: string;
     bookedBy: string;
     fileNumber: string;
@@ -137,7 +145,7 @@ const CompletedBookings: React.FC = () => {
  const [showingAll, setShowingAll] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
     const role = localStorage.getItem('role') || ''
-
+    const [activeTab, setActiveTab] = useState<'feedback' | 'verify'>('verify');
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
         fetchBookings('', page); // Pass the current page
@@ -163,15 +171,19 @@ const CompletedBookings: React.FC = () => {
     };
 
     // getting all bookings
-
+useEffect(() => {
+    fetchBookings();
+}, [activeTab]);
     const fetchBookings = async (searchTerm = '', page = 1, limit: number | 'all' = 10) => {
         try {
-               const params: any = { 
+                 const params: any = { 
                 search: searchTerm,
+                tab: activeTab, // Add the active tab to the request
                 ...(limit === 'all' ? { all: true } : { page, limit })
             };
 
             const response = await axios.get(`${backendUrl}/booking/getordercompleted`, { params });
+          
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
             setCurrentPage(response.data.page);
@@ -234,11 +246,19 @@ const CompletedBookings: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 mb-5">
                     {/* FeedBack & verify Completed */}
-                    <div className="bg-green-500 text-white text-center px-3 py-1 rounded shadow">FeedBack & Verify Completed</div>
-
+  <button 
+                    className={`text-center px-3 py-1 rounded shadow ${activeTab === 'feedback' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
+                    onClick={() => setActiveTab('feedback')}
+                >
+                    FeedBack & Verify Completed
+                </button>
                     {/* Verify Completed*/}
-                    <div className="bg-blue-500 text-white text-center px-3 py-1 rounded shadow">Verify Completed</div>
-                </div>
+  <button 
+                    className={`text-center px-3 py-1 rounded shadow ${activeTab === 'verify' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                    onClick={() => setActiveTab('verify')}
+                >
+                    Verify Completed
+                </button>               </div>
 
                 <div className="table-responsive mb-5">
                     <table style={{ overflowX: 'auto' }}>
@@ -251,6 +271,8 @@ const CompletedBookings: React.FC = () => {
                                 <th>Phone</th>
                                 <th>Service Type</th>
                                 <th>Vehicle Number</th>
+                                                                <th>Verified By</th>
+
                                 <th className="!text-center">Action</th>
                             </tr>
                         </thead>
@@ -310,6 +332,14 @@ const CompletedBookings: React.FC = () => {
                                                 : 'N/A'}
                                         </td>
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
+    <div>
+    {items.verifiedBy && (
+        <div className="text-xs text-gray-500 mt-1">
+            Verified by: {items.verifiedBy.name}
+            {items.verifiedAt && ` on ${new Date(items.verifiedAt).toLocaleString()}`}
+        </div>
+    )}
+</div>
                                         <td className="text-center">
                                             <ul className="flex items-center justify-center gap-2">
                                                 <li>

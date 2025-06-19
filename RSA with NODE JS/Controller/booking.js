@@ -383,7 +383,7 @@ const checkVehicleServiceStatus = async (booking) => {
 // Controller to get Order completed booking  by search query
 exports.getOrderCompletedBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10, all = false } = req.query;
+        let { search, startDate, endDate, page = 1, limit = 10, all = false, tab }  = req.query;
 
         // Convert page and limit based on 'all' flag
         page = all ? 1 : parseInt(page, 10);
@@ -393,7 +393,24 @@ exports.getOrderCompletedBookings = async (req, res) => {
             status: "Order Completed", // Filter only bookings with this status
             accountantVerified: { $ne: true } // Exclude bookings where accountantVerified is true
         };
-
+  // Add tab-specific filters
+if (tab === 'feedback') {
+    query.verified = true;
+    query.feedbackCheck = true;
+} else if (tab === 'verify') {
+    query.$or = [
+        { 
+            verified: true,
+            feedbackCheck: { $ne: true, $exists: true }
+        },
+        { 
+            verified: false 
+        },
+        { 
+            verified: { $exists: false } 
+        }
+    ];
+}
         // Handle search
         if (search) {
 
@@ -447,6 +464,8 @@ exports.getOrderCompletedBookings = async (req, res) => {
             .populate('company')
             .populate('driver')
             .populate('provider')
+                .populate('verifiedBy', 'name email') // Add this line to populate staff details
+
             .skip(all ? 0 : (page - 1) * limit) // Skip only if not fetching all
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
@@ -1244,6 +1263,7 @@ exports.updateFilenumber = async (req, res) => {
 exports.verifyBooking = async (req, res) => {
     try {
         const { id } = req.params;
+        const verifiedBy = req.user.id || req.user._id;// Get the user ID from the authenticated request
 
         const routeLogger = LoggerFactory.createChildLogger({
             route: '/verifyBooking',
@@ -1327,17 +1347,23 @@ exports.verifyBooking = async (req, res) => {
             }
         }
 
-        const updateData = { verified: true };
-        if (booking.provider) {
+ const updateData = { 
+            verified: true,
+            verifiedBy:  new mongoose.Types.ObjectId(verifiedBy), // Add the user who verified the booking
+            verifiedAt: new Date() // Add timestamp of verification
+        };
+                if (booking.provider) {
             updateData.feedbackCheck = true;
         }
-        // Update booking status to verified
         const updatedBooking = await Booking.findByIdAndUpdate(
-            id,
-            updateData,
-            { new: true }
-        );
-
+    id,
+    updateData,
+    { new: true }
+).populate({
+    path: 'verifiedBy',
+    select: 'name email', // Only populate these fields
+    model: 'Staff' // Explicitly specify the model
+});
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
