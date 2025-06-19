@@ -39,18 +39,16 @@ async function calculateNetTotalAmountInHand(driverId) {
                 ]
             }
         },
-        {
-            $group: {
-                _id: null,
-                netTotalAmount: {
-                    $sum: {
- $subtract: [
-                            { $subtract: ['$totalAmount', '$receivedAmount'] },
-                            { $ifNull: ['$receivedAmountStaff', 0] }
-                        ]                    }
-                }
+       {
+    $group: {
+        _id: null,
+        netTotalAmount: {
+            $sum: {
+                $subtract: ["$totalAmount", "$receivedAmount"]
             }
         }
+    }
+}
     ]);
     const result2 = await Booking.aggregate([
         {
