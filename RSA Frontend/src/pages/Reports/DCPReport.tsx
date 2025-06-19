@@ -20,7 +20,8 @@ import {
     CurrencyDollarIcon as CashIcon,
     DocumentTextIcon,
     CheckCircleIcon,
-    ArrowPathIcon
+    ArrowPathIcon,
+    CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 interface Company {
@@ -602,7 +603,7 @@ const handleCompleteEmptySettlement = async () => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-bold mb-4">No Pending Expenses</h3>
-            <p className="mb-4">This driver has no pending expenses. Would you like to mark the settlement as complete?</p>
+            <p className="mb-4">This driver has no pending expenses and salary settlement. Would you like to mark the settlement as complete?</p>
             
             <div className="flex justify-end space-x-3">
                 <button
@@ -625,25 +626,33 @@ const handleCompleteEmptySettlement = async () => {
 )}
                 {showSettlementModal && (
                     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-                        <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col border border-gray-100">
-                            {/* Compact Header */}
-                            <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-white sticky top-0">
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center space-x-4">
-                                        <h3 className="text-lg font-bold">Settle Expenses: {selectedDriver?.name}</h3>
-                                        <span className="text-sm bg-white/20 px-2 py-1 rounded flex items-center">
-                                            <CashIcon className="h-4 w-4 mr-1" />
-                                            ${selectedDriver?.cashInHand?.toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowSettlementModal(false)}
-                                        className="p-1 rounded-full hover:bg-white/20 transition-colors"
-                                    >
-                                        <XMarkIcon className="h-5 w-5" />
-                                    </button>
-                                </div>
-                            </div>
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col border border-gray-100">
+            {/* Compact Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-white sticky top-0">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-4">
+                        <h3 className="text-lg font-bold">Settle Expenses: {selectedDriver?.name}</h3>
+                        <span className="text-sm bg-white/30 px-2 py-1 rounded flex items-center">
+                            <CashIcon className="h-4 w-4 mr-1" />
+                            {selectedDriver?.cashInHand?.toFixed(2)}(Cash In Hand)
+                        </span>
+                        {/* Add balance amount display here */}
+                        {selectedDriver?.balanceAmount !== undefined && (
+                            <span className={`text-sm px-2 py-1 rounded flex items-center ${selectedDriver.balanceAmount < 0 ? 'bg-red-500/90' : 'bg-green-500/90'}`}>
+                                <CurrencyDollarIcon className="h-4 w-4 mr-1" />
+                                {selectedDriver.balanceAmount < 0 ? '-' : ''}{Math.abs(selectedDriver.balanceAmount).toFixed(2)}
+                                {selectedDriver.balanceAmount < 0 ? ' (To Driver)' : ' (To Company)'}
+                            </span>
+                        )}
+                    </div>
+                    <button
+                        onClick={() => setShowSettlementModal(false)}
+                        className="p-1 rounded-full hover:bg-white/20 transition-colors"
+                    >
+                        <XMarkIcon className="h-5 w-5" />
+                    </button>
+                </div>
+            </div>
 
                             {/* Content Area with Scroll */}
                             <div className="flex-1 overflow-y-auto p-4">
