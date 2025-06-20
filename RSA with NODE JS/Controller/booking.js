@@ -432,7 +432,7 @@ if (tab === 'feedback') {
                 const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
                 const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ name: searchRegex }).select('_id');
-
+ const matchingCompanies = await Company.find({ name: searchRegex }).select('_id'); // Add this line
                 query.$or = [
                     { fileNumber: searchRegex },
                     { mob1: searchRegex },
@@ -440,6 +440,8 @@ if (tab === 'feedback') {
                     { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
                     { provider: { $in: matchingProviders.map(p => p._id) } },
+                                { company: { $in: matchingCompanies.map(c => c._id) } }, // Add this line
+
                 ];
             }
         }
