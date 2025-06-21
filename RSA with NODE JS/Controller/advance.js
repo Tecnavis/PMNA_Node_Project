@@ -78,7 +78,109 @@ exports.createNewAdvance = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 }
+// Update existing advance record
+exports.updateAdvance = async (req, res) => {
+    const { id } = req.params;
+    const { remark, advance, type } = req.body;
+    
+    try {
+        if (!remark || !advance || !type) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
 
+        // Find the advance record to update
+        const advanceRecord = await Advance.findById(id);
+        if (!advanceRecord) {
+            return res.status(404).json({ message: 'Advance record not found' });
+        }
+
+        // Find all advance records for this driver
+        const allAdvances = await Advance.find({ driver: advanceRecord.driver }).sort({ createdAt: 1 });
+        
+        // Recalculate all advances to maintain accurate totals
+        let recalculatedAdvances = [];
+        let runningTotal = 0;
+        
+        for (const record of allAdvances) {
+            if (record._id.toString() === id) {
+                // This is the record we're updating
+                runningTotal += Number(advance);
+                recalculatedAdvances.push({
+                    ...record.toObject(),
+                    addedAdvance: Number(advance),
+                    advance: runningTotal,
+                    remark,
+                    type,
+                    updatedAt: new Date()
+                });
+            } else {
+                // Other records - just update their running total
+                runningTotal += record.addedAdvance;
+                recalculatedAdvances.push({
+                    ...record.toObject(),
+                    advance: runningTotal
+                });
+            }
+        }
+
+        // Update all records in the database
+        for (const update of recalculatedAdvances) {
+            await Advance.findByIdAndUpdate(update._id, {
+                addedAdvance: update.addedAdvance,
+                advance: update.advance,
+                remark: update._id.toString() === id ? update.remark : undefined,
+                type: update._id.toString() === id ? update.type : undefined,
+                updatedAt: update.updatedAt
+            });
+        }
+
+        // Update the driver/provider's total advance
+        const driverId = advanceRecord.driver;
+        const userType = advanceRecord.userModel;
+        
+        let source;
+        if (userType === 'Driver') {
+            source = await Driver.findById(driverId);
+        } else {
+            source = await Provider.findById(driverId);
+        }
+
+        if (source) {
+            source.advance = runningTotal;
+            await source.save();
+        }
+
+        // Get the updated record to return
+        const updatedRecord = await Advance.findById(id);
+
+        res.status(200).json({
+            message: 'Advance updated successfully',
+            advance: updatedRecord,
+            newTotalAdvance: runningTotal
+        });
+
+    } catch (error) {
+        console.error('Error updating advance:', error);
+        res.status(500).json({ 
+            message: 'Server error while updating advance',
+            error: error.message 
+        });
+    }
+};
+
+// Get single advance record
+exports.getAdvanceById = async (req, res) => {
+    try {
+        const advance = await Advance.findById(req.params.id);
+        if (!advance) {
+            return res.status(404).json({ message: 'Advance not found' });
+        }
+        res.status(200).json(advance);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 // helper controller for update advance amount to all driver booking salary
 const settleBookingsWithAdvance = async (driverId, advanceDoc, userType) => {
 

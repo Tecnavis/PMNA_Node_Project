@@ -24,45 +24,64 @@ const getTotalDriverExpense = async (driverId) => {
 
     return result[0]?.totalExpense || 0;
 }
+// -------------------------------------
 // Calculating the net total amount in hand 
 async function calculateNetTotalAmountInHand(driverId) {
-
     const result = await Booking.aggregate([
-         {
+        {
             $match: {
-                driver: driverId,
+                driver: new mongoose.Types.ObjectId(driverId),
                 status: 'Order Completed',
                 workType: 'PaymentWork',
                 $or: [
                     { cashPending: false },
                     { cashPending: { $exists: false } }
                 ],
-                // Add this condition to exclude Staff-received bookings
-                $and: [
+                $or: [
+                    { receivedUser: { $ne: 'Staff' } },
+                    { receivedUser: { $exists: false } },
                     {
-                        $or: [
-                            { receivedUser: { $ne: 'Staff' } },
-                            { receivedUser: { $exists: false } }
+                        $and: [
+                            { receivedUser: 'Staff' },
+                            { partialReceivedAmountStaff: true }
                         ]
                     }
                 ]
             }
         },
-       {
-    $group: {
-        _id: null,
-        netTotalAmount: {
-            $sum: {
-                $subtract: ["$totalAmount", "$receivedAmount"]
+        {
+            $addFields: {
+                // Determine which received amount to use based on payment type
+                effectiveReceivedAmount: {
+                    $cond: [
+                        {
+                            $and: [
+                                { $eq: ["$receivedUser", "Staff"] },
+                                { $eq: ["$partialReceivedAmountStaff", true] }
+                            ]
+                        },
+                        "$receivedAmountStaff",  // Use receivedAmountStaff for partial Staff payments
+                        "$receivedAmount"       // Use regular receivedAmount for all others
+                    ]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                netTotalAmount: {
+                    $sum: {
+                        $subtract: ["$totalAmount", "$effectiveReceivedAmount"]
+                    }
+                }
             }
         }
-    }
-}
     ]);
+
     const result2 = await Booking.aggregate([
         {
             $match: {
-                driver: driverId,
+                driver: new mongoose.Types.ObjectId(driverId),
                 partialPayment: true,
                 workType: 'PaymentWork'
             }
@@ -71,9 +90,6 @@ async function calculateNetTotalAmountInHand(driverId) {
             $group: {
                 _id: null,
                 netTotalAmount2: {
-                    // $sum: {
-                    //     $subtract: ['$totalAmount', '$partialAmount']
-                    // }
                     $sum: '$partialAmount'
                 }
             }

@@ -8,123 +8,177 @@ const Staff = require('../Model/staff');
 
 exports.createReceivedDetails = async (req, res) => {
     try {
-        const { amount, currentNetAmount, driver, receivedAmount, remark,totalAmount } = req.body;
-  const userId = req.user.id || req.user._id;
-        const receivedUser = req.user.role || req.user?.user?.role; // Assuming role is stored in the user object
-        const receivedUserId = userId; // The user creating the record
+        const { amount, currentNetAmount, driver, receivedAmount, remark, totalAmount } = req.body;
+        const userId = req.user.id || req.user._id;
+        const userRole = req.user.role || req.user?.user?.role; // Changed to userRole for clarity
+        const receivedUserId = userId;
 
-        if (!amount  || !driver || !receivedAmount) {
+        if (!amount || !driver || !receivedAmount) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
-        const associateDriver = await Driver.findById(driver)
+        const associateDriver = await Driver.findById(driver);
         if (!associateDriver) {
             return res.status(404).json({ message: 'Driver not found' });
         }
-        console.log('found driver', associateDriver.name)
+
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
 
-        // fetch all related bookings
+        // Fetch bookings including partially received Staff payments and non-Staff payments
         const bookings = await Booking.find({
             status: 'Order Completed',
             driver,
             workType: 'PaymentWork',
-             cashPending: false,
+            cashPending: false,
+            $or: [
+                { receivedUser: { $ne: 'Staff' } },
+                { 
+                    receivedUser: 'Staff',
+                    partialReceivedAmountStaff: true
+                }
+            ],
             $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
-        }).sort({ createdAt: 1 })
-        console.log("booking", bookings.length)
-        const updatedBookings = bookings.map(async (booking) => {
+        }).sort({ createdAt: 1 });
 
-            const bookingBalance = booking.totalAmount - (booking.receivedAmount || 0);
+        // Update bookings by distributing receivedAmount
+        for (const booking of bookings) {
+            if (remainingAmount <= 0) break;
 
-            if (remainingAmount > 0 && bookingBalance > 0) {
+            // Calculate balance based on payment type
+            let bookingBalance;
+            if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
+                bookingBalance = booking.totalAmount - (booking.receivedAmountStaff || 0);
+            } else {
+                bookingBalance = booking.totalAmount - (booking.receivedAmount || 0);
+            }
+
+            if (bookingBalance > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
-    if (receivedUser === 'Staff') {
-        // For Staff payments:
-        booking.receivedAmount = 0; // Set receivedAmount to 0 for Staff
-        booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + appliedAmount;
-    } else {
-        // For non-Staff payments (Admin, etc.):
-        booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
-    }                   booking.receivedUser = receivedUser; // Set receivedUser
-                booking.receivedUserId = new mongoose.Types.ObjectId(receivedUserId); // Set receivedUserId
+
+                if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
+                    // For partially received Staff payments
+                    if (userRole === 'Staff') {
+                        // Staff user - update receivedAmountStaff
+                        booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + appliedAmount;
+                    } else {
+                        // Non-Staff user - update givenAmountByStaff instead
+                        booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + appliedAmount;
+                    }
+                    
+                    // Update partialReceivedAmountStatus based on new amount
+                    const totalReceived = (booking.receivedAmountStaff || 0) + (booking.givenAmountByStaff || 0);
+                    booking.partialReceivedAmountStaff = totalReceived < booking.totalAmount;
+                    
+                    // If now fully paid, update regular receivedAmount too
+                    if (!booking.partialReceivedAmountStaff) {
+                        booking.receivedAmount = booking.totalAmount;
+                    }
+                } else {
+                    // For non-Staff payments or new Staff payments
+                    booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+                    
+                    // For new Staff payments, initialize the Staff-specific fields
+                    if (userRole === 'Staff') {
+                        booking.receivedAmountStaff = appliedAmount;
+                        booking.partialReceivedAmountStaff = appliedAmount < booking.totalAmount;
+                    }
+                }
+
+                // Set the received user info
+                booking.receivedUser = userRole;
+                booking.receivedUserId = new mongoose.Types.ObjectId(receivedUserId);
+
                 remainingAmount -= appliedAmount;
                 selectedBookingIds.push(booking._id);
                 await booking.save();
             }
-            console.log('received amount decremnet ', remainingAmount)
-            return booking
-        })
+        }
 
+        // [Rest of your code remains the same...]
+        // Deduct remaining amount from driver's advance
         if (remainingAmount > 0) {
-            console.log("still remain the recedvvined amount", remainingAmount)
             const currentAdvance = associateDriver.advance || 0;
             const newAdvance = Math.max(0, currentAdvance - remainingAmount);
             associateDriver.advance = newAdvance;
             await associateDriver.save();
 
-            const [lastAdvance] = await Advance.find().sort({ createdAt: -1 }).limit(1);
-            const driverAdvance = lastAdvance.advance;
+            // Update last advance record if exists
+            const lastAdvance = await Advance.findOne().sort({ createdAt: -1 });
             if (lastAdvance) {
-                const updatedAdvance = Math.max(0, lastAdvance.advance - remainingAmount);
-                lastAdvance.advance = updatedAdvance;
+                lastAdvance.advance = Math.max(0, lastAdvance.advance - remainingAmount);
                 await lastAdvance.save();
             }
-            const receivedDetails = await ReceivedDetails.create({
+
+            // Create received details for advance deduction
+            await ReceivedDetails.create({
                 remark,
                 balance: newAdvance,
                 fileNumber: 'Advance Deduction',
                 currentNetAmount: 0,
-                amount: `Advance: ${driverAdvance}`,
+                amount: `Advance: ${lastAdvance?.advance || 0}`,
                 driver: associateDriver._id,
                 receivedAmount: remainingAmount,
                 totalAmount: totalAmount,
-                receivedUser,
-
+                receivedUser: userRole,
                 receivedUserId,
             });
         }
 
-        for (let bookingId of selectedBookingIds) {
+        // Create received details for each updated booking
+        for (const bookingId of selectedBookingIds) {
             const booking = await Booking.findById(bookingId);
-            const currentReceivedAmount = booking.receivedAmount || 0;
-            const balance = (booking.totalAmount - currentReceivedAmount).toString();
+            
+            // Determine which received amount to use for the record
+            let amountToRecord;
+            if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
+                // For Staff payments, use the sum of both fields
+                amountToRecord = (booking.receivedAmountStaff || 0) + (booking.givenAmountByStaff || 0);
+            } else {
+                amountToRecord = booking.receivedAmount || 0;
+            }
 
-            const receivedDetails = await ReceivedDetails.create({
+            const balance = (booking.totalAmount - amountToRecord).toString();
+
+            await ReceivedDetails.create({
                 remark,
                 balance: balance,
                 fileNumber: booking.fileNumber,
                 currentNetAmount: balance,
                 amount: booking.totalAmount,
                 driver: associateDriver._id,
-                receivedAmount: currentReceivedAmount,
-                  totalAmount: totalAmount,
-                receivedUser,
-
+                receivedAmount: amountToRecord,
+                totalAmount: totalAmount,
+                receivedUser: userRole,
                 receivedUserId,
             });
-            console.log('receivedDetails ', receivedDetails)
         }
 
-        res.status(201).json({ message: 'Received details created successfully' });
+        res.status(201).json({ 
+            message: 'Received details created successfully',
+            distributedAmount: receivedAmount - remainingAmount,
+            remainingAmount
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal Server Error' });
+        console.error('Error in createReceivedDetails:', error);
+        res.status(500).json({ 
+            message: 'Internal Server Error',
+            error: error.message 
+        });
     }
 };
 
 exports.getAllReceivedDetails = async (req, res) => {
     try {
 
-        const { search, driverId , month, year} = req.query
+        const { search, driverId, month, year } = req.query
 
         const query = {};
 
         if (driverId) {
             query.driver = new mongoose.Types.ObjectId(driverId)
         }
-      // Month and Year filter
+        // Month and Year filter
         if (month && year) {
             const startDate = new Date(year, month - 1, 1);
             const endDate = new Date(year, month, 0, 23, 59, 59);
@@ -199,7 +253,7 @@ exports.getStaffReceivedDetails = async (req, res) => {
         if (search && search.trim()) {
             const searchQuery = search.trim();
             const regex = new RegExp(searchQuery, 'i');
-            
+
             query.$or = [
                 { fileNumber: regex },
                 { remark: regex },
@@ -218,9 +272,9 @@ exports.getStaffReceivedDetails = async (req, res) => {
         res.status(200).json(receivedDetails);
     } catch (error) {
         console.error('Error fetching staff received details:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Internal Server Error',
-            error: error.message 
+            error: error.message
         });
     }
 };

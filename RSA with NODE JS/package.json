@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "agenda": "^5.0.0",
+    "axios": "^1.10.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",

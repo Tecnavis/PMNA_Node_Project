@@ -231,7 +231,7 @@ exports.getAllExpenseForDriver = async (req, res) => {
         return res.status(500).json({ message: 'Error fetching expense', error: error.message });
     }
 }
-// -----------------------------------------------------------
+// ------------------------------------------------
 exports.completeSettlement = async (req, res) => {
     try {
 
