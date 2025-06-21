@@ -379,7 +379,7 @@ const checkVehicleServiceStatus = async (booking) => {
         return { success: false, message: "Error processing request", error: error.message };
     }
 };
-
+// ------------------------------------
 // Controller to get Order completed booking  by search query
 exports.getOrderCompletedBookings = async (req, res) => {
     try {
@@ -429,8 +429,13 @@ if (tab === 'feedback') {
                     $lte: endOfDay,
                 };
             } else {
-                const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
-                const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
+const searchRegex = new RegExp(search, 'i'); 
+// Consider adding this for debugging
+if (page > 10) {
+  console.log(`Debug: Fetching page ${page} with query:`, query);
+  const testCount = await Booking.countDocuments(query);
+  console.log(`Total matching documents: ${testCount}`);
+}                const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ name: searchRegex }).select('_id');
  const matchingCompanies = await Company.find({ name: searchRegex }).select('_id'); // Add this line
                 query.$or = [
@@ -484,7 +489,7 @@ if (tab === 'feedback') {
         res.status(500).json({ message: 'Server error while fetching bookings' });
     }
 };
-// ------------------------------
+
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     const routeLogger = LoggerFactory.createChildLogger({
