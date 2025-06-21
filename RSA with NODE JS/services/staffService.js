@@ -70,19 +70,16 @@ async function calculateReceivedTotalAmount(staffId) {
                     balance: { $toDouble: "$balance" }
                 }
             },
-            {
-                $group: {
-                    _id: null,
-                    netTotalAmount: {
-                        $sum: {
-                            $add: [
-                                { $ifNull: ["$receivedAmount", 0] },
-                                { $ifNull: ["$balance", 0] }
-                            ]
-                        }
-                    }
-                }
+           {
+    $group: {
+        _id: null,
+        netTotalAmount: {
+            $sum: {
+                $ifNull: ["$receivedAmount", 0]
             }
+        }
+    }
+}
         ]);
 
         console.log('--- Received Details Aggregation Results ---');

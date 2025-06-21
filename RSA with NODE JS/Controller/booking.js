@@ -379,7 +379,7 @@ const checkVehicleServiceStatus = async (booking) => {
         return { success: false, message: "Error processing request", error: error.message };
     }
 };
-// ------------------------------------
+// ------------------------
 // Controller to get Order completed booking  by search query
 exports.getOrderCompletedBookings = async (req, res) => {
     try {
@@ -429,13 +429,8 @@ if (tab === 'feedback') {
                     $lte: endOfDay,
                 };
             } else {
-const searchRegex = new RegExp(search, 'i'); 
-// Consider adding this for debugging
-if (page > 10) {
-  console.log(`Debug: Fetching page ${page} with query:`, query);
-  const testCount = await Booking.countDocuments(query);
-  console.log(`Total matching documents: ${testCount}`);
-}                const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
+                const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
+                const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ name: searchRegex }).select('_id');
  const matchingCompanies = await Company.find({ name: searchRegex }).select('_id'); // Add this line
                 query.$or = [
@@ -473,7 +468,7 @@ if (page > 10) {
             .populate('provider')
                 .populate('verifiedBy', 'name email') // Add this line to populate staff details
 
-            .skip(all ? 0 : (page - 1) * limit) // Skip only if not fetching all
+            .skip((page - 1) * limit) // Now this will work correctly with search
             .limit(limit)
             .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
 

@@ -202,6 +202,8 @@ const colsForReceivedDetails = ReceivedDetailsTableColumn;
             });
 
             if (confirmation.isConfirmed) {
+                            setIsSubmitting(true); // Start loading
+
                 // First create the cash received details
                 const receivedDetailsResponse = await axios.post(`${BASE_URL}/cash-received-details`, {
                     totalAmount: receivedAmount,
@@ -268,7 +270,9 @@ const colsForReceivedDetails = ReceivedDetailsTableColumn;
                 text: error.response?.data?.message || error.message || 'Unknown error',
                 icon: 'error',
             });
-        }
+         } finally {
+        setIsSubmitting(false); // Stop loading regardless of success/error
+    }
     };
 
     useEffect(() => {
