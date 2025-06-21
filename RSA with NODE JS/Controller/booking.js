@@ -621,15 +621,20 @@ exports.getAllBookings = async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 })
             .lean()
-
+// ----------------------------------------------------------------
         const balanceAmount = bookings.reduce((total, booking) => {
             if (forStaffReport) {
                 return booking.receivedUser === 'Staff'
                     ? total + (booking.givenAmountByStaff || 0)
                     : total;
             }
-            return total + (booking.receivedAmount || 0);
-        }, 0);
+          
+            // For driver reports, use receivedAmountStaff if Staff payment is partially received
+    if (forDriverReport && booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
+        return total + (booking.receivedAmountStaff || 0);
+    }
+    return total + (booking.receivedAmount || 0);
+}, 0);
         query.workType = { $ne: 'RSAWork' };
 
         // Aggregate data for total amounts
@@ -640,8 +645,16 @@ exports.getAllBookings = async (req, res) => {
 
                     ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
                     ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
-                    ...(forDriverReport && { receivedUser: { $ne: 'Staff' } }),
-                    ...(forStaffReport && { receivedUser: { $eq: 'Staff' } })
+  ...(forDriverReport && { 
+                $or: [
+                    { receivedUser: { $ne: 'Staff' } },
+                    { 
+                        receivedUser: 'Staff',
+                        partialReceivedAmountStaff: true 
+                    }
+                ]
+            }),
+                                ...(forStaffReport && { receivedUser: { $eq: 'Staff' } })
 
 
                 }
@@ -652,26 +665,52 @@ exports.getAllBookings = async (req, res) => {
                     totalCollected: {
                         $sum: forStaffReport
                             ? "$givenAmountByStaff"  // For staff reports, sum givenAmountByStaff
-                            : forDriverReport
-                                ? "$receivedAmount"
+                                : forDriverReport
+                        ? {
+                            $cond: [
+                                { 
+                                    $and: [
+                                        { $eq: ["$receivedUser", "Staff"] },
+                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                                    ]
+                                },
+                                "$receivedAmountStaff",
+                                "$receivedAmount"
+                            ]
+                        }
                                 : forCompanyReport
                                     ? "$receivedAmountByCompany"
                                     : "$receivedAmount"
                     },
                     totalOverall: {
-                        $sum: forStaffReport
-                            ? "$receivedAmountStaff"  // For staff reports, sum receivedAmountStaff
-                            : {
-                                $cond: [
-                                    { $ne: ["$receivedUser", "Staff"] },
-                                    "$totalAmount",
-                                    0
-                                ]
-                            }
-                    }
-                }
-            }
-        ]);
+        $sum: forStaffReport
+          ? "$receivedAmountStaff"
+          : forDriverReport
+            ? {
+                $cond: [
+                  { 
+                    $and: [
+                      { $eq: ["$receivedUser", "Staff"] },
+                      { $eq: ["$partialReceivedAmountStaff", true] }
+                    ]
+                  },
+                  "$totalAmount",
+                  {
+                    $cond: [
+                      { $ne: ["$receivedUser", "Staff"] },
+                      "$totalAmount",
+                      0
+                    ]
+                  }
+                ]
+              }
+            : forCompanyReport
+              ? "$totalAmount"
+              : "$totalAmount"
+      }
+    }
+  }
+]);
         const aggregationResult2 = await Booking.aggregate([
             {
                 $match: {
@@ -1986,11 +2025,12 @@ exports.updateBookingApproved = async (req, res) => {
         })
     }
 }
-// ------------------------------------------------
+//-----------------------------------------------------------
 //Controller for distribute received amount
 exports.distributeReceivedAmount = async (req, res) => {
     const { receivedAmount, driverId, bookingIds, workType = 'RSAWork' } = req.body;
     const userId = req.user.id || req.user._id; // Get the staff user ID from the request
+    const userRole = req.user.role; // Get the user's role from the request
 
     const routeLogger = LoggerFactory.createChildLogger({
         route: '/distributeReceivedAmount',
@@ -2004,6 +2044,7 @@ exports.distributeReceivedAmount = async (req, res) => {
     try {
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
+        const updatedBookings = [];
 
 
         let receivedField = workType === 'PaymentWork' ? '$receivedAmountByCompany' : '$receivedAmount';
@@ -2023,22 +2064,37 @@ exports.distributeReceivedAmount = async (req, res) => {
             if (bookingBalance > 0) {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
 
-                booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
-                // Set the receivedUser and receivedUserId fields for staff
-                booking.receivedUser = 'Staff';
-                booking.receivedUserId = new mongoose.Types.ObjectId(userId);
+                // Handle Staff payments or non-Staff users updating Staff payments
+                if (booking.receivedUser === 'Staff' || (userRole !== 'Staff' && booking.partialReceivedAmountStaff === true)) {
+                    // Update both receivedAmountStaff and givenAmountByStaff
+                    booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + appliedAmount;
+                    
+                    // For non-Staff users, also update givenAmountByStaff
+                    if (userRole !== 'Staff') {
+                        booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + appliedAmount;
+                    }
+                    
+                    // Check if payment is now complete
+                    if (booking.receivedAmountStaff >= booking.totalAmount) {
+                        booking.partialReceivedAmountStaff = false;
+                        booking.receivedAmount = booking.totalAmount; // Mark as fully received
+                    } else {
+                        booking.partialReceivedAmountStaff = true;
+                    }
+                } else {
+                    // For regular non-Staff payments
+                    booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+                }
+
+                // Set the receivedUser and receivedUserId fields if not already set
+                if (!booking.receivedUser || booking.receivedUser !== 'Staff') {
+                    booking.receivedUser = userRole === 'Staff' ? 'Staff' : 'Admin'; // Or appropriate role
+                    booking.receivedUserId = new mongoose.Types.ObjectId(userId);
+                }
 
                 remainingAmount -= appliedAmount;
                 selectedBookingIds.push(booking._id);
-
-                // if (workType === 'PaymentWork') {
-                //     booking.receivedUserId = new mongoose.Types.ObjectId(userId);
-                //     booking.receivedUser = 'Staff'
-                // }
-
-                selectedBookingIds.push(booking._id);
-
-                await booking.save(); // Save updated booking to DB
+                updatedBookings.push(await booking.save());
             }
         }
 

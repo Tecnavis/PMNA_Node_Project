@@ -8,6 +8,7 @@ const { sendOtp, verifyOtp } = require('../services/otpService');
 const { updateDriverFinancials } = require('../services/driverService');
 const Expense = require('../Model/expense'); // Adjust path as needed
 const Advance = require('../Model/advance'); // If you use advances
+const { default: mongoose } = require('mongoose');
 
 
 exports.createDriver = async (req, res) => {
@@ -300,112 +301,177 @@ exports.getDriversForDropdown = async (req, res) => {
     });
   }
 };
-// ------------------------------------
+// --------------------------------
 exports.completeSettlement = async (req, res) => {
+    const session = await mongoose.startSession();
+    
     try {
-        // Verify all required models are available
-        if (!Driver || !Expense || !Advance) {
-            throw new Error('Database models not properly initialized');
-        }
+        await session.startTransaction();
 
         const { driverId } = req.params;
-        const { advanceAmount = 0 } = req.body;
+        const { isFullSettlement = true } = req.body;
 
-        // Verify driver exists
-        const driver = await Driver.findById(driverId);
+        // 1. Verify driver exists
+        const driver = await Driver.findById(driverId).session(session);
         if (!driver) {
+            await session.abortTransaction();
             return res.status(404).json({ 
                 success: false,
                 message: "Driver not found"
             });
         }
 
-        // Check for pending expenses
-        let pendingExpenses = [];
-        let totalPending = 0;
-        
-        try {
-            pendingExpenses = await Expense.find({
-                driver: driverId,
-                $or: [
-                    { approve: { $exists: false } },
-                    { approve: false }
-                ]
-            });
-            totalPending = pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-        } catch (expenseError) {
-            console.error('Error fetching expenses:', expenseError);
-            throw new Error('Failed to process expenses');
+        // 2. Update all relevant bookings
+        const bookingsToUpdate = await Booking.find({
+            driver: driverId,
+            status: "Order Completed",
+            cashPending: false,
+            $or: [
+                { receivedUser: { $ne: 'Staff' } },
+                { 
+                    receivedUser: 'Staff',
+                    partialReceivedAmountStaff: true
+                }
+            ],
+            $expr: { $lt: ["$receivedAmount", "$totalAmount"] }
+        }).session(session);
+
+        // Mark all bookings as fully received
+        if (bookingsToUpdate.length > 0) {
+            const bulkOps = bookingsToUpdate.map(booking => ({
+                updateOne: {
+                    filter: { _id: booking._id },
+                    update: {
+                        $set: {
+                            receivedAmount: booking.totalAmount,
+                            ...(booking.receivedUser === 'Staff' && {
+                                receivedAmountStaff: booking.totalAmount,
+                                partialReceivedAmountStaff: false
+                            })
+                        }
+                    }
+                }
+            }));
+            await Booking.bulkWrite(bulkOps, { session });
         }
 
-        // Prepare update data
-        const updateData = {
-            previousSettlementCompletedDate: driver.settlementCompletedDate,
-            settlementCompletedDate: new Date(),
-            settlement: true
-        };
+        // 3. Get verified bookings and calculate total driver salary
+        const verifiedBookings = await Booking.find({
+            driver: driverId,
+            verified: true,
+            status: "Order Completed",
+            driverSalary: { $exists: true, $gt: 0 }
+        }).session(session);
 
-        // Handle pending expenses if any
-        if (pendingExpenses.length > 0) {
-            if (driver.cashInHand < totalPending) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Insufficient funds. Need $${totalPending - driver.cashInHand} more`,
-                    requiredAmount: totalPending - driver.cashInHand
+        // Calculate total transferable salary from bookings
+        let totalTransferableSalary = 0;
+        const bookingUpdates = [];
+
+        verifiedBookings.forEach(booking => {
+            const currentTransferred = booking.transferedSalary || 0;
+            const balanceSalary = booking.driverSalary - currentTransferred;
+            
+            if (balanceSalary > 0) {
+                totalTransferableSalary += balanceSalary;
+                bookingUpdates.push({
+                    updateOne: {
+                        filter: { _id: booking._id },
+                        update: {
+                            $set: {
+                                transferedSalary: booking.driverSalary // Mark as fully transferred
+                            }
+                        }
+                    }
                 });
             }
+        });
 
+        // Update bookings with their transferred amounts
+        if (bookingUpdates.length > 0) {
+            await Booking.bulkWrite(bookingUpdates, { session });
+        }
+
+        // 4. Update driver document
+        const updateData = {
+            $inc: {
+                transferedSalary: totalTransferableSalary
+            },
+              $set: {
+        driverSalary: 0,    // Reset current salary
+        cashInHand: 0,      // Always reset cashInHand to 0
+        advance: 0,         // Always reset advance to 0
+        balanceAmount: 0    // Always reset balanceAmount to 0
+    }
+        };
+
+      const onlyCashInHand = (driver.cashInHand > 0) && 
+                      (driver.balanceAmount === 0 || driver.balanceAmount === null) && 
+                      (totalTransferableSalary === 0);
+
+if (onlyCashInHand) {
+    // Special case: Only cashInHand needs settlement
+    updateData.$set.advance = 0;  // Explicitly set advance to 0
+}
+
+        const updatedDriver = await Driver.findByIdAndUpdate(
+            driverId,
+            updateData,
+            { session, new: true }
+        ).lean();
+
+        // 5. Handle pending expenses
+        const pendingExpenses = await Expense.find({
+            driver: driverId,
+            $or: [
+                { approve: { $exists: false } },
+                { approve: false }
+            ]
+        }).session(session);
+
+        if (pendingExpenses.length > 0) {
             await Expense.updateMany(
                 { _id: { $in: pendingExpenses.map(e => e._id) } },
                 { 
                     $set: { 
                         approve: true,
                         approvedDate: new Date(),
-                        status: 'approved'
+                        status: 'approved',
+                        approvedBy: req.user._id
                     }
-                }
+                },
+                { session }
             );
-
-            updateData.$inc = {
-                cashInHand: -totalPending,
-                totalExpense: totalPending
-            };
         }
 
-        // Handle advance if provided
-        if (advanceAmount > 0) {
-            await Advance.create({
-                driver: driverId,
-                addedAdvance: advanceAmount,
-                advance: advanceAmount,
-                type: 'settlement',
-                userModel: 'Driver',
-                remark: 'Advance for expense settlement'
-            });
+        // Commit the transaction
+        await session.commitTransaction();
 
-            updateData.$inc = updateData.$inc || {};
-            updateData.$inc.cashInHand = (updateData.$inc.cashInHand || 0) + advanceAmount;
-        }
-
-        // Update driver
-        const updatedDriver = await Driver.findByIdAndUpdate(
-            driverId,
-            updateData,
-            { new: true, runValidators: true }
-        );
-
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
-            message: "Settlement completed successfully",
-            driver: updatedDriver
+            message: 'Full settlement completed successfully',
+            data: {
+                updatedBookings: bookingsToUpdate.length,
+                approvedExpenses: pendingExpenses.length,
+                transferredFromBookings: bookingUpdates.length,
+                totalTransferredSalary: totalTransferableSalary,
+                driver: {
+                    transferedSalary: updatedDriver.transferedSalary,
+                    driverSalary: updatedDriver.driverSalary
+                }
+            }
         });
 
     } catch (error) {
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
         console.error('Settlement error:', error);
-        return res.status(500).json({
+        res.status(500).json({
             success: false,
             message: 'Error completing settlement',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
+    } finally {
+        session.endSession();
     }
 };

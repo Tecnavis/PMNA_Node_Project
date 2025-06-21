@@ -62,6 +62,8 @@ export interface Booking {
     cancelImage: string,// new prop
     company: Company | string
     partialAmount?: number;
+    partialReceivedAmountStaff?:Boolean;
+    partialAmountStaff?:number;
     showroomAmount?: number;
     cancelKm: number,// new prop
     vehicleNumber: string,// new prop

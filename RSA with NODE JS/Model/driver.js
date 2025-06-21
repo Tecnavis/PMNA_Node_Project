@@ -103,6 +103,10 @@ settlement: {
     type: Boolean,
     default: false
   },
+  isFullSettlement : {
+    type: Boolean,
+    default: false
+  },
   settlementCompletedDate: {
     type: Date
   },
