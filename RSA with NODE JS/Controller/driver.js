@@ -111,34 +111,42 @@ exports.getDrivers = async (req, res) => {
 
 exports.filtergetDrivers = async (req, res) => {
   try {
-    const { search } = req.query; // Get search query from request
+    const { search } = req.query;
 
-    let filter = {};
-    if (search) {
-      // Case-insensitive search for both name and idNumber
-      filter = {
-        $or: [
-          { name: { $regex: search, $options: "i" } },
-          { idNumber: { $regex: search, $options: "i" } }
-        ]
-      };
-    }
+    // Validate search query exists but might be empty
+    const filter = search ? {
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { idNumber: { $regex: search, $options: "i" } },
+        // Add more fields if needed
+      ]
+    } : {};
 
-    const drivers = await Driver.find(filter).populate('vehicle.serviceType');
-    
-    // Update all drivers' financials and get the updated documents
+    // Find drivers with optional filter
+    const drivers = await Driver.find(filter)
+      .populate('vehicle.serviceType')
+      .lean(); // Use lean() for better performance
+
+    // Process drivers in parallel
     const updatedDrivers = await Promise.all(
       drivers.map(async (driver) => {
-        const advance = driver.advance || 0;
-        // Wait for each update to complete and return the updated driver
-        return await updateDriverFinancials(driver._id, advance);
+        try {
+          const advance = driver.advance || 0;
+          return await updateDriverFinancials(driver._id, advance);
+        } catch (error) {
+          console.error(`Error updating driver ${driver._id}:`, error);
+          return driver; // Return original driver if update fails
+        }
       })
     );
 
-    // Only send response after all updates are complete
     res.json(updatedDrivers);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error in filtergetDrivers:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch drivers',
+      details: error.message 
+    });
   }
 };
 

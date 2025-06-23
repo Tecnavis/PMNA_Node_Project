@@ -648,6 +648,7 @@ exports.getAllBookings = async (req, res) => {
   ...(forDriverReport && { 
                 $or: [
                     { receivedUser: { $ne: 'Staff' } },
+                    
                     { 
                         receivedUser: 'Staff',
                         partialReceivedAmountStaff: true 
