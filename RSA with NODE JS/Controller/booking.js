@@ -694,7 +694,7 @@ exports.getAllBookings = async (req, res) => {
                       { $eq: ["$partialReceivedAmountStaff", true] }
                     ]
                   },
-                  "$totalAmount",
+                  "$receivedAmountStaff",
                   {
                     $cond: [
                       { $ne: ["$receivedUser", "Staff"] },

@@ -72,8 +72,10 @@ const ExpenseApproveUI = () => {
   };
 
   const openImageModal = (imageUrl: string) => {
-    setSelectedImage(imageUrl);
-  };
+  console.log('Opening modal'); // Add this
+  setSelectedImage(imageUrl);
+  setImageModalOpen(true);
+};
 
   const approveExpense = async (expenseId: string) => {
     try {
@@ -314,7 +316,10 @@ const ExpenseApproveUI = () => {
             <div className="flex justify-between items-center mb-2">
               <p className="text-sm text-gray-600">Receipt:</p>
               <Button
-                onClick={() => setImageModalOpen(true)}
+                  onClick={() => {
+    console.log('Button clicked'); // Add this
+    setImageModalOpen(true);
+  }}
                 className="text-indigo-600 text-sm font-medium flex items-center gap-1"
               >
                 {/* <Maximize2 size={14} /> */}
