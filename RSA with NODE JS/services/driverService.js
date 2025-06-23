@@ -33,22 +33,29 @@ async function calculateNetTotalAmountInHand(driverId) {
                 driver: new mongoose.Types.ObjectId(driverId),
                 status: 'Order Completed',
                 workType: 'PaymentWork',
-               $and: [
-                    { cashPending: false },
-                    { cashPending: { $exists: false } }
-                ],
-                $or: [
-                    { receivedUser: { $ne: 'Staff' } },
-                    { receivedUser: { $exists: false } },
+                               $and: [
                     {
-                        $and: [
-                            { receivedUser: 'Staff' },
-                            { partialReceivedAmountStaff: true }
+                        $or: [
+                            { cashPending: false },
+                            { cashPending: { $exists: false } }
+                        ]
+                    },
+                    {
+                        $or: [
+                            { receivedUser: { $ne: 'Staff' } },
+                            { receivedUser: { $exists: false } },
+                            {
+                                $and: [
+                                    { receivedUser: 'Staff' },
+                                    { partialReceivedAmountStaff: true }
+                                ]
+                            }
                         ]
                     }
                 ]
             }
         },
+
         {
             $addFields: {
                 // Determine which received amount to use based on payment type
