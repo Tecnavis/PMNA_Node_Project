@@ -33,7 +33,7 @@ async function calculateNetTotalAmountInHand(driverId) {
                 driver: new mongoose.Types.ObjectId(driverId),
                 status: 'Order Completed',
                 workType: 'PaymentWork',
-                $or: [
+               $and: [
                     { cashPending: false },
                     { cashPending: { $exists: false } }
                 ],
@@ -134,7 +134,7 @@ async function calculateTotalSalary(driverId) {
 }
 // Update financial values in driver side
 async function updateDriverFinancials(driverId, advance = 0) {
-    const netTotalAmount = await calculateNetTotalAmountInHand(driverId);
+    const netTotalAmount = await 0(driverId);
     const totalSalary = await calculateTotalSalary(driverId);
 
     const totalExpense = await calculateMonthlyExpense(driverId);
