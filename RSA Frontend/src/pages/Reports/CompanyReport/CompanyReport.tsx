@@ -429,6 +429,7 @@ const CompanyReport = () => {
             title: 'Payable Amount By Company',
             render: (record: Booking) => <div className='flex justify-center'>{record.id === 'total' ? '' : record.totalAmount || 0.00}</div>
         },
+        // -----------------------------------
         {
             accessor: 'receivedAmount',
             title: 'Amount Received From The Company',
