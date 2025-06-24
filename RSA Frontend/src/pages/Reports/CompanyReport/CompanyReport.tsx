@@ -433,41 +433,32 @@ const CompanyReport = () => {
                             [ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) ? <>
                                 <input
                                     type="text"
-                                    value={inputValues[booking._id] || 0}
-                                    onChange={(e) => updateInputValues(booking._id, +e.target.value)}
-                                    style={{
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '0.25rem',
-                                        padding: '0.25rem 0.5rem',
-                                        marginRight: '0.5rem',
-                                    }}
-                                    disabled={booking.approve}
-                                    min="0"
-                                />
+ value={inputValues[booking._id] ?? booking.receivedAmountByCompany ?? 0}                                    onChange={(e) => updateInputValues(booking._id, +e.target.value)}
+                                   onChange={(e) => updateInputValues(booking._id, Number(e.target.value))}
+                            className="border border-gray-300 rounded px-2 py-1 w-24 mr-2"
+                            disabled={booking.approve}
+                            min="0"
+                            step="0.01"
+                        />
                                 <button
                                     onClick={() => handleUpdateAmount(booking._id)}
                                     disabled={booking.approve || loadingStates[booking._id]}
-                                    style={{
-                                        backgroundColor:
-                                            Number(
-                                                calculateBalance(
-                                                    parseFloat(booking.totalAmount?.toString() || '0'),
-                                                    inputValues[booking._id] || booking.receivedAmountByCompany || '0',
-                                                    booking.receivedUser
-                                                )
-                                            ) === 0
-                                                ? '#28a745' // Green for zero balance
-                                                : '#dc3545', // Red for non-zero balance
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '0.25rem',
-                                        padding: '0.3rem',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    {loadingStates[booking._id] ? 'Loading...' : 'OK'}
-                                </button >
-                            </> : <input type="text" className="text-center" value={inputValues[booking._id]} readOnly />
+                                    className={`
+                                px-3 py-1 rounded text-white
+                                ${loadingStates[booking._id] ? 'bg-gray-400' : 
+                                    calculateBalance(
+                                        booking.totalAmount || 0,
+                                        inputValues[booking._id] || booking.receivedAmountByCompany || 0,
+                                        booking.receivedUser
+                                    ) === 0 ? 'bg-green-500' : 'bg-red-500'
+                                }
+                                ${booking.approve ? 'cursor-not-allowed' : 'cursor-pointer'}
+                            `}
+                        >
+                            {loadingStates[booking._id] ? '...' : 'Ok'}
+                        </button>
+                            </> :                     <span>{booking.receivedAmountByCompany || 0}</span>
+
                         }
                     </>)
                 }
@@ -636,19 +627,31 @@ const CompanyReport = () => {
     const handleUpdateAmount = async (id: string) => {
         const receivedAmountByCompany = inputValues[id]
 
-        if (!receivedAmountByCompany) return;
-
+ if (!receivedAmountByCompany && receivedAmountByCompany !== 0) {
+        return Swal.fire('Warning!', 'Please enter a valid amount', 'warning');
+    }
         try {
-            const res = await axios.patch(`${BASE_URL}/booking/sattle-amount-company/${id}`, { receivedAmountByCompany });
+                    setLoadingStates(prev => ({ ...prev, [id]: true }));
+
+            const res = await axios.patch(`${BASE_URL}/booking/settle-amount-company/${id}`,  { 
+                receivedAmountByCompany: Number(receivedAmountByCompany) 
+            },  {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
             console.log("Update response:", res.data);
 
             fetchBookings();
             Swal.fire('Balance!', 'The booking balance amount udated.', 'success');
-        } catch (error) {
-            console.error('Error updatebalnce amount:', error);
-            Swal.fire('Error!', 'Failed to update balance amount in booking.', 'error');
-        }
+         } catch (error) {
+        console.error('Error updating balance amount:', error);
+        Swal.fire('Error!', error.response?.data?.message || 'Failed to update balance amount', 'error');
+    } finally {
+        // Reset loading state
+        setLoadingStates(prev => ({ ...prev, [id]: false }));
     }
+}
 
     const handleUpdateInvoiceNumber = async (id: string) => {
         const invoiceNumber = invoiceValues[id]

@@ -14,6 +14,8 @@ const ShowroomInvoice = lazy(() => import('../pages/Reports/DriverReport/Showroo
 const MarketingExecutives = lazy(() => import('../pages/MarketingExecutive/MarketingExecutives'))
 const StatusTable = lazy(() => import('../pages/Screen/StatusTable'));
 const PaymentWorkReport = lazy(() => import('../pages/PaymentManagment/PaymentWorkReport'))
+const PaymentReportStaff = lazy(() => import('../pages/PaymentManagment/PaymentReportStaff'))
+
 const DriverSalaryReport = lazy(() => import('../pages/Reports/DriverReport/SalaryReport'))
 const DieselExpences = lazy(() => import('../pages/Expences/DieselExpences'))
 const OtherExpences = lazy(() => import('../pages/Expences/OtherExpences'))
@@ -262,6 +264,10 @@ const routes = [
     {
         path: '/pmnr-report',
         element: <PaymentWorkReport />,
+    },
+     {
+        path: '/payment-report-staff',
+        element: <PaymentReportStaff />,
     },
     {
         path: '/staffcashreport/:id',
