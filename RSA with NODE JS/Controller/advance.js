@@ -244,7 +244,7 @@ const settleBookingsWithAdvance = async (driverId, advanceDoc, userType) => {
     return data
 };
 
-
+// --------------------------------------------------
 //Controller for get all advance
 exports.getAllAdvance = async (req, res) => {
     try {
@@ -313,35 +313,44 @@ exports.getAllAdvance = async (req, res) => {
 
 exports.monthlyAdvance = asyncErrorHandler(async (req, res) => {
     const { id } = req.params
-    const { startDate, endingDate } = req.query;
+    // 1. Get the driver to access settlement dates
+    const driver = await Driver.findById(id);
+    if (!driver) {
+        throw new NotFoundError('Driver not found');
+    }
 
-    const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
-    const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
+    // 2. Verify we have valid settlement dates
+    if (!driver.previousSettlementCompletedDate || !driver.settlementCompletedDate) {
+        throw new BadRequestError('Settlement dates are not available for this driver');
+    }
 
+    // 3. Calculate advance between these dates
     const result = await Advance.aggregate([
         {
             $match: {
                 driver: new mongoose.Types.ObjectId(id),
                 createdAt: {
-                    $gte: startOfDay,
-                    $lte: endOfDay
+                    $gte: driver.previousSettlementCompletedDate,
+                    $lte: driver.settlementCompletedDate
                 }
             }
         },
         {
             $group: {
                 _id: null,
-                monthlyAdvance: { $sum: '$addedAdvance' }
+                settledAdvance: { $sum: '$addedAdvance' }
             }
-        },
+        }
     ]);
 
-    return res.status(StatusCodes.CREATED).json({
+    return res.status(StatusCodes.OK).json({
         success: true,
         data: {
-            monthlyAdvanceAmount: result[0]?.monthlyAdvance || 0,
-            monthlyAdvance: result
+            settledAdvanceAmount: result[0]?.settledAdvance || 0,
+            periodStart: driver.previousSettlementCompletedDate,
+            periodEnd: driver.settlementCompletedDate,
+            details: result
         },
-        message: "Monthly advance retrieved successfully"
+        message: "Advance between settlements calculated successfully"
     });
-})
+});

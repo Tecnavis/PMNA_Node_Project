@@ -306,18 +306,34 @@ async function calculateMonthlyDieselExpense(driverId) {
 }
 async function calculateTotalAdvance(driverId) {
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+     // First get the driver's settlement dates
+    const driver = await Driver.findById(driverId)
+        .select('previousSettlementCompletedDate settlementCompletedDate')
+        .lean();
 
+    if (!driver) {
+        throw new Error('Driver not found');
+    }
+
+    // Use settlement dates if available, otherwise fall back to current month
+    const startDate = driver.previousSettlementCompletedDate || 
+                     new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    
+    const endDate = driver.settlementCompletedDate || 
+                   new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999);
+
+    // Validate dates
+    if (startDate > endDate) {
+        throw new Error('Invalid date range: previousSettlementCompletedDate is after settlementCompletedDate');
+    }
     const result = await Advance.aggregate([
         {
             $match: {
                 driver: new mongoose.Types.ObjectId(driverId),
                 userModel: "Driver",
                 createdAt: {
-                    $gte: startOfMonth,
-                    $lte: endOfMonth
+                    $gte: startDate,
+                    $lte: endDate
                 }
             }
         },

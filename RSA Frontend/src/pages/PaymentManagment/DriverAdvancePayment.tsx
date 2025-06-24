@@ -231,14 +231,15 @@ const colsForReceivedDetails = ReceivedDetailsTableColumn;
 
                 // Refresh data
                 await Promise.all([fetchReceivedData(), fetchCollectionData(), fetchDrivers()]);
+ // Get the updated driver data to set the new inHandAmount
+            const driverResponse = await axios.get(`${BASE_URL}/driver/${selectedDriver}`);
+            const updatedDriver = driverResponse.data;
+            
+            // Reset form with updated values
+            setRemark('');
+            setReceivedAmount('');
+            setInHandAmount(updatedDriver.cashInHand || 0); // Set to current cash in hand
 
-                // Reset form
-                setRemark('');
-                setReceivedAmount('');
-                setInHandAmount(0);
-                // setSelectedDriver('');
-                // setSelectedType('');
-// -----------
                 Swal.fire({
                     title: 'Settlement Complete!',
                     html: `
