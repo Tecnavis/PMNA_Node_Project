@@ -81,6 +81,8 @@ router.patch('/accountantverify/:id', jwt, controller.accountVerifying);
 
 //Route to settle booking amount
 router.patch('/sattle-amount/:id', jwt, controller.settleAmount);
+router.patch('/sattle-amount-company/:id', jwt, controller.settleAmountCompany);
+
 router.patch('/sattle-amount-staff/:id', jwt, controller.settleStaffAmount);
 
 //Route to settle booking amount

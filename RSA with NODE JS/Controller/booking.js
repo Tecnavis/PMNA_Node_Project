@@ -1776,13 +1776,18 @@ exports.settleAmount = async (req, res) => {
         const userId = req.user.id || req.user._id
 
         const booking = await Booking.findById(id);
-
+console.log("booking",booking)
         if (!booking) {
             return res.status(404).json({
                 message: 'Booking not found'
             });
         }
-
+ // Skip if this is RSAWork (handled by separate endpoint)
+        if (booking.workType === 'RSAWork') {
+            return res.status(400).json({
+                message: 'For RSAWork bookings, please use the settleAmountCompany endpoint'
+            });
+        }
         // Creating the receivedHistory object
         const receivedHistory = {
             role: receivedUser || 'Admin',
@@ -1854,6 +1859,73 @@ exports.settleAmount = async (req, res) => {
     } catch (error) {
         console.error('Error settling booking amount:', error.message);
         res.status(500).json({ message: 'Server error while settling booking amount.' });
+    }
+};
+exports.settleAmountCompany = async (req, res) => {
+    try {
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/settle-amount-company',
+            handler: 'settleAmountCompany',
+        });
+        routeLogger.info({
+            doneBy: req.user || 'unknown'
+        }, 'The process to settle company amount for RSAWork started....');
+
+        const { id } = req.params;
+        const { receivedAmountByCompany } = req.body;
+        const userId = req.user.id || req.user._id;
+
+        const booking = await Booking.findById(id);
+        
+        if (!booking) {
+            return res.status(404).json({
+                message: 'Booking not found'
+            });
+        }
+
+        // Verify this is an RSAWork booking
+        if (booking.workType !== 'RSAWork') {
+            return res.status(400).json({
+                message: 'This endpoint is only for RSAWork bookings'
+            });
+        }
+
+        // Validate the amount
+        if (typeof receivedAmountByCompany !== 'number' || receivedAmountByCompany < 0) {
+            return res.status(400).json({
+                message: 'Invalid amount provided'
+            });
+        }
+
+       
+       
+        // Update company payment fields
+        booking.receivedAmountByCompany = Number(receivedAmountByCompany);
+        
+        // Check if payment is complete
+        if (booking.totalAmount <= booking.receivedAmountByCompany) {
+            booking.cashPending = false;
+        }
+
+        await booking.save();
+
+        routeLogger.info({
+            fileNumber: booking.fileNumber || 'unknown',
+            doneBy: req.user || 'unknown',
+            amount: receivedAmountByCompany
+        }, 'Company amount settled successfully for RSAWork');
+
+        return res.status(200).json({
+            message: "Company amount settled successfully",
+            booking
+        });
+
+    } catch (error) {
+        console.error('Error settling company amount:', error.message);
+        res.status(500).json({ 
+            message: 'Server error while settling company amount',
+            error: error.message 
+        });
     }
 };
 // Controller for settling staff amounts

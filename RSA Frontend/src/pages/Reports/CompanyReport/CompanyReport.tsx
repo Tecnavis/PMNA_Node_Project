@@ -431,7 +431,7 @@ const CompanyReport = () => {
         },
         // -----------------------------------
         {
-            accessor: 'receivedAmount',
+            accessor: 'receivedAmountByCompany',
             title: 'Amount Received From The Company',
             render: (booking: Booking) => {
                 if (booking._id === 'total') {
@@ -623,24 +623,26 @@ const CompanyReport = () => {
     };    
 
 
-    const calculateBalance = (amount: string | number, receivedAmount: string | number, receivedUser?: string) => {
+    const calculateBalance = (amount: string | number, receivedAmountByCompany: string | number, receivedUser?: string) => {
         if (receivedUser === "Staff") {
             return 0;
         }
         const parsedAmount = Number(amount) || 0; // Convert to number safely
-        const parsedReceivedAmount = Number(receivedAmount) || 0;
+        const parsedReceivedAmount = Number(receivedAmountByCompany) || 0;
         const balance = parsedAmount - parsedReceivedAmount;
         console.log('balance',balance)
         return balance; // Always return a string
     };
-
+// ---------------------------------------------
     const handleUpdateAmount = async (id: string) => {
-        const receivedAmount = inputValues[id]
+        const receivedAmountByCompany = inputValues[id]
 
-        if (!receivedAmount) return;
+        if (!receivedAmountByCompany) return;
 
         try {
-            const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { receivedAmount });
+            const res = await axios.patch(`${BASE_URL}/booking/sattle-amount-company/${id}`, { receivedAmountByCompany });
+            console.log("Update response:", res.data);
+
             fetchBookings();
             Swal.fire('Balance!', 'The booking balance amount udated.', 'success');
         } catch (error) {
