@@ -853,7 +853,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
           Approving will reset all amounts to zero: Cash In Hand, Balance, and Advance.
         </p>
         <p className="text-sm text-yellow-700 mt-1">
-          Final Settlement Amount: ${((selectedDriver?.cashInHand ?? 0) - (pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0))).toFixed(2)}
+          Final Settlement Amount: ₹{((selectedDriver?.cashInHand ?? 0) - (pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0))).toFixed(2)}
         </p>
       </div>
     </div>
@@ -866,7 +866,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
     <div className="text-sm text-gray-600">
       {(selectedDriver?.cashInHand ?? 0) < (pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0)) && (
         <span className="text-red-600 font-medium">
-          Shortage: ${((pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0)) - (selectedDriver?.cashInHand ?? 0)).toFixed(2)}
+          Shortage: ₹{((pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0)) - (selectedDriver?.cashInHand ?? 0)).toFixed(2)}
         </span>
       )}
     </div>

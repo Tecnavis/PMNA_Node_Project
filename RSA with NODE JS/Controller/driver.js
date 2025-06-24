@@ -9,6 +9,7 @@ const { updateDriverFinancials } = require('../services/driverService');
 const Expense = require('../Model/expense'); // Adjust path as needed
 const Advance = require('../Model/advance'); // If you use advances
 const { default: mongoose } = require('mongoose');
+const ReceivedDetails = require('../Model/ReceivedDetails'); // If you use advances
 
 
 exports.createDriver = async (req, res) => {
@@ -111,42 +112,34 @@ exports.getDrivers = async (req, res) => {
 
 exports.filtergetDrivers = async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search } = req.query; // Get search query from request
 
-    // Validate search query exists but might be empty
-    const filter = search ? {
-      $or: [
-        { name: { $regex: search, $options: "i" } },
-        { idNumber: { $regex: search, $options: "i" } },
-        // Add more fields if needed
-      ]
-    } : {};
+    let filter = {};
+    if (search) {
+      // Case-insensitive search for both name and idNumber
+      filter = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { idNumber: { $regex: search, $options: "i" } }
+        ]
+      };
+    }
 
-    // Find drivers with optional filter
-    const drivers = await Driver.find(filter)
-      .populate('vehicle.serviceType')
-      .lean(); // Use lean() for better performance
-
-    // Process drivers in parallel
+    const drivers = await Driver.find(filter).populate('vehicle.serviceType');
+    
+    // Update all drivers' financials and get the updated documents
     const updatedDrivers = await Promise.all(
       drivers.map(async (driver) => {
-        try {
-          const advance = driver.advance || 0;
-          return await updateDriverFinancials(driver._id, advance);
-        } catch (error) {
-          console.error(`Error updating driver ${driver._id}:`, error);
-          return driver; // Return original driver if update fails
-        }
+        const advance = driver.advance || 0;
+        // Wait for each update to complete and return the updated driver
+        return await updateDriverFinancials(driver._id, advance);
       })
     );
 
+    // Only send response after all updates are complete
     res.json(updatedDrivers);
   } catch (error) {
-    console.error('Error in filtergetDrivers:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch drivers',
-      details: error.message 
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -309,27 +302,38 @@ exports.getDriversForDropdown = async (req, res) => {
     });
   }
 };
-// --------------------------------
+// ----------------------------------
 exports.completeSettlement = async (req, res) => {
-    const session = await mongoose.startSession();
-    
     try {
-        await session.startTransaction();
-
         const { driverId } = req.params;
         const { isFullSettlement = true } = req.body;
 
-        // 1. Verify driver exists
-        const driver = await Driver.findById(driverId).session(session);
+        // 1. Validate inputs
+        if (!mongoose.Types.ObjectId.isValid(driverId)) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Invalid driver ID"
+            });
+        }
+
+        // 2. Verify driver exists
+        const driver = await Driver.findById(driverId);
         if (!driver) {
-            await session.abortTransaction();
             return res.status(404).json({ 
                 success: false,
                 message: "Driver not found"
             });
         }
 
-        // 2. Update all relevant bookings
+        // Store current date for settlement
+        const currentSettlementDate = new Date();
+        // Prepare dates for update
+        const settlementDatesUpdate = {
+            previousSettlementCompletedDate: driver.settlementCompletedDate || null,
+            settlementCompletedDate: currentSettlementDate
+        };
+
+        // 3. Update bookings with pending payments
         const bookingsToUpdate = await Booking.find({
             driver: driverId,
             status: "Order Completed",
@@ -342,9 +346,8 @@ exports.completeSettlement = async (req, res) => {
                 }
             ],
             $expr: { $lt: ["$receivedAmount", "$totalAmount"] }
-        }).session(session);
+        });
 
-        // Mark all bookings as fully received
         if (bookingsToUpdate.length > 0) {
             const bulkOps = bookingsToUpdate.map(booking => ({
                 updateOne: {
@@ -360,18 +363,17 @@ exports.completeSettlement = async (req, res) => {
                     }
                 }
             }));
-            await Booking.bulkWrite(bulkOps, { session });
+            await Booking.bulkWrite(bulkOps);
         }
 
-        // 3. Get verified bookings and calculate total driver salary
+        // 4. Calculate total transferable salary
         const verifiedBookings = await Booking.find({
             driver: driverId,
             verified: true,
             status: "Order Completed",
             driverSalary: { $exists: true, $gt: 0 }
-        }).session(session);
+        });
 
-        // Calculate total transferable salary from bookings
         let totalTransferableSalary = 0;
         const bookingUpdates = [];
 
@@ -386,7 +388,7 @@ exports.completeSettlement = async (req, res) => {
                         filter: { _id: booking._id },
                         update: {
                             $set: {
-                                transferedSalary: booking.driverSalary // Mark as fully transferred
+                                transferedSalary: booking.driverSalary
                             }
                         }
                     }
@@ -394,47 +396,79 @@ exports.completeSettlement = async (req, res) => {
             }
         });
 
-        // Update bookings with their transferred amounts
         if (bookingUpdates.length > 0) {
-            await Booking.bulkWrite(bookingUpdates, { session });
+            await Booking.bulkWrite(bookingUpdates);
         }
 
-        // 4. Update driver document
+        // 5. Calculate remaining amount and handle advance
+        const remainingAmount = Math.max(0, driver.cashInHand - totalTransferableSalary);
+         let advanceDeduction = 0;
+        let newAdvanceBalance = 0; // This will now always be set to 0
+
+        if (remainingAmount > 0 && driver.advance > 0) {
+            advanceDeduction = Math.min(remainingAmount, driver.advance);
+        }
+
+        // 6. Find and update the last advance record to zero
+        const lastAdvance = await Advance.findOne({ driver: driverId })
+            .sort({ createdAt: -1 })
+            .exec();
+
+        if (lastAdvance) {
+            lastAdvance.advance = 0;
+            lastAdvance.status = 'settled';
+            lastAdvance.settledAt = new Date();
+            await lastAdvance.save();
+        }
+        // 6. Create received details record
+        await ReceivedDetails.create({
+            remark: 'Advance deduction from settlement',
+            balance: 0,
+            fileNumber: 'Advance Deduction',
+            currentNetAmount: 0,
+            amount: `Advance: ${driver.advance || 0}`,
+            driver: driverId,
+            receivedAmount: advanceDeduction,
+            totalAmount: remainingAmount,
+            receivedUser: req.user?.role || 'Admin',
+            receivedUserId: req.user?._id,
+        });
+
+      // Replace it with this if you need to call updateDriverFinancials:
+await updateDriverFinancials(
+    driver._id,
+    driver.advance || 0
+);
+
+
+        // 7. Update driver
         const updateData = {
             $inc: {
                 transferedSalary: totalTransferableSalary
             },
-              $set: {
-        driverSalary: 0,    // Reset current salary
-        cashInHand: 0,      // Always reset cashInHand to 0
-        advance: 0,         // Always reset advance to 0
-        balanceAmount: 0    // Always reset balanceAmount to 0
-    }
+            $set: {
+                driverSalary: 0,
+                cashInHand: 0,
+                balanceAmount: 0,
+                advance: newAdvanceBalance,
+                ...settlementDatesUpdate  // Add the settlement dates here
+            }
         };
-
-      const onlyCashInHand = (driver.cashInHand > 0) && 
-                      (driver.balanceAmount === 0 || driver.balanceAmount === null) && 
-                      (totalTransferableSalary === 0);
-
-if (onlyCashInHand) {
-    // Special case: Only cashInHand needs settlement
-    updateData.$set.advance = 0;  // Explicitly set advance to 0
-}
 
         const updatedDriver = await Driver.findByIdAndUpdate(
             driverId,
             updateData,
-            { session, new: true }
+            { new: true }
         ).lean();
 
-        // 5. Handle pending expenses
+        // 8. Handle pending expenses
         const pendingExpenses = await Expense.find({
             driver: driverId,
             $or: [
                 { approve: { $exists: false } },
                 { approve: false }
             ]
-        }).session(session);
+        });
 
         if (pendingExpenses.length > 0) {
             await Expense.updateMany(
@@ -446,40 +480,30 @@ if (onlyCashInHand) {
                         status: 'approved',
                         approvedBy: req.user._id
                     }
-                },
-                { session }
+                }
             );
         }
-
-        // Commit the transaction
-        await session.commitTransaction();
-
+        
         res.status(200).json({
             success: true,
-            message: 'Full settlement completed successfully',
+            message: 'Settlement completed successfully',
             data: {
-                updatedBookings: bookingsToUpdate.length,
-                approvedExpenses: pendingExpenses.length,
-                transferredFromBookings: bookingUpdates.length,
                 totalTransferredSalary: totalTransferableSalary,
-                driver: {
-                    transferedSalary: updatedDriver.transferedSalary,
-                    driverSalary: updatedDriver.driverSalary
-                }
+                remainingAmount: remainingAmount,
+                advanceDeduction: advanceDeduction,
+                newAdvanceBalance: newAdvanceBalance,
+                currentSettlementDate: currentSettlementDate,
+                previousSettlementDate: settlementDatesUpdate.previousSettlementCompletedDate,
+                driver: updatedDriver
             }
         });
 
     } catch (error) {
-        if (session.inTransaction()) {
-            await session.abortTransaction();
-        }
         console.error('Settlement error:', error);
         res.status(500).json({
             success: false,
             message: 'Error completing settlement',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
-    } finally {
-        session.endSession();
     }
 };
