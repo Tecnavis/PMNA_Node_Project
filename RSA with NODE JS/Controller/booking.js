@@ -2074,14 +2074,18 @@ exports.updateBookingApproved = async (req, res) => {
 
         const { id } = req.params
 
-        const booking = await Booking.findById(id)
+        const { approve } = req.body; // Get the approve status from request body
+
+        const booking = await Booking.findById(id);
 
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
 
-        booking.accountantVerified = true
-        await booking.save()
+        // Update the approve field
+        booking.approve = approve !== undefined ? approve : true; // Default to true if not specified
+       
+        await booking.save();
 
         routeLogger.info({
             fileNumber: booking.fileNumber || 'unknown',
