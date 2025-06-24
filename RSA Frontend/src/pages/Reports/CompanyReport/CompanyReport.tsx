@@ -191,44 +191,35 @@ const CompanyReport = () => {
     };
 
     const handleApproveClick = async (record: Booking) => {
-        // Check if receivedAmount is not zero
-        if (calculateBalance(
-            parseFloat(record.totalAmount?.toString() || '0'),
-            record.receivedAmountByCompany || 0,
-            record.receivedUser
-        ) !== 0) {
-            Swal.fire({
-                title: 'Balance Amount Not Zero',
-                text: 'The balance amount needs to be zero before approving this booking.',
-                icon: 'error',
-                confirmButtonColor: '#3085d6',
-                confirmButtonText: 'OK',
-            });
-            return; // Stop further execution
-        }
+    // Directly show confirmation dialog without balance check
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: 'Do you want to approve this booking?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, approve it!',
+        cancelButtonText: 'Cancel'
+    });
 
-        // Proceed with approval if receivedAmount is zero
-        Swal.fire({
-            title: 'Are you sure?',
-            text: 'Do you want to approve this booking?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, approve it!',
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    const res = await axiosInstance.patch(`${BASE_URL}/booking/update-approve/${record._id}`);
-                    fetchBookings(); // Refresh the bookings list
-                    Swal.fire('Approved!', 'The booking has been approved.', 'success');
-                } catch (error) {
-                    console.error('Error approving booking:', error);
-                    Swal.fire('Error!', 'Failed to approve the booking.', 'error');
-                }
-            }
-        });
-    };
+    if (result.isConfirmed) {
+        try {
+            // Send PATCH request to update approval status
+            await axiosInstance.patch(
+                `${BASE_URL}/booking/update-approve/${record._id}`,
+                { approve: true }
+            );
+            
+            // Refresh bookings and show success message
+            fetchBookings();
+            Swal.fire('Approved!', 'The booking has been approved.', 'success');
+        } catch (error) {
+            console.error('Error approving booking:', error);
+            Swal.fire('Error!', 'Failed to approve the booking.', 'error');
+        }
+    }
+};
 
     const calculateTotalBalance = () => {
         return bookings?.reduce((totalBalance, booking) => {
@@ -544,26 +535,34 @@ const CompanyReport = () => {
                 );
             },
         },
-        {
-            accessor: 'approve',
-            title: 'Approve',
-            className: 'text-center',
-            headerClassName: 'text-center',
-            render: (record: Booking) => {
-                if (record._id === 'total') {
-                    return ""
-                } else {
-                    return <button
-                        onClick={() => handleApproveClick(record)}
-                        className={`${record.accountantVerified ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-500'} hover:${record.accountantVerified ? 'bg-green-300' : 'bg-red-300'
-                            } ${record.accountantVerified ? 'cursor-not-allowed' : 'cursor-pointer'} px-4 py-2 rounded`}
-                        disabled={record.accountantVerified}
-                    >
-                        {record.accountantVerified ? 'Approved' : 'Approve'}
-                    </button>
-                }
-            }
-        },
+  {
+    accessor: 'approve',
+    title: 'Approve',
+    className: 'text-center',
+    headerClassName: 'text-center',
+    render: (record: Booking) => {
+        if (record._id === 'total') {
+            return "";
+        } else {
+            return (
+                <button
+                    onClick={() => handleApproveClick(record)}
+                    disabled={record.approve}
+                    className={`
+                        ${record.approve 
+                            ? 'bg-green-200 text-green-700 hover:bg-green-300' 
+                            : 'bg-red-200 text-red-500 hover:bg-red-300'
+                        }
+                        ${record.approve ? 'cursor-not-allowed' : 'cursor-pointer'}
+                        px-4 py-2 rounded-md font-medium transition-colors duration-200
+                    `}
+                >
+                    {record.approve ? 'Approved' : 'Approve'}
+                </button>
+            );
+        }
+    }
+},
         {
             accessor: 'viewmore',
             title: 'View More',
