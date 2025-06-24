@@ -1863,17 +1863,15 @@ console.log("booking",booking)
 };
 exports.settleAmountCompany = async (req, res) => {
     try {
-        const routeLogger = LoggerFactory.createChildLogger({
-            route: '/settle-amount-company',
-            handler: 'settleAmountCompany',
-        });
-        routeLogger.info({
-            doneBy: req.user || 'unknown'
-        }, 'The process to settle company amount for RSAWork started....');
-
         const { id } = req.params;
         const { receivedAmountByCompany } = req.body;
-        const userId = req.user.id || req.user._id;
+
+        // Validate input
+        if (typeof receivedAmountByCompany !== 'number' || receivedAmountByCompany < 0) {
+            return res.status(400).json({
+                message: 'Invalid amount provided. Must be a positive number.'
+            });
+        }
 
         const booking = await Booking.findById(id);
         
@@ -1883,23 +1881,7 @@ exports.settleAmountCompany = async (req, res) => {
             });
         }
 
-        // Verify this is an RSAWork booking
-        if (booking.workType !== 'RSAWork') {
-            return res.status(400).json({
-                message: 'This endpoint is only for RSAWork bookings'
-            });
-        }
-
-        // Validate the amount
-        if (typeof receivedAmountByCompany !== 'number' || receivedAmountByCompany < 0) {
-            return res.status(400).json({
-                message: 'Invalid amount provided'
-            });
-        }
-
-       
-       
-        // Update company payment fields
+        // Update only the necessary fields
         booking.receivedAmountByCompany = Number(receivedAmountByCompany);
         
         // Check if payment is complete
@@ -1909,21 +1891,15 @@ exports.settleAmountCompany = async (req, res) => {
 
         await booking.save();
 
-        routeLogger.info({
-            fileNumber: booking.fileNumber || 'unknown',
-            doneBy: req.user || 'unknown',
-            amount: receivedAmountByCompany
-        }, 'Company amount settled successfully for RSAWork');
-
         return res.status(200).json({
-            message: "Company amount settled successfully",
+            message: "Company amount updated successfully",
             booking
         });
 
     } catch (error) {
-        console.error('Error settling company amount:', error.message);
+        console.error('Error updating company amount:', error.message);
         res.status(500).json({ 
-            message: 'Server error while settling company amount',
+            message: 'Server error while updating company amount',
             error: error.message 
         });
     }
