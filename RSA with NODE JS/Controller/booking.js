@@ -2506,7 +2506,7 @@ exports.cancelBooking = async (req, res) => {
         booking.cancelImage = image;
         booking.cancelStatus = true;
         booking.cancelReason = cancelData.cancelReason;
-        booking.status = "Order Completed"
+        booking.status = "Cancelled"
         booking.cancelKm = cancelData.cancelKm;
 
         await booking.save();

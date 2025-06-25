@@ -49,3 +49,21 @@ export interface CashCollectionDetails {
     updatedAt?: string | Date; // Optional if using timestamps
     remark?: string;       // Optional remark field
 }
+export interface ReceivedDetailsStaff {
+    _id: string;
+    balance: string;
+    currentCashInHand: number;
+    totalStaffAmount: number;
+    staff: {
+        _id: string;
+        name: string;
+    } | string;
+    givenAmountByStaff: number;
+    remark?: string;
+    createdAt: string | Date;
+    updatedAt?: string | Date;
+    processedBy?: {
+        _id: string;
+        name: string;
+    };
+}

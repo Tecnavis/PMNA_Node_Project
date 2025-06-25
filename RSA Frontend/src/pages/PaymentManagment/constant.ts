@@ -1,7 +1,7 @@
 import { DataTableColumn } from "mantine-datatable";
 import { dateFormate, formattedTime } from "../../utils/dateUtils";
 import { Booking } from "../Bookings/Bookings";
-import { AdvanceData, CashCollectionDetails, ReceivedDetails } from "./types";
+import { AdvanceData, CashCollectionDetails, ReceivedDetails, ReceivedDetailsStaff } from "./types";
 const roundToNearestMinute = (date: Date) => {
   const roundedDate = new Date(date);
   roundedDate.setSeconds(0);
@@ -234,4 +234,60 @@ export const CashCollectionDetailsTableColumn: DataTableColumn<CashCollectionDet
         accessor: 'balance',
         render: (cashCollection: CashCollectionDetails) => cashCollection.balance
     },
+];
+export const ReceivedDetailsStaffTableColumn: DataTableColumn<ReceivedDetailsStaff>[] = [
+    {
+        title: "SI",
+        accessor: '_id',
+        render: (_: any, index: number) => index + 1
+    },
+    {
+        title: "DATE AND TIME",
+        accessor: 'createdAt',
+        render: (details: ReceivedDetailsStaff) => {
+            const dateStr = dateFormate(details.createdAt.toString());
+            const timeStr = formattedTime(details.createdAt.toString());
+            return `${dateStr} at ${timeStr}`;
+        },
+        cellsStyle: (details: ReceivedDetailsStaff) => ({
+            backgroundColor: getColorForDateTime(new Date(details.createdAt))
+        })
+    },
+    {
+        title: "STAFF NAME",
+        accessor: 'staff.name',
+        render: (details: ReceivedDetailsStaff) => 
+            typeof details.staff === 'object' ? details.staff.name : details.staff
+    },
+    {
+        title: "CURRENT CASH",
+        accessor: 'currentCashInHand',
+        render: (details: ReceivedDetailsStaff) => `₹${details.currentCashInHand}`
+    },
+    {
+        title: "TOTAL AMOUNT",
+        accessor: 'totalStaffAmount',
+        render: (details: ReceivedDetailsStaff) => `₹${details.totalStaffAmount}`
+    },
+    {
+        title: "AMOUNT GIVEN",
+        accessor: 'givenAmountByStaff',
+        render: (details: ReceivedDetailsStaff) => `₹${details.givenAmountByStaff}`
+    },
+    {
+        title: "BALANCE",
+        accessor: 'balance',
+        render: (details: ReceivedDetailsStaff) => `₹${details.balance}`
+    },
+    {
+        title: "PROCESSED BY",
+        accessor: 'processedBy.name',
+        render: (details: ReceivedDetailsStaff) => 
+            details.processedBy?.name || 'System'
+    },
+    {
+        title: "REMARK",
+        accessor: 'remark',
+        render: (details: ReceivedDetailsStaff) => details.remark || '-'
+    }
 ];
