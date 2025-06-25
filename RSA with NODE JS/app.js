@@ -35,6 +35,8 @@ var leavesRouter = require('./routes/leaves');
 var bookingNotesRouter = require('./routes/bookingNotes');
 var advanceRouter = require('./routes/advance')
 var cashReceivedDetails = require('./routes/cashReceivedDetails')
+var cashReceivedDetailsStaff = require('./routes/cashReceivedDetailsStaff')
+
 var cashCollectionDetails = require('./routes/cashCollectionDetails.js')
 
 var attendanceRouter = require('./routes/attendance')
@@ -104,6 +106,8 @@ app.use('/point', pointRouter);
 app.use('/bookingnote', bookingNotesRouter);
 app.use('/advance-payment', advanceRouter);
 app.use('/cash-received-details', cashReceivedDetails);
+app.use('/cash-received-details-staff', cashReceivedDetailsStaff);
+
 app.use('/cash-collection-details', cashCollectionDetails);
 
 app.use('/attendance', attendanceRouter);

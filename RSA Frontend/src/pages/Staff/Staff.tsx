@@ -27,6 +27,7 @@ export interface User {
     };
 }
 interface Staff {
+    _id: string;
     image: string;
     name: string;
     phone: string;
@@ -34,6 +35,7 @@ interface Staff {
     userName: string;
     password: string;
     address: string;
+    cashInHand:number;
     role: {
         _id: string;
         name: string;
