@@ -294,9 +294,12 @@ const Sidebar = () => {
                                             <li>
                                                 <NavLink to="/provider-advance-payment-managment">{t('Provider Payment Report')}</NavLink>
                                             </li>
+                                                                        {[ ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+
                                              <li>
                                                 <NavLink to="/payment-report-staff">{t('Staff Payment Report')}</NavLink>
                                             </li>
+                                                                        )}
                                             <li>
                                                 <NavLink to="/pmnr-report">{t('Payment Work Report')}</NavLink>
                                             </li>

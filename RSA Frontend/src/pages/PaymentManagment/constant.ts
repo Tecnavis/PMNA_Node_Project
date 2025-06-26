@@ -271,8 +271,8 @@ export const ReceivedDetailsStaffTableColumn: DataTableColumn<ReceivedDetailsSta
     },
     {
         title: "AMOUNT GIVEN",
-        accessor: 'givenAmountByStaff',
-        render: (details: ReceivedDetailsStaff) => `₹${details.givenAmountByStaff}`
+        accessor: 'givenAmountToStaff',
+        render: (details: ReceivedDetailsStaff) => `₹${details.givenAmountToStaff}`
     },
     {
         title: "BALANCE",

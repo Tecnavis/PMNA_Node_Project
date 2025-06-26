@@ -102,7 +102,7 @@ const settleReceivedAmount = async () => {
             `${BASE_URL}/cash-received-details-staff`,
             {
                 staffId: selectedStaff,
-                givenAmountByStaff: receivedAmount,
+                givenAmountToStaff: receivedAmount,
                 totalStaffAmount: currentCashInHand,
                 remark,
                 currentCashInHand

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const CashCollectionDetailsStaff = require('../Model/cashReceivedDetailsStaff');
 const Staff = require('../Model/staff');
 const Booking = require('../Model/booking.js')
-
+const ReceivedDetails= require('../Model/ReceivedDetails.js')
 
 exports.createReceivedDetailsStaff = async (req, res) => {
     const session = await mongoose.startSession();
@@ -11,7 +11,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
     try {
         const { 
             staffId, 
-            givenAmountByStaff, 
+            givenAmountToStaff, 
             remark,
             totalStaffAmount 
         } = req.body;
@@ -20,7 +20,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         const userRole = req.user.role;
 
         // Validate all required fields
-        if (!staffId || !givenAmountByStaff || givenAmountByStaff <= 0 || 
+        if (!staffId || !givenAmountToStaff || givenAmountToStaff <= 0 || 
             !totalStaffAmount || totalStaffAmount <= 0) {
             await session.abortTransaction();
             return res.status(400).json({ 
@@ -41,12 +41,14 @@ exports.createReceivedDetailsStaff = async (req, res) => {
 
         // Calculate balance and current cash in hand
         const currentCashInHand = staff.cashInHand || 0;
-        const newBalance = currentCashInHand - Number(givenAmountByStaff);
+        const newBalance = currentCashInHand - Number(givenAmountToStaff);
 
-        let remainingAmount = Number(givenAmountByStaff);
+        let remainingAmount = Number(givenAmountToStaff);
         const selectedBookingIds = [];
+        const appliedAmounts = [];
+        let advanceDeductionApplied = 0;
 
-        // Fetch bookings where staff needs to receive payment
+        // 1. First try to distribute to bookings
         const bookings = await Booking.find({
             status: 'Order Completed',
             receivedUser: 'Staff',
@@ -57,27 +59,51 @@ exports.createReceivedDetailsStaff = async (req, res) => {
             ]
         }).sort({ createdAt: 1 }).session(session);
 
-        // Update bookings by distributing givenAmountByStaff
         for (const booking of bookings) {
             if (remainingAmount <= 0) break;
 
-            // Calculate outstanding amount
-            const outstanding = booking.totalAmount - (booking.receivedAmountStaff || 0);
-            const amountToApply = Math.min(remainingAmount, outstanding);
+            const receivableAmount = (booking.receivedAmountStaff || 0) - (booking.givenAmountByStaff || 0);
             
-            // Update booking amounts
-            booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + amountToApply;
-            booking.partialReceivedAmountStaff = booking.receivedAmountStaff < booking.totalAmount;
-            
-            // If fully paid, update status
-            if (!booking.partialReceivedAmountStaff) {
-                booking.receivedAmount = booking.totalAmount;
-                booking.cashPending = false;
-            }
+            if (receivableAmount > 0) {
+                const amountToApply = Math.min(remainingAmount, receivableAmount);
+                
+                booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
+                booking.partialReceivedAmountStaff = booking.receivedAmountStaff < booking.totalAmount;
+                
+                if (booking.givenAmountByStaff >= booking.receivedAmountStaff && 
+                    booking.receivedAmountStaff >= booking.totalAmount) {
+                    booking.cashPending = false;
+                }
 
-            remainingAmount -= amountToApply;
-            selectedBookingIds.push(booking._id);
-            await booking.save({ session });
+                remainingAmount -= amountToApply;
+                selectedBookingIds.push(booking._id);
+                appliedAmounts.push(amountToApply);
+                await booking.save({ session });
+            }
+        }
+
+        // 2. If there's remaining amount, deduct from Advance Deduction record
+        if (remainingAmount > 0) {
+            const advanceRecord = await ReceivedDetails.findOne({
+                fileNumber: "Advance Deduction",
+                receivedUser: 'Staff',
+                receivedUserId: staffId
+            }).session(session);
+
+            if (advanceRecord) {
+                // Calculate how much can be deducted from the advance
+                const advanceReceivable = advanceRecord.receivedAmount - (advanceRecord.givenAmountByStaff || 0);
+                
+                if (advanceReceivable > 0) {
+                    const amountToDeduct = Math.min(remainingAmount, advanceReceivable);
+                    
+                    advanceRecord.givenAmountByStaff = (advanceRecord.givenAmountByStaff || 0) + amountToDeduct;
+                    advanceDeductionApplied = amountToDeduct;
+                    remainingAmount -= amountToDeduct;
+                    
+                    await advanceRecord.save({ session });
+                }
+            }
         }
 
         // Create cash collection record
@@ -87,9 +113,11 @@ exports.createReceivedDetailsStaff = async (req, res) => {
             totalStaffAmount: Number(totalStaffAmount),
             receivedUserId: userId,
             staff: staffId,
-            givenAmountByStaff: Number(givenAmountByStaff),
+            givenAmountToStaff: Number(givenAmountToStaff),
             remark: remark || 'No remarks provided',
             processedBookings: selectedBookingIds,
+            appliedAmounts,
+            advanceDeductionApplied, // Track how much was deducted from advance
             remainingAmount
         }], { session });
 
@@ -108,8 +136,12 @@ exports.createReceivedDetailsStaff = async (req, res) => {
                 name: staff.name,
                 newBalance: staff.cashInHand
             },
-            processedBookings: {
-                count: selectedBookingIds.length,
+            distribution: {
+                bookings: {
+                    count: selectedBookingIds.length,
+                    amounts: appliedAmounts
+                },
+                advanceDeductionApplied,
                 remainingAmount
             }
         });
@@ -126,7 +158,6 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         session.endSession();
     }
 };
-
 exports.getReceivedDetailsStaff = async (req, res) => {
     try {
         const { staffId, search } = req.query;

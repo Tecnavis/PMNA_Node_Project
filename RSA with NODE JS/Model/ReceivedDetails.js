@@ -7,6 +7,8 @@ const ReceivedDetailsSchema = new mongoose.Schema({
     balance: { type: String, required: true },
     currentNetAmount: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
+        givenAmountByStaff: { type: Number, default: 0 },
+
     receivedUser: {
         type: String,
         enum: ['Admin', 'Staff'],

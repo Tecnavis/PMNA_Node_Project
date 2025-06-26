@@ -10,7 +10,7 @@ const CashCollectionDetailsStaffSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Staff'
     },
-    givenAmountByStaff: { type: Number, required: true },
+    givenAmountToStaff: { type: Number, required: true },
     remark: { type: String, required: true }
 }, { timestamps: true });
 

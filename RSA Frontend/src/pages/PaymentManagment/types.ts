@@ -58,7 +58,7 @@ export interface ReceivedDetailsStaff {
         _id: string;
         name: string;
     } | string;
-    givenAmountByStaff: number;
+    givenAmountToStaff: number;
     remark?: string;
     createdAt: string | Date;
     updatedAt?: string | Date;
