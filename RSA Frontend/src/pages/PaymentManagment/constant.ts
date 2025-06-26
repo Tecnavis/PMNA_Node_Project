@@ -279,12 +279,7 @@ export const ReceivedDetailsStaffTableColumn: DataTableColumn<ReceivedDetailsSta
         accessor: 'balance',
         render: (details: ReceivedDetailsStaff) => `₹${details.balance}`
     },
-    {
-        title: "PROCESSED BY",
-        accessor: 'processedBy.name',
-        render: (details: ReceivedDetailsStaff) => 
-            details.processedBy?.name || 'System'
-    },
+   
     {
         title: "REMARK",
         accessor: 'remark',
