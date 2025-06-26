@@ -33,7 +33,7 @@ const [receivedDetailsStaff, setReceivedDetailsStaff] = useState<ReceivedDetails
     const printRef = useRef<HTMLDivElement>(null);
     const role = localStorage.getItem('role');
 
-    const colsForCashCollection = CashCollectionDetailsTableColumn;
+    // const colsForCashCollection = CashCollectionDetailsTableColumn;
     const colsForReceivedDetailsStaff = ReceivedDetailsStaffTableColumn;
 const fetchStaffs = async () => {
     try {
@@ -228,9 +228,34 @@ const settleReceivedAmount = async () => {
                     {isSubmitting ? <Loader /> : 'Record Cash Received'}
                 </button>
             </div>
-
-            {/* Report Tabs */}
+  {/* Received Details Table */}
             <div className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5">
+                <div className="mb-4">
+                    <input
+                        type="text"
+                        placeholder="Search records..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full p-2 border rounded-lg"
+                    />
+                </div>
+
+                <div ref={printRef}>
+                    <DataTable
+                        withBorder
+                        withColumnBorders
+                        striped
+                        highlightOnHover
+                        columns={colsForReceivedDetailsStaff}
+                        records={receivedDetailsStaff}
+                        rowStyle={(record) => ({
+                            backgroundColor: getColorForDateTime(record.createdAt.toString())
+                        })}
+                    />
+                </div>
+            </div>
+            {/* Report Tabs */}
+            {/* <div className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5">
                 <Tab.Group selectedIndex={tabIndex} onChange={setTabIndex}>
                     <Tab.List className="flex border-b mb-4">
                         <Tab className={({ selected }) => 
@@ -288,7 +313,7 @@ const settleReceivedAmount = async () => {
                         </Tab.Panel>
                     </Tab.Panels>
                 </Tab.Group>
-            </div>
+            </div> */}
         </main>
     );
 };

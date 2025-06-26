@@ -704,7 +704,19 @@ const fetchStaffReceivedDetails = async () => {
                                     </div>
                                 </div>
                             }
-                            
+                              <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
+                                <div className="flex items-center justify-between p-4 py-4">
+                                    <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
+                                        <IconTag />
+                                    </div>
+                                    <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
+                                        <h6 className="text-white-dark text-base dark:text-white-dark">
+                                            Collected Amount From Driver Advance {selectedMonth}
+                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
+                                        </h6>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

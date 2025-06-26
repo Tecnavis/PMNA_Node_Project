@@ -6,6 +6,7 @@ import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { ROLES } from '../../constants/roles'
 
 interface Staff {
   _id: string;
@@ -39,6 +40,7 @@ const StaffReport = () => {
     columnAccessor: 'name',
     direction: 'asc',
   });
+    const role = localStorage.getItem('role') || ''
 
   // Staff data state
   const [staffs, setStaffs] = useState<Staff[]>([]);
@@ -132,26 +134,28 @@ const StaffReport = () => {
                   <div>₹{staff.cashInHand !== undefined ? staff.cashInHand : 0}</div>
                 ),
               },
-              {
-                accessor: 'action',
-                title: 'Action',
-                titleClassName: '!text-center',
-                render: (staff: Staff) => (
-                  <div
-                    className="relative inline-flex items-center space-x-1"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              
+              ...[ ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) 
+        ? [
+            {
+              accessor: 'action',
+              title: 'Action',
+              titleClassName: '!text-center',
+              render: (staff: Staff) => (
+                <div className="flex items-center justify-center space-x-1">
+                  <button
+                    type="button"
+                    className="btn btn-success px-2 py-1 text-xs"
+                    onClick={() => navigate(`/staffcashreport/${staff._id}`)}
                   >
-                    <button
-                      type="button"
-                      className="btn btn-success px-2 py-1 text-xs"
-                      onClick={() => navigate(`/staffcashreport/${staff._id}`)}
-                    >
-                      View Report
-                    </button>
-                  </div>
-                ),
-              },
-            ]}
+                    View Report
+                  </button>
+                </div>
+              ),
+            }
+          ]
+        : []
+    ]}
           />
         </div>
       </div>

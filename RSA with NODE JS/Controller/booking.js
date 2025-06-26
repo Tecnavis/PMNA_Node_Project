@@ -621,8 +621,9 @@ exports.getAllBookings = async (req, res) => {
             .limit(limit)
             .sort({ createdAt: -1 })
             .lean()
-// ----------------------------------------------------------------
-        const balanceAmount = bookings.reduce((total, booking) => {
+//-------------------------
+       
+const balanceAmount = bookings.reduce((total, booking) => {
             if (forStaffReport) {
                 return booking.receivedUser === 'Staff'
                     ? total + (booking.givenAmountByStaff || 0)
