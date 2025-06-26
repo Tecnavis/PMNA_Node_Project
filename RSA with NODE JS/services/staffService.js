@@ -49,9 +49,9 @@ async function calculateReceivedTotalAmount(staffId) {
         if (sampleDoc) {
             console.log('Sample document fields:', {
                 receivedAmount: sampleDoc.receivedAmount,
-                balance: sampleDoc.balance,
+                givenAmountByStaff: sampleDoc.givenAmountByStaff,
                 receivedAmountType: typeof sampleDoc.receivedAmount,
-                balanceType: typeof sampleDoc.balance
+                givenAmountByStaffType: typeof sampleDoc.givenAmountByStaff
             });
         }
 
@@ -67,19 +67,21 @@ async function calculateReceivedTotalAmount(staffId) {
                 $project: {
                     // Convert to numbers if they might be strings
                     receivedAmount: { $toDouble: "$receivedAmount" },
-                    balance: { $toDouble: "$balance" }
+                    givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
                 }
             },
-           {
-    $group: {
-        _id: null,
-        netTotalAmount: {
-            $sum: {
-                $ifNull: ["$receivedAmount", 0]
+            {
+                $group: {
+                    _id: null,
+                    totalReceived: { $sum: "$receivedAmount" },
+                    totalGiven: { $sum: "$givenAmountByStaff" }
+                }
+            },
+            {
+                $project: {
+                    netTotalAmount: { $subtract: ["$totalReceived", "$totalGiven"] }
+                }
             }
-        }
-    }
-}
         ]);
 
         console.log('--- Received Details Aggregation Results ---');
