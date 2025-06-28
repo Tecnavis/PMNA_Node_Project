@@ -8,6 +8,8 @@ import { AdvanceDetailsTableColumn, CashCollectionDetailsTableColumn, colsForAdv
 import { AdvanceData, ReceivedDetails } from './types';
 import './AdvancePayment.module.css'
 import Swal from 'sweetalert2';
+import Staff from '../Staff/Staff';
+
 const getColorForDateTime = (dateTimeString: string) => {
     // Combine both date and time for hashing
     let hash = 0;
@@ -31,16 +33,18 @@ const AdvancePayment: React.FC = () => {
     const [receivedAmount, setReceivedAmount] = useState<string>('');
     const [remark, setRemark] = useState<string>('');
     const [search, setSearch] = useState<string>('');
+    const [staffs, setStaffs] = useState<Staff[]>([]);
 
     const [tabIndex, setTabIndex] = useState(0);
     const printRef = useRef<HTMLDivElement>(null);
 
    // creating columns
-       const colsForAdvanceDetails = AdvanceDetailsTableColumn.map((col) => col);
    
-       const colsForCashCollection = CashCollectionDetailsTableColumn.map((col) => col);
-       const colsForReceivedDetails = ReceivedDetailsTableColumn.map((col) => col);
    
+
+       const colsForAdvanceDetails = AdvanceDetailsTableColumn;
+       const colsForCashCollection = CashCollectionDetailsTableColumn; 
+       const colsForReceivedDetails = ReceivedDetailsTableColumn(staffs);
     const handlePrint = () => {
         if (!printRef.current) return;
 
