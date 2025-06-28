@@ -26,7 +26,6 @@ import { CLOUD_IMAGE, NON_COMPLETED_STATUS } from '../../../constants/status';
 
 
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 interface FilterData {
     totalCollectedAmount: number,
@@ -139,7 +138,7 @@ const fetchStaffReceivedDetails = async () => {
     // Fetch staff profile details from backend
     const getStaff = async () => {
         try {
-            const response = await axios.get(`${backendUrl}/staff/${id}`);
+            const response = await axios.get(`${BASE_URL}/staff/${id}`);
             const data = response.data;
             setStaff(data);
         } catch (error) {
@@ -158,7 +157,7 @@ const fetchStaffReceivedDetails = async () => {
         setIsLoading(true);
         const forStaffReport = true
         try {
-            const response = await axios.get(`${backendUrl}/booking`, {
+            const response = await axios.get(`${BASE_URL}/booking`, {
                 params: {
                     staffId: id,
                     startDate,
@@ -255,7 +254,7 @@ const fetchStaffReceivedDetails = async () => {
 
     try {
       setLoadingStates(prev => ({ ...prev, [id]: true }));
-      await axios.patch(`${backendUrl}/booking/sattle-amount-staff/${id}`, { givenAmountByStaff });
+      await axios.patch(`${BASE_URL}/booking/sattle-amount-staff/${id}`, { givenAmountByStaff });
       await fetchBookings();
       Swal.fire('Success!', 'Amount updated successfully', 'success');
     } catch (error) {

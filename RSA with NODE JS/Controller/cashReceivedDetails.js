@@ -68,53 +68,53 @@ exports.createReceivedDetails = async (req, res) => {
                         // Non-Staff user - update givenAmountByStaff instead
                         booking.receivedAmount = (booking.receivedAmountStaff || 0) + appliedAmount;
                     }
-// -------------------------------------------------------
-                  // Calculate total received amount (combining both fields if needed)
-            const totalReceived = booking.receivedUser === 'Staff' 
-                ? (booking.receivedAmountStaff || 0)
-                : (booking.receivedAmount || 0);
+                    // -------------------------------------------------------
+                    // Calculate total received amount (combining both fields if needed)
+                    const totalReceived = booking.receivedUser === 'Staff'
+                        ? (booking.receivedAmountStaff || 0)
+                        : (booking.receivedAmount || 0);
 
-            // Check if fully paid now (using precise decimal comparison)
-            if (Math.abs(totalReceived - booking.totalAmount) < 0.01) { // Accounting for floating point precision
-                booking.partialReceivedAmountStaff = false;
-                booking.receivedAmount = booking.totalAmount; // Set full received amount
-                if (booking.receivedUser === 'Staff') {
-                    booking.receivedAmountStaff = booking.totalAmount;
+                    // Check if fully paid now (using precise decimal comparison)
+                    if (Math.abs(totalReceived - booking.totalAmount) < 0.01) { // Accounting for floating point precision
+                        booking.partialReceivedAmountStaff = false;
+                        booking.receivedAmount = booking.totalAmount; // Set full received amount
+                        if (booking.receivedUser === 'Staff') {
+                            booking.receivedAmountStaff = booking.totalAmount;
+                        }
+                    } else {
+                        booking.partialReceivedAmountStaff = true;
+                    }
+                } else {
+                    // For non-Staff payments or new Staff payments
+                    booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
+
+                    if (userRole === 'Staff') {
+                        booking.receivedAmountStaff = appliedAmount;
+                        // Check if payment fully covers the amount
+                        booking.partialReceivedAmountStaff = (booking.receivedAmount || 0) < booking.totalAmount;
+                    }
+
+                    // Additional check for non-Staff full payment
+                    if (Math.abs(booking.receivedAmount - booking.totalAmount) < 0.01) {
+                        booking.partialReceivedAmountStaff = false;
+                    }
                 }
-            } else {
-                booking.partialReceivedAmountStaff = true;
-            }
-        } else {
-            // For non-Staff payments or new Staff payments
-            booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
 
-            if (userRole === 'Staff') {
-                booking.receivedAmountStaff = appliedAmount;
-                // Check if payment fully covers the amount
-                booking.partialReceivedAmountStaff = (booking.receivedAmount || 0) < booking.totalAmount;
-            }
+                // Only update these fields if the receiver is changing
+                if (previousReceivedUser !== userRole) {
+                    booking.previousReceivedUser = previousReceivedUser;
+                    booking.previousReceivedUserId = previousReceivedUserId;
+                }
 
-            // Additional check for non-Staff full payment
-            if (Math.abs(booking.receivedAmount - booking.totalAmount) < 0.01) {
-                booking.partialReceivedAmountStaff = false;
+                // Set the received user info
+                booking.receivedUser = userRole;
+                booking.receivedUserId = new mongoose.Types.ObjectId(receivedUserId);
+
+                remainingAmount -= appliedAmount;
+                selectedBookingIds.push(booking._id);
+                await booking.save();
             }
         }
-
-        // Only update these fields if the receiver is changing
-        if (previousReceivedUser !== userRole) {
-            booking.previousReceivedUser = previousReceivedUser;
-            booking.previousReceivedUserId = previousReceivedUserId;
-        }
-
-        // Set the received user info
-        booking.receivedUser = userRole;
-        booking.receivedUserId = new mongoose.Types.ObjectId(receivedUserId);
-
-        remainingAmount -= appliedAmount;
-        selectedBookingIds.push(booking._id);
-        await booking.save();
-    }
-}
 
         // [Rest of your code remains the same...]
         // Deduct remaining amount from driver's advance
@@ -288,7 +288,7 @@ exports.getStaffReceivedDetails = async (req, res) => {
         if (search && search.trim()) {
             const searchQuery = search.trim();
             const regex = new RegExp(searchQuery, 'i');
-            
+
             searchFilter.$or = [
                 { fileNumber: regex },
                 { remark: regex },
@@ -297,12 +297,12 @@ exports.getStaffReceivedDetails = async (req, res) => {
         }
 
         // Combine all filters
-        const query = { 
+        const query = {
             $and: [
                 baseQuery,
                 dateFilter,
                 ...(search && search.trim() ? [searchFilter] : [])
-            ] 
+            ]
         };
 
         const receivedDetails = await ReceivedDetails.find(query)
