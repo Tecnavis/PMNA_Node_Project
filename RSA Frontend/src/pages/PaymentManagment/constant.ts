@@ -1,6 +1,6 @@
 import { DataTableColumn } from "mantine-datatable";
 import { dateFormate, formattedTime } from "../../utils/dateUtils";
-import { Booking } from "../Bookings/Bookings";
+import { Staff } from './types'; // Make sure to import the Staff type
 import { AdvanceData, CashCollectionDetails, ReceivedDetails, ReceivedDetailsStaff } from "./types";
 const roundToNearestMinute = (date: Date) => {
   const roundedDate = new Date(date);
@@ -139,7 +139,7 @@ export const colsForAdvance: DataTableColumn<AdvanceData>[] = [
 ];
 //Columns Titles
 
-export const ReceivedDetailsTableColumn: DataTableColumn<ReceivedDetails>[] = [
+export const ReceivedDetailsTableColumn = (staffs: Staff[]): DataTableColumn<ReceivedDetails>[] => [
     {
         title: "SI",
         accessor: '_id',
@@ -180,6 +180,31 @@ export const ReceivedDetailsTableColumn: DataTableColumn<ReceivedDetails>[] = [
         accessor: 'receivedAmount',
         render: (receivedDetails: ReceivedDetails) => `₹ ${receivedDetails?.receivedAmount || 0}`
     },
+      {
+        title: "RECEIVED BY",
+        accessor: 'receivedUser',
+        render: (receivedDetails: ReceivedDetails) => receivedDetails?.receivedUser || 'N/A'
+    },
+{
+    title: "RECEIVED BY (USER)",
+    accessor: 'receivedUserId',
+    render: (receivedDetails: ReceivedDetails, index: number) => {
+        // Type guard for populated staff object
+        if (receivedDetails.receivedUserId && 
+            typeof receivedDetails.receivedUserId === 'object' && 
+            'name' in receivedDetails.receivedUserId) {
+            return receivedDetails.receivedUserId.name || 'N/A';
+        }
+        
+        // Type guard for string ID
+        if (typeof receivedDetails.receivedUserId === 'string') {
+            const staff = staffs.find(s => s._id === receivedDetails.receivedUserId);
+            return staff?.name || 'N/A';
+        }
+        
+        return 'N/A';
+    }
+},
     {
         title: "REMARK",
         accessor: 'remark'

@@ -43,12 +43,19 @@ async function calculateNetTotalAmountInHand(driverId) {
                     },
                     {
                         $or: [
+                            // Non-staff cases
                             { receivedUser: { $ne: 'Staff' } },
                             { receivedUser: { $exists: false } },
+                            // Staff cases (current or previous)
                             {
-                                $and: [
-                                    { receivedUser: 'Staff' },
-                                    { partialReceivedAmountStaff: true }
+                                $or: [
+                                    {
+                                        $and: [
+                                            { receivedUser: 'Staff' },
+                                            { partialReceivedAmountStaff: true }
+                                        ]
+                                    },
+                                 
                                 ]
                             }
                         ]
@@ -56,15 +63,19 @@ async function calculateNetTotalAmountInHand(driverId) {
                 ]
             }
         },
-        {
+         {
             $addFields: {
-                // Determine which received amount to use based on payment type
                 effectiveReceivedAmount: {
                     $cond: [
                         {
-                            $and: [
-                                { $eq: ["$receivedUser", "Staff"] },
-                                { $eq: ["$partialReceivedAmountStaff", true] }
+                            $or: [
+                                {
+                                    $and: [
+                                        { $eq: ["$receivedUser", "Staff"] },
+                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                                    ]
+                                },
+                           
                             ]
                         },
                         "$receivedAmountStaff",  // Use receivedAmountStaff for partial Staff payments

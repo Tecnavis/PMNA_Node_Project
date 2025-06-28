@@ -383,7 +383,7 @@ const checkVehicleServiceStatus = async (booking) => {
 // Controller to get Order completed booking  by search query
 exports.getOrderCompletedBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10, all = false, tab }  = req.query;
+        let { search, startDate, endDate, page = 1, limit = 10, all = false, tab } = req.query;
 
         // Convert page and limit based on 'all' flag
         page = all ? 1 : parseInt(page, 10);
@@ -393,24 +393,24 @@ exports.getOrderCompletedBookings = async (req, res) => {
             status: "Order Completed", // Filter only bookings with this status
             accountantVerified: { $ne: true } // Exclude bookings where accountantVerified is true
         };
-  // Add tab-specific filters
-if (tab === 'feedback') {
-    query.verified = true;
-    query.feedbackCheck = true;
-} else if (tab === 'verify') {
-    query.$or = [
-        { 
-            verified: true,
-            feedbackCheck: { $ne: true, $exists: true }
-        },
-        { 
-            verified: false 
-        },
-        { 
-            verified: { $exists: false } 
+        // Add tab-specific filters
+        if (tab === 'feedback') {
+            query.verified = true;
+            query.feedbackCheck = true;
+        } else if (tab === 'verify') {
+            query.$or = [
+                {
+                    verified: true,
+                    feedbackCheck: { $ne: true, $exists: true }
+                },
+                {
+                    verified: false
+                },
+                {
+                    verified: { $exists: false }
+                }
+            ];
         }
-    ];
-}
         // Handle search
         if (search) {
 
@@ -432,7 +432,7 @@ if (tab === 'feedback') {
                 const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
                 const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ name: searchRegex }).select('_id');
- const matchingCompanies = await Company.find({ name: searchRegex }).select('_id'); // Add this line
+                const matchingCompanies = await Company.find({ name: searchRegex }).select('_id'); // Add this line
                 query.$or = [
                     { fileNumber: searchRegex },
                     { mob1: searchRegex },
@@ -440,7 +440,7 @@ if (tab === 'feedback') {
                     { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
                     { provider: { $in: matchingProviders.map(p => p._id) } },
-                                { company: { $in: matchingCompanies.map(c => c._id) } }, // Add this line
+                    { company: { $in: matchingCompanies.map(c => c._id) } }, // Add this line
 
                 ];
             }
@@ -466,7 +466,7 @@ if (tab === 'feedback') {
             .populate('company')
             .populate('driver')
             .populate('provider')
-                .populate('verifiedBy', 'name email') // Add this line to populate staff details
+            .populate('verifiedBy', 'name email') // Add this line to populate staff details
 
             .skip((page - 1) * limit) // Now this will work correctly with search
             .limit(limit)
@@ -547,9 +547,20 @@ exports.getAllBookings = async (req, res) => {
             query.company = new mongoose.Types.ObjectId(companyId);
             query.workType = 'RSAWork'
         }
-
+        // ---------------------------------------------------
         if (staffId) {
-            query.receivedUserId = new mongoose.Types.ObjectId(staffId)
+            query.$or = [
+                { receivedUserId: new mongoose.Types.ObjectId(staffId) },
+                { previousReceivedUserId: new mongoose.Types.ObjectId(staffId) }
+            ];
+            query.$and = [
+                {
+                    $or: [
+                        { receivedUser: 'Staff' },
+                        { previousReceivedUser: 'Staff' }
+                    ]
+                }
+            ];
         }
 
         // Handle search
@@ -617,25 +628,26 @@ exports.getAllBookings = async (req, res) => {
             .populate('driver')
             .populate('provider')
             .populate('receivedUserId')
+            .populate('previousReceivedUserId')
             .skip(all ? 0 : (page - 1) * limit) // Skip only if not fetching all
             .limit(limit)
             .sort({ createdAt: -1 })
             .lean()
-//-------------------------
-       
-const balanceAmount = bookings.reduce((total, booking) => {
+        //---------------------------
+
+        const balanceAmount = bookings.reduce((total, booking) => {
             if (forStaffReport) {
-                return booking.receivedUser === 'Staff'
-                    ? total + (booking.givenAmountByStaff || 0)
-                    : total;
+                const isStaffInvolved = booking.receivedUser === 'Staff' || booking.previousReceivedUser === 'Staff';
+                return isStaffInvolved ? total + (booking.givenAmountByStaff || 0) : total;
             }
-          
-            // For driver reports, use receivedAmountStaff if Staff payment is partially received
-    if (forDriverReport && booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
-        return total + (booking.receivedAmountStaff || 0);
-    }
-    return total + (booking.receivedAmount || 0);
-}, 0);
+
+            if (forDriverReport &&
+                (booking.receivedUser === 'Staff' || booking.previousReceivedUser === 'Staff') &&
+                booking.partialReceivedAmountStaff === true) {
+                return total + (booking.receivedAmountStaff || 0);
+            }
+            return total + (booking.receivedAmount || 0);
+        }, 0);
         query.workType = { $ne: 'RSAWork' };
 
         // Aggregate data for total amounts
@@ -646,18 +658,22 @@ const balanceAmount = bookings.reduce((total, booking) => {
 
                     ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
                     ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
-  ...(forDriverReport && { 
-                $or: [
-                    { receivedUser: { $ne: 'Staff' } },
-                    
-                    { 
-                        receivedUser: 'Staff',
-                        partialReceivedAmountStaff: true 
-                    }
-                ]
-            }),
-                                ...(forStaffReport && { receivedUser: { $eq: 'Staff' } })
+                    ...(forDriverReport && {
+                        $or: [
+                            { receivedUser: { $ne: 'Staff' } },
 
+                            {
+                                receivedUser: 'Staff',
+                                partialReceivedAmountStaff: true
+                            }
+                        ]
+                    }),
+                    ...(forStaffReport && {
+                        $or: [
+                            { receivedUser: 'Staff' },
+                            { previousReceivedUser: 'Staff' }
+                        ]
+                    })
 
                 }
             },
@@ -667,52 +683,136 @@ const balanceAmount = bookings.reduce((total, booking) => {
                     totalCollected: {
                         $sum: forStaffReport
                             ? "$givenAmountByStaff"  // For staff reports, sum givenAmountByStaff
-                                : forDriverReport
-                        ? {
-                            $cond: [
-                                { 
-                                    $and: [
-                                        { $eq: ["$receivedUser", "Staff"] },
-                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                            : forDriverReport
+                                ? {
+                                    $cond: [
+                                        {
+                                            $or: [
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$receivedUser", "Staff"] },
+                                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                                                    ]
+                                                },
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$previousReceivedUser", "Staff"] },
+                                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "$receivedAmountStaff",
+                                        "$receivedAmount"
                                     ]
-                                },
-                                "$receivedAmountStaff",
-                                "$receivedAmount"
-                            ]
-                        }
+                                }
                                 : forCompanyReport
                                     ? "$receivedAmountByCompany"
                                     : "$receivedAmount"
                     },
                     totalOverall: {
-        $sum: forStaffReport
-          ? "$receivedAmountStaff"
-          : forDriverReport
-            ? {
-                $cond: [
-                  { 
-                    $and: [
-                      { $eq: ["$receivedUser", "Staff"] },
-                      { $eq: ["$partialReceivedAmountStaff", true] }
-                    ]
-                  },
-                  "$totalAmount",
-                  {
-                    $cond: [
-                      { $ne: ["$receivedUser", "Staff"] },
-                      "$totalAmount",
-                      0
-                    ]
-                  }
-                ]
-              }
-            : forCompanyReport
-              ? "$totalAmount"
-              : "$totalAmount"
-      }
-    }
-  }
-]);
+                        $sum: forStaffReport
+                            ? "$receivedAmountStaff"
+                            : forDriverReport
+                                ? {
+                                    $cond: [
+                                        {
+                                            $or: [
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$receivedUser", "Staff"] },
+                                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                                                    ]
+                                                },
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$previousReceivedUser", "Staff"] },
+                                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "$totalAmount",
+                                        {
+                                            $cond: [
+                                                {
+                                                    $or: [
+                                                        { $ne: ["$receivedUser", "Staff"] },
+                                                        { $ne: ["$previousReceivedUser", "Staff"] }
+                                                    ]
+                                                },
+                                                "$totalAmount",
+                                                0
+                                            ]
+                                        }
+                                    ]
+                                }
+                                : forCompanyReport
+                                    ? "$totalAmount"
+                                    : "$totalAmount"
+                    },
+                    // Separate pipeline for advance calculation
+                    advanceData: {
+                        $push: {
+                            $cond: [
+                                {
+                                    $or: [
+                                        {
+                                            $and: [
+                                                { $eq: ["$receivedUser", "Staff"] },
+                                                { $eq: ["$fileNumber", "Advance Deduction"] },
+                                                staffId ? { $eq: ["$receivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                            ]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$previousReceivedUser", "Staff"] },
+                                                { $eq: ["$fileNumber", "Advance Deduction"] },
+                                                staffId ? { $eq: ["$previousReceivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    receivedAmount: { $toDouble: "$receivedAmount" },
+                                    givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
+                                },
+                                null
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    totalCollected: 1,
+                    totalOverall: 1,
+                    advanceToCollectFromStaff: {
+                        $let: {
+                            vars: {
+                                advanceItems: {
+                                    $filter: {
+                                        input: "$advanceData",
+                                        as: "item",
+                                        cond: { $ne: ["$$item", null] }
+                                    }
+                                }
+                            },
+                            in: {
+                                $subtract: [
+                                    { $sum: "$$advanceItems.receivedAmount" },
+                                    { $sum: "$$advanceItems.givenAmountByStaff" }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        console.log('Aggregation result:', JSON.stringify(aggregationResult, null, 2));
+
+
         const aggregationResult2 = await Booking.aggregate([
             {
                 $match: {
@@ -734,8 +834,16 @@ const balanceAmount = bookings.reduce((total, booking) => {
         // Extract financial data from aggregation result
         const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
+        const advanceToCollectFromStaff = aggregationResult[0]?.advanceToCollectFromStaff || 0;
         let balanceAmountToCollect = overallAmount - totalCollectedAmount;
         balanceAmountToCollect += aggregationResult2[0]?.totalPartialAmount || 0
+
+        console.log('Final calculations:', {
+            totalCollectedAmount,
+            overallAmount,
+            advanceToCollectFromStaff,
+            balanceAmountToCollect
+        });
         routeLogger.info({
             doneBy: req.user || 'unknown',
             reportType: forStaffReport ? 'staff' : forDriverReport ? 'driver' : forCompanyReport ? 'company' : 'general'
@@ -750,7 +858,9 @@ const balanceAmount = bookings.reduce((total, booking) => {
             financials: {
                 totalCollectedAmount,
                 overallAmount,
-                balanceAmountToCollect: balanceAmountToCollect
+                balanceAmountToCollect: balanceAmountToCollect,
+                advanceToCollectFromStaff // Include the new field in the response
+
             }
         });
     } catch (error) {
@@ -1390,23 +1500,23 @@ exports.verifyBooking = async (req, res) => {
             }
         }
 
- const updateData = { 
+        const updateData = {
             verified: true,
-            verifiedBy:  new mongoose.Types.ObjectId(verifiedBy), // Add the user who verified the booking
+            verifiedBy: new mongoose.Types.ObjectId(verifiedBy), // Add the user who verified the booking
             verifiedAt: new Date() // Add timestamp of verification
         };
-                if (booking.provider) {
+        if (booking.provider) {
             updateData.feedbackCheck = true;
         }
         const updatedBooking = await Booking.findByIdAndUpdate(
-    id,
-    updateData,
-    { new: true }
-).populate({
-    path: 'verifiedBy',
-    select: 'name email', // Only populate these fields
-    model: 'Staff' // Explicitly specify the model
-});
+            id,
+            updateData,
+            { new: true }
+        ).populate({
+            path: 'verifiedBy',
+            select: 'name email', // Only populate these fields
+            model: 'Staff' // Explicitly specify the model
+        });
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
@@ -1777,13 +1887,13 @@ exports.settleAmount = async (req, res) => {
         const userId = req.user.id || req.user._id
 
         const booking = await Booking.findById(id);
-console.log("booking",booking)
+        console.log("booking", booking)
         if (!booking) {
             return res.status(404).json({
                 message: 'Booking not found'
             });
         }
- // Skip if this is RSAWork (handled by separate endpoint)
+        // Skip if this is RSAWork (handled by separate endpoint)
         if (booking.workType === 'RSAWork') {
             return res.status(400).json({
                 message: 'For RSAWork bookings, please use the settleAmountCompany endpoint'
@@ -1875,7 +1985,7 @@ exports.settleAmountCompany = async (req, res) => {
         }
 
         const booking = await Booking.findById(id);
-        
+
         if (!booking) {
             return res.status(404).json({
                 message: 'Booking not found'
@@ -1884,7 +1994,7 @@ exports.settleAmountCompany = async (req, res) => {
 
         // Update only the necessary fields
         booking.receivedAmountByCompany = Number(receivedAmountByCompany);
-        
+
         // Check if payment is complete
         if (booking.totalAmount <= booking.receivedAmountByCompany) {
             booking.cashPending = false;
@@ -1899,9 +2009,9 @@ exports.settleAmountCompany = async (req, res) => {
 
     } catch (error) {
         console.error('Error updating company amount:', error.message);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Server error while updating company amount',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -1934,7 +2044,7 @@ exports.settleStaffAmount = async (req, res) => {
         }
 
         // Validate staff-specific conditions
-        if (booking.receivedUser !== 'Staff') {
+        if (booking.receivedUser !== 'Staff' && booking.previousReceivedUser !== 'Staff') {
             return res.status(400).json({
                 message: 'This booking is not assigned to staff'
             });
@@ -2061,7 +2171,7 @@ exports.updateBookingApproved = async (req, res) => {
 
         // Update the approve field
         booking.approve = approve !== undefined ? approve : true; // Default to true if not specified
-       
+
         await booking.save();
 
         routeLogger.info({
@@ -2122,12 +2232,12 @@ exports.distributeReceivedAmount = async (req, res) => {
                 if (booking.receivedUser === 'Staff' || (userRole !== 'Staff' && booking.partialReceivedAmountStaff === true)) {
                     // Update both receivedAmountStaff and givenAmountByStaff
                     booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + appliedAmount;
-                    
+
                     // For non-Staff users, also update givenAmountByStaff
                     if (userRole !== 'Staff') {
                         booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + appliedAmount;
                     }
-                    
+
                     // Check if payment is now complete
                     if (booking.receivedAmountStaff >= booking.totalAmount) {
                         booking.partialReceivedAmountStaff = false;

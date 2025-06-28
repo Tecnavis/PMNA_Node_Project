@@ -8,11 +8,34 @@ async function calculateTotalAmount(staffId) {
         const result = await Booking.aggregate([
             {
                 $match: {
-                    receivedUserId: staffId,
-                    receivedUser: 'Staff',
-                    cashPending: false,
-                    status: 'Order Completed',
-                    workType: 'PaymentWork'
+                    $and: [
+                        { 
+                            $or: [
+                                { 
+                                    $and: [
+                                        { receivedUserId: new mongoose.Types.ObjectId(staffId) },
+                                        { receivedUser: 'Staff' }
+                                    ]
+                                },
+                                { 
+                                    $and: [
+                                        { previousReceivedUserId: new mongoose.Types.ObjectId(staffId) },
+                                        { previousReceivedUser: 'Staff' }
+                                    ]
+                                }
+                            ]
+                        },
+                        { cashPending: false },
+                        { status: 'Order Completed' },
+                        { workType: 'PaymentWork' }
+                    ]
+                }
+            },
+            {
+                $project: {
+                    // Convert to numbers if they might be strings
+                    receivedAmountStaff: { $toDouble: "$receivedAmountStaff" },
+                    givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
                 }
             },
             {
@@ -21,17 +44,21 @@ async function calculateTotalAmount(staffId) {
                     netTotalAmount: {
                         $sum: {
                             $subtract: [
-                                '$receivedAmountStaff',
-                                { $ifNull: ['$givenAmountByStaff', 0] }
+                                "$receivedAmountStaff",
+                                { $ifNull: ["$givenAmountByStaff", 0] }
                             ]
                         }
                     }
                 }
             }
         ]);
+
         return result[0]?.netTotalAmount || 0;
     } catch (error) {
-        console.error('Error calculating net total amount:', error);
+        console.error('Error calculating net total amount:', {
+            error: error.message,
+            staffId: staffId
+        });
         return 0;
     }
 }

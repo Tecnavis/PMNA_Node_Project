@@ -77,7 +77,11 @@ verifiedAt: Date,
     cashPending: { type: Boolean },
     approve: { type: Boolean, default: false },
     receivedUser: { type: String },
+        previousReceivedUser: { type: String },
+
     receivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+        previousReceivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+
     dummyDriverName: { type: String },
     dummyProviderName: { type: String },
     bookingStatus: { type: String },

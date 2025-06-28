@@ -31,7 +31,8 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL;
 interface FilterData {
     totalCollectedAmount: number,
     overallAmount: number,
-    balanceAmountToCollect: number
+    balanceAmountToCollect: number,
+    advanceToCollectFromStaff:number
 }
 interface Staff {
     _id: string;
@@ -70,7 +71,8 @@ const Profile = () => {
     const [filterData, setFilterData] = useState<FilterData>({
         totalCollectedAmount: 0,
         overallAmount: 0,
-        balanceAmountToCollect: 0
+        balanceAmountToCollect: 0,
+        advanceToCollectFromStaff:0
     })
     const now = new Date();
     const year = now.getFullYear();
@@ -185,7 +187,9 @@ const fetchStaffReceivedDetails = async () => {
             setFilterData({
                 balanceAmountToCollect: data.financials.balanceAmountToCollect,
                 overallAmount: data.financials.overallAmount,
-                totalCollectedAmount: data.financials.totalCollectedAmount
+                totalCollectedAmount: data.financials.totalCollectedAmount,
+                                advanceToCollectFromStaff: data.financials.advanceToCollectFromStaff,
+
             })
         } catch (error) {
             console.error("Error fetching api booking in report section : ", error)
@@ -712,7 +716,7 @@ const fetchStaffReceivedDetails = async () => {
                                     <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                         <h6 className="text-white-dark text-base dark:text-white-dark">
                                             Collected Amount From Driver Advance {selectedMonth}
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.balanceAmountToCollect}</span>
+                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.advanceToCollectFromStaff}</span>
                                         </h6>
                                     </div>
                                 </div>

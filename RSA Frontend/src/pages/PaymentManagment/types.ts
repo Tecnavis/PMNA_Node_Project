@@ -14,7 +14,13 @@ export interface AdvanceData {
     balanceSalary: number[],
     transferdSalary: number[]
 }
-
+export interface Staff {
+    _id: string;
+    name: string;
+    // Add other staff properties as needed
+    cashInHand?: number;
+    // ... other staff fields
+}
 export interface ReceivedDetails {
     _id: string;
     fileNumber: string;
@@ -25,11 +31,14 @@ export interface ReceivedDetails {
         _id: string;
         name: string;
     };
+     staff: Staff | string; // Can be either Staff object or ID string
+
     receivedAmount: number;
     totalAmount?: number;
     receivedUser: string;
-    receivedUserId?: string;
-    createdAt: string | Date;
+     receivedUserId?: string | Staff; // Can be ID string or populated Staff object
+
+        createdAt: string | Date;
     updatedAt?: string | Date;
     remark?: string;
 }
@@ -42,6 +51,7 @@ export interface CashCollectionDetails {
         _id: string;      // Typically include the ID
         name: string 
     };
+    
     receivedUser: string;  // Enum would be better if limited values
     receivedUserId?: string; // Optional if not always present
     receivedAmount: number;
