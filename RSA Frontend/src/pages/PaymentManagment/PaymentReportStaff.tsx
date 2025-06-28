@@ -44,6 +44,7 @@ const fetchStaffs = async () => {
         Swal.fire('Error', 'Failed to load staff data', 'error');
     }
 };
+
     const fetchReceivedDetails = async () => {
     try {
         const res = await axios.get(`${BASE_URL}/cash-received-details-staff`, {

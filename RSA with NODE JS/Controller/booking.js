@@ -547,21 +547,27 @@ exports.getAllBookings = async (req, res) => {
             query.company = new mongoose.Types.ObjectId(companyId);
             query.workType = 'RSAWork'
         }
-        // ---------------------------------------------------
-        if (staffId) {
-            query.$or = [
-                { receivedUserId: new mongoose.Types.ObjectId(staffId) },
-                { previousReceivedUserId: new mongoose.Types.ObjectId(staffId) }
-            ];
-            query.$and = [
+        //----------------------------------------
+       if (staffId) {
+    query.$and = [
+        {
+            $or: [
                 {
-                    $or: [
-                        { receivedUser: 'Staff' },
+                    $and: [
+                        { receivedUserId: new mongoose.Types.ObjectId(staffId) },
+                        { receivedUser: 'Staff' }
+                    ]
+                },
+                {
+                    $and: [
+                        { previousReceivedUserId: new mongoose.Types.ObjectId(staffId) },
                         { previousReceivedUser: 'Staff' }
                     ]
                 }
-            ];
+            ]
         }
+    ];
+}
 
         // Handle search
         if (search) {
@@ -2189,7 +2195,7 @@ exports.updateBookingApproved = async (req, res) => {
         })
     }
 }
-//-----------------------------------------------------------
+//---------------------
 //Controller for distribute received amount
 exports.distributeReceivedAmount = async (req, res) => {
     const { receivedAmount, driverId, bookingIds, workType = 'RSAWork' } = req.body;

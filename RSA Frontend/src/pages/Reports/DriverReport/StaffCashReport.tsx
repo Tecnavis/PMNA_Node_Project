@@ -115,7 +115,7 @@ const [receivedDetailsLoading, setReceivedDetailsLoading] = useState(false);
 const fetchStaffReceivedDetails = async () => {
     setReceivedDetailsLoading(true);
     try {
-        const response = await axios.get(`${backendUrl}/cash-received-details/staff/${id}`, {
+        const response = await axios.get(`${BASE_URL}/cash-received-details/staff/${id}`, {
             params: {
                 month: MONTHS.indexOf(selectedMonth) + 1, // Convert month name to number
                 year: selectedYear,

@@ -254,7 +254,7 @@ exports.getStaffReceivedDetails = async (req, res) => {
         const staffObjectId = new mongoose.Types.ObjectId(staffId);
 
         // Base query with $or for both current and previous receivers
-        const query = {
+        const baseQuery = {
             $or: [
                 {
                     $and: [
@@ -272,34 +272,45 @@ exports.getStaffReceivedDetails = async (req, res) => {
         };
 
         // Date filtering
+        const dateFilter = {};
         if (month && year) {
             const startDate = new Date(year, month - 1, 1);
             const endDate = new Date(year, month, 0, 23, 59, 59);
-            query.createdAt = { $gte: startDate, $lte: endDate };
+            dateFilter.createdAt = { $gte: startDate, $lte: endDate };
         } else if (year) {
             const startDate = new Date(year, 0, 1);
             const endDate = new Date(year, 11, 31, 23, 59, 59);
-            query.createdAt = { $gte: startDate, $lte: endDate };
+            dateFilter.createdAt = { $gte: startDate, $lte: endDate };
         }
 
-        // Search functionality
+        // Search functionality - should ADD TO not REPLACE the base query
+        const searchFilter = {};
         if (search && search.trim()) {
             const searchQuery = search.trim();
             const regex = new RegExp(searchQuery, 'i');
-
-            query.$or = [
+            
+            searchFilter.$or = [
                 { fileNumber: regex },
                 { remark: regex },
                 { amount: regex }
             ];
         }
 
+        // Combine all filters
+        const query = { 
+            $and: [
+                baseQuery,
+                dateFilter,
+                ...(search && search.trim() ? [searchFilter] : [])
+            ] 
+        };
+
         const receivedDetails = await ReceivedDetails.find(query)
             .sort({ createdAt: -1 })
             .populate('driver')
             .populate({
                 path: 'receivedUserId',
-                select: 'name' // Only get staff name
+                select: 'name'
             });
 
         res.status(200).json(receivedDetails);
