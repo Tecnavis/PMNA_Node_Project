@@ -64,6 +64,8 @@ export interface Booking {
     partialAmount?: number;
     partialReceivedAmountStaff?:Boolean;
     partialAmountStaff?:number;
+    previousReceivedUser?:string;
+    previousReceivedUserId?:string;
     showroomAmount?: number;
     cancelKm: number,// new prop
     vehicleNumber: string,// new prop

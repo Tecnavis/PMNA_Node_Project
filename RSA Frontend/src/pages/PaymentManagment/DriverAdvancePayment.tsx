@@ -8,6 +8,8 @@ import IconPrinter from '../../components/Icon/IconPrinter';
 import { AdvanceDetailsTableColumn, CashCollectionDetailsTableColumn, colsForAdvance, ReceivedDetailsTableColumn } from './constant';
 import { AdvanceData, ReceivedDetails, CashCollectionDetails } from './types';
 import './AdvancePayment.module.css';
+import Staff from '../Staff/Staff';
+
 import Swal from 'sweetalert2';
 import { dateFormate } from '../../utils/dateUtils';
 import Loader from '../../components/loader';
@@ -30,6 +32,7 @@ const AdvancePayment: React.FC = () => {
     const [advanceDetails, setAdvanceDetails] = useState<AdvanceData[]>([]);
     const [receivedDetails, setReceivedDetails] = useState<ReceivedDetails[]>([]);
     const [cashCollectionDetails, setCashCollectionDetails] = useState<CashCollectionDetails[]>([]);
+    const [staffs, setStaffs] = useState<Staff[]>([]);
 
     const [inHandAmount, setInHandAmount] = useState<number>(0);
     const [receivedAmount, setReceivedAmount] = useState<string>('');
@@ -46,8 +49,20 @@ const AdvancePayment: React.FC = () => {
     // In your component
 const colsForAdvanceDetails = AdvanceDetailsTableColumn;
 const colsForCashCollection = CashCollectionDetailsTableColumn; 
-const colsForReceivedDetails = ReceivedDetailsTableColumn;
-    const handlePrint = () => {
+const colsForReceivedDetails = ReceivedDetailsTableColumn(staffs);
+ const fetchStaffs = async () => {
+    try {
+        const response = await axios.get(`${BASE_URL}/staff`);
+        setStaffs(response.data);
+    } catch (error) {
+        console.error('Error fetching staffs:', error);
+    }
+};
+
+useEffect(() => {
+    fetchStaffs();
+}, []);
+const handlePrint = () => {
         if (!printRef.current) return;
 
         const printContents = printRef.current.innerHTML;
