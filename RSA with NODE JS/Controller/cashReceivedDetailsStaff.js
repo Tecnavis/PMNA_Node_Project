@@ -91,7 +91,7 @@ else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUse
             booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
             
             // Update payment status
-            const totalReceived = booking.receivedAmountStaff || 0;
+            const totalReceived = booking.receivedAmount || 0;
             booking.partialReceivedAmountStaff = totalReceived < booking.totalAmount;
             
             if (Math.abs(totalReceived - booking.totalAmount) < 0.01) {
