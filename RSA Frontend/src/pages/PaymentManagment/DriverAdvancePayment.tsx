@@ -42,6 +42,8 @@ const AdvancePayment: React.FC = () => {
 
     const [search, setSearch] = useState<string>('');
     const role = localStorage.getItem('role');
+ const [driverCashInHand, setDriverCashInHand] = useState<number>(0);
+    const [validationError, setValidationError] = useState<string>('');
 
     const [tabIndex, setTabIndex] = useState(0);
     const printRef = useRef<HTMLDivElement>(null);
@@ -183,8 +185,39 @@ const handlePrint = () => {
             setCashCollectionDetails(res.data);
         } catch (error) {}
     };
+      useEffect(() => {
+        if (selectedDriver) {
+            const selectedDriverData = drivers.find(d => d._id === selectedDriver);
+            if (selectedDriverData) {
+                setDriverCashInHand(selectedDriverData.cashInHand || 0);
+                setInHandAmount(selectedDriverData.cashInHand || 0);
+            }
+        }
+    }, [selectedDriver, drivers]);
+
+    // Validate when receivedAmount changes
+    useEffect(() => {
+        if (role === 'Staff' && selectedType !== 'advance' && receivedAmount) {
+            const enteredAmount = Number(receivedAmount);
+            if (Math.abs(enteredAmount - driverCashInHand) > 0.01) {
+                setValidationError(`Amount must exactly match driver's cash in hand: ${driverCashInHand}`);
+            } else {
+                setValidationError('');
+            }
+        }
+    }, [receivedAmount, driverCashInHand, role, selectedType]);
+
     // ------------------------------------------------------
     const settleReceivedAmount = async () => {
+        // Add validation check before proceeding
+        if (role === 'Staff' && validationError) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error',
+                text: validationError,
+            });
+            return;
+        }
         try {
             if (!receivedAmount || !remark.trim()) {
                 Swal.fire({
@@ -394,8 +427,8 @@ const handlePrint = () => {
                                     id="dateField"
                                     value={receivedAmount}
                                     onChange={(e) => setReceivedAmount(e.target.value)}
-                                    className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
-                                />
+                                   className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
+                    />
                                 <label htmlFor="dateField" className="my-3 font-semibold">
                                     Net Total Amount In Hand:
                                 </label>
@@ -406,6 +439,9 @@ const handlePrint = () => {
                                     onChange={(e) => setInHandAmount(+e.target.value)}
                                     className="appearance-none  bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
                                 />
+                                  {validationError && (
+                        <div className="text-red-500 text-sm mt-1">{validationError}</div>
+                    )}
                             </>
                         )}
                     </div>
