@@ -5,7 +5,31 @@ const DieselExpense = require('../Model/dieselExpense');
 const Advance = require('../Model/advance');
 const { distributeReceivedAmount } = require('./bookingService');
 const { default: mongoose } = require('mongoose');
+async function getValidDateRange(driverId) {
+    const driver = await Driver.findById(driverId)
+        .select('previousSettlementCompletedDate settlementCompletedDate')
+        .lean();
 
+    if (!driver) {
+        throw new Error('Driver not found');
+    }
+
+    const now = new Date();
+    
+    // If dates are invalid or missing, use current month
+    if (!driver.previousSettlementCompletedDate || !driver.settlementCompletedDate || 
+        driver.previousSettlementCompletedDate > driver.settlementCompletedDate) {
+        return {
+            startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+            endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+        };
+    }
+    
+    return {
+        startDate: driver.previousSettlementCompletedDate,
+        endDate: driver.settlementCompletedDate
+    };
+}
 const getTotalDriverExpense = async (driverId) => {
     const result = await Expense.aggregate([
         {
@@ -194,26 +218,7 @@ function calculateBalanceAmount(cashInHand, driverSalary) {
     return cashInHand - driverSalary
 }
 async function calculateMonthlyExpense(driverId) {
-    // First get the driver's settlement dates
-    const driver = await Driver.findById(driverId)
-        .select('previousSettlementCompletedDate settlementCompletedDate')
-        .lean();
-
-    if (!driver) {
-        throw new Error('Driver not found');
-    }
-
-    // Use settlement dates if available, otherwise fall back to current month
-    const startDate = driver.previousSettlementCompletedDate || 
-                     new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    
-    const endDate = driver.settlementCompletedDate || 
-                   new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999);
-
-    // Validate dates
-    if (startDate > endDate) {
-        throw new Error('Invalid date range: previousSettlementCompletedDate is after settlementCompletedDate');
-    }
+    const { startDate, endDate } = await getValidDateRange(driverId);
 
     const result = await Expense.aggregate([
         {
@@ -317,26 +322,8 @@ async function calculateMonthlyDieselExpense(driverId) {
 }
 async function calculateTotalAdvance(driverId) {
 
-     // First get the driver's settlement dates
-    const driver = await Driver.findById(driverId)
-        .select('previousSettlementCompletedDate settlementCompletedDate')
-        .lean();
+     const { startDate, endDate } = await getValidDateRange(driverId);
 
-    if (!driver) {
-        throw new Error('Driver not found');
-    }
-
-    // Use settlement dates if available, otherwise fall back to current month
-    const startDate = driver.previousSettlementCompletedDate || 
-                     new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    
-    const endDate = driver.settlementCompletedDate || 
-                   new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999);
-
-    // Validate dates
-    if (startDate > endDate) {
-        throw new Error('Invalid date range: previousSettlementCompletedDate is after settlementCompletedDate');
-    }
     const result = await Advance.aggregate([
         {
             $match: {
