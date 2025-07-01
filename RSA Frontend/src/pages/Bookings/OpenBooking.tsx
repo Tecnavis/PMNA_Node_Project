@@ -615,26 +615,71 @@ const Preview = () => {
 
     //Removing pickup images
 
-    const handleRemovePickupImage = async (index: number) => {
-        try {
-            await axios.patch(`${backendUrl}/booking/pickupimage/${id}/${index}`);
-            setPickuptImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
-        } catch (error: unknown) {
-            console.error('Error deleting image:', error);
-            alert('Failed to delete the image.');
-        }
-    };
-    //Removing dropoff images
+const handleRemovePickupImage = async (index: number) => {
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+    });
 
-    const handleRemoveDropoffImage = async (index: number) => {
+    if (result.isConfirmed) {
         try {
-            await axios.patch(`${backendUrl}/booking/dropoffimage/${id}/${index}`);
-            setDropoffImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+            // Change from PATCH to DELETE and use the new endpoint
+            await axios.delete(`${backendUrl}/booking/removePickupImage/${id}/${index}`);
+            setPickuptImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+            
+            Swal.fire(
+                'Deleted!',
+                'Your image has been deleted.',
+                'success'
+            );
         } catch (error: unknown) {
             console.error('Error deleting image:', error);
-            alert('Failed to delete the image.');
+            Swal.fire(
+                'Error!',
+                'Failed to delete the image.',
+                'error'
+            );
         }
-    };
+    }
+};
+
+const handleRemoveDropoffImage = async (index: number) => {
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            // Change from PATCH to DELETE and use the new endpoint
+            await axios.delete(`${backendUrl}/booking/removeDropoffImage/${id}/${index}`);
+            setDropoffImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+            
+            Swal.fire(
+                'Deleted!',
+                'Your image has been deleted.',
+                'success'
+            );
+        } catch (error: unknown) {
+            console.error('Error deleting image:', error);
+            Swal.fire(
+                'Error!',
+                'Failed to delete the image.',
+                'error'
+            );
+        }
+    }
+};
     const handleDownloadImage = () => {
         if (!enlargedImage) return;
 
@@ -733,8 +778,9 @@ const Preview = () => {
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${
+                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Pickup Details
                                     </button>
@@ -744,8 +790,9 @@ const Preview = () => {
                                 {({ selected }) => (
                                     <button
                                         type="button"
-                                        className={`${selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
-                                            } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
+                                        className={`${
+                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                        } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Dropoff Details
                                     </button>
@@ -759,8 +806,10 @@ const Preview = () => {
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
                                             {pickupImageUrls?.map((url, index) => (
                                                 <div>
-                                                                                                       <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
-
+<IoIosCloseCircleOutline 
+    onClick={() => handleRemovePickupImage(index)} 
+    style={{ cursor: 'pointer', color: 'red', fontSize: '24px' }}
+/>
                                                     <img
                                                         src={url}
                                                         alt={`pickup-${index}`}
@@ -781,7 +830,6 @@ const Preview = () => {
                                                         <span> {dateFormate(booking?.pickupTime as unknown as string)}</span> -<span>{formattedTime(booking?.pickupTime as unknown as string)}</span>
                                                     </span>
                                                 </div>
-
                                             ))}
                                             {pickupImageUrls.length >= 6 ? (
                                                 <div></div>
@@ -802,8 +850,10 @@ const Preview = () => {
                                             {dropoffImageUrls.map((url, index) => (
                                                 <div key={index} className="flex flex-col justify-center items-center p-1">
                                                     <div>
-                                                                                                            <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} />
-
+<IoIosCloseCircleOutline 
+    onClick={() => handleRemoveDropoffImage(index)} 
+    style={{ cursor: 'pointer', color: 'red', fontSize: '24px' }}
+/>
                                                         <img
                                                             src={url}
                                                             alt={`pickup-${index}`}
@@ -826,10 +876,10 @@ const Preview = () => {
                                                             </label>
                                                         )}
                                                         <span className="text-xs">
-                                                            <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -<span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
+                                                            <span> {dateFormate(booking?.dropoffTime as unknown as string)}</span> -
+                                                            <span>{formattedTime(booking?.dropoffTime as unknown as string)}</span>
                                                         </span>
                                                     </div>
-
                                                 </div>
                                             ))}
 
@@ -887,7 +937,6 @@ const Preview = () => {
                                                     <FiZoomIn size={18} />
                                                 </button>
                                             </div>
-
                                         </div>
                                     </div>
                                 </div>
@@ -930,7 +979,8 @@ const Preview = () => {
                                     <tr>
                                         <td style={{ border: '1px solid #ccc', padding: '8px', fontWeight: 'bold' }}>Date And Time</td>
                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
-                                            {formatDate(booking?.createdAt)} - {new Date(booking?.createdAt ?? (booking?.createdAt || '')).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}
+                                            {formatDate(booking?.createdAt)} -{' '}
+                                            {new Date(booking?.createdAt ?? (booking?.createdAt || '')).toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })}
                                         </td>
                                     </tr>
 
@@ -1005,12 +1055,12 @@ const Preview = () => {
                                             {booking?.driver
                                                 ? booking?.driver?.name
                                                 : booking?.provider
-                                                    ? booking.provider?.name
-                                                    : booking?.dummyDriverName
-                                                        ? booking?.dummyDriverName
-                                                        : booking?.dummyProviderName
-                                                            ? booking?.dummyProviderName
-                                                            : 'No Driver And No Provider found'}
+                                                ? booking.provider?.name
+                                                : booking?.dummyDriverName
+                                                ? booking?.dummyDriverName
+                                                : booking?.dummyProviderName
+                                                ? booking?.dummyProviderName
+                                                : 'No Driver And No Provider found'}
                                         </td>
                                     </tr>
 

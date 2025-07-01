@@ -1313,7 +1313,71 @@ exports.changeDropoffImages = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+// Add these new endpoints to your backend
 
+// Remove pickup image
+exports.removePickupImage = async (req, res) => {
+    const { id, index } = req.params;
+
+    try {
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+
+        if (index < 0 || index >= booking.pickupImages.length) {
+            return res.status(400).json({ message: "Invalid index" });
+        }
+
+        // Remove the image from the array
+        booking.pickupImages.splice(index, 1);
+        
+        // Update pending status
+        booking.pickupImagePending = booking.pickupImages.length < 3;
+        
+        await booking.save();
+
+        res.status(200).json({
+            message: "Image removed successfully",
+            pickupImagePending: booking.pickupImagePending,
+        });
+    } catch (error) {
+        console.error("Error removing pickup image:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// Remove dropoff image
+exports.removeDropoffImage = async (req, res) => {
+    const { id, index } = req.params;
+
+    try {
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+
+        if (index < 0 || index >= booking.dropoffImages.length) {
+            return res.status(400).json({ message: "Invalid index" });
+        }
+
+        // Remove the image from the array
+        booking.dropoffImages.splice(index, 1);
+        
+        // Update pending status
+        booking.dropoffImagePending = booking.dropoffImages.length < 3;
+        
+        await booking.save();
+
+        res.status(200).json({
+            message: "Image removed successfully",
+            dropoffImagePending: booking.dropoffImagePending,
+        });
+    } catch (error) {
+        console.error("Error removing dropoff image:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
 // add dropoff images
 exports.addDropoffImages = async (req, res) => {
 

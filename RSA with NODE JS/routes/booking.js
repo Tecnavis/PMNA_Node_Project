@@ -66,7 +66,8 @@ router.patch('/dropoffimage/:id/:index', jwt, upload.single('image'), controller
 
 // Route for adding pickup images
 router.patch('/addingdropoffimage/:id', jwt, upload.array('images', 6), controller.addDropoffImages);
-
+router.delete('/removePickupImage/:id/:index',jwt, controller.removePickupImage);
+router.delete('/removeDropoffImage/:id/:index',jwt, controller.removeDropoffImage);
 //Route for editing fileNumber 
 router.patch('/updatefilenumber/:id', jwt, controller.updateFilenumber);
 
