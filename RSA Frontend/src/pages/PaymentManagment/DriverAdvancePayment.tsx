@@ -44,6 +44,7 @@ const AdvancePayment: React.FC = () => {
     const role = localStorage.getItem('role');
  const [driverCashInHand, setDriverCashInHand] = useState<number>(0);
     const [validationError, setValidationError] = useState<string>('');
+const [isLoading, setIsLoading] = useState(false);
 
     const [tabIndex, setTabIndex] = useState(0);
     const printRef = useRef<HTMLDivElement>(null);
@@ -328,13 +329,6 @@ const handlePrint = () => {
         fetchDrivers();
     }, []);
 
-    useEffect(() => {
-        if (selectedType !== '' || selectedDriver !== '') {
-            fetchAdvancePayment();
-            fetchReceivedData();
-            fetchReceivedData();
-        }
-    }, [selectedType, selectedDriver]);
 
     const updateNetTotalAmount = (driver?: Driver[]) => {
         if (driver?.length) {
@@ -354,14 +348,37 @@ const handlePrint = () => {
         setSearch('');
     }, [selectedType]);
 // --------
-    useEffect(() => {
+ 
+ // Add selectedType to dependencies
+const fetchData = async () => {
+    if (!selectedDriver || !selectedType) return;
+    
+    setIsLoading(true);
+    try {
         if (selectedType === 'advance') {
-            fetchAdvancePayment();
+            await fetchAdvancePayment();
         } else {
-            fetchCollectionData();
+            await Promise.all([fetchReceivedData(), fetchCollectionData()]);
         }
-    }, [search, selectedType]); // Add selectedType to dependencies
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
+// Main data fetching effect
+useEffect(() => {
+    fetchData();
+}, [selectedType, selectedDriver]);
+
+// Search effect
+useEffect(() => {
+    if (selectedDriver && selectedType) {
+        fetchData();
+    }
+}, [search]);
+// -----------------------------------------------
     return (
         <main className="flex flex-col items-center justify-center">
             <div className="rounded-md shadow-md min-w-[85%] p-5">
