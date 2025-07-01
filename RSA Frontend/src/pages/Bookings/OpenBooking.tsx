@@ -613,6 +613,28 @@ const Preview = () => {
         }
     };
 
+    //Removing pickup images
+
+    const handleRemovePickupImage = async (index: number) => {
+        try {
+            await axios.patch(`${backendUrl}/booking/pickupimage/${id}/${index}`);
+            setPickuptImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+        } catch (error: unknown) {
+            console.error('Error deleting image:', error);
+            alert('Failed to delete the image.');
+        }
+    };
+    //Removing dropoff images
+
+    const handleRemoveDropoffImage = async (index: number) => {
+        try {
+            await axios.patch(`${backendUrl}/booking/dropoffimage/${id}/${index}`);
+            setDropoffImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+        } catch (error: unknown) {
+            console.error('Error deleting image:', error);
+            alert('Failed to delete the image.');
+        }
+    };
     const handleDownloadImage = () => {
         if (!enlargedImage) return;
 
@@ -737,6 +759,8 @@ const Preview = () => {
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
                                             {pickupImageUrls?.map((url, index) => (
                                                 <div>
+                                                                                                       <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} />
+
                                                     <img
                                                         src={url}
                                                         alt={`pickup-${index}`}
@@ -778,6 +802,8 @@ const Preview = () => {
                                             {dropoffImageUrls.map((url, index) => (
                                                 <div key={index} className="flex flex-col justify-center items-center p-1">
                                                     <div>
+                                                                                                            <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} />
+
                                                         <img
                                                             src={url}
                                                             alt={`pickup-${index}`}

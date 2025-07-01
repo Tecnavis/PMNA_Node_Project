@@ -23,7 +23,6 @@ interface VerifiedByUser {
     email?: string;
 }
 
-
 interface Company {
     _id: string;
     name: string;
@@ -57,9 +56,9 @@ interface Booking {
     dummyProviderName: string;
     dummyDriverName: string;
     verified: boolean;
-      verifiedAt?: Date;
-    verifiedBy?: VerifiedByUser; 
-      feedbackCheck: boolean;
+    verifiedAt?: Date;
+    verifiedBy?: VerifiedByUser;
+    feedbackCheck: boolean;
     customerVehicleNumber: string;
     bookedBy: string;
     fileNumber: string;
@@ -142,18 +141,22 @@ const CompletedBookings: React.FC = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
- const [showingAll, setShowingAll] = useState(false);
+    const [showingAll, setShowingAll] = useState(false);
     const [totalItems, setTotalItems] = useState(0);
-    const role = localStorage.getItem('role') || ''
+    const role = localStorage.getItem('role') || '';
     const [activeTab, setActiveTab] = useState<'feedback' | 'verify'>('verify');
+    const [currentSearchTerm, setCurrentSearchTerm] = useState('');
+
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
         fetchBookings('', page); // Pass the current page
     };
-   const toggleShowAll = () => {
+    // -----------------------------------------
+    const toggleShowAll = () => {
         const newShowingAll = !showingAll;
         setShowingAll(newShowingAll);
-        fetchBookings('', 1, newShowingAll ? 'all' : 10);
+        // Pass the current search term when toggling
+        fetchBookings(currentSearchTerm, 1, newShowingAll ? 'all' : 10);
     };
     const navigate = useNavigate();
 
@@ -171,32 +174,29 @@ const CompletedBookings: React.FC = () => {
     };
 
     // getting all bookings
-useEffect(() => {
-    fetchBookings();
-}, [activeTab]);
+    useEffect(() => {
+        fetchBookings();
+    }, [activeTab]);
     const fetchBookings = async (searchTerm = '', page = 1, limit: number | 'all' = 10) => {
         try {
-                 const params: any = { 
+            const params: any = {
                 search: searchTerm,
                 tab: activeTab, // Add the active tab to the request
-                ...(limit === 'all' ? { all: true } : { page, limit })
+                ...(limit === 'all' ? { all: true } : { page, limit }),
             };
 
             const response = await axios.get(`${backendUrl}/booking/getordercompleted`, { params });
-          
+
             setBookings(response.data.bookings);
             setTotalPages(response.data.totalPages);
             setCurrentPage(response.data.page);
-                        setTotalItems(response.data.total);
-
+            setTotalItems(response.data.total);
         } catch (error) {
             console.error('Error fetching bookings:', error);
         }
     };
 
-
-
-    // handling accountant verifying 
+    // handling accountant verifying
 
     const handleAccountantVerify = (id: any) => {
         try {
@@ -215,11 +215,10 @@ useEffect(() => {
                     Swal.fire('Verified!', 'The booking has been verified.', 'success');
                 }
             });
-
         } catch (error) {
-            console.log(error)
+            console.log(error);
         }
-    }
+    };
 
     useEffect(() => {
         gettingToken();
@@ -240,25 +239,23 @@ useEffect(() => {
                             type="text"
                             placeholder="Search bookings..."
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
-                            onChange={(e) => fetchBookings(e.target.value)} // Trigger search on input change
+                            onChange={(e) => {
+                                setCurrentSearchTerm(e.target.value);
+                                fetchBookings(e.target.value);
+                            }}
                         />
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 mb-5">
                     {/* FeedBack & verify Completed */}
-  <button 
-                    className={`text-center px-3 py-1 rounded shadow ${activeTab === 'feedback' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
-                    onClick={() => setActiveTab('feedback')}
-                >
-                    FeedBack & Verify Completed
-                </button>
+                    <button className={`text-center px-3 py-1 rounded shadow ${activeTab === 'feedback' ? 'bg-green-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('feedback')}>
+                        FeedBack & Verify Completed
+                    </button>
                     {/* Verify Completed*/}
-  <button 
-                    className={`text-center px-3 py-1 rounded shadow ${activeTab === 'verify' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                    onClick={() => setActiveTab('verify')}
-                >
-                    Verify Completed
-                </button>               </div>
+                    <button className={`text-center px-3 py-1 rounded shadow ${activeTab === 'verify' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('verify')}>
+                        Verify Completed
+                    </button>{' '}
+                </div>
 
                 <div className="table-responsive mb-5">
                     <table style={{ overflowX: 'auto' }}>
@@ -271,8 +268,7 @@ useEffect(() => {
                                 <th>Phone</th>
                                 <th>Service Type</th>
                                 <th>Vehicle Number</th>
-                                                                <th>Verified By</th>
-
+                                <th>Verified By</th>
                                 <th className="!text-center">Action</th>
                             </tr>
                         </thead>
@@ -300,13 +296,13 @@ useEffect(() => {
                                         <td>
                                             {items.provider ? (
                                                 <>
-                                                    {items.provider.name || "No Name"}
-                                                    <p style={{ color: '#9a9a9a' }}>{items.provider.phone || "N/A"}</p>
+                                                    {items.provider.name || 'No Name'}
+                                                    <p style={{ color: '#9a9a9a' }}>{items.provider.phone || 'N/A'}</p>
                                                 </>
                                             ) : items.driver ? (
                                                 <>
-                                                    {items.driver.name || "No Name"}
-                                                    <p style={{ color: '#9a9a9a' }}>{items.driver.phone || "N/A"}</p>
+                                                    {items.driver.name || 'No Name'}
+                                                    <p style={{ color: '#9a9a9a' }}>{items.driver.phone || 'N/A'}</p>
                                                 </>
                                             ) : items.dummyDriverName ? (
                                                 <>
@@ -326,20 +322,16 @@ useEffect(() => {
                                             )}
                                         </td>
                                         <td>{items.mob1}</td>
-                                        <td>
-                                            {items.serviceType?.serviceName
-                                                ? items.serviceType.serviceName.toUpperCase()
-                                                : 'N/A'}
-                                        </td>
+                                        <td>{items.serviceType?.serviceName ? items.serviceType.serviceName.toUpperCase() : 'N/A'}</td>
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
-    <div>
-    {items.verifiedBy && (
-        <div className="text-xs text-gray-500 mt-1">
-            Verified by: {items.verifiedBy.name}
-            {items.verifiedAt && ` on ${new Date(items.verifiedAt).toLocaleString()}`}
-        </div>
-    )}
-</div>
+                                        <div>
+                                            {items.verifiedBy && (
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Verified by: {items.verifiedBy.name}
+                                                    {items.verifiedAt && ` on ${new Date(items.verifiedAt).toLocaleString()}`}
+                                                </div>
+                                            )}
+                                        </div>
                                         <td className="text-center">
                                             <ul className="flex items-center justify-center gap-2">
                                                 <li>
@@ -349,17 +341,15 @@ useEffect(() => {
                                                         </button>
                                                     </Tippy>
                                                 </li>
-                                                 {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.accountant].includes(role) && (
-    items.feedbackCheck && (
-        <li>
-            <Tippy content="Accountant verify">
-                <button type="button">
-                    <RiVerifiedBadgeFill size={25} className="text-success" onClick={() => handleAccountantVerify(items._id)} />
-                </button>
-            </Tippy>
-        </li>
-    )
-)}
+                                                {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.accountant].includes(role) && items.feedbackCheck && (
+                                                    <li>
+                                                        <Tippy content="Accountant verify">
+                                                            <button type="button">
+                                                                <RiVerifiedBadgeFill size={25} className="text-success" onClick={() => handleAccountantVerify(items._id)} />
+                                                            </button>
+                                                        </Tippy>
+                                                    </li>
+                                                )}
                                             </ul>
                                         </td>
                                     </tr>
@@ -369,12 +359,12 @@ useEffect(() => {
                     </table>
                 </div>
             </div>
-                    {/* Updated Pagination Controls */}
+            {/* Updated Pagination Controls */}
             <div className="flex justify-between items-center mt-4">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {bookings.length} of {totalItems} bookings
                 </div>
-                
+
                 <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
                     <li>
                         <button
@@ -389,30 +379,27 @@ useEffect(() => {
                         </button>
                     </li>
 
-                    {!showingAll && Array.from({ length: totalPages }, (_, index) => (
-                        <li key={index}>
-                            <button
-                                type="button"
-                                onClick={() => handlePageChange(index + 1)}
-                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                    currentPage === index + 1 
-                                        ? 'bg-primary text-white' 
-                                        : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                                }`}
-                            >
-                                {index + 1}
-                            </button>
-                        </li>
-                    ))}
+                    {!showingAll &&
+                        Array.from({ length: totalPages }, (_, index) => (
+                            <li key={index}>
+                                <button
+                                    type="button"
+                                    onClick={() => handlePageChange(index + 1)}
+                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                                        currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                                    }`}
+                                >
+                                    {index + 1}
+                                </button>
+                            </li>
+                        ))}
 
                     <li>
                         <button
                             type="button"
                             onClick={toggleShowAll}
                             className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                showingAll 
-                                    ? 'bg-primary text-white' 
-                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                                showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
                             }`}
                         >
                             {showingAll ? 'Pages' : 'All'}
@@ -433,9 +420,6 @@ useEffect(() => {
                     </li>
                 </ul>
             </div>
-
-
-
         </div>
     );
 };

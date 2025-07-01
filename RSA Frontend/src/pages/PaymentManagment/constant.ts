@@ -212,7 +212,7 @@ export const ReceivedDetailsTableColumn = (staffs: Staff[]): DataTableColumn<Rec
 ];
 //Columns Titles
 
-export const CashCollectionDetailsTableColumn: DataTableColumn<CashCollectionDetails>[] = [
+export const CashCollectionDetailsTableColumn = (staffs: Staff[]): DataTableColumn<CashCollectionDetails>[] => [
     {
         title: "SI",
         accessor: '_id',
@@ -247,13 +247,31 @@ export const CashCollectionDetailsTableColumn: DataTableColumn<CashCollectionDet
         accessor: 'totalDriverAmount',
         render: (booking: CashCollectionDetails) => `₹ ${booking?.totalDriverAmount || 0}`
     },
-//    {
-//     title: "FILE NUMBERS",
-//     accessor: 'fileNumbers',
-//     render: (cashCollection: CashCollectionDetails) => (
-//         cashCollection.fileNumbers?.join(', ') || 'N/A'
-//     )
-// },
+  {
+        title: "RECEIVED BY",
+        accessor: 'receivedUser',
+        render: (booking: CashCollectionDetails) => booking?.receivedUser || 'N/A'
+    },
+{
+    title: "RECEIVED BY (USER)",
+    accessor: 'receivedUserId',
+    render: (booking: CashCollectionDetails, index: number) => {
+        // Type guard for populated staff object
+        if (booking.receivedUserId && 
+            typeof booking.receivedUserId === 'object' && 
+            'name' in booking.receivedUserId) {
+            return booking.receivedUserId.name || 'N/A';
+        }
+        
+        // Type guard for string ID
+        if (typeof booking.receivedUserId === 'string') {
+            const staff = staffs.find(s => s._id === booking.receivedUserId);
+            return staff?.name || 'N/A';
+        }
+        
+        return 'N/A';
+    }
+},
     {
         title: "BALANCE",
         accessor: 'balance',

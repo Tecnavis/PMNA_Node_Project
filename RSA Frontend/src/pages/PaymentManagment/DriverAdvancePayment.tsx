@@ -51,7 +51,7 @@ const [isLoading, setIsLoading] = useState(false);
 
     // In your component
 const colsForAdvanceDetails = AdvanceDetailsTableColumn;
-const colsForCashCollection = CashCollectionDetailsTableColumn; 
+const colsForCashCollection = CashCollectionDetailsTableColumn(staffs); 
 const colsForReceivedDetails = ReceivedDetailsTableColumn(staffs);
  const fetchStaffs = async () => {
     try {

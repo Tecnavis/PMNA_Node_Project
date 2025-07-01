@@ -43,7 +43,7 @@ const AdvancePayment: React.FC = () => {
    
 
        const colsForAdvanceDetails = AdvanceDetailsTableColumn;
-       const colsForCashCollection = CashCollectionDetailsTableColumn; 
+const colsForCashCollection = CashCollectionDetailsTableColumn(staffs); 
        const colsForReceivedDetails = ReceivedDetailsTableColumn(staffs);
     const handlePrint = () => {
         if (!printRef.current) return;
