@@ -21,7 +21,16 @@ exports.createReceivedDetails = async (req, res) => {
         if (!associateDriver) {
             return res.status(404).json({ message: 'Driver not found' });
         }
-// -----------------------
+          // Add validation for Staff role
+        if (userRole === 'Staff') {
+            const driverCashInHand = associateDriver.cashInHand || 0;
+            if (Math.abs(Number(receivedAmount) - driverCashInHand) > 0.01) { // Allow small floating point differences
+                return res.status(400).json({ 
+                    message: `For Staff, received amount must exactly match driver's cash in hand (${driverCashInHand})` 
+                });
+            }
+        }
+// ---------------------------
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
 
