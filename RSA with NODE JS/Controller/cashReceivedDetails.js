@@ -21,7 +21,7 @@ exports.createReceivedDetails = async (req, res) => {
         if (!associateDriver) {
             return res.status(404).json({ message: 'Driver not found' });
         }
-
+// -----------------------
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
 

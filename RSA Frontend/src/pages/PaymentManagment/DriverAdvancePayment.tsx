@@ -183,7 +183,7 @@ const handlePrint = () => {
             setCashCollectionDetails(res.data);
         } catch (error) {}
     };
-    // -----------------------------------------------
+    // ------------------------------------------------------
     const settleReceivedAmount = async () => {
         try {
             if (!receivedAmount || !remark.trim()) {
@@ -320,7 +320,7 @@ const handlePrint = () => {
     useEffect(() => {
         setSearch('');
     }, [selectedType]);
-
+// --------
     useEffect(() => {
         if (selectedType === 'advance') {
             fetchAdvancePayment();
