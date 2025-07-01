@@ -7,6 +7,9 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { ROLES } from '../../constants/roles';
+import Tippy from '@tippyjs/react';
+import { IconInfoCircle, IconX } from '@tabler/icons-react';
+import { Modal } from '@mui/material';
 
 interface Staff {
     _id: string;
@@ -20,7 +23,15 @@ interface Staff {
     cashInHand?: number;
     role?: string; // Add role as a top-level property
 }
-
+interface CashCollectionDetail {
+    _id: string;
+    currentCashInHand: number;
+    totalStaffAmount: number;
+    givenAmountToStaff: number;
+    balance: string;
+    createdAt: string;
+   
+}
 const StaffReport = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const navigate = useNavigate();
@@ -45,6 +56,14 @@ const StaffReport = () => {
     // Staff data state
     const [staffs, setStaffs] = useState<Staff[]>([]);
     const [recordsData, setRecordsData] = useState<Staff[]>([]);
+  // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [cashCollectionDetails, setCashCollectionDetails] = useState<CashCollectionDetail[]>([]);
+    const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+const [modalPage, setModalPage] = useState(1);
+const [modalPageSize, setModalPageSize] = useState(10);
+const [totalModalRecords, setTotalModalRecords] = useState(0);
 
     // Fetch staffs from backend using the filtered endpoint
     const fetchStaffs = async (search = '') => {
@@ -59,6 +78,50 @@ const StaffReport = () => {
             console.error('Error fetching staffs:', error);
         }
     };
+    // Fetch cash collection details for a staff member
+   const fetchCashCollectionDetails = async (staffId: string, page = 1, pageSize = 10) => {
+    setIsLoading(true);
+    try {
+        const response = await axios.get(`${backendUrl}/cash-received-details-staff`, {
+            params: { 
+                staffId,
+                page,
+                pageSize
+            },
+        });
+        setCashCollectionDetails(response.data.data);
+        setTotalModalRecords(response.data.pagination.total);
+        setIsModalOpen(true);
+    } catch (error) {
+        console.error('Error fetching cash collection details:', error);
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+// Update your handleInfoClick function
+const handleInfoClick = (staff: Staff) => {
+    setSelectedStaff(staff);
+    setModalPage(1); // Reset to first page when opening modal
+    fetchCashCollectionDetails(staff._id, 1, modalPageSize);
+};
+
+// Add pagination handlers for the modal
+const handleModalPageChange = (page: number) => {
+    setModalPage(page);
+    if (selectedStaff) {
+        fetchCashCollectionDetails(selectedStaff._id, page, modalPageSize);
+    }
+};
+
+const handleModalPageSizeChange = (size: number) => {
+    setModalPageSize(size);
+    setModalPage(1); // Reset to first page when changing page size
+    if (selectedStaff) {
+        fetchCashCollectionDetails(selectedStaff._id, 1, size);
+    }
+};
+
     // Check token and fetch data
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -115,7 +178,20 @@ const StaffReport = () => {
                                 title: 'Cash in Hand',
                                 render: (staff: Staff) => <div>₹{staff.cashInHand !== undefined ? staff.cashInHand : 0}</div>,
                             },
-
+   {
+                                accessor: 'action',
+                                title: 'Action',
+                                titleClassName: '!text-center',
+                                render: (staff: Staff) => (
+                                    <div className="flex items-center justify-center space-x-1">
+                                        <Tippy content="Info">
+                                            <button type="button" onClick={() => handleInfoClick(staff)}>
+                                                <IconInfoCircle className="text-secondary" />
+                                            </button>
+                                        </Tippy>
+                                    </div>
+                                ),
+                            },
                             ...([ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role)
                                 ? [
                                       {
@@ -136,6 +212,78 @@ const StaffReport = () => {
                     />
                 </div>
             </div>
+              {/* Modal for displaying cash collection details */}
+     <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-auto">
+        <div className="p-5">
+            <div className="flex items-center justify-between mb-5">
+                <h5 className="text-lg font-semibold">
+                    Cash Collection Details for {selectedStaff?.name}
+                </h5>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                    <IconX className="w-6 h-6" />
+                </button>
+            </div>
+
+            {isLoading ? (
+                <div className="text-center">Loading...</div>
+            ) : (
+                <div className="datatables">
+                    <DataTable
+                        className="whitespace-nowrap table-hover"
+                        records={cashCollectionDetails}
+                        columns={[
+                           
+                            {
+                                accessor: 'createdAt',
+                                title: 'Date',
+                                render: (detail: CashCollectionDetail) => (
+                                    <div>{new Date(detail.createdAt).toLocaleString()}</div>
+                                ),
+                            },
+                              {
+                                accessor: 'currentCashInHand',
+                                title: 'Current CashInHand',
+                                render: (detail: CashCollectionDetail) => (
+                                    <div>₹{detail.currentCashInHand}</div>
+                                ),
+                            },
+                            {
+                                accessor: 'totalStaffAmount',
+  title: 'Staff Given Amount',
+                                render: (detail: CashCollectionDetail) => (
+                                    <div>₹{detail.totalStaffAmount}</div>
+                                ),                            },
+                            {
+                                accessor: 'givenAmountToStaff',
+                                title: 'givenAmountToStaff',
+                                render: (detail: CashCollectionDetail) => (
+                                    <div>{detail.givenAmountToStaff}</div>
+                                ),
+                            },
+                             {
+                                accessor: 'balance',
+                                title: 'Balance',
+                                render: (detail: CashCollectionDetail) => (
+                                    <div>{detail.balance}</div>
+                                ),
+                            },
+                        ]}
+                        totalRecords={totalModalRecords}
+                        recordsPerPage={modalPageSize}
+                        page={modalPage}
+                        onPageChange={handleModalPageChange}
+                        recordsPerPageOptions={[10, 20, 30, 50, 100]}
+                        onRecordsPerPageChange={handleModalPageSizeChange}
+                        paginationText={({ from, to, totalRecords }) => 
+                            `Showing ${from} to ${to} of ${totalRecords} entries`
+                        }
+                    />
+                </div>
+            )}
+        </div>
+    </div>
+</Modal>
         </div>
     );
 };

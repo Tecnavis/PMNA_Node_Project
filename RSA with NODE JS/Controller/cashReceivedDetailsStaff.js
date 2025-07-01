@@ -181,7 +181,7 @@ else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUse
 };
 exports.getReceivedDetailsStaff = async (req, res) => {
     try {
-        const { staffId, search } = req.query;
+        const { staffId, search, page = 1, pageSize = 10 } = req.query;
         
         const query = {};
         if (staffId) query.staff = staffId;
@@ -192,14 +192,29 @@ exports.getReceivedDetailsStaff = async (req, res) => {
             ];
         }
 
+        // Calculate skip value for pagination
+        const skip = (page - 1) * pageSize;
+        
+        // Get total count for pagination info
+        const total = await CashCollectionDetailsStaff.countDocuments(query);
+        
+        // Get paginated results
         const details = await CashCollectionDetailsStaff.find(query)
             .populate('staff', 'name')
             .populate('receivedUserId', 'name')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(pageSize));
 
         res.status(200).json({
             success: true,
-            data: details
+            data: details,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pageSize: parseInt(pageSize),
+                totalPages: Math.ceil(total / pageSize)
+            }
         });
 
     } catch (error) {
