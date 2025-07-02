@@ -717,9 +717,10 @@ const BookingAdd: React.FC = () => {
         if (selectedOption.value === 'Lifting') {
             setIsLifting(true)
             setSelectedShowroom({
-                id: "Lifting",
+            id: "507f1f77bcf86cd799439011", // Use the string ID directly
                 latitudeAndLongitude: latitudeAndLongitude,
                 name: "Lifting",
+               
                 insurenceAmount: 0,
             });
         } else if (selectedOption) {
