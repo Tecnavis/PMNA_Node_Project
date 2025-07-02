@@ -250,13 +250,13 @@ const handleModalPageSizeChange = (size: number) => {
                             },
                             {
                                 accessor: 'totalStaffAmount',
-  title: 'Staff Given Amount',
+  title: 'TOTAL AMOUNT',
                                 render: (detail: CashCollectionDetail) => (
                                     <div>₹{detail.totalStaffAmount}</div>
                                 ),                            },
                             {
                                 accessor: 'givenAmountToStaff',
-                                title: 'givenAmountToStaff',
+                                title: 'AMOUNT GIVEN',
                                 render: (detail: CashCollectionDetail) => (
                                     <div>{detail.givenAmountToStaff}</div>
                                 ),

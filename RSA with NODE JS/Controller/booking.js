@@ -968,7 +968,9 @@ exports.updateBooking = async (req, res) => {
 
             updatedData.vehicleNumber = selectedVehicle.vehicleNumber
         }
-
+if (updatedData.showroom && !mongoose.Types.ObjectId.isValid(updatedData.showroom)) {
+    return res.status(400).json({ message: 'Invalid showroom ID format' });
+}
         // Check if the body contains 'provider' and handle 'driver' if it exists
         if (updatedData.provider) {
             const booking = await Booking.findById(id); // Fetch the existing booking to check for the driver
