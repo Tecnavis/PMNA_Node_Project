@@ -424,7 +424,7 @@ const ExpenseApproveUI = () => {
       </Card>
 
       {/* Image Modal */}
-      <ReusableModal
+      {/* <ReusableModal
         title='Expense Image'
         isOpen={imageModalOpen}
         onClose={() => setImageModalOpen(false)}
@@ -452,7 +452,7 @@ const ExpenseApproveUI = () => {
             </div>
           </div>
         </div>
-      </ReusableModal>
+      </ReusableModal> */}
       <div className="overflow-x-auto my-10">
         <div className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 mt-5">
         <div className="flex-1">
