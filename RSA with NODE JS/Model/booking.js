@@ -8,7 +8,7 @@ const bookingSchema = new mongoose.Schema({
     location: { type: String },
     latitudeAndLongitude: { type: String },
     baselocation: { type: mongoose.Schema.Types.ObjectId, ref: 'BaseLocation' },
-    showroom: { type: mongoose.Schema.Types.ObjectId, ref: 'Showroom' },
+    showroom: { type: mongoose.Schema.Types.Mixed, ref: 'Showroom' },
     company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
     totalDistence: { type: Number },
     dropoffLocation: { type: String },
