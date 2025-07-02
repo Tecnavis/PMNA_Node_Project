@@ -23,6 +23,8 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
             <table className="min-w-full text-sm text-left text-gray-600 bg-white shadow-md border rounded">
                 <thead className="bg-indigo-50 border-b text-indigo-700">
                     <tr>
+                                                <th className="px-4 py-3">No</th>
+
                         <th className="px-4 py-3">Driver</th>
                         <th className="px-4 py-3">Description</th>
                         <th className="px-4 py-3">Amount (₹)</th>
@@ -33,7 +35,7 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                     <AnimatePresence>
-                        {expenses.map((expense) => (
+                        {expenses.map((expense,index) => (
                             <motion.tr
                                 key={expense._id}
                                 className="hover:bg-gray-50"
@@ -42,6 +44,7 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.2 }}
                             >
+                                <td>{index+1}</td>
                                 <td className="px-4 py-3">
                                     <Tooltip title={`Driver: ${expense.driver.name}`}>
                                         <span className="cursor-help">{expense.driver.name}</span>

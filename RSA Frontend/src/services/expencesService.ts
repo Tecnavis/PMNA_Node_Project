@@ -1,5 +1,5 @@
 import { AxiosResponse } from "axios";
-import { axiosInstance as axios } from "../config/axiosConfig";
+import { axiosInstance as axios, axiosInstance } from "../config/axiosConfig";
 import { BASE_URL } from "../config/axiosConfig";
 import { handleApiError } from "../utils/errorHandler";
 import { Expense, IAPIResponseAllDieselExpenses, IAPIResponseApproveDieselExpenses, IDieselExpense } from "../interface/Expences";
@@ -9,21 +9,27 @@ import { Expense, IAPIResponseAllDieselExpenses, IAPIResponseApproveDieselExpens
 export const getExpences = async (
     month?: string,
     year?: string,
-    vehicleNumber?: string
-): Promise<IDieselExpense[]> => {
+    vehicleNumber?: string,
+    page?: number,
+    limit?: number,
+    all?: boolean
+): Promise<{data: IDieselExpense[], total: number, page: number, limit: number, totalPages: number}> => {
     try {
         const params = new URLSearchParams();
         if (month) params.append('month', month);
         if (year) params.append('year', year);
         if (vehicleNumber) params.append('vehicleNumber', vehicleNumber);
+        if (page) params.append('page', page.toString());
+        if (limit) params.append('limit', limit.toString());
+        if (all) params.append('all', all.toString());
 
         const response: AxiosResponse<IAPIResponseAllDieselExpenses> = await axios.get(
             `${BASE_URL}/diesel-expenses?${params.toString()}`
         );
-        return response.data.data;
+        return response.data;
     } catch (error) {
         handleApiError(error);
-        return [];
+        return {data: [], total: 0, page: 1, limit: 10, totalPages: 0};
     }
 };
 // Approve dieslse expnse
@@ -92,18 +98,22 @@ export const fetchPendingExpenses = async (): Promise<Expense[]> => {
     }
 };
 
-export const fetchExpenses = async (search:string): Promise<Expense[]> => {
+export const fetchExpenses = async (search: string, page: number = 1, limit: number | 'all' = 10): Promise<{ data: Expense[], pagination: any }> => {
     try {
-        const response = await axios.get(
-            `${BASE_URL}/expense`,{
-                params:{
-                    search
-                }
-            }
-        );
-        return response.data.expenseData;
+        const params = {
+            search,
+            page,
+            ...(limit !== 'all' && { limit }),
+            ...(limit === 'all' && { all: true })
+        };
+
+        const response = await axiosInstance.get(`${BASE_URL}/expense`, { params });
+        return {
+            data: response.data.expenseData,
+            pagination: response.data.pagination
+        };
     } catch (error) {
-        console.error('Error fetching pending expenses:', error);
+        console.error('Error fetching expenses:', error);
         throw error;
     }
 };

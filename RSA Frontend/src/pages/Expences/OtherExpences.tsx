@@ -13,6 +13,7 @@ import { dateFormate, formattedTime } from '../../utils/dateUtils';
 import { Expense } from '../../interface/Expences';
 import { fetchExpenses, fetchPendingExpenses, updateStatus } from '../../services/expencesService';
 import ExpenseTable from './ExpenseTable';
+import { GrNext, GrPrevious } from 'react-icons/gr';
 
 
 
@@ -29,6 +30,11 @@ const ExpenseApproveUI = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const [showingAll, setShowingAll] = useState(false);
+    const [currentSearchTerm, setCurrentSearchTerm] = useState('');
 
   const fetchPendingExpense = async () => {
     try {
@@ -46,19 +52,48 @@ const ExpenseApproveUI = () => {
     }
   };
 
-  const fetchExpense = async () => {
-    try {
+    const fetchExpense = async (searchTerm = '', page = 1, limit: number | 'all' = 10) => {
+        try {
+            setLoading(true);
+            const params = {
+                search: searchTerm,
+                page,
+                ...(limit !== 'all' && { limit }),
+                ...(limit === 'all' && { all: true })
+            };
 
-      const response: Expense[] = await fetchExpenses(searchQuery.trim()) as unknown as Expense[]
-      setAllExpenses(response);
+            const response = await axiosInstance.get(`${BASE_URL}/expense`, { params });
+            setExpenses(response.data.expenseData);
+            setTotalItems(response.data.pagination.total);
+            setTotalPages(response.data.pagination.totalPages);
+            setCurrentPage(response.data.pagination.page);
+        } catch (error) {
+            enqueueSnackbar('Failed to fetch expenses', { variant: 'error'});
+            console.error('Error fetching expenses:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      setNewRequestsCount(0);
-    } catch (error) {
-      enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
-      console.error('Error fetching expenses:', error);
-    } finally {
-    }
-  };
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+        fetchExpense(currentSearchTerm, page);
+    };
+
+    const toggleShowAll = () => {
+        const newShowingAll = !showingAll;
+        setShowingAll(newShowingAll);
+        fetchExpense(currentSearchTerm, 1, newShowingAll ? 'all' : 10);
+    };
+
+    const handleSearch = (searchTerm: string) => {
+        setCurrentSearchTerm(searchTerm);
+        fetchExpense(searchTerm);
+    };
+
+    useEffect(() => {
+        fetchExpense();
+    }, []);
 
   const toggleDescription = (expenseId: string) => {
     setExpandedDescriptions(prev => ({
@@ -430,13 +465,89 @@ const ExpenseApproveUI = () => {
           />
         </div>
       </div>
-        <ExpenseTable
-          expenses={allExpenses}
-          expandedDescriptions={expandedDescriptions}
-          toggleDescription={toggleDescription}
-          openImageModal={openImageModal}
-          CLOUD_IMAGE={CLOUD_IMAGE}
-        />
+       <ExpenseTable
+    expenses={expenses}
+    expandedDescriptions={expandedDescriptions}
+    toggleDescription={toggleDescription}
+    openImageModal={openImageModal}
+    CLOUD_IMAGE={CLOUD_IMAGE}
+/>
+
+         {/* Pagination Controls */}
+            <div className="flex justify-between items-center mt-4">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing {expenses.length} of {totalItems} expenses
+                </div>
+
+                <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
+                    <li>
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            disabled={showingAll || currentPage === 1}
+                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                                showingAll || currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
+                        >
+                            <GrPrevious />
+                        </button>
+                    </li>
+
+                    {!showingAll &&
+                        Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                            // Show limited page numbers (max 5)
+                            let pageNum;
+                            if (totalPages <= 5) {
+                                pageNum = index + 1;
+                            } else if (currentPage <= 3) {
+                                pageNum = index + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + index;
+                            } else {
+                                pageNum = currentPage - 2 + index;
+                            }
+
+                            return (
+                                <li key={index}>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePageChange(pageNum)}
+                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                                            currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                </li>
+                            );
+                        })}
+
+                    <li>
+                        <button
+                            type="button"
+                            onClick={toggleShowAll}
+                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                                showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            }`}
+                        >
+                            {showingAll ? 'Show Pages' : 'Show All'}
+                        </button>
+                    </li>
+
+                    <li>
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={showingAll || currentPage === totalPages}
+                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                                showingAll || currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
+                        >
+                            <GrNext />
+                        </button>
+                    </li>
+                </ul>
+            </div>
         {/* Image Modal */}
         {selectedImage && (
           <div

@@ -36,6 +36,11 @@ const DieselExpenses = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [filterLoading, setFilterLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [showAll, setShowAll] = useState<boolean>(false);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
 
   const months = [
     { value: '01', label: 'January' },
@@ -60,15 +65,25 @@ const DieselExpenses = () => {
 
   const role = localStorage.getItem('role') || ''
 
-  const fetchDieselExpences = async () => {
+ const fetchDieselExpences = async () => {
     try {
       setLoading(true);
       setFilterLoading(true);
 
-      const data: IDieselExpense[] = await getExpences(month, year, vehicleNumber) as IDieselExpense[];
-      setExpenses(data);
+      const response = await getExpences(
+        month, 
+        year, 
+        vehicleNumber,
+        currentPage,
+        itemsPerPage,
+        showAll
+      );
+      
+      setExpenses(response.data);
+      setTotalPages(response.totalPages);
+      setTotalItems(response.total);
 
-      data.forEach((expense) => {
+      response.data.forEach((expense) => {
         setkmInputValues((prev) => ({ ...prev, [expense._id]: expense.expenceKm }))
       })
 
@@ -92,10 +107,90 @@ const DieselExpenses = () => {
     fetchDieselExpences();
   };
 
+  // Add pagination controls
+  const PaginationControls = () => (
+    <div className="flex items-center justify-between mt-4">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-600">
+          Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+          {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
+        </span>
+        
+        <FormControl size="small" className="w-24">
+          <InputLabel>Per Page</InputLabel>
+          <Select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            label="Per Page"
+          >
+            <MenuItem value={5}>5</MenuItem>
+            <MenuItem value={10}>10</MenuItem>
+            <MenuItem value={25}>25</MenuItem>
+            <MenuItem value={50}>50</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <Button
+          onClick={() => setShowAll(!showAll)}
+          className={`px-3 py-1 rounded-md ${showAll ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
+        >
+          {showAll ? 'Show Paginated' : 'Show All'}
+        </Button>
+      </div>
+      
+      {!showAll && (
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="p-1 rounded-md disabled:opacity-50"
+          >
+            <ChevronLeft size={20} />
+          </Button>
+          
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+            
+            return (
+              <Button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-8 h-8 rounded-md ${currentPage === pageNum ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+          
+          <Button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="p-1 rounded-md disabled:opacity-50"
+          >
+            <ChevronRight size={20} />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Update useEffect to include pagination dependencies
   useEffect(() => {
     fetchDieselExpences();
-    fetchVehiclesNamesList()
-  }, []);
+    fetchVehiclesNamesList();
+  }, [currentPage, itemsPerPage, showAll]);
 
   const handleStatusUpdate = async (expenseId: string, status: string) => {
     try {
@@ -291,6 +386,8 @@ const DieselExpenses = () => {
           <table className="min-w-full text-sm text-left text-gray-600">
             <thead className="bg-indigo-50 border-b text-indigo-700">
               <tr>
+                                <th className="px-4 py-3">Index</th>
+
                 <th className="px-4 py-3">Expense ID</th>
                 <th className="px-4 py-3">Driver</th>
                 <th className="px-4 py-3">Vehicle Number</th>
@@ -305,7 +402,7 @@ const DieselExpenses = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               <AnimatePresence>
-                {expenses.map((expense) => (
+                {expenses.map((expense,index) => (
                   <motion.tr
                     key={expense.expenseId}
                     className="hover:bg-gray-50"
@@ -314,6 +411,7 @@ const DieselExpenses = () => {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
+                    <td>{index+1}</td>
                     <td className="px-4 py-3 font-medium w-auto">{expense.expenseId}</td>
                     <td className="px-4 py-3">
                       <Tooltip title={`Driver ID: ${expense.driver._id}`}>
@@ -455,6 +553,7 @@ const DieselExpenses = () => {
             </tbody>
           </table>
         </div>
+      <PaginationControls />
 
         {/* Image Modal */}
         {selectedImage && (

@@ -121,9 +121,11 @@ exports.approve = async (req, res) => {
 // All expenses, newest first
 exports.getAllExpense = async (req, res) => {
     try {
-        const { month, year, search } = req.query;
+        const { month, year, search, page = 1, limit = 10, all = false } = req.query;
         const query = {};
-
+          // Convert page and limit to numbers
+        const pageNum = all ? 1 : Math.max(1, parseInt(page, 10));
+        const limitNum = all ? Number.MAX_SAFE_INTEGER : Math.max(1, parseInt(limit, 10));
         // Month and Year filter
         if (month && year) {
             const monthNum = parseInt(month);
@@ -162,16 +164,29 @@ exports.getAllExpense = async (req, res) => {
                 { driver: { $in: drivers.map(d => d._id) } }
             ];
         }
+  // Get total count of documents
+// Get total count of documents
+        const total = await Expense.countDocuments(query);
 
-        const expense = await Expense
+
+        const expenses  = await Expense
             .find(query)  // ← Use the query object here
-            .sort({ createdAt: -1 })           // ← sort descending by createdAt
-            .populate('driver');
+            .sort({ createdAt: -1 })
+            .populate('driver')
+            .skip(all ? 0 : (pageNum - 1) * limitNum)
+            .limit(limitNum)
+            .lean();
 
-        return res.status(200).json({
-            message: "All Expenses are fetched successfully",
+          return res.status(200).json({
+            message: "Expenses fetched successfully",
             success: true,
-            expenseData: expense
+            expenseData: expenses,
+            pagination: {
+                total,
+                page: pageNum,
+                limit: all ? total : limitNum,
+                totalPages: all ? 1 : Math.ceil(total / limitNum),
+            }
         });
     } catch (error) {
         console.error(error);
