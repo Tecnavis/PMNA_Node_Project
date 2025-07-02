@@ -1784,7 +1784,13 @@ exports.getApprovedBookings = async (req, res) => {
                 const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
                 const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
-
+ // Search in company names
+                const matchingCompanies = await Company.find({ 
+                    $or: [
+                        { name: searchRegex },
+                        { phone: searchRegex }
+                    ]
+                }).select('_id');
                 query.$or = [
                     { customerName: searchRegex }, // Replaced fileNumber with customerName
                     { mob1: searchRegex },
@@ -1793,6 +1799,8 @@ exports.getApprovedBookings = async (req, res) => {
                     { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
                     { provider: { $in: matchingProviders.map(p => p._id) } },
+                                        { company: { $in: matchingCompanies.map(c => c._id) } }, // Added company search
+
                 ];
             }
         }
@@ -1817,9 +1825,9 @@ exports.getApprovedBookings = async (req, res) => {
             .populate('company')
             .populate('driver')
             .populate('provider')
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .sort({ createdAt: -1 });  // Sorting by createdAt in descending order
+          .skip(showAll === 'true' ? 0 : (page - 1) * limit)
+            .limit(showAll === 'true' ? Number.MAX_SAFE_INTEGER : limit)
+            .sort({ createdAt: -1 });
 
         res.status(200).json({
             total,

@@ -92,11 +92,10 @@ exports.toggleApproval = async (req, res) => {
 // };
 exports.getAllExpenses = async (req, res) => {
     try {
-        const { month, year, vehicleNumber } = req.query;
+        const { month, year, vehicleNumber, page = 1, limit = 10, all = false } = req.query;
 
         const query = {};
 
-        // Filter by month and year
         // Filter by month and year
         if (month && year) {
             const startDate = new Date(`${year}-${month}-01T00:00:00.000Z`);
@@ -108,11 +107,34 @@ exports.getAllExpenses = async (req, res) => {
             query.vehicleNumber = vehicleNumber;
         }
 
-        const expenses = await DieselExpense.find(query)
-            .sort({ createdAt: -1 }) // latest first
-            .populate('driver');
+        let expenses;
+        let totalCount;
+        
+        if (all === 'true') {
+            expenses = await DieselExpense.find(query)
+                .sort({ createdAt: -1 }) // latest first
+                .populate('driver');
+            totalCount = expenses.length;
+        } else {
+            const pageNumber = parseInt(page);
+            const limitNumber = parseInt(limit);
+            const skip = (pageNumber - 1) * limitNumber;
+            
+            totalCount = await DieselExpense.countDocuments(query);
+            expenses = await DieselExpense.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNumber)
+                .populate('driver');
+        }
 
-        res.status(200).json({ data: expenses });
+        res.status(200).json({ 
+            data: expenses,
+            total: totalCount,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: all === 'true' ? 1 : Math.ceil(totalCount / limit)
+        });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

@@ -19,7 +19,11 @@ export interface IDieselExpense {
 
 // API Response for get all diesel expense
 export interface IAPIResponseAllDieselExpenses {
-    data: IDieselExpense[]
+    data: IDieselExpense[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
 }
 
 // API Response for get all diesel expense

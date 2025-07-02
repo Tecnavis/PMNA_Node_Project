@@ -71,6 +71,12 @@ interface Booking {
             }
         ];
     };
+        company?: {
+        _id: string;
+        name: string;
+        phone: string;
+    };
+
     provider?: {
         idNumber: string;
         image: string;
@@ -192,6 +198,8 @@ const ApprovedBookings: React.FC = () => {
                                  <th>File Number</th>
                                 <th>Customer Name</th>
                                 <th>Mobile</th>
+                                                                <th>Company</th>
+
                                 <th>Service Type</th>
                                 <th>Vehicle Number</th>
                                 <th>comments</th>
@@ -218,25 +226,21 @@ const ApprovedBookings: React.FC = () => {
                                        <td>  {items.fileNumber}
                                         </td>
                                         <td>
-                                            {/* <div style={{ background: fileNumberColor, padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px' }}>
-                                                <p>{items.fileNumber}</p>
-                                            </div>{' '} */}
-                                            {/* File Number with conditional color */}
                                             {items.customerName}
                                         </td>
                                         
-                                        {/* {items.driver ? (
-                                            <td>
-                                                {items.driver.name} <p style={{ color: '#9a9a9a' }}>{items.driver.phone}</p>
-                                            </td>
-                                        ) : (
-                                            <td>
-                                                {items.provider?.name || 'No Provider'} <p style={{ color: '#9a9a9a' }}>{items.provider?.phone || 'N/A'}</p>
-                                            </td>
-                                        )} */}
+                                       
                                         <td>
                                             {items.mob1}
                                         </td>
+                                           <td>
+                {items.company?.name || 'Payment Work'}
+                {items.company?.phone && (
+                    <div className="text-xs text-gray-500">
+                        {items.company.phone}
+                    </div>
+                )}
+            </td>
                                         <td>{items.serviceType.serviceName.toUpperCase()}</td>
                                         <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
                                         <td>{items.comments}</td>
