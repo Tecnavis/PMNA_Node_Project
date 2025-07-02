@@ -10,18 +10,18 @@ export const getExpences = async (
     month?: string,
     year?: string,
     vehicleNumber?: string,
-    page?: number,
-    limit?: number,
-    all?: boolean
-): Promise<{data: IDieselExpense[], total: number, page: number, limit: number, totalPages: number}> => {
+    page: number = 1,
+    limit: number = 10,
+    all: boolean = false
+): Promise<IAPIResponseAllDieselExpenses> => {
     try {
         const params = new URLSearchParams();
         if (month) params.append('month', month);
         if (year) params.append('year', year);
         if (vehicleNumber) params.append('vehicleNumber', vehicleNumber);
-        if (page) params.append('page', page.toString());
-        if (limit) params.append('limit', limit.toString());
-        if (all) params.append('all', all.toString());
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        params.append('all', all.toString());
 
         const response: AxiosResponse<IAPIResponseAllDieselExpenses> = await axios.get(
             `${BASE_URL}/diesel-expenses?${params.toString()}`
@@ -29,7 +29,13 @@ export const getExpences = async (
         return response.data;
     } catch (error) {
         handleApiError(error);
-        return {data: [], total: 0, page: 1, limit: 10, totalPages: 0};
+        return {
+            data: [],
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 0
+        };
     }
 };
 // Approve dieslse expnse
