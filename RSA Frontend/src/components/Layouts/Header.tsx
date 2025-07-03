@@ -24,6 +24,8 @@ import { HiOutlineCalculator } from "react-icons/hi2";
 import { IoCalendarOutline } from "react-icons/io5";
 import { axiosInstance } from '../../config/axiosConfig';
 import Select from "react-select";
+import { IconAt } from '@tabler/icons-react';
+import { CheckCircleIcon } from 'lucide-react';
 
 
 interface ServiceData {
@@ -243,6 +245,9 @@ const Header = () => {
                             </span>
                             <span onClick={() => navigate("/attendance")} className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
                                 <IoCalendarOutline className='size-5' />
+                            </span>
+                             <span onClick={() => navigate("/status")} className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
+                                <CheckCircleIcon className='size-5' />
                             </span>
                         </div>
                         <div>
