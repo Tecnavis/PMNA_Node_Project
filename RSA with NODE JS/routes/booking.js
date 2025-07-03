@@ -68,7 +68,7 @@ router.patch('/dropoffimage/:id/:index', jwt, upload.single('image'), controller
 router.patch('/addingdropoffimage/:id', jwt, upload.array('images', 6), controller.addDropoffImages);
 router.delete('/removePickupImage/:id/:index',jwt, controller.removePickupImage);
 router.delete('/removeDropoffImage/:id/:index',jwt, controller.removeDropoffImage);
-//Route for editing fileNumber 
+router.delete('/:id/dropoff-images/all', controller.removeAllDropoffImages);//Route for editing fileNumber 
 router.patch('/updatefilenumber/:id', jwt, controller.updateFilenumber);
 
 // Route for verify booking 
