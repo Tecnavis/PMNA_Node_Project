@@ -1378,6 +1378,34 @@ exports.removeDropoffImage = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+// Remove all dropoff images at once
+exports.removeAllDropoffImages = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+
+        // Remove all dropoff images by setting the array to empty
+        booking.dropoffImages = [];
+        
+        // Set pending status to true since all images are removed
+        booking.dropoffImagePending = true;
+        
+        await booking.save();
+
+        res.status(200).json({
+            message: "All dropoff images removed successfully",
+            dropoffImages: booking.dropoffImages,
+            dropoffImagePending: booking.dropoffImagePending,
+        });
+    } catch (error) {
+        console.error("Error removing all dropoff images:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
 // add dropoff images
 exports.addDropoffImages = async (req, res) => {
 
