@@ -1,0 +1,15 @@
+/* Add this to your CSS */
+.datatables .mantine-Table-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 16px;
+    align-items: center;
+}
+
+.datatables .mantine-Table-footer > div {
+    text-align: right;
+}
+
+.datatables .mantine-Table-footer > div:first-child {
+    text-align: left;
+}

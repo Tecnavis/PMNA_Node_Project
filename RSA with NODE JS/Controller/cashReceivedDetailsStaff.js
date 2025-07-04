@@ -179,6 +179,7 @@ else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUse
         });
     }
 };
+// In your backend controller (cash-received-details-staff)
 exports.getReceivedDetailsStaff = async (req, res) => {
     try {
         const { staffId, search, page = 1, pageSize = 10 } = req.query;
@@ -192,13 +193,9 @@ exports.getReceivedDetailsStaff = async (req, res) => {
             ];
         }
 
-        // Calculate skip value for pagination
-        const skip = (page - 1) * pageSize;
-        
-        // Get total count for pagination info
-        const total = await CashCollectionDetailsStaff.countDocuments(query);
-        
         // Get paginated results
+        const skip = (page - 1) * pageSize;
+        const total = await CashCollectionDetailsStaff.countDocuments(query);
         const details = await CashCollectionDetailsStaff.find(query)
             .populate('staff', 'name')
             .populate('receivedUserId', 'name')
@@ -206,9 +203,27 @@ exports.getReceivedDetailsStaff = async (req, res) => {
             .skip(skip)
             .limit(parseInt(pageSize));
 
+        // Calculate totals
+        const totals = await CashCollectionDetailsStaff.aggregate([
+            { $match: query },
+            { 
+                $group: {
+                    _id: null,
+                    totalDriverGiven: { $sum: "$totalStaffAmount" },
+                    totalStaffGiven: { $sum: "$givenAmountToStaff" },
+                    totalBalance: { $sum: "$balance" }
+                }
+            }
+        ]);
+
         res.status(200).json({
             success: true,
             data: details,
+            totals: totals[0] || {
+                totalDriverGiven: 0,
+                totalStaffGiven: 0,
+                totalBalance: 0
+            },
             pagination: {
                 total,
                 page: parseInt(page),

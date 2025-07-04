@@ -10,7 +10,22 @@ import { ROLES } from '../../constants/roles';
 import Tippy from '@tippyjs/react';
 import { IconInfoCircle, IconX } from '@tabler/icons-react';
 import { Modal } from '@mui/material';
+import './StaffReport.css';
+// Update your interface
+interface CashCollectionDetail {
+    _id: string;
+    currentCashInHand: number;
+    totalStaffAmount: number;
+    givenAmountToStaff: number;
+    balance: string | number; // Can be either string or number
+    createdAt: string;
+}
 
+interface CashCollectionTotals {
+    totalDriverGiven: number;
+    totalStaffGiven: number;
+    totalBalance: number;
+}
 interface Staff {
     _id: string;
     name: string;
@@ -23,15 +38,7 @@ interface Staff {
     cashInHand?: number;
     role?: string; // Add role as a top-level property
 }
-interface CashCollectionDetail {
-    _id: string;
-    currentCashInHand: number;
-    totalStaffAmount: number;
-    givenAmountToStaff: number;
-    balance: string;
-    createdAt: string;
-   
-}
+
 const StaffReport = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const navigate = useNavigate();
@@ -64,7 +71,11 @@ const StaffReport = () => {
 const [modalPage, setModalPage] = useState(1);
 const [modalPageSize, setModalPageSize] = useState(10);
 const [totalModalRecords, setTotalModalRecords] = useState(0);
-
+const [totals, setTotals] = useState<CashCollectionTotals>({
+    totalDriverGiven: 0,
+    totalStaffGiven: 0,
+    totalBalance: 0
+});
     // Fetch staffs from backend using the filtered endpoint
     const fetchStaffs = async (search = '') => {
         try {
@@ -78,8 +89,9 @@ const [totalModalRecords, setTotalModalRecords] = useState(0);
             console.error('Error fetching staffs:', error);
         }
     };
-    // Fetch cash collection details for a staff member
-   const fetchCashCollectionDetails = async (staffId: string, page = 1, pageSize = 10) => {
+   // Update your fetch function
+// Update your fetch function with proper typing
+const fetchCashCollectionDetails = async (staffId: string, page = 1, pageSize = 10) => {
     setIsLoading(true);
     try {
         const response = await axios.get(`${backendUrl}/cash-received-details-staff`, {
@@ -89,7 +101,15 @@ const [totalModalRecords, setTotalModalRecords] = useState(0);
                 pageSize
             },
         });
-        setCashCollectionDetails(response.data.data);
+        
+        // Convert string balances to numbers if needed with proper typing
+        const dataWithNumericBalances = response.data.data.map((item: CashCollectionDetail) => ({
+            ...item,
+            balance: typeof item.balance === 'string' ? parseFloat(item.balance) : item.balance
+        }));
+        
+        setCashCollectionDetails(dataWithNumericBalances);
+        setTotals(response.data.totals);
         setTotalModalRecords(response.data.pagination.total);
         setIsModalOpen(true);
     } catch (error) {
@@ -145,7 +165,15 @@ const handleModalPageSizeChange = (size: number) => {
         const sortedData = sortBy(staffs, sortStatus.columnAccessor);
         setRecordsData((sortStatus.direction === 'desc' ? sortedData.reverse() : sortedData).slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize));
     }, [sortStatus, staffs, page, pageSize]);
-
+// Add this calculation function
+const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
+    return details.reduce((acc, detail) => ({
+        totalDriverGiven: acc.totalDriverGiven + (detail.totalStaffAmount || 0),
+        totalStaffGiven: acc.totalStaffGiven + (detail.givenAmountToStaff || 0),
+  totalBalance: acc.totalBalance + (typeof detail.balance === 'string' ? 
+                         parseFloat(detail.balance) || 0 : 
+                         detail.balance || 0)    }), { totalDriverGiven: 0, totalStaffGiven: 0, totalBalance: 0 });
+};
     return (
         <div>
             <div className="panel mt-6">
@@ -220,67 +248,100 @@ const handleModalPageSizeChange = (size: number) => {
                 <h5 className="text-lg font-semibold">
                     Cash Collection Details for {selectedStaff?.name}
                 </h5>
+                <div className="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 px-4 py-2 rounded-lg shadow-md border border-green-200 dark:border-emerald-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600 dark:text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <div className="text-xs font-medium text-green-700 dark:text-green-300">CASH IN HAND</div>
+                        <div className="text-xl font-bold text-green-800 dark:text-white">
+                            ₹{selectedStaff?.cashInHand?.toLocaleString('en-IN')}
+                        </div>
+                    </div>
+                </div>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700">
                     <IconX className="w-6 h-6" />
                 </button>
             </div>
 
-            {isLoading ? (
-                <div className="text-center">Loading...</div>
-            ) : (
-                <div className="datatables">
-                    <DataTable
-                        className="whitespace-nowrap table-hover"
-                        records={cashCollectionDetails}
-                        columns={[
-                           
-                            {
-                                accessor: 'createdAt',
-                                title: 'Date',
-                                render: (detail: CashCollectionDetail) => (
-                                    <div>{new Date(detail.createdAt).toLocaleString()}</div>
-                                ),
-                            },
-                              {
-                                accessor: 'currentCashInHand',
-                                title: 'Current CashInHand',
-                                render: (detail: CashCollectionDetail) => (
-                                    <div>₹{detail.currentCashInHand}</div>
-                                ),
-                            },
-                            {
-                                accessor: 'totalStaffAmount',
-  title: 'TOTAL AMOUNT',
-                                render: (detail: CashCollectionDetail) => (
-                                    <div>₹{detail.totalStaffAmount}</div>
-                                ),                            },
-                            {
-                                accessor: 'givenAmountToStaff',
-                                title: 'AMOUNT GIVEN',
-                                render: (detail: CashCollectionDetail) => (
-                                    <div>{detail.givenAmountToStaff}</div>
-                                ),
-                            },
-                             {
-                                accessor: 'balance',
-                                title: 'Balance',
-                                render: (detail: CashCollectionDetail) => (
-                                    <div>{detail.balance}</div>
-                                ),
-                            },
-                        ]}
-                        totalRecords={totalModalRecords}
-                        recordsPerPage={modalPageSize}
-                        page={modalPage}
-                        onPageChange={handleModalPageChange}
-                        recordsPerPageOptions={[10, 20, 30, 50, 100]}
-                        onRecordsPerPageChange={handleModalPageSizeChange}
-                        paginationText={({ from, to, totalRecords }) => 
-                            `Showing ${from} to ${to} of ${totalRecords} entries`
-                        }
-                    />
-                </div>
-            )}
+        
+{isLoading ? (
+    <div className="text-center">Loading...</div>
+) : (
+    <div className="datatables">
+        <DataTable
+            className="whitespace-nowrap table-hover"
+            records={[
+                ...cashCollectionDetails,
+                {
+                    _id: 'totals-row',
+                    createdAt: 'Totals',
+                    totalStaffAmount: calculateClientSideTotals(cashCollectionDetails).totalDriverGiven,
+                    givenAmountToStaff: calculateClientSideTotals(cashCollectionDetails).totalStaffGiven,
+        balance: calculateClientSideTotals(cashCollectionDetails).totalBalance.toString(), // Convert to string
+                    currentCashInHand: 0 // dummy value
+                }
+            ]}
+            columns={[
+                {
+                    accessor: 'createdAt',
+                    title: 'Date',
+                    render: (detail: CashCollectionDetail) => (
+                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
+                            {detail._id === 'totals-row' ? 'Totals:' : new Date(detail.createdAt).toLocaleString()}
+                        </div>
+                    ),
+                },
+                {
+                    accessor: 'totalStaffAmount',
+                    title: 'DRIVER GIVEN AMOUNT',
+                    render: (detail: CashCollectionDetail) => (
+                        <div className={detail._id === 'totals-row' ? 'font-bold text-blue-600 dark:text-blue-300' : ''}>
+                            ₹{detail.totalStaffAmount?.toLocaleString('en-IN')}
+                        </div>
+                    ),
+                },
+                {
+                    accessor: 'givenAmountToStaff',
+                    title: 'STAFF GIVEN TO RSA',
+                    render: (detail: CashCollectionDetail) => (
+                        <div className={detail._id === 'totals-row' ? 'font-bold text-green-600 dark:text-green-300' : ''}>
+                            ₹{detail.givenAmountToStaff?.toLocaleString('en-IN')}
+                        </div>
+                    ),
+                },
+              {
+    accessor: 'balance',
+    title: 'Balance',
+    render: (detail: CashCollectionDetail) => {
+        const balanceValue = typeof detail.balance === 'string' 
+            ? parseFloat(detail.balance) 
+            : detail.balance;
+        return (
+            <div className={`font-medium ${
+                balanceValue < 0 ? 'text-red-600' : 'text-green-600'
+            } ${detail._id === 'totals-row' ? 'font-bold' : ''}`}>
+                ₹{balanceValue.toLocaleString('en-IN')}
+            </div>
+        );
+    },
+}
+            ]}
+            rowClassName={(record) => 
+                record._id === 'totals-row' ? 'bg-gray-50 dark:bg-gray-700' : ''
+            }
+            totalRecords={totalModalRecords}
+            recordsPerPage={modalPageSize}
+            page={modalPage}
+            onPageChange={handleModalPageChange}
+            recordsPerPageOptions={[10, 20, 30, 50, 100]}
+            onRecordsPerPageChange={handleModalPageSizeChange}
+            paginationText={({ from, to, totalRecords }) => 
+                `Showing ${from} to ${to} of ${totalRecords} entries`
+            }
+        />
+    </div>
+)}
         </div>
     </div>
 </Modal>
