@@ -139,6 +139,7 @@ else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUse
             totalStaffAmount: Number(totalStaffAmount),
             receivedUserId: userId,
             staff: staffId,
+            driver: driverId,
             givenAmountToStaff: Number(givenAmountToStaff),
             remark: remark || 'No remarks provided',
             processedBookings: selectedBookingIds,
@@ -181,6 +182,7 @@ else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUse
 };
 // In your backend controller (cash-received-details-staff)
 exports.getReceivedDetailsStaff = async (req, res) => {
+//    ----------------------
     try {
         const { staffId, search, page = 1, pageSize = 10 } = req.query;
         

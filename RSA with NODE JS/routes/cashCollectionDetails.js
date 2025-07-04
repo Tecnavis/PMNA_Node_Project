@@ -5,6 +5,7 @@ const router = express.Router();
 
 
 router.get('/', jwt, controller.getAllCashCollectionDetails)
+router.get('/:staffId', jwt, controller.getCashCollectionDetailsByStaffId);
 
 router.post('/', jwt, controller.createCashCollectionDetails)
 

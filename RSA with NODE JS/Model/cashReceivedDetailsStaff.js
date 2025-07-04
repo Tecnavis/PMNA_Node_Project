@@ -4,7 +4,10 @@ const CashCollectionDetailsStaffSchema = new mongoose.Schema({
     balance: { type: String, required: true },
     currentCashInHand: { type: Number, required: true },
     totalStaffAmount: { type: Number, required: true },
-  
+    driver: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Driver'
+    },
     receivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
     staff: {
         type: mongoose.Schema.Types.ObjectId,
