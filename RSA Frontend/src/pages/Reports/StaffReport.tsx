@@ -20,7 +20,29 @@ interface CashCollectionDetail {
     balance: string | number; // Can be either string or number
     createdAt: string;
 }
+// Update your interfaces to match the actual data structure
+interface CashCollectionDetailStaff {
+    _id: string;
+    balance: string;
+    currentCashInHand: number;
+    totalDriverAmount: number;
+    receivedAmount: number;
+    receivedUser: string;
+    receivedUserId: {
+        _id: string;
+        name: string;
+    };
+    driver: {
+        _id: string;
+        name: string;
+    };
+    remark: string;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
+}
 
+// ---------------------------------------
 interface CashCollectionTotals {
     totalDriverGiven: number;
     totalStaffGiven: number;
@@ -66,6 +88,8 @@ const StaffReport = () => {
   // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [cashCollectionDetails, setCashCollectionDetails] = useState<CashCollectionDetail[]>([]);
+        const [cashCollectionDetailsStaff, setCashCollectionDetailsStaff] = useState<CashCollectionDetailStaff[]>([]);
+
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 const [modalPage, setModalPage] = useState(1);
@@ -118,12 +142,34 @@ const fetchCashCollectionDetails = async (staffId: string, page = 1, pageSize = 
         setIsLoading(false);
     }
 };
-
+const fetchCashCollectionDetailsStaff = async (staffId: string, page = 1, pageSize = 10) => {
+    setIsLoading(true);
+    try {
+        const response = await axios.get(`${backendUrl}/cash-collection-details`, {
+            params: { 
+                staffId,
+                page,
+                pageSize
+            },
+        });
+        
+        
+        
+        setCashCollectionDetailsStaff(response.data);
+       setIsModalOpen(true);
+    } catch (error) {
+        console.error('Error fetching cash collection details:', error);
+    } finally {
+        setIsLoading(false);
+    }
+};
 // Update your handleInfoClick function
 const handleInfoClick = (staff: Staff) => {
     setSelectedStaff(staff);
     setModalPage(1); // Reset to first page when opening modal
     fetchCashCollectionDetails(staff._id, 1, modalPageSize);
+        fetchCashCollectionDetailsStaff(staff._id, 1, modalPageSize);
+
 };
 
 // Add pagination handlers for the modal
@@ -131,6 +177,8 @@ const handleModalPageChange = (page: number) => {
     setModalPage(page);
     if (selectedStaff) {
         fetchCashCollectionDetails(selectedStaff._id, page, modalPageSize);
+                fetchCashCollectionDetailsStaff(selectedStaff._id, page, modalPageSize);
+
     }
 };
 
@@ -139,6 +187,8 @@ const handleModalPageSizeChange = (size: number) => {
     setModalPage(1); // Reset to first page when changing page size
     if (selectedStaff) {
         fetchCashCollectionDetails(selectedStaff._id, 1, size);
+                fetchCashCollectionDetailsStaff(selectedStaff._id, 1, size);
+
     }
 };
 
@@ -241,58 +291,128 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                 </div>
             </div>
               {/* Modal for displaying cash collection details */}
-     <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
-    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-auto">
+   <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-auto">
+    
         <div className="p-5">
             <div className="flex items-center justify-between mb-5">
                 <h5 className="text-lg font-semibold">
                     Cash Collection Details for {selectedStaff?.name}
                 </h5>
-                <div className="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 px-4 py-2 rounded-lg shadow-md border border-green-200 dark:border-emerald-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600 dark:text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                        <div className="text-xs font-medium text-green-700 dark:text-green-300">CASH IN HAND</div>
-                        <div className="text-xl font-bold text-green-800 dark:text-white">
-                            ₹{selectedStaff?.cashInHand?.toLocaleString('en-IN')}
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 px-4 py-2 rounded-lg shadow-md border border-green-200 dark:border-emerald-800">
+                        <div>
+                            <div className="text-xs font-medium text-green-700 dark:text-green-300">CASH IN HAND</div>
+                            <div className="text-xl font-bold text-green-800 dark:text-white">
+                                ₹{selectedStaff?.cashInHand?.toLocaleString('en-IN')}
+                            </div>
                         </div>
                     </div>
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                        <IconX className="w-6 h-6" />
+                    </button>
                 </div>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700">
-                    <IconX className="w-6 h-6" />
-                </button>
             </div>
 
-        
-{isLoading ? (
-    <div className="text-center">Loading...</div>
-) : (
-    <div className="datatables">
-        <DataTable
-            className="whitespace-nowrap table-hover"
-            records={[
-                ...cashCollectionDetails,
-                {
-                    _id: 'totals-row',
-                    createdAt: 'Totals',
-                    totalStaffAmount: calculateClientSideTotals(cashCollectionDetails).totalDriverGiven,
-                    givenAmountToStaff: calculateClientSideTotals(cashCollectionDetails).totalStaffGiven,
-        balance: calculateClientSideTotals(cashCollectionDetails).totalBalance.toString(), // Convert to string
-                    currentCashInHand: 0 // dummy value
-                }
-            ]}
-            columns={[
-                {
-                    accessor: 'createdAt',
-                    title: 'Date',
-                    render: (detail: CashCollectionDetail) => (
-                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
-                            {detail._id === 'totals-row' ? 'Totals:' : new Date(detail.createdAt).toLocaleString()}
+            {isLoading ? (
+                <div className="text-center">Loading...</div>
+            ) : (
+                <div className="flex flex-col md:flex-row gap-4">
+                   
+
+                    {/* Second DataTable - Received from Drivers */}
+                    <div className="flex-1">
+                        <div className="text-center font-semibold mb-2 text-purple-600 dark:text-purple-300">
+                            Received from Drivers
                         </div>
-                    ),
-                },
-                {
+                        <DataTable
+                            className="whitespace-nowrap table-hover"
+                            records={[
+                                ...cashCollectionDetailsStaff,
+                                // {
+                                //     _id: 'totals-row',
+                                //     createdAt: 'Totals',
+                                //     totalDriverAmount: cashCollectionDetailsStaff.reduce((sum, item) => sum + (item.totalDriverAmount || 0), 0),
+                                //     receivedAmount: cashCollectionDetailsStaff.reduce((sum, item) => sum + (item.receivedAmount || 0), 0),
+                                //     balance: cashCollectionDetailsStaff.reduce((sum, item) => {
+                                //         const balance = typeof item.balance === 'string' ? parseFloat(item.balance) : item.balance;
+                                //         return sum + parseFloat(balance || 0);
+                                //     }, 0).toString(),
+                                //     currentCashInHand: 0
+                                // }
+                            ]}
+                            columns={[
+                                {
+                                    accessor: 'createdAt',
+                                    title: 'Date',
+                                    render: (detail: CashCollectionDetailStaff) => (
+                                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
+                                            {detail._id === 'totals-row' ? 'Totals:' : new Date(detail.createdAt).toLocaleDateString()}
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    accessor: 'driver.name',
+                                    title: 'Driver',
+                                    render: (detail: CashCollectionDetailStaff) => (
+                                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
+                                            {detail._id === 'totals-row' ? '' : detail.driver?.name}
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    accessor: 'receivedAmount',
+                                    title: 'Amount',
+                                    render: (detail: CashCollectionDetailStaff) => (
+                                        <div className={detail._id === 'totals-row' ? 'font-bold text-purple-600 dark:text-purple-300' : ''}>
+                                            ₹{detail.receivedAmount?.toLocaleString('en-IN')}
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    accessor: 'remark',
+                                    title: 'Remark',
+                                    render: (detail: CashCollectionDetailStaff) => (
+                                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
+                                            {detail._id === 'totals-row' ? '' : detail.remark}
+                                        </div>
+                                    ),
+                                }
+                            ]}
+                            rowClassName={(record) => 
+                                record._id === 'totals-row' ? 'bg-gray-50 dark:bg-gray-700' : ''
+                            }
+                        />
+                    </div>
+                     {/* First DataTable - Staff Given to RSA */}
+                    <div className="flex-1">
+                        <div className="text-center font-semibold mb-2 text-blue-600 dark:text-blue-300">
+                            Staff Given to RSA
+                        </div>
+                        <DataTable
+                            className="whitespace-nowrap table-hover"
+                            records={[
+                                ...cashCollectionDetails,
+                                {
+                                    _id: 'totals-row',
+                                    createdAt: 'Totals',
+                                    totalStaffAmount: calculateClientSideTotals(cashCollectionDetails).totalDriverGiven,
+                                    givenAmountToStaff: calculateClientSideTotals(cashCollectionDetails).totalStaffGiven,
+                                    balance: calculateClientSideTotals(cashCollectionDetails).totalBalance.toString(),
+                                    currentCashInHand: 0
+                                }
+                            ]}
+                            columns={[
+                                {
+                                    accessor: 'createdAt',
+                                    title: 'Date',
+                                    render: (detail: CashCollectionDetail) => (
+                                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
+                                            {detail._id === 'totals-row' ? 'Totals:' : new Date(detail.createdAt).toLocaleDateString()}
+                                        </div>
+                                    ),
+                                },
+                                {
                     accessor: 'totalStaffAmount',
                     title: 'DRIVER GIVEN AMOUNT',
                     render: (detail: CashCollectionDetail) => (
@@ -310,38 +430,30 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                         </div>
                     ),
                 },
-              {
-    accessor: 'balance',
-    title: 'Balance',
-    render: (detail: CashCollectionDetail) => {
-        const balanceValue = typeof detail.balance === 'string' 
-            ? parseFloat(detail.balance) 
-            : detail.balance;
-        return (
-            <div className={`font-medium ${
-                balanceValue < 0 ? 'text-red-600' : 'text-green-600'
-            } ${detail._id === 'totals-row' ? 'font-bold' : ''}`}>
-                ₹{balanceValue.toLocaleString('en-IN')}
-            </div>
-        );
-    },
-}
-            ]}
-            rowClassName={(record) => 
-                record._id === 'totals-row' ? 'bg-gray-50 dark:bg-gray-700' : ''
-            }
-            totalRecords={totalModalRecords}
-            recordsPerPage={modalPageSize}
-            page={modalPage}
-            onPageChange={handleModalPageChange}
-            recordsPerPageOptions={[10, 20, 30, 50, 100]}
-            onRecordsPerPageChange={handleModalPageSizeChange}
-            paginationText={({ from, to, totalRecords }) => 
-                `Showing ${from} to ${to} of ${totalRecords} entries`
-            }
-        />
-    </div>
-)}
+                                {
+                                    accessor: 'balance',
+                                    title: 'Balance',
+                                    render: (detail: CashCollectionDetail) => {
+                                        const balanceValue = typeof detail.balance === 'string' 
+                                            ? parseFloat(detail.balance) 
+                                            : detail.balance;
+                                        return (
+                                            <div className={`font-medium ${
+                                                balanceValue < 0 ? 'text-red-600' : 'text-green-600'
+                                            } ${detail._id === 'totals-row' ? 'font-bold' : ''}`}>
+                                                ₹{balanceValue.toLocaleString('en-IN')}
+                                            </div>
+                                        );
+                                    },
+                                }
+                            ]}
+                            rowClassName={(record) => 
+                                record._id === 'totals-row' ? 'bg-gray-50 dark:bg-gray-700' : ''
+                            }
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     </div>
 </Modal>

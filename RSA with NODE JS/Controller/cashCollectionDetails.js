@@ -127,3 +127,59 @@ exports.getAllCashCollectionDetails = async (req, res) => {
         });
     }
 };
+exports.getCashCollectionDetailsByStaffId = async (req, res) => {
+    try {
+        const { staffId } = req.params;
+        const { month, year } = req.query;
+
+        // Validate staffId
+        if (!mongoose.Types.ObjectId.isValid(staffId)) {
+            return res.status(400).json({ message: 'Invalid staff ID' });
+        }
+
+        const query = { 
+            receivedUserId: new mongoose.Types.ObjectId(staffId) 
+        };
+
+        // Date filters
+        if (month && year) {
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0, 23, 59, 59);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        } else if (year) {
+            const startDate = new Date(year, 0, 1);
+            const endDate = new Date(year, 11, 31, 23, 59, 59);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        }
+
+        const cashCollections = await CashCollectionDetails.find(query)
+            .sort({ createdAt: -1 })
+            .populate({
+                path: 'driver',
+                select: 'name' // Only include driver name
+            })
+            .populate({
+                path: 'receivedUserId',
+                select: 'name' // Include staff name
+            });
+
+        if (!cashCollections || cashCollections.length === 0) {
+            return res.status(404).json({ 
+                message: 'No cash collection records found for this staff member' 
+            });
+        }
+
+        res.status(200).json(cashCollections);
+    } catch (error) {
+        console.error('Error in getCashCollectionDetailsByStaffId:', {
+            error: error.message,
+            stack: error.stack,
+            params: req.params,
+            query: req.query
+        });
+        res.status(500).json({ 
+            message: 'Internal server error',
+            error: error.message 
+        });
+    }
+};
