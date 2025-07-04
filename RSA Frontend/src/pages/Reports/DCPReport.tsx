@@ -13,6 +13,8 @@ import axios, { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { ROLES } from '../../constants/roles';
 import { CLOUD_IMAGE } from '../../constants/status';
+import './DcpReport.css';
+
 import {
     XMarkIcon,
     UserIcon,
@@ -24,6 +26,7 @@ import {
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 interface Company {
     _id: string;
     name: string;
@@ -247,6 +250,24 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
     }, [searchDriver, searchProviders, searchCompnies]);
     // ------------------------
  const handleSettleClick = async (driver: Driver) => {
+     const password = await Swal.fire({
+    title: 'Authorization Required',
+    input: 'password',
+    inputLabel: 'Enter settlement password',
+    inputPlaceholder: 'Super secret password',
+    showCancelButton: true,
+    confirmButtonText: 'Authenticate',
+    showLoaderOnConfirm: true,
+    preConfirm: (inputPassword) => {
+      return inputPassword === 'RSA@123'; // Change to your password
+    },
+    allowOutsideClick: () => !Swal.isLoading()
+  });
+
+  if (!password.isConfirmed || !password.value) {
+    toast.error('Authentication failed');
+    return;
+  }
     try {
         setSelectedDriver(driver);
         setLoading(true);
