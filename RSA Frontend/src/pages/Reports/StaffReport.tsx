@@ -142,21 +142,21 @@ const fetchCashCollectionDetails = async (staffId: string, page = 1, pageSize = 
         setIsLoading(false);
     }
 };
+// Update your fetch function
+// Update your fetch function
 const fetchCashCollectionDetailsStaff = async (staffId: string, page = 1, pageSize = 10) => {
     setIsLoading(true);
     try {
-        const response = await axios.get(`${backendUrl}/cash-collection-details`, {
+        const response = await axios.get(`${backendUrl}/cash-collection-details/${staffId}`, {
             params: { 
-                staffId,
                 page,
                 pageSize
             },
         });
         
-        
-        
-        setCashCollectionDetailsStaff(response.data);
-       setIsModalOpen(true);
+        setCashCollectionDetailsStaff(response.data.data);
+        setTotalModalRecords(response.data.pagination.total);
+        setIsModalOpen(true);
     } catch (error) {
         console.error('Error fetching cash collection details:', error);
     } finally {
@@ -325,64 +325,50 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                         <div className="text-center font-semibold mb-2 text-purple-600 dark:text-purple-300">
                             Received from Drivers
                         </div>
-                        <DataTable
-                            className="whitespace-nowrap table-hover"
-                            records={[
-                                ...cashCollectionDetailsStaff,
-                                // {
-                                //     _id: 'totals-row',
-                                //     createdAt: 'Totals',
-                                //     totalDriverAmount: cashCollectionDetailsStaff.reduce((sum, item) => sum + (item.totalDriverAmount || 0), 0),
-                                //     receivedAmount: cashCollectionDetailsStaff.reduce((sum, item) => sum + (item.receivedAmount || 0), 0),
-                                //     balance: cashCollectionDetailsStaff.reduce((sum, item) => {
-                                //         const balance = typeof item.balance === 'string' ? parseFloat(item.balance) : item.balance;
-                                //         return sum + parseFloat(balance || 0);
-                                //     }, 0).toString(),
-                                //     currentCashInHand: 0
-                                // }
-                            ]}
-                            columns={[
-                                {
-                                    accessor: 'createdAt',
-                                    title: 'Date',
-                                    render: (detail: CashCollectionDetailStaff) => (
-                                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
-                                            {detail._id === 'totals-row' ? 'Totals:' : new Date(detail.createdAt).toLocaleDateString()}
-                                        </div>
-                                    ),
-                                },
-                                {
-                                    accessor: 'driver.name',
-                                    title: 'Driver',
-                                    render: (detail: CashCollectionDetailStaff) => (
-                                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
-                                            {detail._id === 'totals-row' ? '' : detail.driver?.name}
-                                        </div>
-                                    ),
-                                },
-                                {
-                                    accessor: 'receivedAmount',
-                                    title: 'Amount',
-                                    render: (detail: CashCollectionDetailStaff) => (
-                                        <div className={detail._id === 'totals-row' ? 'font-bold text-purple-600 dark:text-purple-300' : ''}>
-                                            ₹{detail.receivedAmount?.toLocaleString('en-IN')}
-                                        </div>
-                                    ),
-                                },
-                                {
-                                    accessor: 'remark',
-                                    title: 'Remark',
-                                    render: (detail: CashCollectionDetailStaff) => (
-                                        <div className={detail._id === 'totals-row' ? 'font-bold' : ''}>
-                                            {detail._id === 'totals-row' ? '' : detail.remark}
-                                        </div>
-                                    ),
-                                }
-                            ]}
-                            rowClassName={(record) => 
-                                record._id === 'totals-row' ? 'bg-gray-50 dark:bg-gray-700' : ''
-                            }
-                        />
+                     <DataTable
+    className="whitespace-nowrap table-hover"
+    records={cashCollectionDetailsStaff}
+    columns={[
+        {
+            accessor: 'createdAt',
+            title: 'Date',
+            render: (detail: CashCollectionDetailStaff) => (
+                <div>{new Date(detail.createdAt).toLocaleDateString()}</div>
+            ),
+        },
+        {
+            accessor: 'driver.name',
+            title: 'Driver',
+            render: (detail: CashCollectionDetailStaff) => (
+                <div>{detail.driver?.name}</div>
+            ),
+        },
+        {
+            accessor: 'receivedAmount',
+            title: 'Amount',
+            render: (detail: CashCollectionDetailStaff) => (
+                <div>₹{detail.receivedAmount?.toLocaleString('en-IN')}</div>
+            ),
+        },
+        {
+            accessor: 'remark',
+            title: 'Remark',
+            render: (detail: CashCollectionDetailStaff) => (
+                <div>{detail.remark}</div>
+            ),
+        }
+    ]}
+    // Pagination props
+    totalRecords={totalModalRecords}
+    recordsPerPage={modalPageSize}
+    page={modalPage}
+    onPageChange={handleModalPageChange}
+    recordsPerPageOptions={[10, 20, 30, 50, 100]}
+    onRecordsPerPageChange={handleModalPageSizeChange}
+    paginationText={({ from, to, totalRecords }) => 
+        `Showing ${from} to ${to} of ${totalRecords} entries`
+    }
+/>
                     </div>
                      {/* First DataTable - Staff Given to RSA */}
                     <div className="flex-1">
@@ -446,11 +432,20 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                                         );
                                     },
                                 }
-                            ]}
-                            rowClassName={(record) => 
-                                record._id === 'totals-row' ? 'bg-gray-50 dark:bg-gray-700' : ''
-                            }
-                        />
+                                ]}
+            rowClassName={(record) => 
+                record._id === 'totals-row' ? 'bg-gray-50 dark:bg-gray-700' : ''
+            }
+            totalRecords={totalModalRecords}
+            recordsPerPage={modalPageSize}
+            page={modalPage}
+            onPageChange={handleModalPageChange}
+            recordsPerPageOptions={[10, 20, 30, 50, 100]}
+            onRecordsPerPageChange={handleModalPageSizeChange}
+            paginationText={({ from, to, totalRecords }) => 
+                `Showing ${from} to ${to} of ${totalRecords} entries`
+            }
+        />
                     </div>
                 </div>
             )}

@@ -1016,7 +1016,9 @@ exports.updateBooking = async (req, res) => {
             .populate('serviceType')
             .populate('company')
             .populate('driver')
-            .populate('provider');
+            .populate('provider')
+                .exec(); // Add .exec() to properly handle the promise
+
 
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found' });
@@ -1031,11 +1033,10 @@ exports.updateBooking = async (req, res) => {
 
         });
 
-        let receiver = updatedBooking.driver || updatedBooking.provider
-        let receiverOld = booking.driver._id || booking.provider._id
+       let receiver = updatedBooking.driver || updatedBooking.provider;
+let receiverOld = (booking.driver ? booking.driver._id : null) || (booking.provider ? booking.provider._id : null);
 
-        const isDifferentReceiver = receiver?._id?.toString() !== receiverOld?.toString();
-
+const isDifferentReceiver = receiver?._id?.toString() !== receiverOld?.toString();
         if (receiver?.fcmToken && isDifferentReceiver) {
             const notificationResult = await NotificationService.sendNotification({
                 token: receiver?.fcmToken || '',
@@ -1052,10 +1053,14 @@ exports.updateBooking = async (req, res) => {
         }, 'Booking updated successfully...');
 
         res.status(200).json({ message: 'Booking updated successfully', booking: updatedBooking });
-    } catch (error) {
-        console.error('Error updating booking:', error);
-        res.status(500).json({ message: 'Error updating booking', error: error.message });
-    }
+    }  catch (error) {
+  routeLogger.error({
+    error: error.message,
+    stack: error.stack,
+    bookingId: id
+  }, 'Error updating booking');
+  res.status(500).json({ message: 'Error updating booking', error: error.message });
+}
 };
 
 // Controller for updatatin pickup details from admin side 
