@@ -130,7 +130,7 @@ exports.getAllCashCollectionDetails = async (req, res) => {
 exports.getCashCollectionDetailsByStaffId = async (req, res) => {
     try {
         const { staffId } = req.params;
-        const { month, year } = req.query;
+        const { month, year, page = 1, pageSize = 10 } = req.query;
 
         // Validate staffId
         if (!mongoose.Types.ObjectId.isValid(staffId)) {
@@ -152,15 +152,24 @@ exports.getCashCollectionDetailsByStaffId = async (req, res) => {
             query.createdAt = { $gte: startDate, $lte: endDate };
         }
 
+        // Calculate skip value for pagination
+        const skip = (page - 1) * pageSize;
+
+        // Get total count of documents
+        const totalRecords = await CashCollectionDetails.countDocuments(query);
+
+        // Get paginated data
         const cashCollections = await CashCollectionDetails.find(query)
             .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(pageSize))
             .populate({
                 path: 'driver',
-                select: 'name' // Only include driver name
+                select: 'name'
             })
             .populate({
                 path: 'receivedUserId',
-                select: 'name' // Include staff name
+                select: 'name'
             });
 
         if (!cashCollections || cashCollections.length === 0) {
@@ -169,14 +178,17 @@ exports.getCashCollectionDetailsByStaffId = async (req, res) => {
             });
         }
 
-        res.status(200).json(cashCollections);
-    } catch (error) {
-        console.error('Error in getCashCollectionDetailsByStaffId:', {
-            error: error.message,
-            stack: error.stack,
-            params: req.params,
-            query: req.query
+        res.status(200).json({
+            data: cashCollections,
+            pagination: {
+                total: totalRecords,
+                page: parseInt(page),
+                pageSize: parseInt(pageSize),
+                totalPages: Math.ceil(totalRecords / pageSize)
+            }
         });
+    } catch (error) {
+        console.error('Error in getCashCollectionDetailsByStaffId:', error);
         res.status(500).json({ 
             message: 'Internal server error',
             error: error.message 
