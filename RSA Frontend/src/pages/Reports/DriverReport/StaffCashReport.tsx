@@ -272,36 +272,36 @@ const fetchStaffReceivedDetails = async () => {
             headerClassName: 'text-center',
             render: (_: Booking, index: number) => index + 1
         },
-        {
-      accessor: 'selectall',
-      title: (
-        <label className="flex items-center mt-2">
-          <input
-            type="checkbox"
-            checked={selectedBookings.size === bookings.length && bookings.length > 0}
-            onChange={handleSelectAll}
-            className="mr-2"
-          />
-          <span>Select All</span>
-        </label>
-      ),
-           render: (record: Booking) => (
-        <input
-          type="checkbox"
-          disabled={record.approve}
-          checked={selectedBookings.has(record._id)}
-          onChange={() => {
-            if (record.approve) return;
-            const newSelection = new Map(selectedBookings);
-            if (newSelection.has(record._id)) {
-              newSelection.delete(record._id);
-            } else {
-              newSelection.set(record._id, record);
-            }
-            setSelectedBookings(newSelection);
-          }}
-        />  )
-    },
+    //     {
+    //   accessor: 'selectall',
+    //   title: (
+    //     <label className="flex items-center mt-2">
+    //       <input
+    //         type="checkbox"
+    //         checked={selectedBookings.size === bookings.length && bookings.length > 0}
+    //         onChange={handleSelectAll}
+    //         className="mr-2"
+    //       />
+    //       <span>Select All</span>
+    //     </label>
+    //   ),
+    //        render: (record: Booking) => (
+    //     <input
+    //       type="checkbox"
+    //       disabled={record.approve}
+    //       checked={selectedBookings.has(record._id)}
+    //       onChange={() => {
+    //         if (record.approve) return;
+    //         const newSelection = new Map(selectedBookings);
+    //         if (newSelection.has(record._id)) {
+    //           newSelection.delete(record._id);
+    //         } else {
+    //           newSelection.set(record._id, record);
+    //         }
+    //         setSelectedBookings(newSelection);
+    //       }}
+    //     />  )
+    // },
         {
             accessor: 'createdAt',
             title: 'Date',

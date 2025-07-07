@@ -14,6 +14,10 @@ const CashCollectionDetailsSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Driver'
     },
+    provider: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Provider'
+    },
     receivedAmount: { type: Number, required: true },
     remark: { type: String, required: true }
 }, { timestamps: true });

@@ -85,6 +85,33 @@ const providerSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  settlement: {
+    type: Boolean,
+    default: false
+  },
+  isFullSettlement : {
+    type: Boolean,
+    default: false
+  },
+  settlementCompletedDate: {
+    type: Date
+  },
+  previousSettlementCompletedDate: {
+    type: Date
+  },
+  lastSettlementAmount: {
+    type: Number
+  },
+  pendingExpensesCount: {
+    type: Number,
+    default: 0
+  },
+  totalPendingAmount: {
+    type: Number,
+    default: 0
+  }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('Provider', providerSchema);

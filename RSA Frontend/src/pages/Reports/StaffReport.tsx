@@ -36,6 +36,10 @@ interface CashCollectionDetailStaff {
         _id: string;
         name: string;
     };
+      provider: {
+        _id: string;
+        name: string;
+    };
     remark: string;
     createdAt: string;
     updatedAt: string;
@@ -336,13 +340,15 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                 <div>{new Date(detail.createdAt).toLocaleDateString()}</div>
             ),
         },
-        {
-            accessor: 'driver.name',
-            title: 'Driver',
-            render: (detail: CashCollectionDetailStaff) => (
-                <div>{detail.driver?.name}</div>
-            ),
-        },
+     {
+    accessor: 'serviceProvider', // More generic accessor name
+    title: 'Service Provider',
+    render: (detail: CashCollectionDetailStaff) => (
+        <div>
+            {detail.driver?.name || detail.provider?.name || 'N/A'}
+        </div>
+    ),
+},
         {
             accessor: 'receivedAmount',
             title: 'Amount',

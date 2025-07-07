@@ -2,22 +2,23 @@ const mongoose = require('mongoose');
 const CashCollectionDetailsStaff = require('../Model/cashReceivedDetailsStaff');
 const Staff = require('../Model/staff');
 const Booking = require('../Model/booking.js')
-const ReceivedDetails= require('../Model/ReceivedDetails.js')
-// ------------------------------------
+const ReceivedDetails = require('../Model/ReceivedDetails.js')
+
 exports.createReceivedDetailsStaff = async (req, res) => {
-   
     try {
         const { 
             staffId, 
             givenAmountToStaff, 
             remark,
-            totalStaffAmount 
+            totalStaffAmount,
+            driver,
+            provider
         } = req.body;
         
         const userId = req.user.id || req.user._id;
         const userRole = req.user.role;
 
-          // Validate all required fields
+        // Validate all required fields
         if (!staffId || !givenAmountToStaff || givenAmountToStaff <= 0 || 
             !totalStaffAmount || totalStaffAmount <= 0) {
             return res.status(400).json({ 
@@ -25,6 +26,8 @@ exports.createReceivedDetailsStaff = async (req, res) => {
                 message: 'Staff ID, given amount, and total amount are required and must be positive'
             });
         }
+
+       
 
         // Check staff exists
         const staff = await Staff.findById(staffId);
@@ -44,72 +47,79 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         const appliedAmounts = [];
         let advanceDeductionApplied = 0;
 
+        // Determine if we're working with driver or provider
+        const isDriver = !!driver;
+        const entityId = isDriver ? driver : provider;
+        const entityField = isDriver ? 'driver' : 'provider';
+
         // 1. First try to distribute to bookings
         const bookings = await Booking.find({
             status: 'Order Completed',
-             $and: [
-                    {
-                         $or: [
-                // Current staff payments (partial or unpaid)
+            [entityField]: entityId,
+            $and: [
                 {
-                    receivedUser: 'Staff',
-                    receivedUserId: staffId,
                     $or: [
-                        { partialReceivedAmountStaff: true },
-                        { $expr: { $gt: ["$totalAmount", "$receivedAmountStaff"] } }
+                        // Current staff payments (partial or unpaid)
+                        {
+                            receivedUser: 'Staff',
+                            receivedUserId: staffId,
+                            $or: [
+                                { partialReceivedAmountStaff: true },
+                                { $expr: { $gt: ["$totalAmount", "$receivedAmountStaff"] } }
+                            ]
+                        },
+                        // Previously staff-handled payments now with admin
+                        {
+                            previousReceivedUser: 'Staff',
+                            previousReceivedUserId: staffId,
+                            $expr: { $gt: ["$totalAmount", "$receivedAmountStaff"] }
+                        }
                     ]
-                },
-                // Previously staff-handled payments now with admin
-                {
-                    previousReceivedUser: 'Staff',
-                    previousReceivedUserId: staffId,
-                    $expr: { $gt: ["$totalAmount", "$receivedAmountStaff"] }
                 }
             ]
-        }]
         }).sort({ createdAt: 1 });
 
-      // In the bookings loop:
-for (const booking of bookings) {
-    if (remainingAmount <= 0) break;
+        // In the bookings loop:
+        for (const booking of bookings) {
+            if (remainingAmount <= 0) break;
 
-    let receivableAmount = 0;
-    
-    // Only handle current staff payments
-    // For current staff payments
-if (booking.receivedUser === 'Staff' && booking.receivedUserId.equals(staffId)) {
-    receivableAmount = (booking.receivedAmountStaff || 0) - (booking.givenAmountByStaff || 0);
-} 
-// For previously staff-handled payments
-else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUserId.equals(staffId)) {
-    receivableAmount = (booking.receivedAmount || 0) - (booking.givenAmountByStaff || 0);
-}
-        if (receivableAmount > 0) {
-            const amountToApply = Math.min(remainingAmount, receivableAmount);
+            let receivableAmount = 0;
             
-            // Update only for current staff payments
-            booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
-            
-            // Update payment status
-            const totalReceived = booking.receivedAmount || 0;
-            booking.partialReceivedAmountStaff = totalReceived < booking.totalAmount;
-            
-            if (Math.abs(totalReceived - booking.totalAmount) < 0.01) {
-                booking.cashPending = false;
+            // For current staff payments
+            if (booking.receivedUser === 'Staff' && booking.receivedUserId.equals(staffId)) {
+                receivableAmount = (booking.receivedAmountStaff || 0) - (booking.givenAmountByStaff || 0);
+            } 
+            // For previously staff-handled payments
+            else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUserId.equals(staffId)) {
+                receivableAmount = (booking.receivedAmount || 0) - (booking.givenAmountByStaff || 0);
             }
 
-            remainingAmount -= amountToApply;
-            selectedBookingIds.push(booking._id);
-            appliedAmounts.push(amountToApply);
-            await booking.save();
+            if (receivableAmount > 0) {
+                const amountToApply = Math.min(remainingAmount, receivableAmount);
+                
+                // Update only for current staff payments
+                booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
+                
+                // Update payment status
+                const totalReceived = booking.receivedAmount || 0;
+                booking.partialReceivedAmountStaff = totalReceived < booking.totalAmount;
+                
+                if (Math.abs(totalReceived - booking.totalAmount) < 0.01) {
+                    booking.cashPending = false;
+                }
+
+                remainingAmount -= amountToApply;
+                selectedBookingIds.push(booking._id);
+                appliedAmounts.push(amountToApply);
+                await booking.save();
+            }
         }
-    }
 
-
-           // 2. If there's remaining amount, deduct from Advance Deduction records
+        // 2. If there's remaining amount, deduct from Advance Deduction records
         if (remainingAmount > 0) {
             const advanceRecords = await ReceivedDetails.find({
                 fileNumber: "Advance Deduction",
+                [entityField]: entityId,
                 $or: [
                     { receivedUser: 'Staff', receivedUserId: staffId },
                     { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
@@ -133,20 +143,22 @@ else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUse
         }
 
         // Create cash collection record
-        const cashCollectionDetail = await CashCollectionDetailsStaff.create({
+        const cashCollectionData = {
             balance: newBalance.toString(),
             currentCashInHand,
             totalStaffAmount: Number(totalStaffAmount),
             receivedUserId: userId,
             staff: staffId,
-            driver: driverId,
+            [entityField]: entityId,
             givenAmountToStaff: Number(givenAmountToStaff),
             remark: remark || 'No remarks provided',
             processedBookings: selectedBookingIds,
             appliedAmounts,
             advanceDeductionApplied,
             remainingAmount
-        });
+        };
+
+        const cashCollectionDetail = await CashCollectionDetailsStaff.create(cashCollectionData);
 
         // Update staff's cash in hand
         staff.cashInHand = newBalance;
@@ -180,18 +192,27 @@ else if (booking.previousReceivedUser === 'Staff' && booking.previousReceivedUse
         });
     }
 };
-// In your backend controller (cash-received-details-staff)
+
 exports.getReceivedDetailsStaff = async (req, res) => {
-//    ----------------------
     try {
-        const { staffId, search, page = 1, pageSize = 10 } = req.query;
+        const { staffId, driverId, providerId, search, page = 1, pageSize = 10 } = req.query;
         
         const query = {};
         if (staffId) query.staff = staffId;
+        
+        // Handle driver or provider filtering
+        if (driverId) {
+            query.driver = driverId;
+        } else if (providerId) {
+            query.provider = providerId;
+        }
+
         if (search) {
             query.$or = [
                 { remark: { $regex: search, $options: 'i' } },
-                { 'staff.name': { $regex: search, $options: 'i' } }
+                { 'staff.name': { $regex: search, $options: 'i' } },
+                { 'driver.name': { $regex: search, $options: 'i' } },
+                { 'provider.name': { $regex: search, $options: 'i' } }
             ];
         }
 
@@ -201,6 +222,8 @@ exports.getReceivedDetailsStaff = async (req, res) => {
         const details = await CashCollectionDetailsStaff.find(query)
             .populate('staff', 'name')
             .populate('receivedUserId', 'name')
+            .populate('driver', 'name')
+            .populate('provider', 'name')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(pageSize));

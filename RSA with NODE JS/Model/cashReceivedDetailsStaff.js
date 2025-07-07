@@ -8,6 +8,10 @@ const CashCollectionDetailsStaffSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Driver'
     },
+     provider: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Provider'
+    },
     receivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
     staff: {
         type: mongoose.Schema.Types.ObjectId,
