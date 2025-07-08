@@ -1,18 +1,35 @@
 const CashCollectionDetails = require('../Model/cashCollectionDetails');
 const Driver = require('../Model/driver');
+const Provider = require('../Model/provider');
 const Booking = require('../Model/booking');
 const mongoose = require('mongoose');
 
 exports.createCashCollectionDetails = async (req, res) => {
-    try {
-        const { driverId, receivedAmount, remark, totalDriverAmount, currentCashInHand } = req.body;
+  try {
+    const { 
+      driverId, 
+      providerId, 
+      receivedAmount, 
+      remark, 
+      totalDriverAmount,
+      currentCashInHand
+    } = req.body;
         const userId = req.user.id || req.user._id;
         const receivedUser = req.user.role || 'Admin';
 
         // Validate inputs
-        if (!driverId || !receivedAmount || !remark || !totalDriverAmount || currentCashInHand === undefined) {
-            return res.status(400).json({ 
-                message: 'Driver ID, amount, remark, totalDriverAmount and currentCashInHand are required' 
+        if ((!driverId && !providerId) || !receivedAmount || !remark || !totalDriverAmount || currentCashInHand === undefined) {
+             return res.status(400).json({ 
+        success: false,
+        message: 'Provider/driver, amount and totalAmount are required',
+        requiredFields: ['provider|driver', 'receivedAmount', 'totalAmount']
+      });
+        }
+
+        // Ensure only one of driverId or providerId is provided
+        if (driverId && providerId) {
+            return res.status(400).json({
+                message: 'Cannot specify both driverId and providerId'
             });
         }
 
@@ -22,19 +39,27 @@ exports.createCashCollectionDetails = async (req, res) => {
         
         if (isNaN(amount) || isNaN(totalAmount) || isNaN(cashInHand)) {
             return res.status(400).json({ 
-                message: 'Amount, totalDriverAmount and currentCashInHand must be valid numbers' 
+                message: 'Amount, totalAmount and currentCashInHand must be valid numbers' 
             });
         }
 
-        // Verify driver exists (but don't modify anything)
-        const driver = await Driver.findById(driverId);
-        if (!driver) {
-            return res.status(404).json({ message: 'Driver not found' });
+        // Determine if we're working with driver or provider
+        const isDriver = !!driverId;
+        const entityId = isDriver ? driverId : providerId;
+        const entityModel = isDriver ? Driver : Provider;
+        const entityField = isDriver ? 'driver' : 'provider';
+
+        // Verify entity exists (but don't modify anything)
+        const entity = await entityModel.findById(entityId);
+        if (!entity) {
+            return res.status(404).json({ 
+                message: isDriver ? 'Driver not found' : 'Provider not found' 
+            });
         }
 
         // Create cash collection record only
-        const cashCollection = await CashCollectionDetails.create({
-            driver: driverId,
+        const cashCollectionData = {
+            [entityField]: entityId,
             balance: (cashInHand - totalAmount).toString(),
             currentCashInHand: cashInHand,
             totalDriverAmount: totalAmount,
@@ -42,7 +67,9 @@ exports.createCashCollectionDetails = async (req, res) => {
             receivedUser,
             receivedUserId: new mongoose.Types.ObjectId(userId),
             remark
-        });
+        };
+
+        const cashCollection = await CashCollectionDetails.create(cashCollectionData);
         
         res.status(201).json({
             message: 'Cash collection recorded successfully',
@@ -62,14 +89,17 @@ exports.createCashCollectionDetails = async (req, res) => {
         });
     }
 };
+
 exports.getAllCashCollectionDetails = async (req, res) => {
     try {
-        const { search, driverId, month, year } = req.query;
+        const { search, driverId, providerId, month, year } = req.query;
         const query = {};
 
-        // Driver filter
+        // Entity filter
         if (driverId) {
             query.driver = new mongoose.Types.ObjectId(driverId);
+        } else if (providerId) {
+            query.provider = new mongoose.Types.ObjectId(providerId);
         }
 
         // Date filters
@@ -93,10 +123,17 @@ exports.getAllCashCollectionDetails = async (req, res) => {
                 { balance: regex }
             ];
 
-            // Search in driver names
-            const matchingDrivers = await Driver.find({ name: regex }).select('_id').lean();
+            // Search in driver and provider names
+            const [matchingDrivers, matchingProviders] = await Promise.all([
+                Driver.find({ name: regex }).select('_id').lean(),
+                Provider.find({ name: regex }).select('_id').lean()
+            ]);
+
             if (matchingDrivers.length > 0) {
                 searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
+            }
+            if (matchingProviders.length > 0) {
+                searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
             }
 
             query.$or = searchConditions;
@@ -107,11 +144,15 @@ exports.getAllCashCollectionDetails = async (req, res) => {
             .sort({ createdAt: -1 })
             .populate({
                 path: 'driver',
-                select: 'name' // Only include driver name
+                select: 'name'
+            })
+            .populate({
+                path: 'provider',
+                select: 'name'
             })
             .populate({
                 path: 'receivedUserId',
-                select: 'name' // Include staff/admin name if needed
+                select: 'name'
             });
 
         res.status(200).json(cashCollections);
@@ -127,10 +168,11 @@ exports.getAllCashCollectionDetails = async (req, res) => {
         });
     }
 };
+
 exports.getCashCollectionDetailsByStaffId = async (req, res) => {
     try {
         const { staffId } = req.params;
-        const { month, year, page = 1, pageSize = 10 } = req.query;
+        const { month, year, page = 1, pageSize = 10, driverId, providerId } = req.query;
 
         // Validate staffId
         if (!mongoose.Types.ObjectId.isValid(staffId)) {
@@ -140,6 +182,13 @@ exports.getCashCollectionDetailsByStaffId = async (req, res) => {
         const query = { 
             receivedUserId: new mongoose.Types.ObjectId(staffId) 
         };
+
+        // Add driver/provider filter if provided
+        if (driverId) {
+            query.driver = new mongoose.Types.ObjectId(driverId);
+        } else if (providerId) {
+            query.provider = new mongoose.Types.ObjectId(providerId);
+        }
 
         // Date filters
         if (month && year) {
@@ -165,6 +214,10 @@ exports.getCashCollectionDetailsByStaffId = async (req, res) => {
             .limit(parseInt(pageSize))
             .populate({
                 path: 'driver',
+                select: 'name'
+            })
+            .populate({
+                path: 'provider',
                 select: 'name'
             })
             .populate({

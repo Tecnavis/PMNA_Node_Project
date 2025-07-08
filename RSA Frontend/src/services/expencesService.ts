@@ -94,9 +94,13 @@ export const createDieselExpance = async (
 
 export const fetchPendingExpenses = async (): Promise<Expense[]> => {
     try {
+        console.log('Fetching pending expenses...'); // Log before making the request
         const response = await axios.get(
             `${BASE_URL}/expense/pending`
         );
+        
+        console.log('Pending expenses data:', response.data.expenseData); // Log the received data
+        
         return response.data.expenseData;
     } catch (error) {
         console.error('Error fetching pending expenses:', error);

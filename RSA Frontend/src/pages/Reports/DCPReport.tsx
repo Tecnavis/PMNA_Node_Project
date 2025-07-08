@@ -785,6 +785,10 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
       <h4 className="font-bold text-blue-800 mb-2">Current Status</h4>
       <div className="space-y-2">
         <div className="flex justify-between">
+          <span>Total Salary:</span>
+          <span className="font-medium">₹{selectedDriver?.driverSalary?.toFixed(2) ?? '0.00'}</span>
+        </div>
+        <div className="flex justify-between">
           <span>Cash In Hand:</span>
           <span className="font-medium">₹{selectedDriver?.cashInHand?.toFixed(2) ?? '0.00'}</span>
         </div>
@@ -816,39 +820,37 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
           <span>Pending Expenses:</span>
           <span className="font-medium">₹{pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0).toFixed(2)}</span>
         </div>
-        <div className="flex justify-between">
-          <span>Balance Adjustment:</span>
-          <span className="font-medium">
-            {(selectedDriver?.balanceAmount ?? 0) < 0 ? '+' : '-'}₹
-            {Math.abs(selectedDriver?.balanceAmount ?? 0).toFixed(2)}
-          </span>
-        </div>
-        <div className="border-t border-green-200 my-2"></div>
-       <div className="flex justify-between font-bold">
-  <span>
-    {((selectedDriver?.cashInHand ?? 0) - 
-     (pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + 
-     ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0))) >= 0 
-      ? 'Settlement Amount (to RSA)' 
-      : 'Settlement Amount (to Driver)'}
-  </span>
-  <span className={`text-lg font-bold ${
-    ((selectedDriver?.cashInHand ?? 0) - 
-     (pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + 
-     ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0))) >= 0 
-      ? 'text-green-600' 
-      : 'text-red-600'
-  }`}>
-    ₹{Math.abs(
-      ((selectedDriver?.cashInHand ?? 0) - 
-       (pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + 
-       ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0)))
-    ).toFixed(2)}
-  </span>
-</div>
+       
+       <div className="flex justify-between">
+        <span>Total Salary:</span>
+        <span className="font-medium">₹{selectedDriver?.driverSalary?.toFixed(2) ?? '0.00'}</span>
       </div>
+      
+      <div className="border-t border-green-200 my-2"></div>
+      
+      {/* Settlement Amount Calculation */}
+      {(() => {
+        const cashInHand = selectedDriver?.cashInHand ?? 0;
+        const totalPendingExpenses = pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+        const totalSalary = selectedDriver?.driverSalary ?? 0;
+        const settlementAmount = cashInHand - (totalSalary + totalPendingExpenses);
+        
+        return (
+          <div className="flex justify-between font-bold">
+            <span>
+              {settlementAmount >= 0 
+                ? 'Settlement Amount (to RSA)' 
+                : 'Settlement Amount (to Driver)'}
+            </span>
+            <span className={settlementAmount >= 0 ? 'text-green-600' : 'text-red-600'}>
+              ₹{Math.abs(settlementAmount).toFixed(2)}
+            </span>
+          </div>
+        );
+      })()}
     </div>
   </div>
+</div>
 
   {/* Pending Expenses List */}
   {pendingExpenses.length > 0 && (
@@ -873,9 +875,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
         <p className="text-sm text-yellow-700 mt-1">
           Approving will reset all amounts to zero: Cash In Hand, Balance, and Advance.
         </p>
-        <p className="text-sm text-yellow-700 mt-1">
-          Final Settlement Amount: ₹{((selectedDriver?.cashInHand ?? 0) - (pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0) + ((selectedDriver?.balanceAmount ?? 0) < 0 ? Math.abs(selectedDriver?.balanceAmount ?? 0) : 0))).toFixed(2)}
-        </p>
+       
       </div>
     </div>
   </div>

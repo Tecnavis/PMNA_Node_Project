@@ -8,36 +8,42 @@ const Staff = require('../Model/staff');
 
 exports.createReceivedDetails = async (req, res) => {
     try {
-        const { amount, currentNetAmount, driver, receivedAmount, remark, totalAmount } = req.body;
+        const { amount, currentNetAmount, driver, provider, receivedAmount, remark, totalAmount } = req.body;
         const userId = req.user.id || req.user._id;
-        const userRole = req.user.role || req.user?.user?.role; // Changed to userRole for clarity
+        const userRole = req.user.role || req.user?.user?.role;
         const receivedUserId = userId;
 
-        if (!amount || !driver || !receivedAmount) {
-            return res.status(400).json({ message: 'All fields are required' });
+        if (!amount || !receivedAmount || (!driver && !provider)) {
+            return res.status(400).json({ message: 'All required fields are missing' });
         }
 
-        const associateDriver = await Driver.findById(driver);
-        if (!associateDriver) {
-            return res.status(404).json({ message: 'Driver not found' });
+        // Determine if we're working with a driver or provider
+        const isDriver = !!driver;
+        const associateEntity = isDriver 
+            ? await Driver.findById(driver) 
+            : await Provider.findById(provider);
+
+        if (!associateEntity) {
+            return res.status(404).json({ 
+                message: isDriver ? 'Driver not found' : 'Provider not found' 
+            });
         }
-          // Add validation for Staff role
+
+        // Add validation for Staff role
         if (userRole === 'Staff') {
-            const driverCashInHand = associateDriver.cashInHand || 0;
-            if (Math.abs(Number(receivedAmount) - driverCashInHand) > 0.01) { // Allow small floating point differences
-                return res.status(400).json({ 
-                    message: `For Staff, received amount must exactly match driver's cash in hand (${driverCashInHand})` 
+            const cashInHand = associateEntity.cashInHand || 0;
+if (Math.abs(Number(receivedAmount) - cashInHand) > 0.01) {                return res.status(400).json({ 
+                    message: `For Staff, received amount must match ${isDriver ? 'driver' : 'provider'}'s cash in hand (${cashInHand})` 
                 });
             }
         }
-// ---------------------------
+
         let remainingAmount = receivedAmount;
         const selectedBookingIds = [];
 
         // Fetch bookings including partially received Staff payments and non-Staff payments
-        const bookings = await Booking.find({
+        const bookingQuery = {
             status: 'Order Completed',
-            driver,
             workType: 'PaymentWork',
             cashPending: false,
             $or: [
@@ -48,16 +54,24 @@ exports.createReceivedDetails = async (req, res) => {
                 }
             ],
             $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
-        }).sort({ createdAt: 1 });
+        };
+
+        // Add driver/provider to query
+        if (isDriver) {
+            bookingQuery.driver = driver;
+        } else {
+            bookingQuery.provider = provider;
+        }
+
+        const bookings = await Booking.find(bookingQuery).sort({ createdAt: 1 });
 
         // Update bookings by distributing receivedAmount
         for (const booking of bookings) {
             if (remainingAmount <= 0) break;
-            // Store previous values before making changes
+            
             const previousReceivedUser = booking.receivedUser;
             const previousReceivedUserId = booking.receivedUserId;
 
-            // Calculate balance based on payment type
             let bookingBalance;
             if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
                 bookingBalance = booking.totalAmount - (booking.receivedAmountStaff || 0);
@@ -69,24 +83,19 @@ exports.createReceivedDetails = async (req, res) => {
                 const appliedAmount = Math.min(remainingAmount, bookingBalance);
 
                 if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
-                    // For partially received Staff payments
                     if (userRole === 'Staff') {
-                        // Staff user - update receivedAmountStaff
                         booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + appliedAmount;
                     } else {
-                        // Non-Staff user - update givenAmountByStaff instead
                         booking.receivedAmount = (booking.receivedAmountStaff || 0) + appliedAmount;
                     }
-                    // -------------------------------------------------------
-                    // Calculate total received amount (combining both fields if needed)
+
                     const totalReceived = booking.receivedUser === 'Staff'
                         ? (booking.receivedAmountStaff || 0)
                         : (booking.receivedAmount || 0);
 
-                    // Check if fully paid now (using precise decimal comparison)
-                    if (Math.abs(totalReceived - booking.totalAmount) < 0.01) { // Accounting for floating point precision
+                    if (Math.abs(totalReceived - booking.totalAmount) < 0.01) {
                         booking.partialReceivedAmountStaff = false;
-                        booking.receivedAmount = booking.totalAmount; // Set full received amount
+                        booking.receivedAmount = booking.totalAmount;
                         if (booking.receivedUser === 'Staff') {
                             booking.receivedAmountStaff = booking.totalAmount;
                         }
@@ -94,28 +103,23 @@ exports.createReceivedDetails = async (req, res) => {
                         booking.partialReceivedAmountStaff = true;
                     }
                 } else {
-                    // For non-Staff payments or new Staff payments
                     booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
 
                     if (userRole === 'Staff') {
                         booking.receivedAmountStaff = appliedAmount;
-                        // Check if payment fully covers the amount
                         booking.partialReceivedAmountStaff = (booking.receivedAmount || 0) < booking.totalAmount;
                     }
 
-                    // Additional check for non-Staff full payment
                     if (Math.abs(booking.receivedAmount - booking.totalAmount) < 0.01) {
                         booking.partialReceivedAmountStaff = false;
                     }
                 }
 
-                // Only update these fields if the receiver is changing
                 if (previousReceivedUser !== userRole) {
                     booking.previousReceivedUser = previousReceivedUser;
                     booking.previousReceivedUserId = previousReceivedUserId;
                 }
 
-                // Set the received user info
                 booking.receivedUser = userRole;
                 booking.receivedUserId = new mongoose.Types.ObjectId(receivedUserId);
 
@@ -125,28 +129,29 @@ exports.createReceivedDetails = async (req, res) => {
             }
         }
 
-        // [Rest of your code remains the same...]
-        // Deduct remaining amount from driver's advance
+        // Deduct remaining amount from advance
         if (remainingAmount > 0) {
-            const currentAdvance = associateDriver.advance || 0;
+            const currentAdvance = associateEntity.advance || 0;
             const newAdvance = Math.max(0, currentAdvance - remainingAmount);
-            associateDriver.advance = newAdvance;
-            await associateDriver.save();
+            associateEntity.advance = newAdvance;
+            await associateEntity.save();
 
-            // Update last advance record if exists
-            const lastAdvance = await Advance.findOne({ driver: associateDriver._id }).sort({ createdAt: -1 }); if (lastAdvance) {
+            const lastAdvance = await Advance.findOne({ 
+                [isDriver ? 'driver' : 'provider']: associateEntity._id 
+            }).sort({ createdAt: -1 });
+
+            if (lastAdvance) {
                 lastAdvance.advance = Math.max(0, lastAdvance.advance - remainingAmount);
                 await lastAdvance.save();
             }
 
-            // Create received details for advance deduction
             await ReceivedDetails.create({
                 remark,
                 balance: newAdvance,
                 fileNumber: 'Advance Deduction',
                 currentNetAmount: 0,
                 amount: `Advance: ${lastAdvance?.advance || 0}`,
-                driver: associateDriver._id,
+                [isDriver ? 'driver' : 'provider']: associateEntity._id,
                 receivedAmount: remainingAmount,
                 totalAmount: totalAmount,
                 receivedUser: userRole,
@@ -158,7 +163,6 @@ exports.createReceivedDetails = async (req, res) => {
         for (const bookingId of selectedBookingIds) {
             const booking = await Booking.findById(bookingId);
 
-            // Change the record creation to:
             let amountToRecord;
             if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
                 amountToRecord = (booking.receivedAmountStaff || 0) + (booking.receivedAmount || 0);
@@ -174,7 +178,7 @@ exports.createReceivedDetails = async (req, res) => {
                 fileNumber: booking.fileNumber,
                 currentNetAmount: balance,
                 amount: booking.totalAmount,
-                driver: associateDriver._id,
+                [isDriver ? 'driver' : 'provider']: associateEntity._id,
                 receivedAmount: amountToRecord,
                 totalAmount: totalAmount,
                 receivedUser: userRole,
@@ -198,15 +202,18 @@ exports.createReceivedDetails = async (req, res) => {
 
 exports.getAllReceivedDetails = async (req, res) => {
     try {
-
-        const { search, driverId, month, year } = req.query
+        const { search, driverId, providerId, month, year } = req.query;
 
         const query = {};
 
+        // Handle either driver or provider
         if (driverId) {
-            query.driver = new mongoose.Types.ObjectId(driverId)
+            query.driver = new mongoose.Types.ObjectId(driverId);
+        } else if (providerId) {
+            query.provider = new mongoose.Types.ObjectId(providerId);
         }
-        // Month and Year filter
+
+        // Date filtering
         if (month && year) {
             const startDate = new Date(year, month - 1, 1);
             const endDate = new Date(year, month, 0, 23, 59, 59);
@@ -216,6 +223,8 @@ exports.getAllReceivedDetails = async (req, res) => {
             const endDate = new Date(year, 11, 31, 23, 59, 59);
             query.createdAt = { $gte: startDate, $lte: endDate };
         }
+
+        // Search functionality
         if (search && search.trim()) {
             const searchQuery = search.trim();
             const regex = new RegExp(searchQuery, 'i');
@@ -238,10 +247,11 @@ exports.getAllReceivedDetails = async (req, res) => {
 
             query.$or = searchConditions;
         }
+
         const receivedDetails = await ReceivedDetails
             .find(query)
             .sort({ createdAt: -1 })
-            .populate('driver')
+            .populate('driver provider');
 
         res.status(200).json(receivedDetails);
     } catch (error) {
@@ -249,20 +259,17 @@ exports.getAllReceivedDetails = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
-// Controller/cashReceivedDetails.js
 
 exports.getStaffReceivedDetails = async (req, res) => {
     try {
         const { staffId } = req.params;
         const { month, year, search } = req.query;
 
-        // Validate staffId
         if (!mongoose.Types.ObjectId.isValid(staffId)) {
             return res.status(400).json({ message: 'Invalid staff ID' });
         }
         const staffObjectId = new mongoose.Types.ObjectId(staffId);
 
-        // Base query with $or for both current and previous receivers
         const baseQuery = {
             $or: [
                 {
@@ -280,7 +287,6 @@ exports.getStaffReceivedDetails = async (req, res) => {
             ]
         };
 
-        // Date filtering
         const dateFilter = {};
         if (month && year) {
             const startDate = new Date(year, month - 1, 1);
@@ -292,7 +298,6 @@ exports.getStaffReceivedDetails = async (req, res) => {
             dateFilter.createdAt = { $gte: startDate, $lte: endDate };
         }
 
-        // Search functionality - should ADD TO not REPLACE the base query
         const searchFilter = {};
         if (search && search.trim()) {
             const searchQuery = search.trim();
@@ -305,7 +310,6 @@ exports.getStaffReceivedDetails = async (req, res) => {
             ];
         }
 
-        // Combine all filters
         const query = {
             $and: [
                 baseQuery,
@@ -316,7 +320,7 @@ exports.getStaffReceivedDetails = async (req, res) => {
 
         const receivedDetails = await ReceivedDetails.find(query)
             .sort({ createdAt: -1 })
-            .populate('driver')
+            .populate('driver provider')
             .populate({
                 path: 'receivedUserId',
                 select: 'name'

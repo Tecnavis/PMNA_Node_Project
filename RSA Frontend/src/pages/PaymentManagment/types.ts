@@ -2,7 +2,13 @@ export interface AdvanceData {
     _id: string;
     addedAdvance: number;
     advance: number;
-    driver:
+    driver?:
+        | {
+              name: string;
+              _id: string;
+          }
+        | string;
+        provider?:
         | {
               name: string;
               _id: string;
@@ -15,6 +21,40 @@ export interface AdvanceData {
     driverSalary: number[];
     balanceSalary: number[];
     transferdSalary: number[];
+}
+export interface Provider {
+  _id: string;
+  name: string;
+  cashInHand: number;
+  advance?: number;
+ companyName: string;
+    baseLocation: {
+        _id: string;
+        baseLocation: string;
+        latitudeAndLongitude: string;
+    };
+    idNumber: string;
+    creditAmountLimit: number;
+    phone: string;
+    personalPhoneNumber: string;
+    password: string;
+    serviceDetails: [
+        {
+            serviceType: {
+                _id: string;
+                serviceName: string;
+                firstKilometer: number;
+                additionalAmount: number;
+                firstKilometerAmount: number;
+                expensePerKm: number;
+            };
+            basicAmount: number;
+            kmForBasicAmount: number;
+            overRideCharge: number;
+            vehicleNumber: string;
+        }
+    ];
+    image: string;
 }
 export interface Staff {
     _id: string;
@@ -30,7 +70,11 @@ export interface ReceivedDetails {
     balance: string;
     currentNetAmount: number;
     amount: string;
-    driver: {
+    driver?: {
+        _id: string;
+        name: string;
+    };
+  provider?: {
         _id: string;
         name: string;
     };
@@ -50,7 +94,11 @@ export interface CashCollectionDetails {
     balance: string; // String representation of balance
     currentCashInHand: number;
     totalDriverAmount: number;
-    driver: {
+    driver?: {
+        _id: string; // Typically include the ID
+        name: string;
+    };
+     provider?: {
         _id: string; // Typically include the ID
         name: string;
     };
@@ -78,6 +126,10 @@ export interface ReceivedDetailsStaff {
     createdAt: string | Date;
     updatedAt?: string | Date;
     processedBy?: {
+        _id: string;
+        name: string;
+    };
+      provider?: {
         _id: string;
         name: string;
     };

@@ -95,24 +95,35 @@ exports.approve = async (req, res) => {
         const driver = await Driver.findById(expense.driver)
 
 
-        driver.cashInHand -= expense.amount
-        await driver.save()
+         // Only update driver's cashInHand if the expense is being approved
+        if (status === true) {
+            driver.cashInHand -= expense.amount;
+            await driver.save();
 
-        if (expense.amount > 0) {
-            await distributeReceivedAmount(driver._id, expense.amount, "Driver Total Expense.")
+            if (expense.amount > 0) {
+                await distributeReceivedAmount(driver._id, expense.amount, "Driver Total Expense.");
+            }
         }
+
+        // Determine the status text based on the boolean status
+        const statusText = status ? "approved" : "rejected";
+
         const updatedExpense = await Expense.findByIdAndUpdate(id, {
-            approve: status
+            approve: status,
+            status: statusText
         }, { new: true });
 
-        return res.status(201).json({
-            message: "Expense created successfully",
+        return res.status(200).json({
+            message: `Expense ${statusText} successfully`,
             success: true,
             expenseData: updatedExpense
-        })
+        });
     } catch (error) {
-        console.error(error.message)
-        return res.status(500).json({ message: 'Error approving expense', error: error.message });
+        console.error(error.message);
+        return res.status(500).json({ 
+            message: 'Error updating expense status', 
+            error: error.message 
+        });
     }
 }
 
@@ -197,8 +208,11 @@ exports.getAllExpense = async (req, res) => {
 exports.getAllPendingExpense = async (req, res) => {
     try {
         const pendingExpense = await Expense
-            .find({ approve: { $exists: false } })
-            .sort({ createdAt: -1 })           // ← same here
+ .find({ 
+                approve: { $exists: false },
+                status: "pending" 
+            })
+                        .sort({ createdAt: -1 })           // ← same here
             .populate('driver');
 
         return res.status(200).json({

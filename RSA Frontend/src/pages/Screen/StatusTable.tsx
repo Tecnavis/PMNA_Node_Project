@@ -7,11 +7,12 @@ import Index from './Index';
 import Timer from './Timer';
 import axios from 'axios';
 import { BASE_URL } from '../../config/axiosConfig';
-import { Booking } from '../Bookings/OpenBooking';
+import { Booking } from '../Screen/types';
 import { formattedTime, dateFormate } from '../../utils/dateUtils';
 import { connectSocket, disconnectSocket } from '../../utils/socket';
 import { SocketData } from '../Status/Status';
 import { Socket } from 'socket.io-client';
+import { FaArrowDown, FaArrowUp } from 'react-icons/fa';
 
 // Animations
 const fadeIn = keyframes`
@@ -196,7 +197,25 @@ const ScrollContainer = styled.div`
         border-radius: 6px;
     }
 `;
+const ScrollControls = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 8px;
+`;
 
+const ScrollButton = styled.button`
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    
+    &:hover {
+        background: #e0e0e0;
+    }
+`;
 const StatusTable = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -213,65 +232,44 @@ const StatusTable = () => {
     useEffect(() => {
         dispatch(setPageTitle('Driver Status Dashboard'));
 
-        const fetchBookings = async () => {
-            try {
-                const [ongoingResponse, completedResponse] = await Promise.all([
-                    axios.get(`${BASE_URL}/booking/status-based`, {
-                        params: { status: 'OngoingBookings', limit: 100000 }
-                    }),
-                    axios.get(`${BASE_URL}/booking/status-based`, {
-                        params: { status: 'Order Completed', limit: 100000 }
-                    })
-                ]);
+  const fetchBookings = async () => {
+    try {
+        const [ongoingResponse, completedResponse] = await Promise.all([
+            axios.get(`${BASE_URL}/booking/status-based`, {
+                params: { 
+                    status: 'OngoingBookings', 
+                    limit: 100000 
+                }
+            }),
+            axios.get(`${BASE_URL}/booking/status-based`, {
+                params: { 
+                    status: 'Order Completed', 
+                    limit: 100000
+                }
+            })
+        ]);
 
-                setOngoingBookings(ongoingResponse.data.bookings);
-                setCompletedBookings(completedResponse.data.bookings);
-            } catch (error) {
-                console.error('Error fetching bookings:', error);
-            }
-        };
+        // Filter completed bookings to only show last week's
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        const recentCompleted = completedResponse.data.bookings.filter((booking: Booking) => {
+            const bookingDate = new Date(booking.createdAt || booking.updatedAt);
+            return bookingDate >= oneWeekAgo;
+        });
+
+        setOngoingBookings(ongoingResponse.data.bookings);
+        setCompletedBookings(recentCompleted);
+    } catch (error) {
+        console.error('Error fetching bookings:', error);
+    }
+};
 
         fetchBookings();
         const intervalId = setInterval(fetchBookings, 30000); // Refresh every 30 seconds
 
         return () => clearInterval(intervalId);
     }, [dispatch]);
-
-    const startScrolling = () => {
-        if (scrollIntervalRef.current || !tableContainerRef.current) return;
-
-        scrollIntervalRef.current = setInterval(() => {
-            if (tableContainerRef.current) {
-                const { scrollTop, scrollHeight, clientHeight } = tableContainerRef.current;
-
-                if (scrollDirection === 'down') {
-                    if (scrollTop + clientHeight >= scrollHeight - 1) {
-                        setScrollDirection('up');
-                    } else {
-                        tableContainerRef.current.scrollBy({ top: 2, behavior: 'smooth' });
-                    }
-                } else {
-                    if (scrollTop <= 1) {
-                        setScrollDirection('down');
-                    } else {
-                        tableContainerRef.current.scrollBy({ top: -2, behavior: 'smooth' });
-                    }
-                }
-            }
-        }, 50);
-    };
-
-    const stopScrolling = () => {
-        if (scrollIntervalRef.current) {
-            clearInterval(scrollIntervalRef.current);
-            scrollIntervalRef.current = null;
-        }
-    };
-
-    useEffect(() => {
-        startScrolling();
-        return stopScrolling;
-    }, [scrollDirection]);
 
     const calculatePickupTime = (pickupDistance: string) => {
         const distance = parseFloat(pickupDistance) || 0;
@@ -305,20 +303,28 @@ const StatusTable = () => {
         const socketInstance = connectSocket("test@example.com");
         setSocket(socketInstance);
 
-        const handleNewChanges = async (data: SocketData) => {
-            try {
-                if (!data?.type) return;
+       const handleNewChanges = async (data: SocketData) => {
+    try {
+        if (!data?.type) return;
 
-                if (data.type === 'update' && data.status === 'Order Completed') {
-                    // Remove from ongoing bookings
-                    setOngoingBookings(prev =>
-                        prev.filter(booking => booking._id !== data.bookingId)
-                    );
+          if (data.type === 'update' && data.status === 'Order Completed') {
+            setOngoingBookings(prev =>
+                prev.filter(booking => booking._id !== data.bookingId)
+            );
 
-                    // @ts-ignore
-                    setCompletedBookings(prev => [...prev, data.updatedBooking as Booking]);
-                    setUdate(true)
-                }
+            // Type assertion solution:
+            const updatedBooking = data.updatedBooking as unknown as Booking;
+            
+            // Only add to completed if it's recent
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            const bookingDate = new Date(updatedBooking?.createdAt || new Date());
+            
+            if (bookingDate >= oneWeekAgo) {
+                setCompletedBookings(prev => [...prev, updatedBooking]);
+            }
+            setUdate(true);
+        }
 
                 else if (data.type === 'newBooking') {
 
@@ -366,15 +372,29 @@ const StatusTable = () => {
 
             <SectionTitle>ONGOING BOOKINGS</SectionTitle>
             <TableContainer>
+               <ScrollControls>
+    <ScrollButton 
+        onClick={() => tableContainerRef.current?.scrollBy({ top: -100, behavior: 'smooth' })}
+    >
+        <FaArrowUp size={26} />
+    </ScrollButton>
+    <ScrollButton 
+        onClick={() => tableContainerRef.current?.scrollBy({ top: 100, behavior: 'smooth' })}
+    >
+        <FaArrowDown size={26} />
+    </ScrollButton>
+</ScrollControls>
                 <ScrollContainer
                     ref={tableContainerRef}
-                    onMouseEnter={stopScrolling}
-                    onMouseLeave={startScrolling}
+                   
                 >
                     <Table>
                         <thead>
                             <tr>
-                                <TableHeader>Date & Time</TableHeader>
+
+                                <TableHeader>Index</TableHeader>
+                                                                <TableHeader>Date and Time</TableHeader>
+
                                 <TableHeader>File Number</TableHeader>
                                 <TableHeader>Driver</TableHeader>
                                 <TableHeader>Vehicle</TableHeader>
@@ -384,12 +404,14 @@ const StatusTable = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {ongoingBookings.map((record) => (
+                            {ongoingBookings.map((record,index) => (
                                 <TableRow
                                     key={record._id}
                                     highlight={record?.bookingStatus === 'showroom'}
                                     urgent={isUrgent(record)}
                                 >
+                                                                        <TableData>{index+1}</TableData>
+
                                     <TableData>
                                         <TimeBadge>{dateFormate("" + record.createdAt)}</TimeBadge>
                                         <TimeBadge>{formattedTime("" + record.createdAt)}</TimeBadge>
@@ -398,10 +420,10 @@ const StatusTable = () => {
                                     <TableData>{record.driver?.name || 'N/A'}</TableData>
                                     <TableData>{record.customerVehicleNumber}</TableData>
                                     <HighlightedTableData>
-                                        {record.pickupDate ? (
+                                        {record.pickupTime ? (
                                             <>
-                                                <div>{dateFormate("" + record.pickupDate)}</div>
-                                                <div>{formattedTime("" + record.pickupDate)}</div>
+                                                <div>{dateFormate("" + record.pickupTime)}</div>
+                                                <div>{formattedTime("" + record.pickupTime)}</div>
                                             </>
                                         ) : 'N/A'}
                                     </HighlightedTableData>

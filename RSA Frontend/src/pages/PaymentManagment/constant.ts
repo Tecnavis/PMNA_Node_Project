@@ -160,11 +160,24 @@ export const ReceivedDetailsTableColumn = (staffs: Staff[]): DataTableColumn<Rec
       };
     }
   },
-    {
-        title: "DRIVER NAME",
-        accessor: 'driver.name',
-        render: (booking: ReceivedDetails) => (booking.driver?.name || "N/A")
-    },
+  {
+    title: "SERVICE PROVIDER",
+    accessor: 'serviceProvider',
+    render: (receivedDetails: ReceivedDetails) => {
+      // Handle cases where either driver or provider might be populated or just an ID
+      if (receivedDetails.driver) {
+        return typeof receivedDetails.driver === 'object' 
+          ? receivedDetails.driver.name 
+          : 'Driver ID: ' + receivedDetails.driver;
+      }
+      if (receivedDetails.provider) {
+        return typeof receivedDetails.provider === 'object' 
+          ? receivedDetails.provider.name 
+          : 'Provider ID: ' + receivedDetails.provider;
+      }
+      return "N/A";
+    }
+  },
        {
         title: "FILE NUMBER",
         accessor: 'fileNumber',
@@ -232,11 +245,29 @@ export const CashCollectionDetailsTableColumn = (staffs: Staff[]): DataTableColu
       };
     }
   },
-    {
-        title: "DRIVER NAME",
-        accessor: 'driver.name',
-        render: (booking: CashCollectionDetails) => (booking.driver?.name || "N/A")
-    },
+    // {
+    //     title: "DRIVER NAME",
+    //     accessor: 'driver.name',
+    //     render: (booking: CashCollectionDetails) => (booking.driver?.name || "N/A")
+    // },
+     {
+    title: "SERVICE PROVIDER",
+    accessor: 'serviceProvider',
+    render: (booking: CashCollectionDetails) => {
+      // Handle cases where either driver or provider might be populated or just an ID
+      if (booking.driver) {
+        return typeof booking.driver === 'object' 
+          ? booking.driver.name 
+          : 'Driver ID: ' + booking.driver;
+      }
+      if (booking.provider) {
+        return typeof booking.provider === 'object' 
+          ? booking.provider.name 
+          : 'Provider ID: ' + booking.provider;
+      }
+      return "N/A";
+    }
+  },
      {
         title: "CURRENT CASH IN HAND",
         accessor: 'currentCashInHand',
