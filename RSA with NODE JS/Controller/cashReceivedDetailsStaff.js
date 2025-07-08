@@ -27,7 +27,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
             });
         }
 
-       
+        
 
         // Check staff exists
         const staff = await Staff.findById(staffId);
@@ -55,7 +55,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         // 1. First try to distribute to bookings
         const bookings = await Booking.find({
             status: 'Order Completed',
-            [entityField]: entityId,
+           
             $and: [
                 {
                     $or: [
@@ -195,16 +195,16 @@ exports.createReceivedDetailsStaff = async (req, res) => {
 
 exports.getReceivedDetailsStaff = async (req, res) => {
     try {
-        const { staffId, driverId, providerId, search, page = 1, pageSize = 10 } = req.query;
+        const { staffId, driver, provider, search, page = 1, pageSize = 10 } = req.query;
         
         const query = {};
         if (staffId) query.staff = staffId;
         
         // Handle driver or provider filtering
-        if (driverId) {
-            query.driver = driverId;
-        } else if (providerId) {
-            query.provider = providerId;
+        if (driver) {
+            query.driver = driver;
+        } else if (provider) {
+            query.provider = provider;
         }
 
         if (search) {

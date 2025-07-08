@@ -42,7 +42,6 @@ const ExpenseApproveUI = () => {
 
       const response: Expense[] = await fetchPendingExpenses() as unknown as Expense[]
       setExpenses(response);
-
       setNewRequestsCount(0);
     } catch (error) {
       enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
@@ -52,28 +51,21 @@ const ExpenseApproveUI = () => {
     }
   };
 
-    const fetchExpense = async (searchTerm = '', page = 1, limit: number | 'all' = 10) => {
-        try {
-            setLoading(true);
-            const params = {
-                search: searchTerm,
-                page,
-                ...(limit !== 'all' && { limit }),
-                ...(limit === 'all' && { all: true })
-            };
-
-            const response = await axiosInstance.get(`${BASE_URL}/expense`, { params });
-            setExpenses(response.data.expenseData);
-            setTotalItems(response.data.pagination.total);
-            setTotalPages(response.data.pagination.totalPages);
-            setCurrentPage(response.data.pagination.page);
-        } catch (error) {
-            enqueueSnackbar('Failed to fetch expenses', { variant: 'error'});
-            console.error('Error fetching expenses:', error);
-        } finally {
-            setLoading(false);
+     const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: number | 'all' = 10) => {
+    try {
+        const response = await fetchExpenses(searchTerm, page, limit);
+        setAllExpenses(response.data);
+        
+        // Update pagination state
+        if (response.pagination) {
+            setTotalPages(response.pagination.totalPages);
+            setTotalItems(response.pagination.totalItems);
         }
-    };
+    } catch (error) {
+        enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
+        console.error('Error fetching expenses:', error);
+    }
+};
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
@@ -87,13 +79,15 @@ const ExpenseApproveUI = () => {
     };
 
     const handleSearch = (searchTerm: string) => {
-        setCurrentSearchTerm(searchTerm);
-        fetchExpense(searchTerm);
-    };
+    setCurrentSearchTerm(searchTerm);
+    setCurrentPage(1);  // Reset to first page when searching
+    fetchExpense(searchTerm, 1, showingAll ? 'all' : 10);
+};
 
-    useEffect(() => {
-        fetchExpense();
-    }, []);
+   useEffect(() => {
+    fetchPendingExpense();  // For pending approvals
+    fetchExpense();        // For all expenses table
+}, []);
 
   const toggleDescription = (expenseId: string) => {
     setExpandedDescriptions(prev => ({
@@ -114,41 +108,37 @@ const ExpenseApproveUI = () => {
 
   const approveExpense = async (expenseId: string) => {
     try {
-      setActionLoading(true);
-
-      await updateStatus(expenseId, true)
-
-      setExpenses(prev => prev.map(exp =>
-        exp._id === expenseId ? { ...exp, approve: true } : exp
-      ));
-      enqueueSnackbar('Expense approved successfully', { variant: 'success' });
-      moveToNextExpense();
+        setActionLoading(true);
+        await updateStatus(expenseId, true);
+        setExpenses(prev => prev.map(exp =>
+            exp._id === expenseId ? { ...exp, approve: true, status: "approved" } : exp
+        ));
+        enqueueSnackbar('Expense approved successfully', { variant: 'success' });
+        moveToNextExpense();
     } catch (error) {
-      enqueueSnackbar('Failed to approve expense', { variant: 'error' });
-      console.error('Error approving expense:', error);
+        enqueueSnackbar('Failed to approve expense', { variant: 'error' });
+        console.error('Error approving expense:', error);
     } finally {
-      setActionLoading(false);
+        setActionLoading(false);
     }
-  };
+};
 
-  const rejectExpense = async (expenseId: string) => {
+const rejectExpense = async (expenseId: string) => {
     try {
-      setActionLoading(true);
-
-      await updateStatus(expenseId, false)
-
-      setExpenses(prev => prev.map(exp =>
-        exp._id === expenseId ? { ...exp, approve: false } : exp
-      ));
-      enqueueSnackbar('Expense rejected successfully', { variant: 'success' });
-      moveToNextExpense();
+        setActionLoading(true);
+        await updateStatus(expenseId, false);
+        setExpenses(prev => prev.map(exp =>
+            exp._id === expenseId ? { ...exp, approve: false, status: "rejected" } : exp
+        ));
+        enqueueSnackbar('Expense rejected successfully', { variant: 'success' });
+        moveToNextExpense();
     } catch (error) {
-      enqueueSnackbar('Failed to reject expense', { variant: 'error' });
-      console.error('Error rejecting expense:', error);
+        enqueueSnackbar('Failed to reject expense', { variant: 'error' });
+        console.error('Error rejecting expense:', error);
     } finally {
-      setActionLoading(false);
+        setActionLoading(false);
     }
-  };
+};
 
   const getDownloadableUrl = (url: string) => {
     return url.replace('/upload/', '/upload/fl_attachment/');
@@ -249,14 +239,90 @@ const ExpenseApproveUI = () => {
         </div>
       </div>
       
-      <ExpenseTable
-        expenses={allExpenses}
-        expandedDescriptions={expandedDescriptions}
-        toggleDescription={toggleDescription}
-        openImageModal={openImageModal}
-        CLOUD_IMAGE={CLOUD_IMAGE}
-      />
+  <ExpenseTable
+    expenses={allExpenses}  // Changed from expenses to allExpenses
+    expandedDescriptions={expandedDescriptions}
+    toggleDescription={toggleDescription}
+    openImageModal={openImageModal}
+    CLOUD_IMAGE={CLOUD_IMAGE}
+/>
+   {/* Pagination Controls */}
+            <div className="flex justify-between items-center mt-4">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing {expenses.length} of {totalItems} expenses
+                </div>
+
+                <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
+                    <li>
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            disabled={showingAll || currentPage === 1}
+                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                                showingAll || currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
+                        >
+                            <GrPrevious />
+                        </button>
+                    </li>
+
+                    {!showingAll &&
+                        Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                            // Show limited page numbers (max 5)
+                            let pageNum;
+                            if (totalPages <= 5) {
+                                pageNum = index + 1;
+                            } else if (currentPage <= 3) {
+                                pageNum = index + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + index;
+                            } else {
+                                pageNum = currentPage - 2 + index;
+                            }
+
+                            return (
+                                <li key={index}>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePageChange(pageNum)}
+                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                                            currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                </li>
+                            );
+                        })}
+
+                    <li>
+                        <button
+                            type="button"
+                            onClick={toggleShowAll}
+                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                                showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            }`}
+                        >
+                            {showingAll ? 'Show Pages' : 'Show All'}
+                        </button>
+                    </li>
+
+                    <li>
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={showingAll || currentPage === totalPages}
+                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                                showingAll || currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
+                        >
+                            <GrNext />
+                        </button>
+                    </li>
+                </ul>
+            </div>    
     </>
+    
     );
   }
 
@@ -423,36 +489,7 @@ const ExpenseApproveUI = () => {
         </CardContent>
       </Card>
 
-      {/* Image Modal */}
-      {/* <ReusableModal
-        title='Expense Image'
-        isOpen={imageModalOpen}
-        onClose={() => setImageModalOpen(false)}
-      >
-        <div className="bg-white rounded-xl p-4 max-w-4xl max-h-[90vh] outline-none">
-          <div className="relative">
-            <img
-              src={`${CLOUD_IMAGE}${currentExpense.image}`} // Replace with your actual image path
-              alt="Expense receipt"
-              className="max-h-[80vh] max-w-full object-contain rounded-lg"
-            />
-            <div className="absolute top-4 right-4 flex gap-2">
-              <IconButton
-                // onClick={() => downloadImage(`/receipts/${currentExpense.image}`)}
-                className="bg-black/50 hover:bg-black/70 text-white"
-              >
-                <Download size={20} />
-              </IconButton>
-              <IconButton
-                onClick={() => setImageModalOpen(false)}
-                className="bg-black/50 hover:bg-black/70 text-white"
-              >
-                <X size={20} />
-              </IconButton>
-            </div>
-          </div>
-        </div>
-      </ReusableModal> */}
+    
       <div className="overflow-x-auto my-10">
         <div className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 mt-5">
         <div className="flex-1">
@@ -465,15 +502,14 @@ const ExpenseApproveUI = () => {
           />
         </div>
       </div>
-       <ExpenseTable
-    expenses={expenses}
+     <ExpenseTable
+    expenses={allExpenses}  // Changed from expenses to allExpenses
     expandedDescriptions={expandedDescriptions}
     toggleDescription={toggleDescription}
     openImageModal={openImageModal}
     CLOUD_IMAGE={CLOUD_IMAGE}
 />
-
-         {/* Pagination Controls */}
+ {/* Pagination Controls */}
             <div className="flex justify-between items-center mt-4">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {expenses.length} of {totalItems} expenses
@@ -548,6 +584,7 @@ const ExpenseApproveUI = () => {
                     </li>
                 </ul>
             </div>
+       
         {/* Image Modal */}
         {selectedImage && (
           <div

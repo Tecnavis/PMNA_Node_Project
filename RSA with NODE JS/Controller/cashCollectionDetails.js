@@ -7,18 +7,18 @@ const mongoose = require('mongoose');
 exports.createCashCollectionDetails = async (req, res) => {
   try {
     const { 
-      driver, 
-      provider, 
+      driverId, 
+      providerId, 
       receivedAmount, 
       remark, 
-      totalAmount,
+      totalDriverAmount,
       currentCashInHand
     } = req.body;
         const userId = req.user.id || req.user._id;
         const receivedUser = req.user.role || 'Admin';
 
         // Validate inputs
-        if ((!driver && !provider) || !receivedAmount || !remark || !totalAmount || currentCashInHand === undefined) {
+        if ((!driverId && !providerId) || !receivedAmount || !remark || !totalDriverAmount || currentCashInHand === undefined) {
              return res.status(400).json({ 
         success: false,
         message: 'Provider/driver, amount and totalAmount are required',
@@ -27,25 +27,25 @@ exports.createCashCollectionDetails = async (req, res) => {
         }
 
         // Ensure only one of driverId or providerId is provided
-        if (driver && provider) {
+        if (driverId && providerId) {
             return res.status(400).json({
                 message: 'Cannot specify both driverId and providerId'
             });
         }
 
         const amount = Number(receivedAmount);
-        const total = Number(totalAmount);
+        const totalAmount = Number(totalDriverAmount);
         const cashInHand = Number(currentCashInHand);
         
-        if (isNaN(amount) || isNaN(total) || isNaN(cashInHand)) {
+        if (isNaN(amount) || isNaN(totalAmount) || isNaN(cashInHand)) {
             return res.status(400).json({ 
                 message: 'Amount, totalAmount and currentCashInHand must be valid numbers' 
             });
         }
 
         // Determine if we're working with driver or provider
-        const isDriver = !!driver;
-        const entityId = isDriver ? driver : provider;
+        const isDriver = !!driverId;
+        const entityId = isDriver ? driverId : providerId;
         const entityModel = isDriver ? Driver : Provider;
         const entityField = isDriver ? 'driver' : 'provider';
 
@@ -60,9 +60,9 @@ exports.createCashCollectionDetails = async (req, res) => {
         // Create cash collection record only
         const cashCollectionData = {
             [entityField]: entityId,
-            balance: (cashInHand - total).toString(),
+            balance: (cashInHand - totalAmount).toString(),
             currentCashInHand: cashInHand,
-            totalDriverAmount: total,
+            totalDriverAmount: totalAmount,
             receivedAmount: amount,
             receivedUser,
             receivedUserId: new mongoose.Types.ObjectId(userId),

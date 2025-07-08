@@ -302,12 +302,12 @@ useEffect(() => {
                 // Then create cash collection record
                 const cashCollectionResponse = await axios.post(`${BASE_URL}/cash-collection-details`, {
            providerId: selectedProvider, // Changed from providerId to match backend
-  receivedAmount: Number(receivedAmount), // Ensure number
+  receivedAmount, // Ensure number
   remark,
   receivedUser: role,
   receivedUserId,
-  totalAmount: Number(receivedAmount), // Changed from totalDriverAmount
-  currentCashInHand: Number(inHandAmount),
+ totalDriverAmount: receivedAmount, // Changed from totalDriverAmount
+  currentCashInHand: inHandAmount,
 });
 
                 // Refresh data

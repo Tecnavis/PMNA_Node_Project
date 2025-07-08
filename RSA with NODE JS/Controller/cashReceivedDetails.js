@@ -32,8 +32,7 @@ exports.createReceivedDetails = async (req, res) => {
         // Add validation for Staff role
         if (userRole === 'Staff') {
             const cashInHand = associateEntity.cashInHand || 0;
-            if (Math.abs(Number(receivedAmount) - cashInHand > 0.01)) {
-                return res.status(400).json({ 
+if (Math.abs(Number(receivedAmount) - cashInHand) > 0.01) {                return res.status(400).json({ 
                     message: `For Staff, received amount must match ${isDriver ? 'driver' : 'provider'}'s cash in hand (${cashInHand})` 
                 });
             }
