@@ -5,6 +5,9 @@ const Booking = require('../Model/booking');
 const mongoose = require('mongoose');
 
 exports.createCashCollectionDetails = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { 
       driverId, 
@@ -14,81 +17,134 @@ exports.createCashCollectionDetails = async (req, res) => {
       totalDriverAmount,
       currentCashInHand
     } = req.body;
-        const userId = req.user.id || req.user._id;
-        const receivedUser = req.user.role || 'Admin';
 
-        // Validate inputs
-        if ((!driverId && !providerId) || !receivedAmount || !remark || !totalDriverAmount || currentCashInHand === undefined) {
-             return res.status(400).json({ 
+    const userId = req.user.id || req.user._id;
+    const receivedUser = req.user.role || 'Admin';
+
+    // ===== 1. VALIDATION (Atomic Checks) =====
+    if ((!driverId && !providerId) || !receivedAmount || !remark || !totalDriverAmount || currentCashInHand === undefined) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
         success: false,
-        message: 'Provider/driver, amount and totalAmount are required',
-        requiredFields: ['provider|driver', 'receivedAmount', 'totalAmount']
+        message: 'Missing required fields',
+        requiredFields: ['provider|driver', 'receivedAmount', 'totalAmount', 'currentCashInHand']
       });
-        }
-
-        // Ensure only one of driverId or providerId is provided
-        if (driverId && providerId) {
-            return res.status(400).json({
-                message: 'Cannot specify both driverId and providerId'
-            });
-        }
-
-        const amount = Number(receivedAmount);
-        const totalAmount = Number(totalDriverAmount);
-        const cashInHand = Number(currentCashInHand);
-        
-        if (isNaN(amount) || isNaN(totalAmount) || isNaN(cashInHand)) {
-            return res.status(400).json({ 
-                message: 'Amount, totalAmount and currentCashInHand must be valid numbers' 
-            });
-        }
-
-        // Determine if we're working with driver or provider
-        const isDriver = !!driverId;
-        const entityId = isDriver ? driverId : providerId;
-        const entityModel = isDriver ? Driver : Provider;
-        const entityField = isDriver ? 'driver' : 'provider';
-
-        // Verify entity exists (but don't modify anything)
-        const entity = await entityModel.findById(entityId);
-        if (!entity) {
-            return res.status(404).json({ 
-                message: isDriver ? 'Driver not found' : 'Provider not found' 
-            });
-        }
-
-        // Create cash collection record only
-        const cashCollectionData = {
-            [entityField]: entityId,
-            balance: (cashInHand - totalAmount).toString(),
-            currentCashInHand: cashInHand,
-            totalDriverAmount: totalAmount,
-            receivedAmount: amount,
-            receivedUser,
-            receivedUserId: new mongoose.Types.ObjectId(userId),
-            remark
-        };
-
-        const cashCollection = await CashCollectionDetails.create(cashCollectionData);
-        
-        res.status(201).json({
-            message: 'Cash collection recorded successfully',
-            data: cashCollection
-        });
-
-    } catch (error) {
-        console.error('Error in createCashCollectionDetails:', {
-            error: error.message,
-            stack: error.stack,
-            body: req.body,
-            user: req.user
-        });
-        res.status(500).json({ 
-            message: 'Internal server error',
-            error: error.message 
-        });
     }
+
+    if (driverId && providerId) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: 'Specify either driverId OR providerId' });
+    }
+
+    // ===== 2. TYPE SAFETY =====
+    const amount = Number(receivedAmount);
+    const totalAmount = Number(totalDriverAmount);
+    const cashInHand = Number(currentCashInHand);
+    
+    if (isNaN(amount) || isNaN(totalAmount) || isNaN(cashInHand)) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        code: 'INVALID_NUMERIC_VALUE',
+        message: 'All amounts must be valid numbers' 
+      });
+    }
+
+    // ===== 3. ENTITY VERIFICATION =====
+    const isDriver = !!driverId;
+    const entityId = isDriver ? driverId : providerId;
+    const entityModel = isDriver ? Driver : Provider;
+    const entityField = isDriver ? 'driver' : 'provider';
+
+    const entity = await entityModel.findById(entityId).session(session);
+    if (!entity) {
+      await session.abortTransaction();
+      return res.status(404).json({ 
+        code: 'ENTITY_NOT_FOUND',
+        message: isDriver ? 'Driver not found' : 'Provider not found' 
+      });
+    }
+
+    // ===== 4. TRANSACTIONAL OPERATIONS =====
+    const cashCollectionData = {
+      [entityField]: entityId,
+      balance: (cashInHand - totalAmount).toString(),
+      currentCashInHand: cashInHand,
+      totalDriverAmount: totalAmount,
+      receivedAmount: amount,
+      receivedUser,
+      receivedUserId: new mongoose.Types.ObjectId(userId),
+      remark,
+      status: 'PROCESSED' // Audit field
+    };
+
+    const cashCollection = await CashCollectionDetails.create([cashCollectionData], { session });
+    
+    // ===== 5. COMMIT & RESPONSE =====
+    await session.commitTransaction();
+    
+    res.status(201).json({
+      success: true,
+      data: cashCollection[0],
+      audit: {
+        transactionId: session.id,
+        timestamp: new Date()
+      }
+    });
+
+  } catch (error) {
+    // ===== 6. TRANSACTION ROLLBACK =====
+    await session.abortTransaction();
+    
+    // Classified Error Handling
+    if (isNetworkError(error)) {
+      console.error('Network failure during cash collection:', {
+        error: error.message,
+        sessionId: session?.id,
+        userId: req.user?.id
+      });
+      
+      return res.status(503).json({
+        code: 'NETWORK_FAILURE',
+        message: 'Temporary service disruption. Please retry.',
+        retryable: true
+      });
+    }
+
+    // Business Logic Errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        code: 'VALIDATION_FAILED',
+        fields: Object.keys(error.errors),
+        message: 'Data validation failed'
+      });
+    }
+
+    // Unknown Errors
+    console.error('Fatal error in cash collection:', {
+      error: error.message,
+      stack: error.stack,
+      sessionId: session?.id,
+      body: req.body
+    });
+
+    res.status(500).json({
+      code: 'FATAL_SERVER_ERROR',
+      message: 'Critical failure. Contact support.',
+      referenceId: session?.id // For debugging
+    });
+  } finally {
+    // ===== 7. RESOURCE CLEANUP =====
+    session.endSession();
+  }
 };
+
+// Reusable error classifier
+function isNetworkError(error) {
+  return error.message.includes('network') || 
+         error.message.includes('ECONN') || 
+         error.message.includes('timeout') ||
+         error.name === 'MongoNetworkError';
+}
 
 exports.getAllCashCollectionDetails = async (req, res) => {
     try {

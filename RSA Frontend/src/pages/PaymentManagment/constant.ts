@@ -49,10 +49,26 @@ export const AdvanceDetailsTableColumn: DataTableColumn<AdvanceData>[] = [
         render: (advanceDetails: AdvanceData) =>
             `${dateFormate(advanceDetails?.createdAt)} at ${formattedTime(advanceDetails?.createdAt)}`
     },
+     {
+        title: "PREVIOUS BALANCE ADVANCE",
+        accessor: 'previousAdvance',
+        render: (advanceDetails: AdvanceData) => `₹${advanceDetails?.previousAdvance || 0}`
+    },
+     
     {
-        title: "INITIAL ADVANCE",
+        title: "ADVANCE",
         accessor: 'addedAdvance',
         render: (advanceDetails: AdvanceData) => `₹${advanceDetails?.addedAdvance || 0}`
+    },
+        {
+        title: "TOTAL ADVANCE",
+        accessor: "", // Dummy accessor
+        render: (advanceDetails: AdvanceData) => {
+            const previousAdvance = advanceDetails?.previousAdvance || 0;
+            const addedAdvance = advanceDetails?.addedAdvance || 0;
+            const totalAdvance = previousAdvance + addedAdvance;
+            return `₹${totalAdvance}`;
+        }
     },
     {
         title: "ADVANCE AFTER DEDUCTION",

@@ -10,6 +10,7 @@ const AdvanceSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+     previousAdvance: { type: Number, default: 0 },
     advance: {
         type: Number,
         required: true,
