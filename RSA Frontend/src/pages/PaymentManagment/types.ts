@@ -2,6 +2,7 @@ export interface AdvanceData {
     _id: string;
     addedAdvance: number;
     advance: number;
+    previousAdvance?:number;
     driver?:
         | {
               name: string;

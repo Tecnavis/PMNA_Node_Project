@@ -5,200 +5,242 @@ const Advance = require('../Model/advance.js')
 const Provider = require('../Model/provider');
 const { default: mongoose } = require('mongoose');
 const Staff = require('../Model/staff');
-
+// ----------------------------
 exports.createReceivedDetails = async (req, res) => {
-    try {
-        const { amount, currentNetAmount, driver, provider, receivedAmount, remark, totalAmount } = req.body;
-        const userId = req.user.id || req.user._id;
-        const userRole = req.user.role || req.user?.user?.role;
-        const receivedUserId = userId;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-        if (!amount || !receivedAmount || (!driver && !provider)) {
-            return res.status(400).json({ message: 'All required fields are missing' });
-        }
+  try {
+    // ===== 1. INPUT VALIDATION =====
+    const { amount, currentNetAmount, driver, provider, receivedAmount, remark, totalAmount } = req.body;
+    const userId = req.user.id || req.user._id;
+    const userRole = req.user.role || req.user?.user?.role;
+    const receivedUserId = userId;
 
-        // Determine if we're working with a driver or provider
-        const isDriver = !!driver;
-        const associateEntity = isDriver 
-            ? await Driver.findById(driver) 
-            : await Provider.findById(provider);
-
-        if (!associateEntity) {
-            return res.status(404).json({ 
-                message: isDriver ? 'Driver not found' : 'Provider not found' 
-            });
-        }
-
-        // Add validation for Staff role
-        if (userRole === 'Staff') {
-            const cashInHand = associateEntity.cashInHand || 0;
-if (Math.abs(Number(receivedAmount) - cashInHand) > 0.01) {                return res.status(400).json({ 
-                    message: `For Staff, received amount must match ${isDriver ? 'driver' : 'provider'}'s cash in hand (${cashInHand})` 
-                });
-            }
-        }
-
-        let remainingAmount = receivedAmount;
-        const selectedBookingIds = [];
-
-        // Fetch bookings including partially received Staff payments and non-Staff payments
-        const bookingQuery = {
-            status: 'Order Completed',
-            workType: 'PaymentWork',
-            cashPending: false,
-            $or: [
-                { receivedUser: { $ne: 'Staff' } },
-                {
-                    receivedUser: 'Staff',
-                    partialReceivedAmountStaff: true
-                }
-            ],
-            $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
-        };
-
-        // Add driver/provider to query
-        if (isDriver) {
-            bookingQuery.driver = driver;
-        } else {
-            bookingQuery.provider = provider;
-        }
-
-        const bookings = await Booking.find(bookingQuery).sort({ createdAt: 1 });
-
-        // Update bookings by distributing receivedAmount
-        for (const booking of bookings) {
-            if (remainingAmount <= 0) break;
-            
-            const previousReceivedUser = booking.receivedUser;
-            const previousReceivedUserId = booking.receivedUserId;
-
-            let bookingBalance;
-            if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
-                bookingBalance = booking.totalAmount - (booking.receivedAmountStaff || 0);
-            } else {
-                bookingBalance = booking.totalAmount - (booking.receivedAmount || 0);
-            }
-
-            if (bookingBalance > 0) {
-                const appliedAmount = Math.min(remainingAmount, bookingBalance);
-
-                if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
-                    if (userRole === 'Staff') {
-                        booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + appliedAmount;
-                    } else {
-                        booking.receivedAmount = (booking.receivedAmountStaff || 0) + appliedAmount;
-                    }
-
-                    const totalReceived = booking.receivedUser === 'Staff'
-                        ? (booking.receivedAmountStaff || 0)
-                        : (booking.receivedAmount || 0);
-
-                    if (Math.abs(totalReceived - booking.totalAmount) < 0.01) {
-                        booking.partialReceivedAmountStaff = false;
-                        booking.receivedAmount = booking.totalAmount;
-                        if (booking.receivedUser === 'Staff') {
-                            booking.receivedAmountStaff = booking.totalAmount;
-                        }
-                    } else {
-                        booking.partialReceivedAmountStaff = true;
-                    }
-                } else {
-                    booking.receivedAmount = (booking.receivedAmount || 0) + appliedAmount;
-
-                    if (userRole === 'Staff') {
-                        booking.receivedAmountStaff = appliedAmount;
-                        booking.partialReceivedAmountStaff = (booking.receivedAmount || 0) < booking.totalAmount;
-                    }
-
-                    if (Math.abs(booking.receivedAmount - booking.totalAmount) < 0.01) {
-                        booking.partialReceivedAmountStaff = false;
-                    }
-                }
-
-                if (previousReceivedUser !== userRole) {
-                    booking.previousReceivedUser = previousReceivedUser;
-                    booking.previousReceivedUserId = previousReceivedUserId;
-                }
-
-                booking.receivedUser = userRole;
-                booking.receivedUserId = new mongoose.Types.ObjectId(receivedUserId);
-
-                remainingAmount -= appliedAmount;
-                selectedBookingIds.push(booking._id);
-                await booking.save();
-            }
-        }
-
-        // Deduct remaining amount from advance
-        if (remainingAmount > 0) {
-            const currentAdvance = associateEntity.advance || 0;
-            const newAdvance = Math.max(0, currentAdvance - remainingAmount);
-            associateEntity.advance = newAdvance;
-            await associateEntity.save();
-
-            const lastAdvance = await Advance.findOne({ 
-                [isDriver ? 'driver' : 'provider']: associateEntity._id 
-            }).sort({ createdAt: -1 });
-
-            if (lastAdvance) {
-                lastAdvance.advance = Math.max(0, lastAdvance.advance - remainingAmount);
-                await lastAdvance.save();
-            }
-
-            await ReceivedDetails.create({
-                remark,
-                balance: newAdvance,
-                fileNumber: 'Advance Deduction',
-                currentNetAmount: 0,
-                amount: `Advance: ${lastAdvance?.advance || 0}`,
-                [isDriver ? 'driver' : 'provider']: associateEntity._id,
-                receivedAmount: remainingAmount,
-                totalAmount: totalAmount,
-                receivedUser: userRole,
-                receivedUserId,
-            });
-        }
-
-        // Create received details for each updated booking
-        for (const bookingId of selectedBookingIds) {
-            const booking = await Booking.findById(bookingId);
-
-            let amountToRecord;
-            if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff === true) {
-                amountToRecord = (booking.receivedAmountStaff || 0) + (booking.receivedAmount || 0);
-            } else {
-                amountToRecord = booking.receivedAmount || 0;
-            }
-
-            const balance = (booking.totalAmount - amountToRecord).toString();
-
-            await ReceivedDetails.create({
-                remark,
-                balance: balance,
-                fileNumber: booking.fileNumber,
-                currentNetAmount: balance,
-                amount: booking.totalAmount,
-                [isDriver ? 'driver' : 'provider']: associateEntity._id,
-                receivedAmount: amountToRecord,
-                totalAmount: totalAmount,
-                receivedUser: userRole,
-                receivedUserId,
-            });
-        }
-
-        res.status(201).json({
-            message: 'Received details created successfully',
-            distributedAmount: receivedAmount - remainingAmount,
-            remainingAmount
-        });
-    } catch (error) {
-        console.error('Error in createReceivedDetails:', error);
-        res.status(500).json({
-            message: 'Internal Server Error',
-            error: error.message
-        });
+    if (!amount || !receivedAmount || (!driver && !provider)) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        code: 'MISSING_FIELDS',
+        message: 'Amount, receivedAmount, and driver/provider are required' 
+      });
     }
+
+    // ===== 2. ENTITY VERIFICATION =====
+    const isDriver = !!driver;
+    const entityId = isDriver ? driver : provider;
+    const entityModel = isDriver ? Driver : Provider;
+    const entityField = isDriver ? 'driver' : 'provider';
+
+    const associateEntity = await entityModel.findById(entityId).session(session);
+    if (!associateEntity) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        code: 'ENTITY_NOT_FOUND',
+        message: isDriver ? 'Driver not found' : 'Provider not found'
+      });
+    }
+
+    // ===== 3. STAFF VALIDATION =====
+    if (userRole === 'Staff') {
+      const cashInHand = associateEntity.cashInHand || 0;
+      if (Math.abs(Number(receivedAmount) - cashInHand) > 0.01) {
+        await session.abortTransaction();
+        return res.status(403).json({
+          code: 'STAFF_AMOUNT_MISMATCH',
+          message: `Staff can only receive exact cash in hand (${cashInHand})`
+        });
+      }
+    }
+
+    // ===== 4. BOOKING PROCESSING =====
+    let remainingAmount = Number(receivedAmount);
+    const processedBookings = [];
+
+    const bookingQuery = {
+      status: 'Order Completed',
+      workType: 'PaymentWork',
+      cashPending: false,
+      $or: [
+        { receivedUser: { $ne: 'Staff' } },
+        { receivedUser: 'Staff', partialReceivedAmountStaff: true }
+      ],
+      $expr: { $gt: ["$totalAmount", "$receivedAmount"] },
+      [entityField]: entityId
+    };
+
+    const bookings = await Booking.find(bookingQuery)
+      .sort({ createdAt: 1 })
+      .session(session);
+
+    // Process each booking in transaction
+    for (const booking of bookings) {
+      if (remainingAmount <= 0) break;
+
+      const bookingBalance = calculateBookingBalance(booking, userRole);
+      if (bookingBalance <= 0) continue;
+
+      const appliedAmount = Math.min(remainingAmount, bookingBalance);
+      updateBookingPayment(booking, appliedAmount, userRole, receivedUserId);
+      
+      remainingAmount -= appliedAmount;
+      processedBookings.push(booking._id);
+      await booking.save({ session });
+    }
+
+    // ===== 5. ADVANCE DEDUCTION =====
+    if (remainingAmount > 0) {
+      await processAdvanceDeduction(
+        associateEntity, 
+        isDriver, 
+        remainingAmount, 
+        { remark, totalAmount, userRole, receivedUserId },
+        session
+      );
+    }
+
+    // ===== 6. CREATE RECEIVED RECORDS =====
+    await createReceivedRecords(
+      processedBookings, 
+      associateEntity, 
+      { isDriver, remark, totalAmount, userRole, receivedUserId },
+      session
+    );
+
+    // ===== 7. FINALIZE TRANSACTION =====
+    await session.commitTransaction();
+    
+    res.status(201).json({
+      success: true,
+      distributedAmount: Number(receivedAmount) - remainingAmount,
+      remainingAmount,
+      audit: {
+        transactionId: session.id,
+        timestamp: new Date()
+      }
+    });
+
+  } catch (error) {
+    // ===== ERROR HANDLING =====
+    await session.abortTransaction();
+    
+    if (isNetworkError(error)) {
+      console.error('Network failure during payment:', {
+        error: error.message,
+        sessionId: session.id,
+        userId: req.user?.id
+      });
+      
+      return res.status(503).json({
+        code: 'NETWORK_FAILURE',
+        message: 'Payment processing interrupted. Please retry.',
+        retryable: true
+      });
+    }
+
+    console.error('Payment processing error:', {
+      error: error.message,
+      stack: error.stack,
+      body: req.body
+    });
+
+    res.status(500).json({
+      code: 'PROCESSING_FAILURE',
+      message: 'Payment failed to process',
+      referenceId: session.id
+    });
+  } finally {
+    session.endSession();
+  }
 };
+
+// Helper Functions
+function calculateBookingBalance(booking, userRole) {
+  if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff) {
+    return booking.totalAmount - (booking.receivedAmountStaff || 0);
+  }
+  return booking.totalAmount - (booking.receivedAmount || 0);
+}
+
+function updateBookingPayment(booking, amount, userRole, receivedUserId) {
+  if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff) {
+    if (userRole === 'Staff') {
+      booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + amount;
+    } else {
+      booking.receivedAmount = (booking.receivedAmount || 0) + amount;
+    }
+  } else {
+    booking.receivedAmount = (booking.receivedAmount || 0) + amount;
+    if (userRole === 'Staff') {
+      booking.receivedAmountStaff = amount;
+    }
+  }
+
+  // Update tracking fields
+  booking.receivedUser = userRole;
+  booking.receivedUserId = receivedUserId;
+  booking.partialReceivedAmountStaff = 
+    Math.abs((booking.receivedAmount || 0) - booking.totalAmount) >= 0.01;
+}
+
+async function processAdvanceDeduction(entity, isDriver, amount, meta, session) {
+  const newAdvance = Math.max(0, (entity.advance || 0) - amount);
+  entity.advance = newAdvance;
+  await entity.save({ session });
+
+  const lastAdvance = await Advance.findOne({
+    [isDriver ? 'driver' : 'provider']: entity._id
+  })
+  .sort({ createdAt: -1 })
+  .session(session);
+
+  if (lastAdvance) {
+    lastAdvance.advance = newAdvance;
+    await lastAdvance.save({ session });
+  }
+
+  await ReceivedDetails.create([{
+    remark: meta.remark,
+    balance: newAdvance,
+    fileNumber: 'Advance Deduction',
+    currentNetAmount: 0,
+    amount: `Advance: ${newAdvance}`,
+    [isDriver ? 'driver' : 'provider']: entity._id,
+    receivedAmount: amount,
+    totalAmount: meta.totalAmount,
+    receivedUser: meta.userRole,
+    receivedUserId: meta.receivedUserId,
+    transactionType: 'ADVANCE_DEDUCTION'
+  }], { session });
+}
+
+async function createReceivedRecords(bookingIds, entity, meta, session) {
+  for (const bookingId of bookingIds) {
+    const booking = await Booking.findById(bookingId).session(session);
+    const amountToRecord = booking.receivedAmount || 0;
+    const balance = (booking.totalAmount - amountToRecord).toFixed(2);
+
+    await ReceivedDetails.create([{
+      remark: meta.remark,
+      balance,
+      fileNumber: booking.fileNumber,
+      currentNetAmount: balance,
+      amount: booking.totalAmount,
+      [meta.isDriver ? 'driver' : 'provider']: entity._id,
+      receivedAmount: amountToRecord,
+      totalAmount: meta.totalAmount,
+      receivedUser: meta.userRole,
+      receivedUserId: meta.receivedUserId,
+      transactionType: 'BOOKING_PAYMENT'
+    }], { session });
+  }
+}
+
+function isNetworkError(error) {
+  return error.message.includes('network') || 
+         error.message.includes('ECONN') || 
+         error.message.includes('timeout') ||
+         error.name === 'MongoNetworkError';
+}
 
 exports.getAllReceivedDetails = async (req, res) => {
     try {

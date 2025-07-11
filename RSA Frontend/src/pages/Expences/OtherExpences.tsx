@@ -84,10 +84,9 @@ const ExpenseApproveUI = () => {
     fetchExpense(searchTerm, 1, showingAll ? 'all' : 10);
 };
 
-   useEffect(() => {
-    fetchPendingExpense();  // For pending approvals
-    fetchExpense();        // For all expenses table
-}, []);
+    useEffect(() => {
+        fetchExpense();
+    }, []);
 
   const toggleDescription = (expenseId: string) => {
     setExpandedDescriptions(prev => ({
@@ -246,7 +245,7 @@ const rejectExpense = async (expenseId: string) => {
     openImageModal={openImageModal}
     CLOUD_IMAGE={CLOUD_IMAGE}
 />
-   {/* Pagination Controls */}
+        {/* Pagination Controls */}
             <div className="flex justify-between items-center mt-4">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {expenses.length} of {totalItems} expenses
@@ -320,7 +319,7 @@ const rejectExpense = async (expenseId: string) => {
                         </button>
                     </li>
                 </ul>
-            </div>    
+            </div>
     </>
     
     );
@@ -328,6 +327,42 @@ const rejectExpense = async (expenseId: string) => {
 
   return (
     <div className="relative">
+       {/* Image Modal */}
+        {selectedImage && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 transition-opacity duration-300"
+            onClick={closeImageModal}
+          >
+            <div
+              className="relative bg-white rounded-xl p-4 max-w-4xl max-h-[90vh] overflow-hidden outline-none"
+              onClick={(e) => e.stopPropagation()} // prevent modal close when clicking on image
+            >
+
+              <img
+                src={selectedImage}
+                alt="Expense Receipt"
+                className="max-h-[70vh] max-w-full object-contain rounded-lg mx-auto"
+              />
+              <div className='flex flex-row gap-2 item-end mt-5'>
+                {/* Close Button */}
+                <button
+                  onClick={closeImageModal}
+                  className=" top-2 left-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                >
+                  <X size={20} />
+                </button>
+
+                {/* Download Button */}
+                <button
+                  onClick={() => selectedImage && downloadImage(selectedImage)}
+                  className=" top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                >
+                  <Download size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       {/* Floating notification badge */}
       {newRequestsCount > 0 && (
         <motion.div
@@ -509,118 +544,9 @@ const rejectExpense = async (expenseId: string) => {
     openImageModal={openImageModal}
     CLOUD_IMAGE={CLOUD_IMAGE}
 />
- {/* Pagination Controls */}
-            <div className="flex justify-between items-center mt-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {expenses.length} of {totalItems} expenses
-                </div>
 
-                <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                            disabled={showingAll || currentPage === 1}
-                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                showingAll || currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-                        >
-                            <GrPrevious />
-                        </button>
-                    </li>
-
-                    {!showingAll &&
-                        Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-                            // Show limited page numbers (max 5)
-                            let pageNum;
-                            if (totalPages <= 5) {
-                                pageNum = index + 1;
-                            } else if (currentPage <= 3) {
-                                pageNum = index + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                                pageNum = totalPages - 4 + index;
-                            } else {
-                                pageNum = currentPage - 2 + index;
-                            }
-
-                            return (
-                                <li key={index}>
-                                    <button
-                                        type="button"
-                                        onClick={() => handlePageChange(pageNum)}
-                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                            currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                                        }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                </li>
-                            );
-                        })}
-
-                    <li>
-                        <button
-                            type="button"
-                            onClick={toggleShowAll}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            }`}
-                        >
-                            {showingAll ? 'Show Pages' : 'Show All'}
-                        </button>
-                    </li>
-
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                            disabled={showingAll || currentPage === totalPages}
-                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                showingAll || currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-                        >
-                            <GrNext />
-                        </button>
-                    </li>
-                </ul>
-            </div>
        
-        {/* Image Modal */}
-        {selectedImage && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 transition-opacity duration-300"
-            onClick={closeImageModal}
-          >
-            <div
-              className="relative bg-white rounded-xl p-4 max-w-4xl max-h-[90vh] overflow-hidden outline-none"
-              onClick={(e) => e.stopPropagation()} // prevent modal close when clicking on image
-            >
-
-              <img
-                src={selectedImage}
-                alt="Expense Receipt"
-                className="max-h-[70vh] max-w-full object-contain rounded-lg mx-auto"
-              />
-              <div className='flex flex-row gap-2 item-end mt-5'>
-                {/* Close Button */}
-                <button
-                  onClick={closeImageModal}
-                  className=" top-2 left-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
-                >
-                  <X size={20} />
-                </button>
-
-                {/* Download Button */}
-                <button
-                  onClick={() => selectedImage && downloadImage(selectedImage)}
-                  className=" top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
-                >
-                  <Download size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+       
       </div>
     </div>
   );

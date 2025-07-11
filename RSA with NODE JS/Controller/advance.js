@@ -31,6 +31,14 @@ exports.createNewAdvance = async (req, res) => {
             return res.status(404).json({ message: 'Driver or Provider not found' });
         }
 
+        // Get the most recent advance to get the previous cashInHand value
+        const previousAdvanceRecord = await Advance.findOne({ driver: driverId })
+            .sort({ createdAt: -1 }) // Get the most recent record
+            .exec();
+
+        const previousAdvanceAmount = previousAdvanceRecord ? previousAdvanceRecord.advance : 0;
+        const previousCashInHand = previousAdvanceRecord ? previousAdvanceRecord.cashInHand : 0;
+
         // Calculate current total advance without modifying historical records
         const previousAdvances = await Advance.find({ driver: driverId });
         
@@ -51,6 +59,8 @@ exports.createNewAdvance = async (req, res) => {
             driver: driverId,
             addedAdvance: Number(advance),  // The amount being added in this transaction
             advance: newAdvance,       // The new cumulative total
+            previousAdvance: previousAdvanceAmount, // Store previous advance amount
+            cashInHand: previousCashInHand, // Store previous cashInHand value
             type,
             userModel: userType,
             remark,
@@ -70,7 +80,7 @@ exports.createNewAdvance = async (req, res) => {
             driver: source,
             previousAdvance: existingAdvance,
             addedAdvance: Number(advance),
-            newAdvanceTotal:newAdvance
+            newAdvanceTotal: newAdvance
         });
 
     } catch (error) {
@@ -183,66 +193,92 @@ exports.getAdvanceById = async (req, res) => {
 };
 // helper controller for update advance amount to all driver booking salary
 const settleBookingsWithAdvance = async (driverId, advanceDoc, userType) => {
-
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+    
     const driverObjectId = new mongoose.Types.ObjectId(driverId);
-
     const data = {
-        filesNumbers: [],
-        driverSalary: [],
-        balanceSalary: [],
-        transferdSalary: [],
-    }
+      filesNumbers: [],
+      driverSalary: [],
+      balanceSalary: [],
+      transferdSalary: [],
+    };
 
     const bookings = await Booking.find({
-        [userType === 'Driver' ? 'driver' : 'provider']: driverObjectId,
-        verified: true,
-    });
+      [userType === 'Driver' ? 'driver' : 'provider']: driverObjectId,
+      verified: true,
+    }).session(session);
 
-    if (!bookings.length || bookings.length === 0) {
-        return data
-    }
+    if (!bookings.length) return data;
+
     let remainingAdvance = advanceDoc.advance;
 
     for (const booking of bookings) {
+      const currentTransferred = booking.transferedSalary || 0;
+      const balanceSalary = booking.driverSalary - currentTransferred;
 
-        const currentTransferred = booking.transferedSalary || 0;
-        const balanceSalary = booking.driverSalary - currentTransferred;
+      if (balanceSalary <= 0) continue;
 
-        if (balanceSalary <= 0) continue;
+      const transferAmount = Math.min(balanceSalary, remainingAdvance);
 
-        data.filesNumbers.push(booking.fileNumber)
-        data.driverSalary.push(booking.driverSalary)
-        data.balanceSalary.push(balanceSalary)
+      // Update booking
+      booking.transferedSalary = currentTransferred + transferAmount;
+      await booking.save({ session });
 
-        const transferAmount = Math.min(balanceSalary, remainingAdvance);
+      // Update tracking data
+      data.filesNumbers.push(booking.fileNumber);
+      data.driverSalary.push(booking.driverSalary);
+      data.balanceSalary.push(balanceSalary);
+      data.transferdSalary.push(transferAmount);
 
-        data.transferdSalary.push(transferAmount)
-
-        booking.transferedSalary = currentTransferred + transferAmount;
-
-        await booking.save();
-        remainingAdvance -= transferAmount;
-        if (remainingAdvance <= 0) break;
+      remainingAdvance -= transferAmount;
+      if (remainingAdvance <= 0) break;
     }
 
+    // Update advance document
     advanceDoc.advance = remainingAdvance;
     advanceDoc.cashInHand = (advanceDoc.cashInHand || 0) + remainingAdvance;
-    await advanceDoc.save();
-
-    if (userType === 'Provider') {
-        await Provider.findByIdAndUpdate(driverId, { advance: remainingAdvance });
-    } else {
-        await Driver.findByIdAndUpdate(driverId, { advance: remainingAdvance });
-    }
-
     advanceDoc.filesNumbers = data.filesNumbers;
     advanceDoc.driverSalary = data.driverSalary;
     advanceDoc.balanceSalary = data.balanceSalary;
     advanceDoc.transferdSalary = data.transferdSalary;
+    
+    await advanceDoc.save({ session });
 
-    await advanceDoc.save();
-    return data
+    // Update driver/provider
+    const model = userType === 'Provider' ? Provider : Driver;
+    await model.findByIdAndUpdate(
+      driverId, 
+      { advance: remainingAdvance },
+      { session }
+    );
+
+    await session.commitTransaction();
+    return data;
+  } catch (error) {
+    await session.abortTransaction();
+    
+    // Classify the error
+    if (isNetworkError(error)) {
+      console.error('Network error during settlement:', error);
+      throw new Error('NETWORK_ERROR: Please check your connection and try again');
+    }
+    
+    console.error('Settlement error:', error);
+    throw error;
+  } finally {
+    session.endSession();
+  }
 };
+
+// Helper function to detect network errors
+function isNetworkError(error) {
+  return error.message.includes('network') || 
+         error.message.includes('ECONN') || 
+         error.message.includes('timeout') ||
+         error.name === 'MongoNetworkError';
+}
 
 // --------------------------------------------------
 //Controller for get all advance
