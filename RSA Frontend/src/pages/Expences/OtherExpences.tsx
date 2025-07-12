@@ -225,15 +225,50 @@ const toggleShowAll = () => {
     const updatedCash = currentExpense?.driver.cashInHand - (currentExpense?.amount || 0);
 
     if (loading) {
-        return (
+    return (
+        <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+    );
+}
+   return (
+    <div className="relative">
+        {/* Image Modal - MOVED TO TOP LEVEL */}
+        {selectedImage && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 transition-opacity duration-300" onClick={closeImageModal}>
+                <div
+                    className="relative bg-white rounded-xl p-4 max-w-4xl max-h-[90vh] overflow-hidden outline-none"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <img src={selectedImage} alt="Expense Receipt" className="max-h-[70vh] max-w-full object-contain rounded-lg mx-auto" />
+                    <div className="flex flex-row gap-2 item-end mt-5">
+                        <button onClick={closeImageModal} className="top-2 left-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
+                            <X size={20} />
+                        </button>
+                        <button onClick={() => selectedImage && downloadImage(selectedImage)} className="top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
+                            <Download size={20} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Floating notification badge */}
+        {newRequestsCount > 0 && (
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="fixed top-4 right-4 z-50">
+                <Badge badgeContent={newRequestsCount} color="error" overlap="circular" onClick={fetchPendingExpense} className="cursor-pointer">
+                    <IconButton className="bg-indigo-100 hover:bg-indigo-200">
+                        <Bell className="text-indigo-600" />
+                    </IconButton>
+                </Badge>
+            </motion.div>
+        )}
+
+      {loading ? (
             <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
             </div>
-        );
-    }
-
-    if (!expenses.length) {
-        return (
+        ) : !expenses.length ? (
             <>
                 <Card className="w-full max-w-lg mx-auto mt-12 p-6 shadow-2xl rounded-3xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-100">
                     <CardContent className="text-center space-y-4">
@@ -260,127 +295,16 @@ const toggleShowAll = () => {
                 </div>
 
                 <ExpenseTable
-                    expenses={allExpenses} // Changed from expenses to allExpenses
+                    expenses={allExpenses}
                     expandedDescriptions={expandedDescriptions}
                     toggleDescription={toggleDescription}
                     openImageModal={openImageModal}
                     CLOUD_IMAGE={CLOUD_IMAGE}
                 />
-                {/* Pagination Controls */}
-               <div className="flex justify-between items-center mt-4">
-    <div className="text-sm text-gray-600 dark:text-gray-400">
-        Showing {allExpenses.length} of {totalItems} expenses
-    </div>
-
-    <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-        <li>
-            <button
-                type="button"
-                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                disabled={showingAll || currentPage === 1}
-                className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                    showingAll || currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-            >
-                <GrPrevious />
-            </button>
-        </li>
-
-        {!showingAll &&
-            Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-                // Show limited page numbers (max 5)
-                let pageNum;
-                if (totalPages <= 5) {
-                    pageNum = index + 1;
-                } else if (currentPage <= 3) {
-                    pageNum = index + 1;
-                } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + index;
-                } else {
-                    pageNum = currentPage - 2 + index;
-                }
-
-                return (
-                    <li key={pageNum}>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(pageNum)}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            }`}
-                        >
-                            {pageNum}
-                        </button>
-                    </li>
-                );
-            })}
-
-        <li>
-            <button
-                type="button"
-                onClick={toggleShowAll}
-                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                    showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                }`}
-            >
-                {showingAll ? 'Show Pages' : 'Show All'}
-            </button>
-        </li>
-
-        <li>
-            <button
-                type="button"
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                disabled={showingAll || currentPage === totalPages}
-                className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                    showingAll || currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-            >
-                <GrNext />
-            </button>
-        </li>
-    </ul>
-</div>
-            </>
-        );
-    }
-
-    return (
-        <div className="relative">
-            {/* Image Modal */}
-            {selectedImage && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 transition-opacity duration-300" onClick={closeImageModal}>
-                    <div
-                        className="relative bg-white rounded-xl p-4 max-w-4xl max-h-[90vh] overflow-hidden outline-none"
-                        onClick={(e) => e.stopPropagation()} // prevent modal close when clicking on image
-                    >
-                        <img src={selectedImage} alt="Expense Receipt" className="max-h-[70vh] max-w-full object-contain rounded-lg mx-auto" />
-                        <div className="flex flex-row gap-2 item-end mt-5">
-                            {/* Close Button */}
-                            <button onClick={closeImageModal} className=" top-2 left-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
-                                <X size={20} />
-                            </button>
-
-                            {/* Download Button */}
-                            <button onClick={() => selectedImage && downloadImage(selectedImage)} className=" top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
-                                <Download size={20} />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {/* Floating notification badge */}
-            {newRequestsCount > 0 && (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="fixed top-4 right-4 z-50">
-                    <Badge badgeContent={newRequestsCount} color="error" overlap="circular" onClick={fetchPendingExpense} className="cursor-pointer">
-                        <IconButton className="bg-indigo-100 hover:bg-indigo-200">
-                            <Bell className="text-indigo-600" />
-                        </IconButton>
-                    </Badge>
-                </motion.div>
-            )}
-
-            <Card className="w-full max-w-lg mx-auto mt-12 p-6 shadow-2xl rounded-3xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-100">
+                   </>
+        ) : (
+            <>
+ <Card className="w-full max-w-lg mx-auto mt-12 p-6 shadow-2xl rounded-3xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-100">
                 <CardContent className="space-y-6 text-gray-800">
                     <div className="flex justify-between items-center">
                         <h2 className="text-2xl font-semibold text-indigo-700">Expense Approval</h2>
@@ -451,6 +375,7 @@ const toggleShowAll = () => {
         className="w-full h-32 object-contain rounded border bg-gray-50 cursor-pointer"
         onClick={() => openImageModal(`${CLOUD_IMAGE}${currentExpense.image}`)}
     />
+  
 </div>
 
                     {/* Date */}
@@ -496,8 +421,7 @@ const toggleShowAll = () => {
                     </div>
                 </CardContent>
             </Card>
-
-            <div className="overflow-x-auto my-10">
+ <div className="overflow-x-auto my-10">
                 <div className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 mt-5">
                     <div className="flex-1">
                         <input
@@ -591,8 +515,87 @@ const toggleShowAll = () => {
     </ul>
 </div>
             </div>
-        </div>
-    );
-};
+      </>
+        )}
+                {/* Pagination Controls */}
+               <div className="flex justify-between items-center mt-4">
+    <div className="text-sm text-gray-600 dark:text-gray-400">
+        Showing {allExpenses.length} of {totalItems} expenses
+    </div>
+
+    <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
+        <li>
+            <button
+                type="button"
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                disabled={showingAll || currentPage === 1}
+                className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                    showingAll || currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
+            >
+                <GrPrevious />
+            </button>
+        </li>
+
+        {!showingAll &&
+            Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                // Show limited page numbers (max 5)
+                let pageNum;
+                if (totalPages <= 5) {
+                    pageNum = index + 1;
+                } else if (currentPage <= 3) {
+                    pageNum = index + 1;
+                } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + index;
+                } else {
+                    pageNum = currentPage - 2 + index;
+                }
+
+                return (
+                    <li key={pageNum}>
+                        <button
+                            type="button"
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                                currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                            }`}
+                        >
+                            {pageNum}
+                        </button>
+                    </li>
+                );
+            })}
+
+        <li>
+            <button
+                type="button"
+                onClick={toggleShowAll}
+                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                    showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                }`}
+            >
+                {showingAll ? 'Show Pages' : 'Show All'}
+            </button>
+        </li>
+
+        <li>
+            <button
+                type="button"
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                disabled={showingAll || currentPage === totalPages}
+                className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                    showingAll || currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
+                } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
+            >
+                <GrNext />
+            </button>
+        </li>
+    </ul>
+</div>
+            </div>
+        );
+    }
+
+
 
 export default ExpenseApproveUI;
