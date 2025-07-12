@@ -1,7 +1,7 @@
 // components/ExpenseTable.tsx
-import { motion, AnimatePresence } from "framer-motion";
-import { Tooltip } from "@mui/material";
-import { Expense } from "../../interface/Expences";
+import { motion, AnimatePresence } from 'framer-motion';
+import { Tooltip } from '@mui/material';
+import { Expense } from '../../interface/Expences';
 
 interface ExpenseTableProps {
     expenses: Expense[];
@@ -11,19 +11,13 @@ interface ExpenseTableProps {
     CLOUD_IMAGE: string;
 }
 
-const ExpenseTable: React.FC<ExpenseTableProps> = ({
-    expenses,
-    expandedDescriptions,
-    toggleDescription,
-    openImageModal,
-    CLOUD_IMAGE,
-}) => {
+const ExpenseTable: React.FC<ExpenseTableProps> = ({ expenses, expandedDescriptions, toggleDescription, openImageModal, CLOUD_IMAGE }) => {
     return (
         <div className="overflow-x-auto my-2">
             <table className="min-w-full text-sm text-left text-gray-600 bg-white shadow-md border rounded">
                 <thead className="bg-indigo-50 border-b text-indigo-700">
                     <tr>
-                                                <th className="px-4 py-3">No</th>
+                        <th className="px-4 py-3">No</th>
 
                         <th className="px-4 py-3">Driver</th>
                         <th className="px-4 py-3">Description</th>
@@ -35,7 +29,7 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                     <AnimatePresence>
-                        {expenses.map((expense,index) => (
+                        {expenses.map((expense, index) => (
                             <motion.tr
                                 key={expense._id}
                                 className="hover:bg-gray-50"
@@ -44,52 +38,45 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ duration: 0.2 }}
                             >
-                                <td>{index+1}</td>
+                                <td>{index + 1}</td>
                                 <td className="px-4 py-3">
                                     <Tooltip title={`Driver: ${expense.driver.name}`}>
                                         <span className="cursor-help">{expense.driver.name}</span>
                                     </Tooltip>
                                 </td>
                                 <td className="px-4 py-3 max-w-xs">
-                                    <div
-                                        className={`cursor-pointer ${!expandedDescriptions[expense._id] && "truncate"
-                                            }`}
-                                        onClick={() => toggleDescription(expense._id)}
-                                    >
+                                    <div className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`} onClick={() => toggleDescription(expense._id)}>
                                         {expense.description}
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 font-semibold text-green-700">
-                                    ₹{expense.amount.toLocaleString()}
-                                </td>
+                                <td className="px-4 py-3 font-semibold text-green-700">₹{expense.amount.toLocaleString()}</td>
                                 <td className="px-4 py-3">
                                     <div className="flex gap-2 items-center -space-x-4">
                                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                            <img
-                                                src={`${CLOUD_IMAGE}${expense.image}`}
-                                                alt="Expense"
-                                                className="shadow-sm cursor-pointer relative inline-block h-12 w-20 rounded-full border-2 border-white object-cover object-center hover:z-10 focus:z-10"
-                                                onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.image}`)}
-                                            />
+                                          
+<img
+    src={`${CLOUD_IMAGE}${expense.image}`}
+    alt="Expense"
+    className="shadow-sm cursor-pointer relative inline-block h-12 w-20 rounded-full border-2 border-white object-cover object-center hover:z-10 focus:z-10"
+    onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.image}`)}
+/>
                                         </motion.div>
                                     </div>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
-                                {new Date(expense.createdAt).toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    hour12: true,
-})}
+                                    {new Date(expense.createdAt).toLocaleString('en-GB', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: 'numeric',
+                                        minute: 'numeric',
+                                        second: 'numeric',
+                                        hour12: true,
+                                    })}
                                 </td>
-<td className="px-4 py-3 capitalize">
-                                <td className="px-4 py-3 capitalize">{expense.approve ? "Approved" : "Rejected"}</td>
-</td>
-
-
+                                <td className="px-4 py-3 capitalize">
+                                    <td className="px-4 py-3 capitalize">{expense.approve ? 'Approved' : 'Rejected'}</td>
+                                </td>
                             </motion.tr>
                         ))}
                     </AnimatePresence>
