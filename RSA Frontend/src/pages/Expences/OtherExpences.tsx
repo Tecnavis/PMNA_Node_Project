@@ -14,6 +14,7 @@ import { Expense } from '../../interface/Expences';
 import { fetchExpenses, fetchPendingExpenses, updateStatus } from '../../services/expencesService';
 import ExpenseTable from './ExpenseTable';
 import { GrNext, GrPrevious } from 'react-icons/gr';
+import Swal from 'sweetalert2';
 
 const ExpenseApproveUI = () => {
     const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -32,6 +33,7 @@ const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [totalItems, setTotalItems] = useState(0);
     const [showingAll, setShowingAll] = useState(false);
     const [currentSearchTerm, setCurrentSearchTerm] = useState('');
+    
     const fetchPendingExpense = async () => {
         try {
             setLoading(true);
@@ -102,12 +104,25 @@ const toggleShowAll = () => {
     setSelectedImage(imageUrl);
 };
 
-    const approveExpense = async (expenseId: string) => {
+   const approveExpense = async (expenseId: string) => {
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You are about to approve this expense!",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#16a34a', // green-600
+        cancelButtonColor: '#dc2626',  // red-600
+        confirmButtonText: 'Yes, approve it!',
+        cancelButtonText: 'No, cancel',
+    });
+
+    if (result.isConfirmed) {
         try {
             setActionLoading(true);
             await updateStatus(expenseId, true);
             setExpenses((prev) => prev.map((exp) => (exp._id === expenseId ? { ...exp, approve: true, status: 'approved' } : exp)));
             enqueueSnackbar('Expense approved successfully', { variant: 'success' });
+            window.location.reload();
             moveToNextExpense();
         } catch (error) {
             enqueueSnackbar('Failed to approve expense', { variant: 'error' });
@@ -115,14 +130,28 @@ const toggleShowAll = () => {
         } finally {
             setActionLoading(false);
         }
-    };
+    }
+};
 
-    const rejectExpense = async (expenseId: string) => {
+   const rejectExpense = async (expenseId: string) => {
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You are about to reject this expense!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626', // red-600
+        cancelButtonColor: '#4b5563',  // gray-600
+        confirmButtonText: 'Yes, reject it!',
+        cancelButtonText: 'No, cancel',
+    });
+
+    if (result.isConfirmed) {
         try {
             setActionLoading(true);
             await updateStatus(expenseId, false);
             setExpenses((prev) => prev.map((exp) => (exp._id === expenseId ? { ...exp, approve: false, status: 'rejected' } : exp)));
             enqueueSnackbar('Expense rejected successfully', { variant: 'success' });
+           window.location.reload();
             moveToNextExpense();
         } catch (error) {
             enqueueSnackbar('Failed to reject expense', { variant: 'error' });
@@ -130,7 +159,8 @@ const toggleShowAll = () => {
         } finally {
             setActionLoading(false);
         }
-    };
+    }
+};
 
     const getDownloadableUrl = (url: string) => {
         return url.replace('/upload/', '/upload/fl_attachment/');
@@ -437,23 +467,23 @@ const toggleShowAll = () => {
                             Previous
                         </Button>
 
-                        <div className="flex gap-4">
-                            <Button
-                                onClick={() => rejectExpense(currentExpense._id)}
-                                disabled={actionLoading}
-                                className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {actionLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <X size={16} />}
-                                Reject
-                            </Button>
-                            <Button
-                                onClick={() => approveExpense(currentExpense._id)}
-                                className={`bg-green-600 hover:bg-green-700'} text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 flex items-center gap-2`}
-                            >
-                                {actionLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <Check size={16} />}
-                                Approve
-                            </Button>
-                        </div>
+                       <div className="flex gap-4">
+    <Button
+        onClick={() => rejectExpense(currentExpense._id)}
+        disabled={actionLoading}
+        className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 flex items-center gap-2"
+    >
+        {actionLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <X size={16} />}
+        Reject
+    </Button>
+    <Button
+        onClick={() => approveExpense(currentExpense._id)}
+        className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg disabled:opacity-50 flex items-center gap-2"
+    >
+        {actionLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : <Check size={16} />}
+        Approve
+    </Button>
+</div>
 
                         <Button
                             onClick={moveToNextExpense}
