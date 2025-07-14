@@ -94,8 +94,15 @@ exports.approve = async (req, res) => {
 
         const driver = await Driver.findById(expense.driver)
 
-
-         // Only update driver's cashInHand if the expense is being approved
+// Check if approving would result in negative balance
+        if (status === true && (driver.cashInHand - expense.amount) < 0) {
+            return res.status(400).json({
+                message: "Not enough amount in driver hand",
+                success: false,
+                code: "INSUFFICIENT_BALANCE"
+            })
+        }
+        // Only update driver's cashInHand if the expense is being approved
         if (status === true) {
             driver.cashInHand -= expense.amount;
             await driver.save();
@@ -120,9 +127,9 @@ exports.approve = async (req, res) => {
         });
     } catch (error) {
         console.error(error.message);
-        return res.status(500).json({ 
-            message: 'Error updating expense status', 
-            error: error.message 
+        return res.status(500).json({
+            message: 'Error updating expense status',
+            error: error.message
         });
     }
 }
@@ -134,7 +141,7 @@ exports.getAllExpense = async (req, res) => {
     try {
         const { month, year, search, page = 1, limit = 10, all = false } = req.query;
         const query = {};
-          // Convert page and limit to numbers
+        // Convert page and limit to numbers
         const pageNum = all ? 1 : Math.max(1, parseInt(page, 10));
         const limitNum = all ? Number.MAX_SAFE_INTEGER : Math.max(1, parseInt(limit, 10));
         // Month and Year filter
@@ -175,12 +182,12 @@ exports.getAllExpense = async (req, res) => {
                 { driver: { $in: drivers.map(d => d._id) } }
             ];
         }
-  // Get total count of documents
-// Get total count of documents
+        // Get total count of documents
+        // Get total count of documents
         const total = await Expense.countDocuments(query);
 
 
-        const expenses  = await Expense
+        const expenses = await Expense
             .find(query)  // ← Use the query object here
             .sort({ createdAt: -1 })
             .populate('driver')
@@ -188,7 +195,7 @@ exports.getAllExpense = async (req, res) => {
             .limit(limitNum)
             .lean();
 
-          return res.status(200).json({
+        return res.status(200).json({
             message: "Expenses fetched successfully",
             success: true,
             expenseData: expenses,
@@ -208,11 +215,11 @@ exports.getAllExpense = async (req, res) => {
 exports.getAllPendingExpense = async (req, res) => {
     try {
         const pendingExpense = await Expense
- .find({ 
+            .find({
                 approve: { $exists: false },
-                status: "pending" 
+                status: "pending"
             })
-                        .sort({ createdAt: -1 })           // ← same here
+            .sort({ createdAt: -1 })           // ← same here
             .populate('driver');
 
         return res.status(200).json({
