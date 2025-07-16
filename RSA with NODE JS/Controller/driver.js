@@ -309,7 +309,7 @@ exports.completeSettlement = async (req, res) => {
         const { isFullSettlement = true } = req.body;
 
         // 1. Validate inputs
-        if (!mongoose.Types.ObjectId.isValid(driverId)) {
+          if (!mongoose.Types.ObjectId.isValid(driverId)) {
             return res.status(400).json({ 
                 success: false,
                 message: "Invalid driver ID"
@@ -317,7 +317,7 @@ exports.completeSettlement = async (req, res) => {
         }
 
         // 2. Verify driver exists
-        const driver = await Driver.findById(driverId);
+  const driver = await Driver.findById(driverId);
         if (!driver) {
             return res.status(404).json({ 
                 success: false,
@@ -326,15 +326,14 @@ exports.completeSettlement = async (req, res) => {
         }
 
         // Store current date for settlement
-        const currentSettlementDate = new Date();
-        // Prepare dates for update
+           const currentSettlementDate = new Date();
         const settlementDatesUpdate = {
             previousSettlementCompletedDate: driver.settlementCompletedDate || null,
             settlementCompletedDate: currentSettlementDate
         };
 
         // 3. Update bookings with pending payments
-        const bookingsToUpdate = await Booking.find({
+       const bookingsToUpdate = await Booking.find({
             driver: driverId,
             status: "Order Completed",
             cashPending: false,
@@ -373,7 +372,6 @@ exports.completeSettlement = async (req, res) => {
             status: "Order Completed",
             driverSalary: { $exists: true, $gt: 0 }
         });
-
         let totalTransferableSalary = 0;
         const bookingUpdates = [];
 
@@ -396,14 +394,14 @@ exports.completeSettlement = async (req, res) => {
             }
         });
 
-        if (bookingUpdates.length > 0) {
+          if (bookingUpdates.length > 0) {
             await Booking.bulkWrite(bookingUpdates);
         }
 
         // 5. Calculate remaining amount and handle advance
-        const remainingAmount = Math.max(0, driver.cashInHand - totalTransferableSalary);
-         let advanceDeduction = 0;
-        let newAdvanceBalance = 0; // This will now always be set to 0
+         const remainingAmount = Math.max(0, driver.cashInHand - totalTransferableSalary);
+        let advanceDeduction = 0;
+        let newAdvanceBalance = 0;
 
         if (remainingAmount > 0 && driver.advance > 0) {
             advanceDeduction = Math.min(remainingAmount, driver.advance);
@@ -413,8 +411,7 @@ exports.completeSettlement = async (req, res) => {
         const lastAdvance = await Advance.findOne({ driver: driverId })
             .sort({ createdAt: -1 })
             .exec();
-
-        if (lastAdvance) {
+      if (lastAdvance) {
             lastAdvance.advance = 0;
             lastAdvance.status = 'settled';
             lastAdvance.settledAt = new Date();
@@ -435,10 +432,10 @@ exports.completeSettlement = async (req, res) => {
         });
 
       // Replace it with this if you need to call updateDriverFinancials:
-await updateDriverFinancials(
-    driver._id,
-    driver.advance || 0
-);
+ await updateDriverFinancials(
+            driver._id,
+            driver.advance || 0
+        );
 
 
         // 7. Update driver
@@ -451,7 +448,7 @@ await updateDriverFinancials(
                 cashInHand: 0,
                 balanceAmount: 0,
                 advance: newAdvanceBalance,
-                ...settlementDatesUpdate  // Add the settlement dates here
+                ...settlementDatesUpdate
             }
         };
 
@@ -483,7 +480,7 @@ await updateDriverFinancials(
                 }
             );
         }
-        
+      
         res.status(200).json({
             success: true,
             message: 'Settlement completed successfully',
@@ -498,7 +495,7 @@ await updateDriverFinancials(
             }
         });
 
-    } catch (error) {
+    } catch (error) {     
         console.error('Settlement error:', error);
         res.status(500).json({
             success: false,
