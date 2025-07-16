@@ -27,6 +27,7 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+// -----------------------------------------------------------
 interface Company {
     _id: string;
     name: string;
@@ -248,7 +249,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
         fetchProviders(searchProviders);
         fetchCompanies(searchCompnies);
     }, [searchDriver, searchProviders, searchCompnies]);
-    // ------------------------
+    // ---------------------------------------
  const handleSettleClick = async (driver: Driver) => {
      const password = await Swal.fire({
     title: 'Authorization Required',
@@ -300,264 +301,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
         setLoading(false);
     }
 };
-    // -------------------------------------------------------------------------------------------
-// const handleCompleteEmptySettlement = async () => {
-//     try {
-//         if (!selectedDriver) {
-//             toast.error('No driver selected');
-//             return;
-//         }
-
-//         setProcessingSettlement(true);
-        
-//         const response = await axios.post(
-//             `${backendUrl}/driver/complete-settlement/${selectedDriver._id}`,
-//             { advanceAmount: 0 },
-//             {
-//                 headers: {
-//                     'Content-Type': 'application/json',
-//                     'Authorization': `Bearer ${localStorage.getItem('token')}`
-//                 }
-//             }
-//         );
-
-//         if (response.data.success) {
-//             toast.success(response.data.message || "Settlement completed successfully");
-//             fetchDrivers();
-//         } else {
-//             toast.error(response.data.message || "Failed to complete settlement");
-//         }
-//     } catch (error: any) {
-//         console.error('Full error:', error);
-//         let errorMessage = 'Error completing settlement';
-        
-//         if (error.response) {
-//             errorMessage = error.response.data?.error?.message || 
-//                           error.response.data?.message || 
-//                           `Server error: ${error.response.status}`;
-            
-//             console.error('Server response:', error.response.data);
-//             toast.error(errorMessage);
-//         } else if (error.request) {
-//             console.error('No response received:', error.request);
-//             toast.error('No response from server - check your connection');
-//         } else {
-//             console.error('Request setup error:', error.message);
-//             toast.error('Request failed to send');
-//         }
-//     } finally {
-//         setProcessingSettlement(false);
-//         setShowNoExpensesModal(false);
-//     }
-// };
-//  const handleApproveAll = async () => {
-//     let loadingToast: string | undefined;
-
-//     try {
-//         setLoading(true);
-
-//         if (!selectedDriver) {
-//             toast.error('No driver selected');
-//             return;
-//         }
-
-//         const totalPendingExpenses = pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-//         const balanceAmount = selectedDriver?.balanceAmount || 0;
-        
-//         // Calculate total amount needed (negative balance only if no expenses)
-//         const totalAmountNeeded = balanceAmount < 0 
-//             ? (pendingExpenses.length > 0 ? totalPendingExpenses + Math.abs(balanceAmount) : Math.abs(balanceAmount))
-//             : totalPendingExpenses;
-
-//         const currentCash = selectedDriver.cashInHand || 0;
-
-//         if (currentCash < totalAmountNeeded) {
-//             const shortage = totalAmountNeeded - currentCash;
-//             setRequiredAmount(shortage);
-
-//             // Create a custom toast with buttons
-//             const toastId = toast.custom((t) => (
-//                 <div className="bg-white rounded-lg shadow-lg p-4 w-full max-w-md">
-//                     <div className="text-left">
-//                         <h3 className="font-bold text-lg mb-2">Insufficient Funds</h3>
-//                         <p className="mb-1">Driver has ${currentCash.toFixed(2)} but needs ${totalAmountNeeded.toFixed(2)}</p>
-//                         {balanceAmount < 0 && (
-//                             <p className="text-sm text-gray-600">
-//                                 {pendingExpenses.length > 0 
-//                                     ? `(Includes ${totalPendingExpenses.toFixed(2)} expenses + ${Math.abs(balanceAmount).toFixed(2)} balance)`
-//                                     : `(Balance settlement)`}
-//                             </p>
-//                         )}
-//                         <p className="font-bold mt-2">Shortage: ${shortage.toFixed(2)}</p>
-//                         <p className="mt-2">Would you like to provide an amount?</p>
-//                     </div>
-//                     <div className="flex justify-end space-x-2 mt-4">
-//                         <button
-//                             onClick={() => {
-//                                 setShowAdvanceModal(true);
-//                                 toast.dismiss(t.id);
-//                             }}
-//                             className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-//                         >
-//                             Add Amount
-//                         </button>
-//                         <button
-//                             onClick={() => toast.dismiss(t.id)}
-//                             className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
-//                         >
-//                             Cancel
-//                         </button>
-//                     </div>
-//                 </div>
-//             ));
-
-//             return;
-//         }
-
-//         const toastId = toast.custom((t) => (
-//             <div className="bg-white rounded-lg shadow-lg p-4 w-full max-w-md">
-//                 <h3 className="font-bold text-lg mb-2">Confirm Settlement</h3>
-//                 <div className="mb-4 space-y-1">
-//                     {pendingExpenses.length > 0 && (
-//                         <p>Approve {pendingExpenses.length} expenses totaling ${totalPendingExpenses.toFixed(2)}</p>
-//                     )}
-//                     {balanceAmount < 0 && (
-//                         <p className={pendingExpenses.length > 0 ? "text-sm text-gray-600" : ""}>
-//                             {pendingExpenses.length > 0 
-//                                 ? `+ ${Math.abs(balanceAmount).toFixed(2)} balance settlement`
-//                                 : `Balance settlement: ${Math.abs(balanceAmount).toFixed(2)}`}
-//                         </p>
-//                     )}
-//                     <p className="font-bold">Total: ${totalAmountNeeded.toFixed(2)}</p>
-//                 </div>
-//                 <div className="flex justify-end space-x-2">
-//                     <button
-//                         onClick={async () => {
-//                             toast.dismiss(t.id);
-//                             loadingToast = toast.loading('Processing...');
-
-//                             try {
-//                                 // First handle the expenses if any
-//                                 if (pendingExpenses.length > 0) {
-//                                     const expenseResponse = await axios.patch(
-//                                         `${backendUrl}/expense/complete-settlement/${selectedDriver?._id}`,
-//                                         { advanceAmount: 0 }
-//                                     );
-
-//                                     if (!expenseResponse.data.success) {
-//                                         throw new Error(expenseResponse.data.message || "Failed to settle expenses");
-//                                     }
-//                                 }
-
-//                                 // Then handle the balance amount if negative
-//                                 if (balanceAmount < 0) {
-//                                     const balanceToSettle = Math.abs(balanceAmount);
-                                    
-//                                     if (currentCash >= totalAmountNeeded) {
-//                                         // If we have enough cash, distribute the balance amount
-//                                         const distributeResponse = await axios.patch(
-//                                             `${backendUrl}/driver/distribute-amount`,
-//                                             {
-//                                                 driverId: selectedDriver._id,
-//                                                 receivedAmount: balanceToSettle,
-//                                                 workType: 'PaymentWork'
-//                                             }
-//                                         );
-
-//                                         if (!distributeResponse.data.success) {
-//                                             throw new Error(distributeResponse.data.message || "Failed to distribute balance amount");
-//                                         }
-//                                     } else if (currentCash < Math.abs(balanceAmount)) {
-//                                         // Case 2: Not enough cash for balance - create advance and distribute
-//                                         // Step 1: Create advance
-//                                         const advanceResponse = await axios.post(
-//                                             `${backendUrl}/advance-payment`,
-//                                             {
-//                                                 driverId: selectedDriver._id,
-//                                                 amount: balanceToSettle,
-//                                                 description: "Balance settlement advance"
-//                                             }
-//                                         );
-
-//                                         if (!advanceResponse.data.success) {
-//                                             throw new Error(advanceResponse.data.message || "Failed to create advance for balance");
-//                                         }
-
-//                                         // Step 2: Distribute the advance
-//                                         const distributeResponse = await axios.patch(
-//                                             `${backendUrl}/driver/distribute-amount`,
-//                                             {
-//                                                 driverId: selectedDriver._id,
-//                                                 receivedAmount: balanceToSettle,
-//                                                 workType: 'PaymentWork'
-//                                             }
-//                                         );
-
-//                                         if (!distributeResponse.data.success) {
-//                                             throw new Error(distributeResponse.data.message || "Failed to distribute advance amount");
-//                                         }
-//                                     } else {
-//                                         // Case 3: Partial cash - use available cash first
-//                                         const cashToUse = currentCash - (pendingExpenses.length > 0 ? totalPendingExpenses : 0);
-//                                         if (cashToUse > 0) {
-//                                             const distributeResponse = await axios.patch(
-//                                                 `${backendUrl}/driver/distribute-amount`,
-//                                                 {
-//                                                     driverId: selectedDriver._id,
-//                                                     receivedAmount: cashToUse,
-//                                                     workType: 'PaymentWork'
-//                                                 }
-//                                             );
-
-//                                             if (!distributeResponse.data.success) {
-//                                                 throw new Error(distributeResponse.data.message || "Failed to distribute partial balance amount");
-//                                             }
-//                                         }
-//                                     }
-//                                 }
-
-//                                 toast.success(`Settlement completed successfully!`);
-//                                 fetchDrivers(); // Refresh data
-//                                 setShowSettlementModal(false);
-//                             } catch (error) {
-//                                 let errorMessage = 'There was an error completing the settlement.';
-//                                 if (axios.isAxiosError(error)) {
-//                                     errorMessage = error.response?.data?.message || error.message;
-//                                 } else if (error instanceof Error) {
-//                                     errorMessage = error.message;
-//                                 }
-//                                 toast.error(errorMessage);
-//                             } finally {
-//                                 if (loadingToast) toast.dismiss(loadingToast);
-//                                 setLoading(false);
-//                             }
-//                         }}
-//                         className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-//                     >
-//                         Confirm
-//                     </button>
-//                     <button
-//                         onClick={() => toast.dismiss(t.id)}
-//                         className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-100"
-//                     >
-//                         Cancel
-//                     </button>
-//                 </div>
-//             </div>
-//         ), { duration: Infinity });
-
-//     } catch (error) {
-//         let errorMessage = 'An unexpected error occurred';
-//         if (axios.isAxiosError(error)) {
-//             errorMessage = error.response?.data?.message || error.message;
-//         } else if (error instanceof Error) {
-//             errorMessage = error.message;
-//         }
-//         toast.error(errorMessage);
-//     } finally {
-//         setLoading(false);
-//     }
-// };
+  
     return (
         <div>
             {![ROLES.VERIFIER].includes(role) && (
@@ -586,22 +330,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                                 },
                                 { accessor: 'idNumber', title: 'Driver ID', render: (driver: Driver) => <div>{driver.idNumber}</div> },
                                 { accessor: 'cashInHand', title: 'Cash in Hand', render: (driver: Driver) => <div>₹{driver.cashInHand ? driver.cashInHand : 0}</div> },
-                                //                                        {
-                                //     accessor: 'driverSalary',
-                                //     title: 'Balance To Get',
-                                //     render: (driver: Driver) => {
-                                //         const balance = driver.balanceAmount || 0;
-                                //         const isNegative = balance < 0;
-                                //         const absoluteValue = Math.abs(balance);
-
-                                //         return (
-                                //             <div className={`font-medium ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-                                //                 ₹{absoluteValue.toLocaleString()}
-                                //                 {isNegative && ' (To Driver)'}  {/* Optional: Add "Dr" indicator for negative values */}
-                                //             </div>
-                                //         );
-                                //     },
-                                // },
+                              
 
                                 {
                                     accessor: 'action',
@@ -661,17 +390,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                                 },
                                 { accessor: 'idNumber', title: 'Driver ID', render: (provider: Provider) => <div>{provider.idNumber}</div> },
                                 { accessor: 'cashInHand', title: 'Cash in Hand', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
-                                // {
-                                //     accessor: 'driverSalary',
-                                //     title: 'Balance To Get',
-                                //     render: (provider: Provider) => (
-                                //         <div>
-                                //             <div>₹{provider.driverSalary ? provider.driverSalary : 0}</div>
-                                //         </div>
-                                //     ),
-                                // },
-                                // { accessor: 'balanceAmount', title: 'Balance Amount', render: (provider: Provider) => <div>₹{provider.cashInHand ? provider.cashInHand : 0}</div> },
-
+                            
                                 {
                                     accessor: 'action',
                                     title: 'Action',
@@ -739,31 +458,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                         ]}
                     />
                 </div>
-                {/* {showNoExpensesModal && (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">No Pending Expenses</h3>
-            <p className="mb-4">This driver has no pending expenses and salary settlement. Would you like to mark the settlement as complete?</p>
-            
-            <div className="flex justify-end space-x-3">
-                <button
-                    onClick={() => setShowNoExpensesModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                    disabled={processingSettlement}
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleCompleteEmptySettlement}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                    disabled={processingSettlement}
-                >
-                    {processingSettlement ? 'Processing...' : 'Mark Complete'}
-                </button>
-            </div>
-        </div>
-    </div>
-)} */}
+               
  {showSettlementModal && (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col border border-gray-100">
@@ -937,99 +632,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
 )}
             </div>
 
-            {/* {showAdvanceModal && (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-                        <div className="p-6">
-                            <h3 className="text-xl font-bold mb-4">Provide Amount</h3>
-
-                            <div className="mb-6">
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div className="bg-yellow-50 p-3 rounded-lg">
-                                        <p className="text-sm text-yellow-700">Current Cash</p>
-                                        <p className="font-bold">${(selectedDriver?.cashInHand || 0).toFixed(2)}</p>
-                                    </div>
-                                    <div className="bg-red-50 p-3 rounded-lg">
-                                        <p className="text-sm text-red-700">Required</p>
-                                        <p className="font-bold">${requiredAmount.toFixed(2)}</p>
-                                    </div>
-                                </div>
-
-                                <label className="block mb-2 font-medium">Providing Amount</label>
-                                <input
-                                    type="number"
-                                    value={advanceAmount}
-                                    onChange={(e) => setAdvanceAmount(Number(e.target.value))}
-                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                                    min={requiredAmount}
-                                    step="0.01"
-                                />
-                                <p className="text-sm text-gray-500 mt-1">Minimum: ${requiredAmount.toFixed(2)}</p>
-                            </div>
-
-                            <div className="flex justify-end space-x-3">
-                                <button
-                                    onClick={() => {
-                                        setShowAdvanceModal(false);
-                                        setAdvanceAmount(0);
-                                    }}
-                                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        if (advanceAmount < requiredAmount) {
-                                            toast.error(`Please enter at least $${requiredAmount.toFixed(2)}`);
-                                            return;
-                                        }
-
-                                        try {
-                                            setLoading(true);
-                                            setShowAdvanceModal(false);
-
-                                            // Create advance
-                                            const newAdvance = await axios.post(`${backendUrl}/advance-payment`, {
-                                                driverId: selectedDriver?._id,
-                                                advance: advanceAmount,
-                                                type: 'settlement',
-                                                remark: 'Advance for expense settlement'
-                                            });
-
-                                            fetchDrivers(); // Refresh data
-                                            setShowSettlementModal(false)
-                                            // Show success toast
-                                            toast.success('Advance created successfully!');
-                                            // Retry settlement with the new funds
-                                            await handleApproveAll();
-                                        } catch (error) {
-                                            console.error('Error creating advance:', error);
-
-                                            // Type guard for AxiosError
-                                            if (error instanceof Error) {
-                                                const axiosError = error as AxiosError<{ message?: string }>;
-                                                toast.error(
-                                                    axiosError.response?.data?.message ||
-                                                    axiosError.message ||
-                                                    'Failed to create advance'
-                                                );
-                                            } else {
-                                                toast.error('Failed to create advance');
-                                            }
-                                        } finally {
-                                            setLoading(false);
-                                            setAdvanceAmount(0);
-                                        }
-                                    }}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                >
-                                    Add Amount & Continue
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )} */}
+           
         </div>
     );
 };

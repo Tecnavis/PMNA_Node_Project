@@ -390,7 +390,8 @@ const fetchBookings = async (page = 1, limit = 10, showAll = false) => {
                 totalDistence: cancelFormData.Totalkm,
                 driverSalary: cancelFormData.totalDriverSalary,
                 totalAmount: cancelFormData.amountForCustomer,
-                status: "Order Completed"
+                status: "Order Completed",
+cashPending:false,
             };
 
             const result: APIForCancelApiResponse = await handleUpdateCancelData(selectedBooking?._id || '', cancelData);
