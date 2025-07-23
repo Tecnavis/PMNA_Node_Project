@@ -5,136 +5,147 @@ const Advance = require('../Model/advance.js')
 const Provider = require('../Model/provider');
 const { default: mongoose } = require('mongoose');
 const Staff = require('../Model/staff');
+const { 
+  isNetworkError,
+  withRetryableTransaction,
+  networkErrorResponse,
+  checkDbConnection
+} = require('../utils/networkUtils.js');
 // ----------------------------
 exports.createReceivedDetails = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
+    // Check DB connection first
+  const isDbConnected = await checkDbConnection();
+  if (!isDbConnected) {
+    return res.status(503).json({
+      code: 'DATABASE_UNAVAILABLE',
+      message: 'Database connection not available',
+      retryable: true
+    });
+  }
   try {
-    // ===== 1. INPUT VALIDATION =====
-    const { amount, currentNetAmount, driver, provider, receivedAmount, remark, totalAmount } = req.body;
-    const userId = req.user.id || req.user._id;
-    const userRole = req.user.role || req.user?.user?.role;
-    const receivedUserId = userId;
+    const result = await withRetryableTransaction(async (session) => {
+      // ===== 1. INPUT VALIDATION =====
+      const { amount, currentNetAmount, driver, provider, receivedAmount, remark, totalAmount } = req.body;
+      const userId = req.user.id || req.user._id;
+      const userRole = req.user.role || req.user?.user?.role;
+      const receivedUserId = userId;
 
-    if (!amount || !receivedAmount || (!driver && !provider)) {
-      await session.abortTransaction();
-      return res.status(400).json({ 
-        code: 'MISSING_FIELDS',
-        message: 'Amount, receivedAmount, and driver/provider are required' 
-      });
-    }
-
-    // ===== 2. ENTITY VERIFICATION =====
-    const isDriver = !!driver;
-    const entityId = isDriver ? driver : provider;
-    const entityModel = isDriver ? Driver : Provider;
-    const entityField = isDriver ? 'driver' : 'provider';
-
-    const associateEntity = await entityModel.findById(entityId).session(session);
-    if (!associateEntity) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        code: 'ENTITY_NOT_FOUND',
-        message: isDriver ? 'Driver not found' : 'Provider not found'
-      });
-    }
-
-    // ===== 3. STAFF VALIDATION =====
-    if (userRole === 'Staff') {
-      const cashInHand = associateEntity.cashInHand || 0;
-      if (Math.abs(Number(receivedAmount) - cashInHand) > 0.01) {
-        await session.abortTransaction();
-        return res.status(403).json({
-          code: 'STAFF_AMOUNT_MISMATCH',
-          message: `Staff can only receive exact cash in hand (${cashInHand})`
+      if (!amount || !receivedAmount || (!driver && !provider)) {
+        return res.status(400).json({ 
+          code: 'MISSING_FIELDS',
+          message: 'Amount, receivedAmount, and driver/provider are required' 
         });
       }
-    }
 
-    // ===== 4. BOOKING PROCESSING =====
-    let remainingAmount = Number(receivedAmount);
-    const processedBookings = [];
+      // ===== 2. ENTITY VERIFICATION =====
+      const isDriver = !!driver;
+      const entityId = isDriver ? driver : provider;
+      const entityModel = isDriver ? Driver : Provider;
+      const entityField = isDriver ? 'driver' : 'provider';
 
-    const bookingQuery = {
-      status: 'Order Completed',
-      workType: 'PaymentWork',
-      cashPending: false,
-      $or: [
-        { receivedUser: { $ne: 'Staff' } },
-        { receivedUser: 'Staff', partialReceivedAmountStaff: true }
-      ],
-      $expr: { $gt: ["$totalAmount", "$receivedAmount"] },
-      [entityField]: entityId
-    };
+      const associateEntity = await entityModel.findById(entityId).session(session);
+      if (!associateEntity) {
+        return res.status(404).json({
+          code: 'ENTITY_NOT_FOUND',
+          message: isDriver ? 'Driver not found' : 'Provider not found'
+        });
+      }
 
-    const bookings = await Booking.find(bookingQuery)
-      .sort({ createdAt: 1 })
-      .session(session);
+      // ===== 3. STAFF VALIDATION =====
+      if (userRole === 'Staff') {
+        const cashInHand = associateEntity.cashInHand || 0;
+        if (Math.abs(Number(receivedAmount) - cashInHand) > 0.01) {
+          return res.status(403).json({
+            code: 'STAFF_AMOUNT_MISMATCH',
+            message: `Staff can only receive exact cash in hand (${cashInHand})`
+          });
+        }
+      }
 
-    // Process each booking in transaction
-    for (const booking of bookings) {
-      if (remainingAmount <= 0) break;
+      // ===== 4. BOOKING PROCESSING =====
+      let remainingAmount = Number(receivedAmount);
+      const processedBookings = [];
 
-      const bookingBalance = calculateBookingBalance(booking, userRole);
-      if (bookingBalance <= 0) continue;
+   const bookingQuery = {
+  status: 'Order Completed',
+  workType: 'PaymentWork',
+  cashPending: false,
+  receivedUser: { $ne: 'Staff' },
+  $expr: { $gt: ["$totalAmount", "$receivedAmount"] },
+  [entityField]: entityId
+};
 
-      const appliedAmount = Math.min(remainingAmount, bookingBalance);
-      updateBookingPayment(booking, appliedAmount, userRole, receivedUserId);
-      
-      remainingAmount -= appliedAmount;
-      processedBookings.push(booking._id);
-      await booking.save({ session });
-    }
+      const bookings = await Booking.find(bookingQuery)
+        .sort({ createdAt: 1 })
+        .session(session);
 
-    // ===== 5. ADVANCE DEDUCTION =====
-    if (remainingAmount > 0) {
-      await processAdvanceDeduction(
+      // Process each booking in transaction
+      for (const booking of bookings) {
+        if (remainingAmount <= 0) break;
+
+        const bookingBalance = calculateBookingBalance(booking, userRole);
+        if (bookingBalance <= 0) continue;
+
+        const appliedAmount = Math.min(remainingAmount, bookingBalance);
+        updateBookingPayment(booking, appliedAmount, userRole, receivedUserId);
+        
+        remainingAmount -= appliedAmount;
+        processedBookings.push(booking._id);
+        await booking.save({ session });
+      }
+
+      // ===== 5. ADVANCE DEDUCTION =====
+      if (remainingAmount > 0) {
+        await processAdvanceDeduction(
+          associateEntity, 
+          isDriver, 
+          remainingAmount, 
+          { remark, totalAmount, userRole, receivedUserId },
+          session
+        );
+      }
+
+      // ===== 6. CREATE RECEIVED RECORDS =====
+      await createReceivedRecords(
+        processedBookings, 
         associateEntity, 
-        isDriver, 
-        remainingAmount, 
-        { remark, totalAmount, userRole, receivedUserId },
+        { isDriver, remark, totalAmount, userRole, receivedUserId },
         session
       );
-    }
 
-    // ===== 6. CREATE RECEIVED RECORDS =====
-    await createReceivedRecords(
-      processedBookings, 
-      associateEntity, 
-      { isDriver, remark, totalAmount, userRole, receivedUserId },
-      session
-    );
-
-    // ===== 7. FINALIZE TRANSACTION =====
-    await session.commitTransaction();
-    
-    res.status(201).json({
-      success: true,
-      distributedAmount: Number(receivedAmount) - remainingAmount,
-      remainingAmount,
-      audit: {
-        transactionId: session.id,
-        timestamp: new Date()
-      }
+      // Return success data
+      return {
+        success: true,
+        distributedAmount: Number(receivedAmount) - remainingAmount,
+        remainingAmount,
+        audit: {
+          transactionId: session.id,
+          timestamp: new Date()
+        }
+      };
+     }, { 
+      maxRetries: 5, // Increase retries for critical operations
+      baseDelay: 2000 // Longer base delay
     });
+
+    // Send success response
+    res.status(201).json(result);
 
   } catch (error) {
     // ===== ERROR HANDLING =====
-    await session.abortTransaction();
-    
-    if (isNetworkError(error)) {
-      console.error('Network failure during payment:', {
-        error: error.message,
-        sessionId: session.id,
-        userId: req.user?.id
-      });
+        if (isNetworkError(error)) {
+      // Add additional context for better debugging
+      const context = {
+        endpoint: 'createReceivedDetails',
+        userId: req.user?.id,
+        body: req.body,
+        timestamp: new Date().toISOString()
+      };
       
-      return res.status(503).json({
-        code: 'NETWORK_FAILURE',
-        message: 'Payment processing interrupted. Please retry.',
-        retryable: true
-      });
+      return res.status(503).json(networkErrorResponse(error, {
+        endpoint: 'createReceivedDetails',
+        userId: req.user?.id
+      }));
     }
 
     console.error('Payment processing error:', {
@@ -145,11 +156,8 @@ exports.createReceivedDetails = async (req, res) => {
 
     res.status(500).json({
       code: 'PROCESSING_FAILURE',
-      message: 'Payment failed to process',
-      referenceId: session.id
+      message: 'Payment failed to process'
     });
-  } finally {
-    session.endSession();
   }
 };
 
@@ -235,12 +243,7 @@ async function createReceivedRecords(bookingIds, entity, meta, session) {
   }
 }
 
-function isNetworkError(error) {
-  return error.message.includes('network') || 
-         error.message.includes('ECONN') || 
-         error.message.includes('timeout') ||
-         error.name === 'MongoNetworkError';
-}
+
 
 exports.getAllReceivedDetails = async (req, res) => {
     try {

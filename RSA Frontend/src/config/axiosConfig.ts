@@ -1,13 +1,13 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { isAxiosError, AxiosRequestConfig, AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 export const BASE_URL: string = import.meta.env.VITE_BACKEND_URL;
 export const VITE_STAFF_DASHBOARD_URL: string = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'http://localhost:5175/';
 
 // Create an Axios instance
-export const axiosInstance: AxiosInstance = axios.create({
-    baseURL: BASE_URL,
-});
+export const axiosInstance = axios.create({
+  baseURL: BASE_URL,
+}) as AxiosInstance & { isAxiosError: typeof axios.isAxiosError };
 
 // Axios Request Interceptor for Adding Authorization Token
 axiosInstance.interceptors.request.use(

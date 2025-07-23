@@ -69,7 +69,7 @@ async function calculateReceivedTotalAmount(staffId) {
         // First verify the fields exist and are numbers
         const sampleDoc = await ReceivedDetails.findOne({
             receivedUserId: staffId,
-            receivedUser: { $in: ['Staff', 'Admin'] },
+            // receivedUser: { $in: ['Staff', 'Admin'] },
             fileNumber: 'Advance Deduction'
         });
 

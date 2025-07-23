@@ -13,6 +13,8 @@ import Staff from '../Staff/Staff';
 import Swal from 'sweetalert2';
 import { dateFormate } from '../../utils/dateUtils';
 import Loader from '../../components/loader';
+import { AxiosRequestConfig, isAxiosError } from 'axios';
+import { executeWithRetry, handleNetworkError, offlineQueue } from '../../utils/networkUtils';
 const getColorForDateTime = (dateTimeString: string) => {
     // Combine both date and time for hashing
     let hash = 0;
@@ -209,122 +211,177 @@ const handlePrint = () => {
     }, [receivedAmount, driverCashInHand, role, selectedType]);
 
     // ------------------------------------------------------
-    const settleReceivedAmount = async () => {
-        // Add validation check before proceeding
-        if (role === 'Staff' && validationError) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Validation Error',
-                text: validationError,
-            });
-            return;
-        }
-        try {
-            if (!receivedAmount || !remark.trim()) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top',
-                    icon: 'warning',
-                    title: 'All fields are required',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    customClass: {
-                        popup: 'small-toast',
-                    },
-                });
-                return;
-            }
+ 
+const settleReceivedAmount = async () => {
+  // Add validation check before proceeding
+  if (role === 'Staff' && validationError) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Validation Error',
+      text: validationError,
+    });
+    return;
+  }
 
+  if (!receivedAmount || !remark.trim()) {
+    Swal.fire({
+      toast: true,
+      position: 'top',
+      icon: 'warning',
+      title: 'All fields are required',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      customClass: {
+        popup: 'small-toast',
+      },
+    });
+    return;
+  }
 
-            // Add confirmation dialog
-            const confirmation = await Swal.fire({
-                title: 'Are you sure?',
-                text: `You are about to settle ₹${receivedAmount}. This action cannot be undone.`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, settle it!',
+  try {
+    // Add confirmation dialog
+    const confirmation = await Swal.fire({
+      title: 'Are you sure?',
+      text: `You are about to settle ₹${receivedAmount}. This action cannot be undone.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, settle it!',
+      cancelButtonText: 'Cancel',
+    });
 
-                cancelButtonText: 'Cancel',
-            });
+    if (!confirmation.isConfirmed) return;
 
-            if (confirmation.isConfirmed) {
-                            setIsSubmitting(true); // Start loading
+    setIsSubmitting(true);
 
-                // First create the cash received details
-                const receivedDetailsResponse = await axios.post(`${BASE_URL}/cash-received-details`, {
-                    totalAmount: receivedAmount,
-                    amount: receivedAmount,
-                    balance: (Number(inHandAmount) || 0) - (Number(receivedAmount) || 0),
-
-                    currentNetAmount: inHandAmount,
-                    driver: selectedDriver,
-                    receivedAmount,
-                    remark,
-                    receivedUser: role,
-                    receivedUserId,
-                });
-
-                // Then create cash collection record
-                const cashCollectionResponse = await axios.post(`${BASE_URL}/cash-collection-details`, {
-                    driverId: selectedDriver,
-                    receivedAmount,
-                    remark,
-                    receivedUser: role,
-                    receivedUserId,
-                    totalDriverAmount: receivedAmount, // Make sure to include this
-                    currentCashInHand: inHandAmount,
-                });
-
-                // Refresh data
-                await Promise.all([fetchReceivedData(), fetchCollectionData(), fetchDrivers()]);
- // Get the updated driver data to set the new inHandAmount
-            const driverResponse = await axios.get(`${BASE_URL}/driver/${selectedDriver}`);
-            const updatedDriver = driverResponse.data;
-            
-            // Reset form with updated values
-            setRemark('');
-            setReceivedAmount('');
-            setInHandAmount(updatedDriver.cashInHand || 0); // Set to current cash in hand
-
-                Swal.fire({
-                    title: 'Settlement Complete!',
-                    html: `
-                    <div class="text-left">
-                        <p><b>Amount:</b> ₹${receivedAmount}</p>
-                        <p><b>Processed Bookings:</b> ${cashCollectionResponse.data.processedBookings}</p>
-                        <p><b>Remaining Balance:</b> ₹${cashCollectionResponse.data.remainingAmount || 0}</p>
-                    </div>
-                `,
-                    icon: 'success',
-                });
-
-                console.log('Settlement completed:', {
-                    receivedDetails: receivedDetailsResponse.data,
-                    cashCollection: cashCollectionResponse.data,
-                });
-            }
-        } catch (error: any) {
-            console.error('Settlement error:', {
-                error: error.response?.data || error.message,
-                request: {
-                    driver: selectedDriver,
-                    amount: receivedAmount,
-                },
-            });
-
-            Swal.fire({
-                title: 'Settlement Failed',
-                text: error.response?.data?.message || error.message || 'Unknown error',
-                icon: 'error',
-            });
-         } finally {
-        setIsSubmitting(false); // Stop loading regardless of success/error
-    }
+    // Prepare the requests
+    const receivedDetailsRequest: AxiosRequestConfig = {
+      method: 'POST',
+      url: `${BASE_URL}/cash-received-details`,
+      data: {
+        totalAmount: receivedAmount,
+        amount: receivedAmount,
+        balance: (Number(inHandAmount) || 0) - (Number(receivedAmount) || 0),
+        currentNetAmount: inHandAmount,
+        driver: selectedDriver,
+        receivedAmount,
+        remark,
+        receivedUser: role,
+        receivedUserId,
+      }
     };
 
+    const cashCollectionRequest: AxiosRequestConfig = {
+      method: 'POST',
+      url: `${BASE_URL}/cash-collection-details`,
+      data: {
+        driverId: selectedDriver,
+        receivedAmount,
+        remark,
+        receivedUser: role,
+        receivedUserId,
+        totalDriverAmount: receivedAmount,
+        currentCashInHand: inHandAmount,
+      }
+    };
+
+    // Execute with retry logic
+    const [receivedDetailsResponse, cashCollectionResponse] = await executeWithRetry(async () => {
+      try {
+        const results = await Promise.all([
+          axios(receivedDetailsRequest),
+          axios(cashCollectionRequest)
+        ]);
+        return results;
+      } catch (error) {
+        // If offline, add to queue and throw error to trigger retry
+        if (!navigator.onLine) {
+          offlineQueue.addToQueue(receivedDetailsRequest);
+          offlineQueue.addToQueue(cashCollectionRequest);
+          throw error;
+        }
+        throw error;
+      }
+    });
+
+    // Refresh data
+    await Promise.all([
+      executeWithRetry(fetchReceivedData),
+      executeWithRetry(fetchCollectionData),
+      executeWithRetry(fetchDrivers)
+    ]);
+
+    // Get updated driver data
+    const driverResponse = await executeWithRetry(() => 
+      axios.get(`${BASE_URL}/driver/${selectedDriver}`)
+    );
+    const updatedDriver = driverResponse.data;
+
+    // Reset form with updated values
+    setRemark('');
+    setReceivedAmount('');
+    setInHandAmount(updatedDriver.cashInHand || 0);
+
+    // Show success message
+    Swal.fire({
+      title: 'Settlement Complete!',
+      html: `
+        <div class="text-left">
+          <p><b>Amount:</b> ₹${receivedAmount}</p>
+          <p><b>Processed Bookings:</b> ${cashCollectionResponse.data.processedBookings || 'N/A'}</p>
+          <p><b>Remaining Balance:</b> ₹${cashCollectionResponse.data.remainingAmount || 0}</p>
+        </div>
+      `,
+      icon: 'success',
+    });
+
+    console.log('Settlement completed:', {
+      receivedDetails: receivedDetailsResponse.data,
+      cashCollection: cashCollectionResponse.data,
+    });
+
+  } catch (error: any) {
+    console.error('Settlement error:', {
+      error: error.response?.data || error.message,
+      request: {
+        driver: selectedDriver,
+        amount: receivedAmount,
+      },
+    });
+
+if (isAxiosError(error) && !error.response) {
+      // Network error
+      const networkError = handleNetworkError(error, {
+        endpoint: 'settleReceivedAmount',
+        amount: receivedAmount,
+        driver: selectedDriver
+      });
+
+      Swal.fire({
+        title: networkError.title,
+        html: `
+          <div>
+            <p>${networkError.message}</p>
+            <p class="text-sm mt-2">Error ID: ${networkError.errorId}</p>
+            <p class="text-sm">Your transaction has been queued and will be processed when you're back online.</p>
+          </div>
+        `,
+        icon: 'warning',
+      });
+    } else {
+      // Other errors
+      Swal.fire({
+        title: 'Settlement Failed',
+        text: error.response?.data?.message || error.message || 'Unknown error',
+        icon: 'error',
+      });
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
     useEffect(() => {
         fetchDrivers();
     }, []);
