@@ -9,6 +9,8 @@ import { CashCollectionDetailsTableColumn, ReceivedDetailsStaffTableColumn } fro
 import { ReceivedDetails, ReceivedDetailsStaff, CashCollectionDetails } from './types';
 import Swal from 'sweetalert2';
 import Loader from '../../components/loader';
+import { executeWithRetry, handleNetworkError, offlineQueue } from '../../utils/networkUtils';
+import { isAxiosError } from 'axios';
 
 const getColorForDateTime = (dateTimeString: string) => {
     let hash = 0;
@@ -60,84 +62,171 @@ const PaymentReportStaff: React.FC = () => {
         }
     };
 
-    const settleReceivedAmount = async () => {
-        if (!selectedStaff || !receivedAmount || receivedAmount <= 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Validation Error',
-                text: 'Please select a staff member and enter a valid amount',
-                confirmButtonColor: '#3085d6',
-            });
-            return;
-        }
 
-        const selectedStaffData = staffs.find((s) => s._id === selectedStaff);
-        const currentCashInHand = selectedStaffData?.cashInHand || 0;
-        const newBalance = currentCashInHand - Number(receivedAmount);
+const settleReceivedAmount = async () => {
+  // Input validation
+  if (!selectedStaff || !receivedAmount || receivedAmount <= 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Validation Error',
+      text: 'Please select a staff member and enter a valid amount',
+      confirmButtonColor: '#3085d6',
+    });
+    return;
+  }
 
-        const confirmation = await Swal.fire({
-            title: 'Confirm Cash Collection',
-            html: `
-            <div class="text-left">
-                <p><strong>Staff:</strong> ${selectedStaffData?.name}</p>
-                <p><strong>Amount Collected:</strong> ₹${receivedAmount}</p>
-                <p><strong>Current Balance:</strong> ₹${currentCashInHand}</p>
-                <p><strong>New Balance:</strong> ₹${newBalance}</p>
-            </div>
-        `,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Confirm Collection',
-            cancelButtonText: 'Cancel',
-        });
+  const selectedStaffData = staffs.find((s) => s._id === selectedStaff);
+  const currentCashInHand = selectedStaffData?.cashInHand || 0;
 
-        if (!confirmation.isConfirmed) return;
+  // Amount validation
+  if (Number(receivedAmount) > currentCashInHand) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Invalid Amount',
+      text: `Cannot collect more than current balance (₹${currentCashInHand})`,
+      confirmButtonColor: '#3085d6',
+    });
+    return;
+  }
 
-        setIsSubmitting(true);
+  const newBalance = currentCashInHand - Number(receivedAmount);
 
-        try {
-            // Create cash collection record
-            const response = await axios.post(`${BASE_URL}/cash-received-details-staff`, {
-                staffId: selectedStaff,
-                givenAmountToStaff: receivedAmount,
-                totalStaffAmount: currentCashInHand,
-                remark,
-                currentCashInHand,
-            });
+  // Confirmation dialog
+  const confirmation = await Swal.fire({
+    title: 'Confirm Cash Collection',
+    html: `
+      <div class="text-left">
+        <p><strong>Staff:</strong> ${selectedStaffData?.name}</p>
+        <p><strong>Amount Collected:</strong> ₹${receivedAmount}</p>
+        <p><strong>Current Balance:</strong> ₹${currentCashInHand}</p>
+        <p><strong>New Balance:</strong> ₹${newBalance}</p>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Confirm Collection',
+    cancelButtonText: 'Cancel',
+  });
 
-            // Refresh data
-            await Promise.all([fetchStaffs(), fetchReceivedDetails()]);
+  if (!confirmation.isConfirmed) return;
 
-            // Reset form
-            setReceivedAmount('');
-            setRemark('');
+  setIsSubmitting(true);
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                html: `
-                <div class="text-left">
-                    <p><strong>Amount Collected:</strong> ₹${receivedAmount}</p>
-                    <p><strong>Staff:</strong> ${selectedStaffData?.name}</p>
-                    <p><strong>New Balance:</strong> ₹${newBalance}</p>
-                </div>
-            `,
-                confirmButtonColor: '#3085d6',
-            });
-        } catch (error: any) {
-            console.error('Collection error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.response?.data?.message || 'Failed to record cash collection',
-                confirmButtonColor: '#3085d6',
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
+  try {
+    // Prepare the request
+    const requestData = {
+      staffId: selectedStaff,
+      givenAmountToStaff: receivedAmount,
+      totalStaffAmount: currentCashInHand,
+      remark,
+      currentCashInHand,
     };
+
+    // Execute with retry logic
+    const response = await executeWithRetry(async () => {
+      try {
+        return await axios.post(`${BASE_URL}/cash-received-details-staff`, requestData);
+      } catch (error) {
+        if (!navigator.onLine) {
+          // Queue the request if offline
+          offlineQueue.addToQueue({
+            method: 'POST',
+            url: `${BASE_URL}/cash-received-details-staff`,
+            data: requestData
+          });
+          
+          throw error;
+        }
+        throw error;
+      }
+    });
+
+    // Refresh data with retry capability
+    await Promise.all([
+      executeWithRetry(fetchStaffs),
+      executeWithRetry(fetchReceivedDetails)
+    ]);
+
+    // Reset form
+    setReceivedAmount('');
+    setRemark('');
+
+    // Success notification
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      html: `
+        <div class="text-left">
+          <p><strong>Amount Collected:</strong> ₹${receivedAmount}</p>
+          <p><strong>Staff:</strong> ${selectedStaffData?.name}</p>
+          <p><strong>New Balance:</strong> ₹${newBalance}</p>
+          ${response.data.remainingAmount > 0 ? 
+            `<p class="text-warning"><strong>Warning:</strong> ₹${response.data.remainingAmount} could not be fully allocated</p>` : 
+            ''}
+          ${response.data.distribution ? 
+            `<div class="mt-2">
+              <p><strong>Distribution:</strong></p>
+              <p>- Bookings: ₹${response.data.distribution.bookings.total} (${response.data.distribution.bookings.count})</p>
+              <p>- Advance Deduction: ₹${response.data.distribution.advanceDeductionApplied}</p>
+            </div>` : 
+            ''}
+        </div>
+      `,
+      confirmButtonColor: '#3085d6',
+    });
+
+  } catch (error: any) {
+    console.error('Collection error:', {
+      error: error.response?.data || error.message,
+      request: {
+        staff: selectedStaff,
+        amount: receivedAmount,
+      },
+    });
+
+    if (isAxiosError(error) && !error.response) {
+      // Network error handling
+      const networkError = handleNetworkError(error, {
+        endpoint: 'cash-received-details-staff',
+        amount: receivedAmount,
+        staff: selectedStaff
+      });
+
+      Swal.fire({
+        title: networkError.title,
+        html: `
+          <div>
+            <p>${networkError.message}</p>
+            <p class="text-sm mt-2">Error ID: ${networkError.errorId}</p>
+            <p class="text-sm">Your transaction has been queued and will be processed when you're back online.</p>
+          </div>
+        `,
+        icon: 'warning',
+      });
+    } else {
+      // Other error handling
+      let errorMessage = error.response?.data?.message || 'Failed to record cash collection';
+      
+      // Handle specific backend error codes
+      if (error.response?.data?.code === 'INSUFFICIENT_FUNDS') {
+        errorMessage = `Staff only has ₹${error.response.data.currentBalance} available`;
+      } else if (error.response?.data?.code === 'STAFF_NOT_FOUND') {
+        errorMessage = 'Staff member not found in system';
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        confirmButtonColor: '#3085d6',
+      });
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
     // --------------------------------------------------
 
     // `${BASE_URL}/cash-received-details-staff/cash-received-details-staff`,
