@@ -4,7 +4,7 @@ const Staff = require('../Model/staff');
 const Booking = require('../Model/booking.js')
 const ReceivedDetails = require('../Model/ReceivedDetails.js');
 const { withRetryableTransaction, networkErrorResponse, isNetworkError } = require('../utils/networkUtils.js');
-// -----------------------------------------------------
+//...............................................................................................
 exports.createReceivedDetailsStaff = async (req, res) => {
 
 
@@ -55,29 +55,73 @@ exports.createReceivedDetailsStaff = async (req, res) => {
      const bookings = await Booking.find({
         status: 'Order Completed',
         $or: [
-          { receivedUser: 'Staff', receivedUserId: staffId },
-          { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-        ],
-        $expr: {
-          $gt: [
-            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-            0
-          ]
+        // Regular staff bookings (cashPending false)
+        { 
+            $and: [
+                { 
+                    $or: [
+                        { receivedUser: 'Staff', receivedUserId: staffId },
+                        { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+                    ]
+                },
+                { cashPending: false },
+                { 
+                    $expr: {
+                        $gt: [
+                            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+                            0
+                        ]
+                    }
+                }
+            ]
+        },
+        // Partial payment bookings (cashPending true)
+        { 
+            $and: [
+                { 
+                    $or: [
+                        { receivedUser: 'Staff', receivedUserId: staffId },
+                        { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+                    ]
+                },
+                { cashPending: true },
+                { partialPayment: true },
+                { 
+                    $expr: {
+                        $gt: [
+                            "$receivedAmountStaff",
+                            { $ifNull: ["$givenAmountByStaff", 0] }
+                        ]
+                    }
+                }
+            ]
         }
-      })
+    ]
+})
 .sort({ createdAt: 1 })
 .session(session);
     for (const booking of bookings) {
       if (remainingAmount <= 0) break;
 
-      const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
-      
+ let allocatableAmount;
+    
+    // Different calculation for cashPending true bookings
+    if (booking.cashPending && booking.partialPayment) {
+        // For partial payments, we can allocate up to receivedAmountStaff
+        allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
+    } else {
+        // Regular calculation for non-partial payments
+        allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
+    }      
       if (allocatableAmount > 0) {
     const amountToApply = Math.min(remainingAmount, allocatableAmount);
     
-    // Update booking with new given amount
-    booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
-
+         // Update booking with new given amount
+        booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
+  // NEW: Check if givenAmountByStaff + receivedAmount equals totalAmount
+        if (Math.abs((booking.givenAmountByStaff + booking.receivedAmount) - booking.totalAmount) < 0.01) {
+            booking.receivedAmount = booking.totalAmount;
+        }
     remainingAmount -= amountToApply;
     selectedBookingIds.push(booking._id);
     appliedAmounts.push(amountToApply);
@@ -93,7 +137,7 @@ if (remainingAmount > 0) {
     fileNumber: "Advance Deduction",
     $or: [
       { receivedUser: 'Staff', receivedUserId: staffId },
-      { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+
     ],
     $expr: {
       $gt: [
@@ -114,7 +158,7 @@ if (remainingAmount > 0) {
       const amountToDeduct = Math.min(remainingAmount, allocatableAmount);
       
       // Update record with new given amount
-      record.givenAmountByStaff = (record.givenAmountByStaff || 0) + amountToDeduct;
+      record.givenAmountByStaff =  amountToDeduct;
       advanceDeductionApplied += amountToDeduct;
       remainingAmount -= amountToDeduct;
       

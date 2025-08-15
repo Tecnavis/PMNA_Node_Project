@@ -25,9 +25,24 @@ async function calculateTotalAmount(staffId) {
                                 }
                             ]
                         },
-                        { cashPending: false },
-                        { status: 'Order Completed' },
-                        { workType: 'PaymentWork' }
+                        
+                        { 
+                            $or: [
+                                // Regular completed payments
+                                { 
+                                    cashPending: false,
+                                    status: 'Order Completed',
+                                    workType: 'PaymentWork'
+                                },
+                                // Include partial payment bookings with cashPending: true
+                                {
+                                    cashPending: true,
+                                    partialPayment: true,
+                                    status: 'Order Completed',
+                                    workType: 'PaymentWork'
+                                }
+                            ]
+                        }
                     ]
                 }
             },
@@ -35,19 +50,21 @@ async function calculateTotalAmount(staffId) {
                 $project: {
                     // Convert to numbers if they might be strings
                     receivedAmountStaff: { $toDouble: "$receivedAmountStaff" },
-                    givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
+                    givenAmountByStaff: { $toDouble: "$givenAmountByStaff" },
+                    // Calculate net amount for both regular and partial payment bookings
+                    netAmount: {
+                        $subtract: [
+                            "$receivedAmountStaff",
+                            { $ifNull: ["$givenAmountByStaff", 0] }
+                        ]
+                    }
                 }
             },
             {
                 $group: {
                     _id: null,
                     netTotalAmount: {
-                        $sum: {
-                            $subtract: [
-                                "$receivedAmountStaff",
-                                { $ifNull: ["$givenAmountByStaff", 0] }
-                            ]
-                        }
+                        $sum: "$netAmount"
                     }
                 }
             }

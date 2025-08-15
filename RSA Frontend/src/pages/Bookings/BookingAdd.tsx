@@ -239,6 +239,8 @@ const BookingAdd: React.FC = () => {
     //ref for states 
     const workTypeRef = useRef<HTMLInputElement>(null);
     const totalDistanceRef = useRef<HTMLInputElement>(null);
+ const adjustmentValueRef = useRef<HTMLInputElement>(null);
+
     const trapedLocationRef = useRef<HTMLInputElement>(null);
     const totalDriverDistenceRef = useRef<HTMLInputElement>(null);
     const mob1Ref = useRef<HTMLInputElement>(null);
@@ -664,7 +666,7 @@ const BookingAdd: React.FC = () => {
         if (adjustmentValue === null) {
             const payableWithInsurance = (selectedEntity?.payableAmount ?? 0) - parseFloat(insuranceAmount || '0');
             setTotalAmount(payableWithInsurance);
-        } else if (adjustmentValue > totalAmount) {
+        } else if (adjustmentValue >= totalAmount) {
             // If the adjustmentValue is greater than totalAmount, set the adjustmentAmount to adjustmentValue
             setTotalAmount(adjustmentValue);
             console.log(totalAmount, adjustmentValue)
@@ -1149,7 +1151,11 @@ const BookingAdd: React.FC = () => {
             totalDistanceRef.current?.focus();
 
         }
+  if (!adjustmentValue) {
+            formErrors.adjustmentValue = 'Total adjustmentValue is required';
+            adjustmentValueRef.current?.focus();
 
+        }
         // Trapped location validation
         // if (!trappedLocation) {
         //     formErrors.trappedLocation = 'Trapped location is required';
@@ -1297,18 +1303,18 @@ const BookingAdd: React.FC = () => {
                             {errors.workType && <p className="text-red-500">{errors.workType}</p>}
                         </div>
                         {/* pickup date (optional)  */}
-                        <div>
-                            <label htmlFor="pickupDate">
-                                Pickup Date <span style={{ color: 'red' }}>(optional)</span>
-                            </label>
-                            <Flatpickr
-                                id="date-time"
-                                options={{ enableTime: true, dateFormat: "Y-m-d\\TH:i" }}
-                                value={pickupDate}
-                                onChange={([date]) => setPickupDate("" + date)}
-                                className="form-input"
-                            />
-                        </div>
+                     <div>
+    <label htmlFor="pickupDate">
+        Pickup Date <span style={{ color: 'red' }}>(optional)</span>
+    </label>
+    <input
+        type="datetime-local"
+        id="pickupDate"
+        value={pickupDate}
+        onChange={(e) => setPickupDate(e.target.value)}
+        className="form-input"
+    />
+</div>
                         {/* selcect company if the work type is RSAWork  */}
                         {workType === 'RSAWork' && (
                             <div>
@@ -1740,6 +1746,7 @@ const BookingAdd: React.FC = () => {
                             <input
                                 id="adjustmentValue"
                                 type="number"
+                                 ref={adjustmentValueRef}
                                 className="form-input"
                                 onWheel={(e) => e.preventDefault()}
                                 value={adjustmentValue ?? ''}
@@ -1750,6 +1757,7 @@ const BookingAdd: React.FC = () => {
                                     Apply
                                 </button>
                             }
+                             {errors.adjustmentValue && <p className="text-red-500">{errors.adjustmentValue}</p>}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px' }}>
                             <div>
@@ -1901,38 +1909,33 @@ const BookingAdd: React.FC = () => {
                                 onChange={(e) => setCustomerVehicleNumber(e.target.value)}
                             />
                         </div>
-                        <div>
+                        {/* <div>
                             <label htmlFor="vehicleType">Select Vehicle Type by Tyre Number:</label>
                             <select id="vehicleType" name="vehicleType" className="form-select" value={selectedVehicleType} onChange={handleChange}>
                                 <option value="" disabled>
                                     Select a vehicle type
                                 </option>
-                                {/* Two-Wheelers */}
                                 <optgroup label="Two-Wheelers (2 Tyres)">
                                     <option value="bicycle">Bicycle</option>
                                     <option value="motorcycle">Motorcycle</option>
                                     <option value="scooter">Scooter</option>
                                     <option value="moped">Moped</option>
                                 </optgroup>
-                                {/* Three-Wheelers */}
                                 <optgroup label="Three-Wheelers (3 Tyres)">
                                     <option value="auto-rickshaw">Auto-rickshaw</option>
                                     <option value="tuk-tuk">Tuk-tuk</option>
                                     <option value="motorized-tricycle">Motorized Tricycle</option>
                                 </optgroup>
-                                {/* Four-Wheelers */}
                                 <optgroup label="Four-Wheelers (4 Tyres)">
                                     <option value="car">Car</option>
                                     <option value="jeep">Jeep</option>
                                     <option value="suv">SUV</option>
                                     <option value="pickup-truck">Pickup Truck</option>
                                 </optgroup>
-                                {/* Six-Wheelers */}
                                 <optgroup label="Six-Wheelers (6 Tyres)">
                                     <option value="truck">Medium-sized Truck</option>
                                     <option value="bus">Bus</option>
                                 </optgroup>
-                                {/* Eight-Wheelers and Above */}
                                 <optgroup label="Eight-Wheelers and Above">
                                     <option value="large-truck">Large Truck</option>
                                     <option value="heavy-duty-vehicle">Heavy-duty Vehicle</option>
@@ -1940,14 +1943,12 @@ const BookingAdd: React.FC = () => {
                                     <option value="tanker">Tanker</option>
                                     <option value="articulated-lorry">Articulated Lorry</option>
                                 </optgroup>
-                                {/* Tracked Vehicles */}
                                 <optgroup label="Tracked Vehicles (No Tyres)">
                                     <option value="bulldozer">Bulldozer</option>
                                     <option value="tank">Tank</option>
                                 </optgroup>
                             </select>
-                            {/* {errors.selectedVehicleType && <p className="text-red-500">{errors.selectedVehicleType}</p>} */}
-                        </div>
+                        </div> */}
                         <div>
                             <label htmlFor="brandName">Brand name </label>
                             <input id="brandName" type="text" placeholder="Enter brand name" className="form-input" value={brandName} onChange={(e) => setBrandName(e.target.value)} />

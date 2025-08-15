@@ -349,9 +349,36 @@ const checkVehicleServiceStatus = async (booking) => {
             throw new Error("Vehicle details not found");
         }
 
-        // Step 2: Update the vehicle's odometer with the new booking's distance
-        const newOdometerValue = vehicle.totalOdometer + booking.totalDistence;
+          // Step 2: Calculate new odometer value by summing all completed bookings' distances
+        const completedBookings = await Booking.aggregate([
+            {
+                $match: {
+                    driver: booking.driver,
+                    status: "Order Completed",
+                    serviceType: booking.serviceType,
+                    $or: [
+                        { serviceDue: { $exists: false } },
+                        { serviceDue: { $ne: false } }
+                    ]
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalDistance: { $sum: "$totalDriverDistence" }
+                }
+            }
+        ]);
+
+        const totalCompletedDistance = completedBookings.length > 0 
+            ? completedBookings[0].totalDistance 
+            : 0;
+
+        // Use either the sum of completed bookings or the current odometer + current booking distance
+        const newOdometerValue = vehicle.totalOdometer  + totalCompletedDistance;
+        
         const update = {}
+
 
         // Step 3: Check if the vehicle has reached its service KM limit then set default value
         if ((newOdometerValue - vehicle.totalOdometer) >= vehicle.serviceKM) {
@@ -500,10 +527,12 @@ exports.getAllBookings = async (req, res) => {
             forDriverReport,
             forCompanyReport,
             forStaffReport,
+            forShowroomReport,
             page = 1,
             limit = 10,
             status = '',
             driverId,
+            showroomId,
             providerId,
             companyId,
             verified,
@@ -541,7 +570,10 @@ exports.getAllBookings = async (req, res) => {
         if (providerId) {
             query.provider = new mongoose.Types.ObjectId(providerId);
         }
-
+// Add this to your backend controller
+if (showroomId) {
+  query.showroom = new mongoose.Types.ObjectId(showroomId);
+}
         // If providerId as query then fetch company bookings
         if (companyId) {
             query.company = new mongoose.Types.ObjectId(companyId);
@@ -595,10 +627,11 @@ exports.getAllBookings = async (req, res) => {
                     { customerVehicleNumber: regex },
                 ];
 
-                const [matchingDrivers, matchingProviders, matchingCompanies] = await Promise.all([
+                const [matchingDrivers, matchingProviders, matchingCompanies,matchingShowrooms] = await Promise.all([
                     Driver.find({ name: regex }).select('_id').lean(),
                     Provider.find({ name: regex }).select('_id').lean(),
-                    Company.find({ name: regex }).select('_id').lean()
+                    Company.find({ name: regex }).select('_id').lean(),
+                     Showroom.find({ name: regex }).select('_id').lean()
                 ]);
 
                 if (matchingDrivers.length > 0) {
@@ -609,6 +642,9 @@ exports.getAllBookings = async (req, res) => {
                 }
                 if (matchingCompanies.length > 0) {
                     searchConditions.push({ company: { $in: matchingCompanies.map(c => c._id) } });
+                }
+                  if (matchingShowrooms.length > 0) {
+                    searchConditions.push({ showroom: { $in: matchingShowrooms.map(c => c._id) } });
                 }
 
                 query.$or = searchConditions;
@@ -655,15 +691,23 @@ exports.getAllBookings = async (req, res) => {
             return total + (booking.receivedAmount || 0);
         }, 0);
         query.workType = { $ne: 'RSAWork' };
-
+if (forDriverReport) {
+    query.$and = query.$and || [];
+    // Only exclude Admin receipts, not Staff
+    query.$and.push({
+      
+    });
+}
+// ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         // Aggregate data for total amounts
         const aggregationResult = await Booking.aggregate([
             {
                 $match: {
                     ...query,
 
-                    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
+                    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) && { cashPending: false }),
                     ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
+                      ...((forShowroomReport !== undefined) ),
                     ...(forDriverReport && {
                         $or: [
                             { receivedUser: { $ne: 'Staff' } },
@@ -705,54 +749,75 @@ exports.getAllBookings = async (req, res) => {
                                                         { $eq: ["$previousReceivedUser", "Staff"] },
                                                         { $eq: ["$partialReceivedAmountStaff", true] }
                                                     ]
-                                                }
+                                                },
+                                                 // New condition added to the OR clause
+                    {
+                        $and: [
+                            { $eq: ["$receivedUser", "Staff"] },
+                            { $eq: ["$multipleReceivedUser", true] },
+                            { $eq: ["$previousReceivedUser", "Driver"] }
+                        ]
+                    }
                                             ]
                                         },
-                                        "$receivedAmountStaff",
-                                        "$receivedAmount"
-                                    ]
-                                }
+                                       // Modified then clause to handle the new condition
+            {
+                $cond: [
+                    {
+                        $and: [
+                            { $eq: ["$receivedUser", "Staff"] },
+                            { $eq: ["$multipleReceivedUser", true] },
+                            { $eq: ["$previousReceivedUser", "Driver"] }
+                        ]
+                    },
+                    "$receivedAmountDriver",  // Use this if the new condition is true
+                    "$receivedAmountStaff"  // Otherwise use the original value
+                ]
+            },
+            "$receivedAmount" 
+             // Else clause remains the same
+        ]
+    }
                                 : forCompanyReport
                                     ? "$receivedAmountByCompany"
                                     : "$receivedAmount"
                     },
+                    
                     totalOverall: {
                         $sum: forStaffReport
                             ? "$receivedAmountStaff"
-                            : forDriverReport
-                                ? {
-                                    $cond: [
-                                        {
-                                            $or: [
-                                                {
-                                                    $and: [
-                                                        { $eq: ["$receivedUser", "Staff"] },
-                                                        { $eq: ["$partialReceivedAmountStaff", true] }
-                                                    ]
-                                                },
-                                                {
-                                                    $and: [
-                                                        { $eq: ["$previousReceivedUser", "Staff"] },
-                                                        { $eq: ["$partialReceivedAmountStaff", true] }
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        "$totalAmount",
-                                        {
-                                            $cond: [
-                                                {
-                                                    $or: [
-                                                        { $ne: ["$receivedUser", "Staff"] },
-                                                        { $ne: ["$previousReceivedUser", "Staff"] }
-                                                    ]
-                                                },
-                                                "$totalAmount",
-                                                0
-                                            ]
-                                        }
-                                    ]
-                                }
+                           : forDriverReport
+            ? {
+                $cond: [
+                    {
+                        $or: [
+                            { $ne: ["$receivedUser", "Staff"] },
+                            { $ne: ["$previousReceivedUser", "Staff"] },
+                            {
+                                $and: [
+                                    { $eq: ["$receivedUser", "Staff"] },
+                                    { $eq: ["$multipleReceivedUser", true] },
+                                    { $eq: ["$previousReceivedUser", "Driver"] }
+                                ]
+                            }
+                        ]
+                    },
+                    "$totalAmount",
+                    {
+                        $cond: [
+                            {
+                                $and: [
+                                    { $eq: ["$receivedUser", "Staff"] },
+                                    { $eq: ["$multipleReceivedUser", true] },
+                                    { $eq: ["$previousReceivedUser", "Driver"] }
+                                ]
+                            },
+                            "$receivedAmountDriver",
+                            0
+                        ]
+                    }
+                ]
+            }
                                 : forCompanyReport
                                     ? "$totalAmount"
                                     : "$totalAmount"
@@ -1623,7 +1688,22 @@ exports.verifyBooking = async (req, res) => {
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-
+// Call the vehicle service status check function after successful verification
+        if (booking.driver && booking.totalDriverDistence) {
+            const vehicleStatusResult = await checkVehicleServiceStatus(updatedBooking);
+            if (!vehicleStatusResult.success) {
+                routeLogger.warn({
+                    bookingId: id,
+                    error: vehicleStatusResult.message
+                }, 'Vehicle service status update failed');
+            } else {
+                routeLogger.info({
+                    bookingId: id,
+                    vehicleId: vehicleStatusResult.vehicleId,
+                    newOdometerValue: vehicleStatusResult.newOdometerValue
+                }, 'Vehicle service status updated successfully');
+            }
+        }
         routeLogger.info({
             fileNumber: updatedBooking.fileNumber || 'unknown',
             doneBy: req.user || 'unknown'
@@ -1982,65 +2062,75 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
     }
 };
 
-//Controller to settle booking amount 
+// Controller to settle booking amount 
 exports.settleAmount = async (req, res) => {
-    try {
+   try {
         const routeLogger = LoggerFactory.createChildLogger({
             route: '/settle-amount',
             handler: 'settleAmount',
         });
-        routeLogger.info({
-            doneBy: req.user || 'unknown'
-        }, 'The process to settle amount the booking has started....');
-
+        
         const { id } = req.params;
-        const { partialAmount, receivedUser, role, receivedAmount } = req.body;
-        const userId = req.user.id || req.user._id
+        const { partialAmount, receivedUser, role, receivedAmount, receivedUserId } = req.body;
+        const currentUserId = req.user.id || req.user._id; // The user making the request
 
         const booking = await Booking.findById(id);
-        console.log("booking", booking)
         if (!booking) {
-            return res.status(404).json({
-                message: 'Booking not found'
-            });
+            return res.status(404).json({ message: 'Booking not found' });
         }
-        // Skip if this is RSAWork (handled by separate endpoint)
+
         if (booking.workType === 'RSAWork') {
             return res.status(400).json({
                 message: 'For RSAWork bookings, please use the settleAmountCompany endpoint'
             });
         }
+
         // Creating the receivedHistory object
         const receivedHistory = {
             role: receivedUser || 'Admin',
-            receivedUser: userId,
+            receivedUser: currentUserId, // The user who processed the payment
             amount: receivedAmount || partialAmount
-        }
+        };
 
-        booking.receivedHistory.push(receivedHistory)
-
-        if (role !== 'admin' && receivedUser) {
-            booking.receivedUserId = userId
-            booking.receivedUser = receivedUser
-            booking.receivedAmountStaff = partialAmount || receivedAmount  // Changed from 'amount'
+        booking.receivedHistory.push(receivedHistory);
+   if (receivedUser) {
+    // Check if current receivedUser is different from new receivedUser AND roles are different
+    if (booking.receivedUser && booking.receivedUser !== receivedUser) {
+        booking.multipleReceivedUser = true; // Set flag if different users
+        // Only update previousReceivedUser when the roles are different
+        booking.previousReceivedUser = booking.receivedUser;
+        booking.previousReceivedUserId = booking.receivedUserId;
+    }
+            
+            // Use receivedUserId if provided (for Drivers), otherwise use current user ID
+            const targetUserId = receivedUser === 'Driver' ? receivedUserId : currentUserId;
+            
+            booking.receivedUserId = targetUserId;
+            booking.receivedUser = receivedUser;
+            
+            if (receivedUser === 'Driver') {
+                booking.receivedAmountDriver = (booking.receivedAmountDriver || 0) + Number(partialAmount || receivedAmount || 0);
+            } else if (receivedUser === 'Staff') {
+                booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + Number(partialAmount || receivedAmount || 0);
+            }
 
             const ReceivedUserModel = mongoose.model(receivedUser || "Driver");
 
-            //Update ReceivedUser cash in hand 
-            await ReceivedUserModel.findByIdAndUpdate(userId, {
+            // Update the target user's cash in hand
+            await ReceivedUserModel.findByIdAndUpdate(targetUserId, {
                 $inc: {
                     cashInHand: Number(partialAmount || 0)
                 }
             });
         }
-
+        // Rest of your existing code remains the same...
         // Update partial or amount to booking
         if (booking.company) {
             const currentAmount = Number(booking.receivedAmountByCompany) || 0;
             const amountToAdd = Number(partialAmount || receivedAmount) || 0;
 
             booking.receivedAmountByCompany = currentAmount + amountToAdd;
-            booking.receivedAmount = amountToAdd
+            booking.receivedAmount = amountToAdd;
             if (booking.totalAmount <= booking.receivedAmountByCompany) {
                 booking.cashPending = false;
             }
@@ -2049,7 +2139,7 @@ exports.settleAmount = async (req, res) => {
                 booking.receivedAmount = receivedAmount;
             } else {
                 booking.partialAmount = booking.partialAmount || 0;
-                booking.partialAmount += partialAmount;
+                booking.partialAmount += Number(partialAmount || 0);
                 if (booking.partialAmount < booking.totalAmount) {
                     booking.partialPayment = true;
                     booking.cashPending = true;
@@ -2060,12 +2150,13 @@ exports.settleAmount = async (req, res) => {
             }
         }
 
-        // Condition for valide amount if the amount more thatn total amount this will handled
+        // Condition for valid amount if the amount more than total amount this will handled
         if (!booking.company && booking.totalAmount <= booking.partialAmount) {
             booking.partialAmount = booking.receivedAmount;
             booking.partialPayment = false;
             booking.cashPending = false;
         }
+        
         await booking.save();
 
         routeLogger.info({

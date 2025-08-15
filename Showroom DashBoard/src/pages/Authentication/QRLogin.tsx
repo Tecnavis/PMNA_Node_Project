@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { QRCodeSVG as QRCode } from 'qrcode.react'
 import rsaIcon from '../../../public/assets/rsaqr.jpg'
-import domtoimage from 'dom-to-image';
+// import domtoimage from 'dom-to-image';
 import { jsPDF } from 'jspdf';
 import { main } from "@popperjs/core";
 import { getShowroomById } from "../../service/showroom";

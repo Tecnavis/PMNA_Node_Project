@@ -89,32 +89,44 @@ const ShowroomCashCollectionsReport = () => {
     }
   };
 
-  // Fetch bookings related to this showroom
-  const fetchBookings = async () => {
-    if (!showroom?._id) return;
-    try {
-      const response = await axios.get(`${backendUrl}/booking`, {
-        params: {
-          showroomId: showroom._id,
-          startDate,
-          endingDate,
-          search,
-          page,
-          limit: pageSize
-        }
-      });
-      setBookings(response.data.bookings);
-      calculateFinacials(response.data.bookings)
-    } catch (error) {
-      console.error("Error fetching bookings for showroom:", error);
-    }
-  };
+const fetchBookings = async () => {
+  if (!showroom?._id) {
+    console.log("Showroom ID not available yet");
+    return;
+  }
+  
+  try {
+    const response = await axios.get(`${backendUrl}/booking`, {
+      params: {
+        showroomId: showroom._id,
+        search,
+        page,
+        limit: pageSize
+      }
+    });
+    
+    // Map bookings to include totalAmountShowroom
+    const updatedBookings = response.data.bookings.map((booking: Booking) => ({
+      ...booking,
+      totalAmountShowroom: (booking?.insuranceAmount || 0) + (booking?.showroomAmount || 0)
+    }));
+    
+    setBookings(updatedBookings);
+    calculateFinacials(updatedBookings);
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+  }
+};
+useEffect(() => {
+  gettingToken();
+  getShowroom();
+}, [id]);
 
-  useEffect(() => {
-    gettingToken();
-    getShowroom();
-    // Optionally, fetch bookings here if showroom data is not required for the query
-  }, []);
+useEffect(() => {
+  if (showroom?._id) {
+    fetchBookings();
+  }
+}, [showroom, startDate, endingDate, search, page, pageSize]);
 
   useEffect(() => {
     if (showroom) {
@@ -165,7 +177,7 @@ const ShowroomCashCollectionsReport = () => {
     const amount = inputValues[bookingId]
     if (result.isConfirmed) {
       await axios.put(`${BASE_URL}/booking/${bookingId}`, {
-        receivedAmount: amount
+        receivedAmountShowroom: amount
       });
       fetchBookings();
       Swal.fire('Confirmed!', 'The amount has been updated.', 'success');
@@ -291,7 +303,16 @@ const ShowroomCashCollectionsReport = () => {
       }
     },
     { accessor: 'insuranceAmount', cellsClassName: 'text-center', title: 'Payable Insurance From Showroom', render: (record: Booking) => <span className='text-center'>{record?.insuranceAmount || 0} </span> },
-    { accessor: 'insuranceAmount', cellsClassName: 'text-center', title: 'Total (Payable Amount + Payable Insurance)', render: (record: Booking) => <span className='text-center'>{(record?.insuranceAmount || 0) + (record?.showroomAmount || 0)} </span> },
+      {
+    accessor: 'totalAmountShowroom',
+    cellsClassName: 'text-center', 
+    title: 'Total (Payable Amount + Payable Insurance)',
+    render: (record: Booking) => (
+      <span className='text-center'>
+        {record?.totalAmountShowroom || 0}
+      </span>
+    )
+  },
     {
       accessor: 'receivedAmount',
       cellsClassName: 'text-center',
@@ -300,7 +321,7 @@ const ShowroomCashCollectionsReport = () => {
         <div style={{ display: 'flex', alignItems: 'center' }} className='flex gap-2'>
           <input
             type="text"
-            value={inputValues[booking._id] || booking.receivedAmount || ''}
+            value={inputValues[booking._id] || booking.receivedAmountShowroom || ''}
             onChange={(e) => handleInputChange(booking._id, e.target.value)}
             className=' border py-2 px-2 border-gray-500 rounded-md h-9'
             disabled={booking.approve}
@@ -310,7 +331,7 @@ const ShowroomCashCollectionsReport = () => {
             disabled={booking.approve || loadingStates[booking._id]}
             style={{
               backgroundColor:
-                Number(calculateBalance(booking.totalAmount || 0, inputValues[booking._id] || booking.receivedAmount || 0)) === 0
+                Number(calculateBalance(booking.totalAmountShowroom || 0, inputValues[booking._id] || booking.receivedAmountShowroom || 0)) === 0
                   ? '#28a745'
                   : '#dc3545',
               color: 'white',
@@ -325,28 +346,29 @@ const ShowroomCashCollectionsReport = () => {
         </div>
       )
     },
-    {
-      accessor: 'balance',
-      title: 'Balance(from showroom)',
-      cellsClassName: 'text-center',
-      render: (booking: Booking) => {
-        const effectiveReceivedAmount = inputValues[booking._id] || booking.receivedAmount || 0;
-        return (
-          <span
-            style={{
-              backgroundColor:
-                Number(calculateBalance(booking.totalAmount || 0, effectiveReceivedAmount)) === 0
-                  ? '#e6ffe6'
-                  : '#ffe6e6',
-              padding: '0.25rem 0.5rem',
-              borderRadius: '0.25rem'
-            }}
-          >
-            {calculateBalance(booking.totalAmount || 0, effectiveReceivedAmount)}
-          </span>
-        );
-      }
-    },
+   {
+    accessor: 'balance',
+    title: 'Balance(from showroom)',
+    cellsClassName: 'text-center',
+    render: (booking: Booking) => {
+      const effectiveReceivedAmount = inputValues[booking._id] || booking.receivedAmountShowroom || 0;
+      return (
+        <span
+          style={{
+            backgroundColor:
+              Number(calculateBalance(booking.totalAmountShowroom || 0, effectiveReceivedAmount)) === 0
+                ? '#e6ffe6'
+                : '#ffe6e6',
+            padding: '0.25rem 0.5rem',
+            borderRadius: '0.25rem'
+          }}
+        >
+          {calculateBalance(booking.totalAmountShowroom || 0, effectiveReceivedAmount)}
+        </span>
+      );
+    }
+      },
+
     {
       accessor: 'status',
       title: 'Status',

@@ -20,6 +20,13 @@ const expenseSchema = new mongoose.Schema({
     approvedDate: {
         type: Date
     },
+     settled: { // New field to track settlement status
+        type: Boolean,
+        default: false
+    },
+    settledAt: { // New field to track when it was settled
+        type: Date
+    },
     driver: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Driver',

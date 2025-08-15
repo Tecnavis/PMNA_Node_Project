@@ -55,7 +55,8 @@ const VehicleDetails: React.FC = () => {
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
-    
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const navigate = useNavigate();
 
     // checking the token
@@ -117,9 +118,10 @@ const VehicleDetails: React.FC = () => {
     };
 
     const handleSaveVehicleDetails = async () => {
-        setFormSubmitted(true);
+    setFormSubmitted(true);
+    if (!validateForm()) return;
 
-        if (!validateForm()) return;
+    setIsSubmitting(true);
 
         try {
             await axios.post(`${backendUrl}/vehicle`, { serviceKM, serviceVehicle, vehicleName });
@@ -137,9 +139,25 @@ const VehicleDetails: React.FC = () => {
             setVehicleName("")
             setServiceNumber("")
             setServiceKM("")
-        } catch (error) {
-            console.error('Error saving baselocation:', error);
+        } catch (error: any) {
+    console.error('Error saving vehicle:', error);
+     handleClose();
+    Swal.fire({
+        icon: 'error',
+        title: 'Error saving vehicle',
+        text: error.response?.data?.message || 'Unknown error occurred',
+        toast: false, // Remove toast style
+        position: 'center', // Center the alert
+        showConfirmButton: true, // Show OK button
+        timer: undefined, // Don't auto-close
+        customClass: {
+            container: 'swal-overlay', // Add custom class
+            popup: 'swal-z-index' // Add custom class
         }
+    });
+} finally {
+        setIsSubmitting(false);
+    }
     };
 
     // editing baselocation

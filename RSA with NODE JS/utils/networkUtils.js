@@ -25,22 +25,22 @@ exports.isNetworkError = (error) => {
 
 // Transaction wrapper with retry logic
 exports.withRetryableTransaction = async (fn, options = {}) => {
-    
   const { maxRetries = 3, baseDelay = 1000 } = options;
   let attempt = 0;
   let lastError;
   
   while (attempt < maxRetries) {
     const session = await mongoose.startSession();
-    session.startTransaction();
     
     try {
+      session.startTransaction();
       const result = await fn(session);
       await session.commitTransaction();
       return result;
     } catch (error) {
-      await session.abortTransaction();
-      
+      if (session.inTransaction()) {
+        await session.abortTransaction();
+      }
       if (!this.isNetworkError(error)) {
         throw error; // Non-network errors bubble up immediately
       }
@@ -90,8 +90,11 @@ exports.checkDbConnection = async () => {
         socketTimeoutMS: 45000
       });
     }
+    // Additional check for replica set
+    await conn.db.admin().ping();
     return true;
   } catch (error) {
+    console.error('DB connection check failed:', error);
     return false;
   }
 };

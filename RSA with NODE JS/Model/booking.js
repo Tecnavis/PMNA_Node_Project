@@ -33,6 +33,10 @@ const bookingSchema = new mongoose.Schema({
     totalAmount: { type: Number },
     receivedAmount: { type: Number, default: 0 },
     receivedAmountStaff: { type: Number, default: 0 },
+        receivedAmountDriver: { type: Number, default: 0 },
+        receivedAmountShowroom: { type: Number, default: 0 },
+        totalAmountShowroom: { type: Number, default: 0 },
+multipleReceivedUser:{ type: Boolean },
     givenAmountByStaff: { type: Number, default: 0 },
     receivedAmountByCompany: { type: Number, default: 0 },
     showroomAmount: { type: Number, default: 0 },
@@ -109,6 +113,7 @@ partialAmountStaff: { type: Number },
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' },
     rewardAmount: { type: Number },
     discountAmount: { type: Number },
+    serviceDue: { type: Boolean },
     receivedHistory: [ReceivedHistorySchema],
 }, { timestamps: true });
 

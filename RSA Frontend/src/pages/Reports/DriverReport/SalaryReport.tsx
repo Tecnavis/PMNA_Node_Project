@@ -536,7 +536,7 @@ const DriverSalaryReport = () => {
                                         <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
                                             <h6 className="text-white-dark text-base font-bold  dark:text-white-dark">
                                                 Total Advance Amount
-                                                <span className="block text-base text-red-500 dark:text-white-light">{monthlyAdvanceAmount ? '₹' + monthlyAdvanceAmount : 'No advance payment made'}</span>
+                                                <span className="block text-base text-red-500 dark:text-white-light">{driver?.totalAdvance ? '₹' + driver.totalAdvance : 'No advance payment made'}</span>
                                             </h6>
                                         </div>
                                     </div>

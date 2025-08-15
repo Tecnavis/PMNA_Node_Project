@@ -299,7 +299,8 @@ exports.completeSettlement = async (req, res) => {
                     $set: {
                         previousSettlementCompletedDate: driver.settlementCompletedDate,
                         settlementCompletedDate: new Date(),
-                        settlement: true
+                        settlement: true,
+                        
                     }
                 },
                 {

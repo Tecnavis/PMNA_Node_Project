@@ -101,6 +101,7 @@ export interface Driver {
     balanceAmount?: number;
     driverSalary: number;
     advance: number;
+    totalAdvance?:number;
     phone: string;
     personalPhoneNumber: string;
     password: string;
