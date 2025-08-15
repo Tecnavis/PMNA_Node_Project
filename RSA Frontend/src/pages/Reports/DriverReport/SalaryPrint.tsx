@@ -230,7 +230,7 @@ export const handlePrint = (
             <div class="card-container">
                 <div class="card">
                     <div class="title">Advance Amount:</div>
-                    <div class="value">${driver.advance ? driver.advance : "No advance payment made"}</div>
+                    <div class="value">${driver.totalAdvance ? driver.totalAdvance : "No advance payment made"}</div>
                 </div>
                 <div class="card">
                     <div class="title">Salary in ${selectedMonth}: </div>

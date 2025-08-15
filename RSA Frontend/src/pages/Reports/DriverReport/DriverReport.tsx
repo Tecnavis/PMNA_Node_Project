@@ -291,89 +291,94 @@ const DriverCashCollectionsReport = () => {
         },
        {
     accessor: 'receivedAmount',
-    title: 'Amount Received From The Driver',
-    render: (booking: Booking) => {
-        if (booking._id === 'total') {
-            return <span className='font-semibold text-lg w-full flex justify-center text-center'>Total</span>
-        } else if (booking.cashPending) {
-            return <span className='ml-5 flex justify-center items-center text-center w-full text-red-500'>
-                Cash is pending...
-            </span>
-        } else if (booking.totalAmount == booking.receivedAmount) {
-            return <div className='flex justify-center items-center text-center w-full bg-yellow-100 p-2 rounded'>
-                {booking.receivedAmount}
-            </div>
-        } else {
-            return (
-                <td key={booking._id} className='flex justify-center items-center text-center w-full'>
-                    <div className='flex justify-center items-center text-center w-full'>
-                        {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
-                            <span className={`flex justify-center items-center text-center w-full ${
-                                booking.receivedUser === "Staff" 
-                                    ? booking.partialReceivedAmountStaff 
-                                        ? 'text-blue-600'  // Blue for partially received
-                                        : 'text-green-600' // Green for fully received
-                                    : 'text-red-500'
-                            }`}>
-                                      {booking.receivedUser === "Staff" 
-            ? <>
-                {booking.partialReceivedAmountStaff 
-                    ? "Staff Partially Received" 
-                    : "Staff Received"}
-                <br />
-                <span className="text-sm font-medium">
-                    (₹{booking.receivedAmountStaff || 0})
-                </span>
-              </>
-
-                                    : "No Need"}
-                            </span>
-                        ) : (
-                            <>
-                                <input
-                                    type="text"
-                                    value={inputValues[booking._id] || 0}
-                                    onChange={(e) => updateInputValues(booking._id, +e.target.value)}
-                                    style={{
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '0.25rem',
-                                        padding: '0.25rem 0.5rem',
-                                        marginRight: '0.5rem',
-                                    }}
-                                    disabled={booking.approve}
-                                    min="0"
-                                />
-                                <button
-                                    onClick={() => [ROLES.VERIFIER].includes(role) ? null : handleUpdateAmount(booking._id)}
-                                    disabled={booking.approve || loadingStates[booking._id]}
-                                    style={{
-                                        backgroundColor:
-                                            Number(
-                                                calculateBalance(
-                                                    parseFloat(booking.totalAmount?.toString() || '0'),
-                                                    inputValues[booking._id] || booking.receivedAmount || '0',
-                                                    booking.receivedUser,
-                                                     booking.partialReceivedAmountStaff, booking.receivedAmountStaff 
-                                                )
-                                            ) === 0
-                                                ? '#28a745' // Green for zero balance
-                                                : '#dc3545', // Red for non-zero balance
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '0.25rem',
-                                        padding: '0.3rem',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    {loadingStates[booking._id] ? 'Loading...' : 'OK'}
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </td>
-            )
-        }
+  title: 'Amount Received From The Driver',
+render: (booking: Booking) => {
+    if (booking._id === 'total') {
+        return <span className='font-semibold text-lg w-full flex justify-center text-center'>Total</span>
+    } else if (booking.cashPending) {
+        return <span className='ml-5 flex justify-center items-center text-center w-full text-red-500'>
+            Cash is pending...
+        </span>
+    } else if (booking.totalAmount == booking.receivedAmount) {
+        return <div className='flex justify-center items-center text-center w-full bg-yellow-100 p-2 rounded'>
+            {booking.receivedAmount}
+        </div>
+    } else {
+        // Calculate amounts based on payment flow
+        const driverReceivedAmount = booking.receivedAmountDriver || 0;
+        const staffReceivedAmount = booking.receivedAmountStaff || 0;
+        
+        // Determine payment flow direction
+        const isDriverToStaff = booking.receivedUser === "Staff" && booking.previousReceivedUser === "Driver";
+        const isStaffToDriver = booking.receivedUser === "Driver" && booking.previousReceivedUser === "Staff";
+        
+        return (
+            <td key={booking._id} className='flex justify-center items-center text-center w-full'>
+                <div className='flex justify-center items-center text-center w-full'>
+                    {booking.workType === 'RSAWork' && driver?.companyName !== 'Company' || booking.receivedUser === "Staff" ? (
+                        <span className={`flex flex-col justify-center items-center text-center w-full ${
+                            booking.receivedUser === "Staff" 
+                                ? booking.partialReceivedAmountStaff 
+                                    ? 'text-blue-600'  // Blue for partially received
+                                    : 'text-green-600' // Green for fully received
+                                : 'text-red-500'
+                        }`}>
+                            {isStaffToDriver ? (
+                                <>
+                                    <span>Driver Received: ₹{driverReceivedAmount}</span>
+                                    <span className="text-sm">(Staff Paid: ₹{staffReceivedAmount})</span>
+                                </>
+                            ) : isDriverToStaff ? (
+                                <>
+                                    <span>Staff Received: ₹{staffReceivedAmount}</span>
+                                    <span className="text-sm">(Driver Received: ₹{driverReceivedAmount})</span>
+                                </>
+                            ) : booking.receivedUser === "Staff" ? (
+                                <>
+                                    {booking.partialReceivedAmountStaff 
+                                        ? "Staff Partially Received" 
+                                        : "Staff Received"}
+                                    <br />
+                                    <span className="text-sm font-medium">
+                                        (₹{staffReceivedAmount})
+                                    </span>
+                                </>
+                            ) : "No Need"}
+                        </span>
+                    ) : (
+                        <>
+                            <input
+                                type="number"
+                                value={inputValues[booking._id] || 0}
+                                onChange={(e) => updateInputValues(booking._id, +e.target.value)}
+                                className="border border-gray-300 rounded px-2 py-1 mr-2 w-20"
+                                disabled={booking.approve}
+                                min="0"
+                            />
+                            <button
+                                onClick={() => [ROLES.VERIFIER].includes(role) ? null : handleUpdateAmount(booking._id)}
+                                disabled={booking.approve || loadingStates[booking._id]}
+                                className={`px-3 py-1 rounded text-white ${
+                                    Number(
+                                        calculateBalance(
+                                            parseFloat(booking.totalAmount?.toString() || '0'),
+                                            inputValues[booking._id] || booking.receivedAmount || '0',
+                                            booking.receivedUser,
+                                            booking.partialReceivedAmountStaff, 
+                                            booking.receivedAmountStaff
+                                        )
+                                    ) === 0 ? 'bg-green-500' : 'bg-red-500'
+                                }`}
+                            >
+                                {loadingStates[booking._id] ? 'Loading...' : 'OK'}
+                            </button>
+                        </>
+                    )}
+                </div>
+            </td>
+        )
     }
+}
 },
        {
   accessor: 'balance',
@@ -393,6 +398,12 @@ const DriverCashCollectionsReport = () => {
 
     // Handle Staff payments
     if (booking.receivedUser === 'Staff') {
+          // New condition for multiple received users both being Staff
+      if (booking.multipleReceivedUser === true && 
+          booking.receivedUser === 'Staff' && 
+          booking.previousReceivedUser === 'Staff') {
+        return <div className='text-center'>0</div>;
+      }
       if (booking.partialReceivedAmountStaff === false) {
         return <div className='text-center'>0</div>;
       }

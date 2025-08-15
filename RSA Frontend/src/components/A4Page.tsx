@@ -29,7 +29,7 @@ const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, url }) => {
             const pdf = new jsPDF("p", "mm", "a4");
 
             // Calculate dimensions to fit A4
-            const imgWidth = 190; // Width of A4 (210mm) minus margins (10mm on each side)
+            const imgWidth = 185; // Width of A4 (210mm) minus margins (10mm on each side)
             const imgHeight = (modalContent.scrollHeight * imgWidth) / modalContent.scrollWidth;
 
             // Add image to PDF
@@ -70,7 +70,7 @@ const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, url }) => {
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    padding: "20px",
+                    padding: "23px",
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -79,9 +79,9 @@ const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, url }) => {
                     ref={modalContentRef}
                     id='modal-content'
                     style={{
-                        padding: "30px",
+                        padding: "35px",
                         overflowY: "auto",
-                        width: "700px",
+                        width: "774px",
                         position: "relative", // Ensure QR codes are positioned properly
                     }}
                     className=" bg-white"

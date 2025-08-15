@@ -480,7 +480,25 @@ exports.completeSettlement = async (req, res) => {
                 }
             );
         }
-      
+      // Then mark all approved expenses as settled
+const approvedExpenses = await Expense.find({
+    driver: driverId,
+    approve: true,
+    status: 'approved',
+    settled: { $ne: true }
+});
+
+if (approvedExpenses.length > 0) {
+    await Expense.updateMany(
+        { _id: { $in: approvedExpenses.map(e => e._id) } },
+        { 
+            $set: { 
+                settled: true,
+                settledAt: new Date()
+            }
+        }
+    );
+}
         res.status(200).json({
             success: true,
             message: 'Settlement completed successfully',

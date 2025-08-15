@@ -346,11 +346,11 @@ exports.getVehiclesExceedingServiceKM = async (req, res) => {
     }
 };
 
-// Update service Km reached vehicle to valid state
+// Update service Km reached vehicle to valid state and update related bookings
 exports.updateVehicleServiceStatus = async (req, res) => {
     try {
         const { vehicleId } = req.params;
-        const { role } = req.body; // New serviceKM value
+        const { role } = req.body;
 
         // Find the vehicle
         const vehicle = await Vehicle.findById(vehicleId);
@@ -361,24 +361,65 @@ exports.updateVehicleServiceStatus = async (req, res) => {
             });
         }
 
-        // Update fields
+        // Find the driver and service type associated with this vehicle
+        const driver = await Driver.findOne({ 
+            "vehicle.vehicleNumber": vehicle.serviceVehicle 
+        });
+        
+        if (!driver) {
+            return res.status(404).json({
+                success: false,
+                message: "Driver not found for this vehicle",
+            });
+        }
+
+        // Find the specific vehicle entry in driver's vehicles array
+        const driverVehicle = driver.vehicle.find(
+            v => v.vehicleNumber === vehicle.serviceVehicle
+        );
+
+        if (!driverVehicle) {
+            return res.status(404).json({
+                success: false,
+                message: "Vehicle not found in driver's records",
+            });
+        }
+
+        // Update all matching bookings
+        const updateBookingsResult = await Booking.updateMany(
+            {
+                driver: driver._id,
+                status: "Order Completed",
+                serviceType: driverVehicle.serviceType,
+                $or: [
+                    { serviceDue: { $exists: false } },
+                    { serviceDue: { $ne: false } }
+                ]
+            },
+            {
+                $set: { serviceDue: true }
+            }
+        );
+
+        // Update vehicle fields
         vehicle.vehicleServiceDue = true;
         vehicle.vehicleServiceDismissed = true;
-        vehicle.DismissedBy = role
-        vehicle.valid = true
+        vehicle.DismissedBy = role;
+        vehicle.valid = true;
 
         await vehicle.save();
 
         res.status(200).json({
             success: true,
-            message: "Vehicle updated successfully",
+            message: "Vehicle and related bookings updated successfully",
             vehicle,
+            bookingsUpdated: updateBookingsResult.modifiedCount
         });
     } catch (error) {
         console.error("Error updating vehicle:", error);
         res.status(500).json({
             success: false,
-            message: "An error occurred while updating the vehicle.",
+            message: "An error occurred while updating the vehicle and bookings.",
             error: error.message,
         });
     }

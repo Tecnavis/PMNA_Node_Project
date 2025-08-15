@@ -15,19 +15,19 @@ async function getValidDateRange(driverId) {
     }
 
     const now = new Date();
-    
-    // If dates are invalid or missing, use current month
-    if (!driver.previousSettlementCompletedDate || !driver.settlementCompletedDate || 
-        driver.previousSettlementCompletedDate > driver.settlementCompletedDate) {
+
+    // If dates are invalid or missing, use current month's start date as startDate and current date as endDate
+    if (!driver.settlementCompletedDate) {
         return {
             startDate: new Date(now.getFullYear(), now.getMonth(), 1),
-            endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+            endDate: now
         };
     }
-    
+
+    // Always use current date as endDate, and settlementCompletedDate as startDate
     return {
-        startDate: driver.previousSettlementCompletedDate,
-        endDate: driver.settlementCompletedDate
+        startDate: driver.settlementCompletedDate,
+        endDate: now
     };
 }
 const getTotalDriverExpense = async (driverId) => {
@@ -48,9 +48,9 @@ const getTotalDriverExpense = async (driverId) => {
 
     return result[0]?.totalExpense || 0;
 }
-// -------------------------------------
-// Calculating the net total amount in hand 
+// ..........................................................................................................
 async function calculateNetTotalAmountInHand(driverId) {
+    // First aggregation for regular bookings
     const result = await Booking.aggregate([
         {
             $match: {
@@ -67,8 +67,20 @@ async function calculateNetTotalAmountInHand(driverId) {
                     },
                     {
                         $or: [
+                           
+                            {
+                                $nor: [
+                                    { receivedUser: { $in: ['Admin', 'Staff'] } },
+                                    { previousReceivedUser: { $in: ['Admin', 'Staff'] } }
+                                ]
+                            }
+                        ]
+                    },
+
+                    {
+                        $or: [
                             // Non-staff cases
-                            { receivedUser: { $ne: 'Staff' } },
+                            { receivedUser: { $nin: ['Staff', 'Admin'] } },
                             { receivedUser: { $exists: false } },
                             // Staff cases (current or previous)
                             {
@@ -79,7 +91,25 @@ async function calculateNetTotalAmountInHand(driverId) {
                                             { partialReceivedAmountStaff: true }
                                         ]
                                     },
-                                 
+                                    {
+                                        $and: [
+                                            { previousReceivedUser: 'Staff' },
+                                            { partialPayment: false }
+                                        ]
+                                    }
+                                ]
+                            },
+                            // Driver cases with multipleReceivedUser
+                            {
+                                $and: [
+                                    { multipleReceivedUser: true },
+                                    {
+                                        $or: [
+                                            { receivedUser: 'Driver' },
+                                            { previousReceivedUser: 'Driver' }
+
+                                        ]
+                                    }
                                 ]
                             }
                         ]
@@ -87,27 +117,56 @@ async function calculateNetTotalAmountInHand(driverId) {
                 ]
             }
         },
-         {
-            $addFields: {
-                effectiveReceivedAmount: {
+       {
+    $addFields: {
+        effectiveReceivedAmount: {
+            $cond: [
+                {
+                    $or: [
+                        // Staff cases
+                        {
+                            $and: [
+                                { $eq: ["$receivedUser", "Staff"] },
+                                { $eq: ["$partialReceivedAmountStaff", true] }
+                            ]
+                        },
+                        {
+                            $and: [
+                                { $eq: ["$previousReceivedUser", "Staff"] },
+                                { $eq: ["$partialPayment", false] }
+                            ]
+                        },
+                        // Driver cases with multipleReceivedUser
+                        {
+                            $and: [
+                                { $eq: ["$multipleReceivedUser", true] },
+                                {
+                                    $or: [
+                                        { $eq: ["$receivedUser", "Driver"] },
+                                        { $eq: ["$previousReceivedUser", "Driver"] }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
                     $cond: [
                         {
                             $or: [
-                                {
-                                    $and: [
-                                        { $eq: ["$receivedUser", "Staff"] },
-                                        { $eq: ["$partialReceivedAmountStaff", true] }
-                                    ]
-                                },
-                           
+                                { $eq: ["$receivedUser", "Staff"] },
+                                { $eq: ["$previousReceivedUser", "Staff"] }
                             ]
                         },
-                        "$receivedAmountStaff",  // Use receivedAmountStaff for partial Staff payments
-                        "$receivedAmount"       // Use regular receivedAmount for all others
+                        "$receivedAmountStaff",  // Use receivedAmountStaff for Staff cases
+                        "$receivedAmountDriver"  // Use receivedAmountDriver for Driver cases
                     ]
-                }
-            }
-        },
+                },
+                "$receivedAmount"  // Default case
+            ]
+        }
+    }
+},
         {
             $group: {
                 _id: null,
@@ -120,19 +179,145 @@ async function calculateNetTotalAmountInHand(driverId) {
         }
     ]);
 
-    const result2 = await Booking.aggregate([
+    // Second aggregation for partial payment bookings (cashPending true)
+    const partialPaymentResult = await Booking.aggregate([
         {
             $match: {
                 driver: new mongoose.Types.ObjectId(driverId),
+                status: 'Order Completed',
+                workType: 'PaymentWork',
+                cashPending: true,
                 partialPayment: true,
-                workType: 'PaymentWork'
+                receivedUser:'Driver'
+            }
+        },
+        {
+            $addFields: {
+                // For partial payment bookings, we use receivedAmountDriver as the target amount
+                amountDue: {
+                    $subtract: ["$receivedAmountDriver", "$receivedAmount"]
+                }
             }
         },
         {
             $group: {
                 _id: null,
-                netTotalAmount2: {
-                    $sum: '$partialAmount'
+                netPartialAmount: {
+                    $sum: {
+                        $cond: [
+                            { $gt: ["$amountDue", 0] },  // Only include if there's amount due
+                            "$amountDue",
+                            0
+                        ]
+                    }
+                }
+            }
+        }
+    ]);
+ const firstCasePaymentResult = await Booking.aggregate([
+        {
+            $match: {
+                driver: new mongoose.Types.ObjectId(driverId),
+                status: 'Order Completed',
+                workType: 'PaymentWork',
+                cashPending: false,
+                receivedUser: 'Driver',
+                 previousReceivedUser: 'Staff'
+                 },
+            
+        },
+        {
+            $addFields: {
+                // For partial payment bookings, we use receivedAmountDriver as the target amount
+                amountDue: {
+                    $subtract: ["$receivedAmountDriver", "$receivedAmount"]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                netFirstCaseAmount: {
+                    $sum: {
+                        $cond: [
+                            { $gt: ["$amountDue", 0] },  // Only include if there's amount due
+                            "$amountDue",
+                            0
+                        ]
+                    }
+                }
+            }
+        }
+    ]);
+    // third case
+      const thirdCasePaymentResult = await Booking.aggregate([
+        {
+            $match: {
+                driver: new mongoose.Types.ObjectId(driverId),
+                status: 'Order Completed',
+                workType: 'PaymentWork',
+                cashPending: false,
+                receivedUser:'Staff',
+                previousReceivedUser:"Driver",
+                givenAmountByStaff: 0,
+            }
+        },
+        {
+            $addFields: {
+                // For partial payment bookings, we use receivedAmountDriver as the target amount
+                amountDue: {
+                    $subtract: ["$receivedAmountDriver", "$receivedAmount"]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                netThirdCaseAmount: {
+                    $sum: {
+                        $cond: [
+                            { $gt: ["$amountDue", 0] },  // Only include if there's amount due
+                            "$amountDue",
+                            0
+                        ]
+                    }
+                }
+            }
+        }
+    ]);
+  
+        // new condition................................
+         const newCasePaymentResult = await Booking.aggregate([
+        {
+            $match: {
+                driver: new mongoose.Types.ObjectId(driverId),
+                status: 'Order Completed',
+                workType: 'PaymentWork',
+                cashPending: false,
+                receivedUser:'Driver',
+                previousReceivedUser:"Staff",
+                receivedAmount: 0,
+            }
+        },
+        {
+            $addFields: {
+                // For partial payment bookings, we use receivedAmountDriver as the target amount
+                amountDue: {
+                    $subtract: ["$receivedAmountDriver", "$receivedAmount"]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                netNewCaseAmount: {
+                    $sum: {
+                        $cond: [
+                            { $gt: ["$amountDue", 0] },  // Only include if there's amount due
+                            "$amountDue",
+                            0
+                        ]
+                    }
                 }
             }
         }
@@ -140,7 +325,10 @@ async function calculateNetTotalAmountInHand(driverId) {
 
     return (
         (result[0]?.netTotalAmount || 0) +
-        (result2[0]?.netTotalAmount2 || 0)
+        (partialPaymentResult[0]?.netPartialAmount || 0)+
+        (firstCasePaymentResult[0]?.netFirstCaseAmount || 0)+
+         (thirdCasePaymentResult[0]?.netThirdCaseAmount || 0)+
+           (newCasePaymentResult[0]?.netNewCaseAmount || 0)
     );
 }
 // Calculate the driver total salary from verified bookings
@@ -187,7 +375,7 @@ async function updateDriverFinancials(driverId, advance = 0) {
 
     const finalCashInHand = netTotalAmount + advance
     const balance = calculateBalanceAmount(finalCashInHand, totalSalary) || 0
-     // Prepare the update object
+    // Prepare the update object
     const updateData = {
         cashInHand: finalCashInHand,
         driverSalary: totalSalary,
@@ -218,29 +406,12 @@ function calculateBalanceAmount(cashInHand, driverSalary) {
     return cashInHand - driverSalary
 }
 async function calculateMonthlyExpense(driverId) {
-    const { startDate, endDate } = await getValidDateRange(driverId);
-
     const result = await Expense.aggregate([
         {
             $match: {
                 driver: new mongoose.Types.ObjectId(driverId),
                 approve: true,
-                $or: [
-                    // Expenses created between settlements
-                    { 
-                        createdAt: { 
-                            $gte: startDate,
-                            $lte: endDate 
-                        } 
-                    },
-                    // Or expenses approved between settlements (if you track approval date)
-                    { 
-                        approvedDate: { 
-                            $gte: startDate,
-                            $lte: endDate 
-                        } 
-                    }
-                ]
+                settled: { $ne: true } // Only include unsettled expenses
             }
         },
         {
@@ -256,7 +427,7 @@ async function calculateMonthlyExpense(driverId) {
             }
         }
     ]);
-
+    console.log("result", result)
     return result[0]?.monthlyExpense || 0;
 }
 // Calculating the current monthlyExpense
@@ -322,7 +493,7 @@ async function calculateMonthlyDieselExpense(driverId) {
 }
 async function calculateTotalAdvance(driverId) {
 
-     const { startDate, endDate } = await getValidDateRange(driverId);
+    const { startDate, endDate } = await getValidDateRange(driverId);
 
     const result = await Advance.aggregate([
         {
@@ -350,7 +521,7 @@ async function calculateMonthlySalary(driverId) {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    
+
     const result = await Booking.aggregate([
         {
             $match: {

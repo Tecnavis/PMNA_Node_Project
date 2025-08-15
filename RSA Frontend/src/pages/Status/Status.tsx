@@ -191,23 +191,30 @@ const Status: React.FC = () => {
         }
     };
 
-    const handleSavePayment = async () => {
-        setLoader(true);
-
-        try {
-            const partialAmount = paymentAmount
-
-            const response = await axiosInstance.patch(`/booking/sattle-amount/${selectedBooking?._id}`, { partialAmount, receivedUser, role });
-
-            setShowPaymentModal(false);
-            setPaymentAmount(0);
-            fetchBookings();
-        } catch (error) {
-
-        } finally {
-            setLoader(false);
-        }
+   const handleSavePayment = async () => {
+    setLoader(true);
+    try {
+        // You'll need to get the selected driver's ID from your state
+        const driverId = selectedBooking?.driver?._id; // Or however you store the selected driver's ID
+        
+        const response = await axiosInstance.patch(
+            `/booking/sattle-amount/${selectedBooking?._id}`, 
+            { 
+                partialAmount: paymentAmount, 
+                receivedUser,  // 'Driver', 'Staff', or 'Showroom'
+                receivedUserId: receivedUser === 'Driver' ? driverId : undefined,
+                role 
+            }
+        );
+        setShowPaymentModal(false);
+        setPaymentAmount(0);
+        fetchBookings();
+    } catch (error) {
+        console.error('Error saving payment:', error);
+    } finally {
+        setLoader(false);
     }
+};
     const handleChangeAmount = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value.trim();
 
@@ -707,7 +714,7 @@ const Status: React.FC = () => {
                                 type="radio"
                                 name="role"
                                 value="Driver"
-                                defaultChecked
+                               
                                 onChange={handleRoleChange}
                             />
                             <label className="mt-1">Driver</label>

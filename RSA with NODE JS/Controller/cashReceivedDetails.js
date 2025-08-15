@@ -11,7 +11,7 @@ const {
   networkErrorResponse,
   checkDbConnection
 } = require('../utils/networkUtils.js');
-// ----------------------------
+// ----------------------------------------------------------------------------------
 exports.createReceivedDetails = async (req, res) => {
     // Check DB connection first
   const isDbConnected = await checkDbConnection();
@@ -66,12 +66,42 @@ exports.createReceivedDetails = async (req, res) => {
       let remainingAmount = Number(receivedAmount);
       const processedBookings = [];
 
-   const bookingQuery = {
+  const bookingQuery = {
   status: 'Order Completed',
   workType: 'PaymentWork',
   cashPending: false,
-  receivedUser: { $ne: 'Staff' },
-  $expr: { $gt: ["$totalAmount", "$receivedAmount"] },
+    receivedUser: { $ne: 'Staff' },
+  
+
+  $or: [
+    { 
+    $or: [
+        { receivedUser: { $ne: 'Staff' } },
+        { 
+          $and: [
+            { multipleReceivedUser: true },
+            { 
+              $or: [
+                { receivedUser: 'Staff' },
+                { previousReceivedUser: 'Staff' }
+              ]
+            }
+          ]
+        }
+      ],
+      $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
+    },
+    { 
+      cashPending: true,
+      partialPayment: true,
+      $expr: { 
+        $and: [
+          { $gt: ["$totalAmount", "$receivedAmount"] },
+          { $gt: ["$receivedAmountDriver", "$receivedAmount"] }
+        ]
+      }
+    }
+  ],
   [entityField]: entityId
 };
 
@@ -163,31 +193,62 @@ exports.createReceivedDetails = async (req, res) => {
 
 // Helper Functions
 function calculateBookingBalance(booking, userRole) {
+  // Handle the specific case where:
+  // - receivedUser is "Staff"
+  // - multipleReceivedUser is true
+  // - previousReceivedUser is "Driver"
+  if (booking.receivedUser === 'Staff' && 
+      booking.multipleReceivedUser === true && 
+      booking.previousReceivedUser === 'Driver') {
+    return (booking.receivedAmountDriver || 0) - (booking.receivedAmount || 0);
+  }
+  
+  // Existing logic for Staff with partial received amount
   if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff) {
     return booking.totalAmount - (booking.receivedAmountStaff || 0);
   }
+  
+  // Default case
   return booking.totalAmount - (booking.receivedAmount || 0);
 }
 
 function updateBookingPayment(booking, amount, userRole, receivedUserId) {
+  // Case 1: Staff with partial payment
   if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff) {
     if (userRole === 'Staff') {
       booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + amount;
     } else {
       booking.receivedAmount = (booking.receivedAmount || 0) + amount;
     }
-  } else {
+  } 
+  // Case 2: Special case where receivedUser is Admin/Staff with multipleReceivedUser
+  else if (booking.multipleReceivedUser === true && 
+           (booking.receivedUser === 'Admin' || booking.receivedUser === 'Staff')) {
+    // Keep original receivedUser as is
+    booking.receivedAmount = (booking.receivedAmount || 0) + amount;
+    
+    // Track the current payment separately
+    booking.previousReceivedUser = userRole;
+    booking.previousReceivedUserId = receivedUserId;
+  } 
+  // Default case
+  else {
     booking.receivedAmount = (booking.receivedAmount || 0) + amount;
     if (userRole === 'Staff') {
       booking.receivedAmountStaff = amount;
     }
+    booking.receivedUser = userRole;
+    booking.receivedUserId = receivedUserId;
   }
 
-  // Update tracking fields
-  booking.receivedUser = userRole;
-  booking.receivedUserId = receivedUserId;
+  // Update partial payment flag
   booking.partialReceivedAmountStaff = 
     Math.abs((booking.receivedAmount || 0) - booking.totalAmount) >= 0.01;
+  
+  // Update multipleReceivedUser flag if not already set
+  if (booking.receivedUser && booking.previousReceivedUser && !booking.multipleReceivedUser) {
+    booking.multipleReceivedUser = true;
+  }
 }
 
 async function processAdvanceDeduction(entity, isDriver, amount, meta, session) {

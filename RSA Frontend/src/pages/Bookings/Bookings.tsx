@@ -62,6 +62,9 @@ export interface Booking {
     cancelImage: string,// new prop
     company: Company | string
     partialAmount?: number;
+     receivedAmountShowroom?: number;
+      totalAmountShowroom?: number;
+    bookedByModel?:string;
     partialReceivedAmountStaff?:Boolean;
     partialAmountStaff?:number;
     previousReceivedUser?:string;
@@ -478,7 +481,9 @@ cashPending:false,
                                 const bookingDate = items.createdAt ? new Date(items.createdAt) : new Date();
                                 const isToday = bookingDate.toLocaleDateString('en-GB') === currentDate.toLocaleDateString('en-GB');
 
-                                if (items.bookedBy?.startsWith('RSA')) {
+                if (items.bookedByModel === 'Showroom') {
+                    fileNumberColor = isToday ? '#3b82f6' : '#f97316'; // Showroom today = blue, past = orange
+                                 } else if (items.bookedBy?.startsWith('RSA')) {
                                     fileNumberColor = isToday ? '#22c55e' : '#eab308'; // RSA today = green, past = yellow
                                 } else if (items.bookedBy?.startsWith('SHM')) {
                                     fileNumberColor = isToday ? '#3b82f6' : '#f97316'; // SHM today = blue, past = orange

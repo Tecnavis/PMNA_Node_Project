@@ -244,53 +244,53 @@ const Index = () => {
         }
     }
 
-    const handleDismissVehicleServiceKm = async (vehicle: VehicleRecord) => {
-        try {
-            const result = await Swal.fire({
-                title: `Dismiss Service KM Exceeded?`,
-                text: `Are you sure you want to dismiss the service KM exceeded status for vehicle ${vehicle.vehicleNumber}?`,
-                color: '#ffff',
-                showCancelButton: true,
-                confirmButtonColor: "#ef4444",
-                cancelButtonColor: "#e5e7eb",
-                confirmButtonText: "Yes, Dismiss it!"
-            });
+   const handleDismissVehicleServiceKm = async (vehicle: VehicleRecord) => {
+    try {
+        const result = await Swal.fire({
+            title: `Dismiss Service KM Exceeded?`,
+            text: `This will update the vehicle status and mark all completed bookings as requiring service. Continue?`,
+            color: '#ffff',
+            showCancelButton: true,
+            confirmButtonColor: "#ef4444",
+            cancelButtonColor: "#e5e7eb",
+            confirmButtonText: "Yes, Dismiss it!"
+        });
 
-            if (!result.isConfirmed) return;
+        if (!result.isConfirmed) return;
 
-            const response = await axios.put(`${backendUrl}/vehicle/${vehicle._id}/update-status`, {
-                role
-            });
+        const response = await axios.put(`${backendUrl}/vehicle/${vehicle._id}/update-status`, {
+            role
+        });
 
-            fetchServiceKmExceededVehicle(); // Refresh bookings or vehicle data
-            // Handle API response
-            if (response.data) {
-                Swal.fire({
-                    icon: 'success',
-                    title: `Service KM exceeded status for vehicle ${vehicle.vehicleNumber} dismissed successfully.`,
-                    toast: true,
-                    position: 'top',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    padding: '10px 20px',
-                });
-            } else {
-                throw new Error(response.data.message || "Something went wrong");
-            }
-
-        } catch (error: any) {
+        fetchServiceKmExceededVehicle(); // Refresh bookings or vehicle data
+        
+        if (response.data) {
             Swal.fire({
-                title: "Error",
-                text: error.message || "Failed to dismiss the service KM exceeded status.",
+                icon: 'success',
+                title: `Service status updated successfully`,
+                text: `Vehicle and ${response.data.bookingsUpdated} bookings were updated`,
                 toast: true,
-                icon: "error",
                 position: 'top',
                 showConfirmButton: false,
                 timer: 3000,
                 padding: '10px 20px',
             });
+        } else {
+            throw new Error(response.data.message || "Something went wrong");
         }
-    };
+    } catch (error: any) {
+        Swal.fire({
+            title: "Error",
+            text: error.message || "Failed to update service status",
+            toast: true,
+            icon: "error",
+            position: 'top',
+            showConfirmButton: false,
+            timer: 3000,
+            padding: '10px 20px',
+        });
+    }
+};
 
 
     const compareDates = (dateString: string, currentDate: Date): boolean => {
