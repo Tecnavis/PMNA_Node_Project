@@ -250,41 +250,41 @@ async function calculateNetTotalAmountInHand(driverId) {
         }
     ]);
     // third case
-      const thirdCasePaymentResult = await Booking.aggregate([
-        {
-            $match: {
-                driver: new mongoose.Types.ObjectId(driverId),
-                status: 'Order Completed',
-                workType: 'PaymentWork',
-                cashPending: false,
-                receivedUser:'Staff',
-                previousReceivedUser:"Driver",
-                givenAmountByStaff: 0,
-            }
-        },
-        {
-            $addFields: {
-                // For partial payment bookings, we use receivedAmountDriver as the target amount
-                amountDue: {
-                    $subtract: ["$receivedAmountDriver", "$receivedAmount"]
-                }
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                netThirdCaseAmount: {
-                    $sum: {
-                        $cond: [
-                            { $gt: ["$amountDue", 0] },  // Only include if there's amount due
-                            "$amountDue",
-                            0
-                        ]
-                    }
-                }
-            }
-        }
-    ]);
+    //   const thirdCasePaymentResult = await Booking.aggregate([
+    //     {
+    //         $match: {
+    //             driver: new mongoose.Types.ObjectId(driverId),
+    //             status: 'Order Completed',
+    //             workType: 'PaymentWork',
+    //             cashPending: false,
+    //             receivedUser:'Staff',
+    //             previousReceivedUser:"Driver",
+    //             givenAmountByStaff: 0,
+    //         }
+    //     },
+    //     {
+    //         $addFields: {
+    //             // For partial payment bookings, we use receivedAmountDriver as the target amount
+    //             amountDue: {
+    //                 $subtract: ["$receivedAmountDriver", "$receivedAmount"]
+    //             }
+    //         }
+    //     },
+    //     {
+    //         $group: {
+    //             _id: null,
+    //             netThirdCaseAmount: {
+    //                 $sum: {
+    //                     $cond: [
+    //                         { $gt: ["$amountDue", 0] },  // Only include if there's amount due
+    //                         "$amountDue",
+    //                         0
+    //                     ]
+    //                 }
+    //             }
+    //         }
+    //     }
+    // ]);
   
         // new condition................................
          const newCasePaymentResult = await Booking.aggregate([
@@ -322,13 +322,67 @@ async function calculateNetTotalAmountInHand(driverId) {
             }
         }
     ]);
-
+// new condition................................
+         const lastCasePaymentResult = await Booking.aggregate([
+        {
+            $match: {
+                driver: new mongoose.Types.ObjectId(driverId),
+                status: 'Order Completed',
+                workType: 'PaymentWork',
+                cashPending: false,
+                receivedUser:'Staff',
+                previousReceivedUser:"Driver",
+                multipleReceivedUser :true,
+              
+            }
+        },
+        {
+            $addFields: {
+                // For partial payment bookings, we use receivedAmountDriver as the target amount
+                amountDue: {
+                    $subtract: ["$receivedAmountDriver", "$receivedAmount"]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                netLastCaseAmount: {
+                    $sum: {
+                        $cond: [
+                            { $gt: ["$amountDue", 0] },  // Only include if there's amount due
+                            "$amountDue",
+                            0
+                        ]
+                    }
+                }
+            }
+        }
+    ]);
+    // Before the return statement, add this console.log:
+console.log({
+  "Regular Bookings": result[0]?.netTotalAmount || 0,
+  "Partial Payments": partialPaymentResult[0]?.netPartialAmount || 0,
+  "First Case (Driver after Staff)": firstCasePaymentResult[0]?.netFirstCaseAmount || 0,
+//   "Third Case (Staff after Driver, givenAmountByStaff=0)": thirdCasePaymentResult[0]?.netThirdCaseAmount || 0,
+  "New Case (Driver after Staff, receivedAmount=0)": newCasePaymentResult[0]?.netNewCaseAmount || 0,
+  "Last Case (Staff after Driver, multipleReceivedUser)": lastCasePaymentResult[0]?.netLastCaseAmount || 0,
+  "Total Sum": 
+    (result[0]?.netTotalAmount || 0) +
+    (partialPaymentResult[0]?.netPartialAmount || 0) +
+    (firstCasePaymentResult[0]?.netFirstCaseAmount || 0) +
+    // (thirdCasePaymentResult[0]?.netThirdCaseAmount || 0) +
+    (newCasePaymentResult[0]?.netNewCaseAmount || 0) +
+    (lastCasePaymentResult[0]?.netLastCaseAmount || 0)
+});
     return (
         (result[0]?.netTotalAmount || 0) +
         (partialPaymentResult[0]?.netPartialAmount || 0)+
         (firstCasePaymentResult[0]?.netFirstCaseAmount || 0)+
-         (thirdCasePaymentResult[0]?.netThirdCaseAmount || 0)+
-           (newCasePaymentResult[0]?.netNewCaseAmount || 0)
+        //  (thirdCasePaymentResult[0]?.netThirdCaseAmount || 0)+
+           (newCasePaymentResult[0]?.netNewCaseAmount || 0)+
+                    (lastCasePaymentResult[0]?.netLastCaseAmount || 0)
+
     );
 }
 // Calculate the driver total salary from verified bookings

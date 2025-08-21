@@ -54,6 +54,9 @@ exports.createReceivedDetailsStaff = async (req, res) => {
 
      const bookings = await Booking.find({
         status: 'Order Completed',
+         workType: 'PaymentWork',
+  cashPending: false,
+        receivedUser: 'Staff',
         $or: [
         // Regular staff bookings (cashPending false)
         { 
@@ -64,7 +67,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
                         { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
                     ]
                 },
-                { cashPending: false },
+              
                 { 
                     $expr: {
                         $gt: [
@@ -78,12 +81,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         // Partial payment bookings (cashPending true)
         { 
             $and: [
-                { 
-                    $or: [
-                        { receivedUser: 'Staff', receivedUserId: staffId },
-                        { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-                    ]
-                },
+              
                 { cashPending: true },
                 { partialPayment: true },
                 { 

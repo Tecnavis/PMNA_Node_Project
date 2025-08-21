@@ -69,55 +69,57 @@ const Status: React.FC = () => {
     const navigate = useNavigate();
     const role = localStorage.getItem('role') || ''
 
-    const handlePageChange = (page: number) => {
-        if (page === currentPage || page < 1 || page > totalPages) return;
-        fetchBookings("", page);
-    };
+const handlePageChange = (page: number) => {
+    if (page === currentPage || page < 1 || page > totalPages) return;
+    fetchBookings(query, page); // Pass current query
+};
 
-    const fetchBookings = useCallback(
-        async (search: string = query, page: number = 1, limit: number = 10) => {
-            setLoader(true);
+ const fetchBookings = useCallback(
+    async (search: string, page: number = 1, limit: number = 10) => {
+        setLoader(true);
 
-            let status: string = tab === Tabs.CompletedBookings
-                ? 'Order Completed'
-                : tab === Tabs.CashPendingBookings
-                    ? Tabs.CashPendingBookings
-                    : Tabs.OngoingBookings;
+        let status: string = tab === Tabs.CompletedBookings
+            ? 'Order Completed'
+            : tab === Tabs.CashPendingBookings
+                ? Tabs.CashPendingBookings
+                : Tabs.OngoingBookings;
 
-            console.log("Fetching =>", { search, status, tab });
+        try {
+            const response = await axiosInstance.get(`/booking/status-based`, {
+                params: {
+                    page,
+                    limit: showAll ? undefined : limit,
+                    search: search.trim(),
+                    status,
+                    showAll
+                }
+            });
 
-            try {
-                const response = await axiosInstance.get(`/booking/status-based`, {
-                    params: {
-                        page,
-                        limit: showAll ? undefined : limit,
-                        search,
-                        status,
-                        showAll
-                    }
-                });
+            setBookings(response.data.bookings);
+            setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
+            setCurrentPage(response.data.page);
+        } catch (error) {
+            console.error("Error fetching bookings", error);
+        } finally {
+            setLoader(false);
+        }
+    }, [tab, showAll] // REMOVE query and currentPage from dependencies
+);
 
-                setBookings(response.data.bookings);
-                setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
-                setCurrentPage(response.data.page);
-            } catch (error) {
-                console.error("Error fetching bookings", error);
-            } finally {
-                setLoader(false);
-            }
-        }, [tab, showAll] // Add showAll to dependencies
-    );
-
-    const debouncedFetchBookings = useMemo(
-        () => debounce(fetchBookings, 1000),
-        [fetchBookings]
-    );
-    const toggleShowAll = () => {
-        setShowAll(!showAll);
-        fetchBookings("", 1, 10); // Reset to page 1 when toggling
-    };
-    const handleChangeTabs = (tabName: Tabs) => setTab(tabName);
-
+const debouncedFetchBookings = useMemo(
+    () => debounce((search: string, page: number = 1) => {
+        fetchBookings(search, page);
+    }, 500), // Reduced to 500ms for better responsiveness
+    [fetchBookings]
+);
+   const toggleShowAll = () => {
+    setShowAll(!showAll);
+    fetchBookings(query, 1, 10); // Pass current query
+};
+const handleChangeTabs = (tabName: Tabs) => {
+    setTab(tabName);
+    fetchBookings(query, 1); // Pass current query
+};
     const handlePaymentSettlement = (record: Booking) => {
         setSelectedBooking(record);
         setPaymentAmount(((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.receivedAmount ?? 0)));
@@ -159,7 +161,7 @@ const Status: React.FC = () => {
             icon: 'success',
             confirmButtonColor: '#3085d6',
         });
-            fetchBookings()
+fetchBookings(query, 1);
 
         } catch (error) {
             const axiosError = error as AxiosError<ApiError>;
@@ -208,7 +210,7 @@ const Status: React.FC = () => {
         );
         setShowPaymentModal(false);
         setPaymentAmount(0);
-        fetchBookings();
+fetchBookings(query, 1);
     } catch (error) {
         console.error('Error saving payment:', error);
     } finally {
@@ -227,9 +229,9 @@ const Status: React.FC = () => {
             }
         }
     };
-    useEffect(() => {
-        fetchBookings();
-    }, [tab]);
+ useEffect(() => {
+    fetchBookings(query, 1); // Add query parameter
+}, [tab, fetchBookings, query]); // Add dependencies
 
     // Helper function to update a single booking in state
     const updateBookingInState = (
@@ -282,7 +284,7 @@ const Status: React.FC = () => {
                         setBookings(prev => updateBookingInState(prev, data.bookingId, updatedBooking));
 
                         if (shouldRefetchForTab(updatedBooking.status, tab)) {
-                            fetchBookings();
+fetchBookings(query, 1);
                         }
                     }
                 } catch (err) {
@@ -390,15 +392,16 @@ const Status: React.FC = () => {
                     </h5>
                     {/* Search Bar */}
                     <div className="flex-grow sm:w-auto w-full ml-3">
-                        <input
-                            type="text"
-                            onChange={(e) => {
-                                debouncedFetchBookings(e.target.value)
-                                setQuery(e.target.value)
-                            }}
-                            placeholder="Search..."
-                            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
-                        />
+                       <input
+    type="text"
+    onChange={(e) => {
+        const searchValue = e.target.value;
+        setQuery(searchValue);
+        debouncedFetchBookings(searchValue, 1); // Pass the value directly
+    }}
+    placeholder="Search..."
+    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
+/>
                     </div>
                 </div>
             </div>

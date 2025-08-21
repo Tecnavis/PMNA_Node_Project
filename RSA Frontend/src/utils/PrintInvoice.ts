@@ -1,7 +1,7 @@
 import { RefObject } from "react";
 import { Driver } from "../pages/Bookings/BookingAdd";
 import { Booking } from "../pages/Bookings/Bookings";
-import { formattedTime } from "./dateUtils";
+import { dateFormate, formattedTime } from "./dateUtils";
 import logo from '../assets/images/RSALogo.png'
 
 export const handlePrint = (
@@ -264,8 +264,7 @@ export const handlePrint = (
                     ${bookings?.map((booking: Booking, index: number) => `
                       <tr>
                                  <td>${index + 1}</td>
-                                 <td>${formattedTime(booking.createdAt + '')}</td>
-                                 <td>${booking.fileNumber}</td>
+<td>${dateFormate(booking.createdAt + '')} ${formattedTime(booking.createdAt + '')}</td>                                 <td>${booking.fileNumber}</td>
                                  <td>${booking.customerVehicleNumber}</td>
                                  <td>${booking.totalAmount}</td>
                                  <td>${booking.receivedAmount}</td>
