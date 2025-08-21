@@ -129,80 +129,126 @@ const CombinedDeliveryUploadPage = () => {
 
 
   //  -----------------------------------------------------------------------------
-  // Handler for image uploads
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, index: number) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const objectUrl = URL.createObjectURL(file);
-
-      setImages((prev) => {
-        const updatedFiles = [...prev];
-        updatedFiles[index] = file;
-        return updatedFiles;
-      });
-
-      setPreviews((prev) => {
-        const updatedPreviews = [...prev];
-        updatedPreviews[index] = objectUrl;
-        return updatedPreviews;
-      });
+  // Improved image upload handler
+const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, index: number) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    // Check file type and size
+    if (!file.type.startsWith('image/')) {
+      Swal.fire('Error', 'Please upload only image files', 'error');
+      return;
     }
-  };
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      Swal.fire('Error', 'Image size should be less than 5MB', 'error');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+
+    setImages((prev) => {
+      const updatedFiles = [...prev];
+      updatedFiles[index] = file;
+      return updatedFiles;
+    });
+
+    setPreviews((prev) => {
+      const updatedPreviews = [...prev];
+      updatedPreviews[index] = objectUrl;
+      return updatedPreviews;
+    });
+  }
+};
 
   // Count of uploaded images
   const uploadedCount = previews.filter((img) => img !== null).length;
 
   const handleSubmit = async () => {
-    setLoading(true)
-    try {
-      const combinedPickupDate = new Date(`${pickupTime}T${deliveryTime}:00`).toISOString();
-      const formData = new FormData();
+  setLoading(true);
+  try {
+    // Validate required fields
+    if (!customerName || !pickupTime || !deliveryTime || !customerVehicleNumber) {
+      Swal.fire('Error', 'Please fill all required fields', 'error');
+      setLoading(false);
+      return;
+    }
 
-      // Append fields
-      formData.append("customerName", customerName);
-      formData.append("pickupTime", combinedPickupDate);
-      formData.append("customerVehicleNumber", customerVehicleNumber);
-      formData.append("mob1", mob1);
-      formData.append("fileNumber", fileNumber);
-      formData.append("status", "On the way to dropoff location");
-      formData.append("pickupImagePending", "false");
+    const combinedPickupDate = new Date(`${pickupTime}T${deliveryTime}:00`).toISOString();
+    const formData = new FormData();
 
-      // Append images (only if they exist)
-      images.forEach((img) => {
-        if (img) formData.append("images", img);
-      });
+    // Append fields
+    formData.append("customerName", customerName);
+    formData.append("pickupTime", combinedPickupDate);
+    formData.append("customerVehicleNumber", customerVehicleNumber);
+    formData.append("mob1", mob1);
+    formData.append("fileNumber", fileNumber);
+    formData.append("status", "On the way to dropoff location");
+    formData.append("pickupImagePending", "false");
 
-      if (bookingData) {
-        // Update existing booking
-        await axios.put(`${backendUrl}/booking/${itemId}`, formData);
-        Swal.fire({
-          title: "Success!",
-          text: "Booking updated successfully.",
-          icon: "success",
-          confirmButtonText: "OK",
-        }).then(() => navigate("/bookings"));
-      } else {
-        // Create new booking
-        await axios.post(`${backendUrl}/booking`, formData);
-        Swal.fire({
-          title: "Success!",
-          text: "New booking created successfully.",
-          icon: "success",
-          confirmButtonText: "OK",
-        }).then(() => navigate("/bookings"));
+    // Append images (only if they exist)
+    images.forEach((img, index) => {
+      if (img) formData.append("images", img);
+    });
+
+    // Get token from storage
+    const token = localStorage.getItem('token');
+    if (!token) {
+      Swal.fire('Error', 'Authentication token not found. Please login again.', 'error');
+      navigate('/login');
+      return;
+    }
+
+    const config = {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
       }
-    } catch (error) {
-      console.error("Error submitting booking data:", error);
+    };
+
+    if (bookingData && itemId) {
+      // Update existing booking
+      await axios.put(`${backendUrl}/booking/${itemId}`, formData, config);
+      Swal.fire({
+        title: "Success!",
+        text: "Booking updated successfully.",
+        icon: "success",
+        confirmButtonText: "OK",
+      }).then(() => navigate("/bookings"));
+    } else {
+      // Create new booking
+      await axios.post(`${backendUrl}/booking`, formData, config);
+      Swal.fire({
+        title: "Success!",
+        text: "New booking created successfully.",
+        icon: "success",
+        confirmButtonText: "OK",
+      }).then(() => navigate("/bookings"));
+    }
+  } catch (error: any) {
+    console.error("Error submitting booking data:", error);
+    
+    if (error.response?.status === 401) {
+      Swal.fire({
+        title: "Authentication Error!",
+        text: "Your session has expired. Please login again.",
+        icon: "error",
+        confirmButtonText: "OK",
+      }).then(() => {
+        localStorage.removeItem('token');
+        navigate('/login');
+      });
+    } else {
       Swal.fire({
         title: "Error!",
-        text: "Failed to submit booking data. Please try again.",
+        text: error.response?.data?.message || "Failed to submit booking data. Please try again.",
         icon: "error",
         confirmButtonText: "OK",
       });
-    } finally {
-      setLoading(false)
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   return (

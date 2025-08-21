@@ -511,30 +511,51 @@ const Preview = () => {
                 });
                 return; // Stop here, don't verify
             }
-            if (booking?.pickupImagePending && booking?.dropoffImagePending && booking?.dropoffImages.length < 3 && booking?.pickupImages.length < 3) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Image is Pending',
-                    toast: true,
-                    position: 'top',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    padding: '10px 20px',
-                });
-                return;
-            }
-            if (booking?.inventoryImagePending && !booking.inventoryImage) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Inventory Image is Pending',
-                    toast: true,
-                    position: 'top',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    padding: '10px 20px',
-                });
-                return;
-            }
+            // Check image counts
+        const pickupImageCount = booking?.pickupImages ? booking.pickupImages.length : 0;
+        const dropoffImageCount = booking?.dropoffImages ? booking.dropoffImages.length : 0;
+
+        if (pickupImageCount < 3) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Pickup Images Pending',
+                text: `Minimum 3 pickup images required. You have ${pickupImageCount}.`,
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            return;
+        }
+
+        if (dropoffImageCount < 3) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Dropoff Images Pending',
+                text: `Minimum 3 dropoff images required. You have ${dropoffImageCount}.`,
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            return;
+        }
+
+        if (booking?.inventoryImagePending && !booking.inventoryImage) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Inventory Image is Pending',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            return;
+        }
+
             // If no pending, proceed
             await axios.patch(`${backendUrl}/booking/verifybooking/${id}`);
             navigate('/completedbookings');

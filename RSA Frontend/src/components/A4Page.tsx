@@ -70,7 +70,7 @@ const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, url }) => {
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    padding: "23px",
+                    padding: "21.4px",
                 }}
                 onClick={(e) => e.stopPropagation()}
             >

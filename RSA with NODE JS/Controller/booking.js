@@ -691,49 +691,199 @@ if (showroomId) {
             return total + (booking.receivedAmount || 0);
         }, 0);
         query.workType = { $ne: 'RSAWork' };
-if (forDriverReport) {
-    query.$and = query.$and || [];
-    // Only exclude Admin receipts, not Staff
-    query.$and.push({
-      
-    });
-}
+
 // ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         // Aggregate data for total amounts
-        const aggregationResult = await Booking.aggregate([
+       // Add this right before your aggregation pipeline
+console.log('============ DEBUGGING DRIVER REPORT ============');
+console.log('Query being used for aggregation:', JSON.stringify({
+    ...query,
+    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
+    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
+    ...(forDriverReport && {
+        $or: [
+            { receivedUser: { $ne: 'Staff' } },
+            { receivedUser: 'Staff', partialReceivedAmountStaff: true },
+            { receivedUser: "Driver" },
             {
-                $match: {
-                    ...query,
+                $and: [
+                    { receivedUser: "Staff" },
+                    { multipleReceivedUser: true },
+                    { previousReceivedUser: "Driver" }
+                ]
+            }
+        ]
+    }),
+    ...(forStaffReport && {
+        $or: [
+            { receivedUser: 'Staff' },
+            { previousReceivedUser: 'Staff' }
+        ]
+    })
+}, null, 2));
 
-                    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) && { cashPending: false }),
-                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
-                      ...((forShowroomReport !== undefined) ),
-                    ...(forDriverReport && {
-                        $or: [
-                            { receivedUser: { $ne: 'Staff' } },
+// Also log the driverId being used
+console.log('Driver ID being queried:', driverId);
 
-                            {
-                                receivedUser: 'Staff',
-                                partialReceivedAmountStaff: true
-                            }
-                        ]
-                    }),
-                    ...(forStaffReport && {
-                        $or: [
-                            { receivedUser: 'Staff' },
-                            { previousReceivedUser: 'Staff' }
-                        ]
-                    })
-
+// Add this temporary aggregation to see what documents are being processed
+const debugAggregation = await Booking.aggregate([
+    {
+        $match: {
+            ...query,
+            ...(forDriverReport && { cashPending: false }),
+            $or: [
+                { receivedUser: "Driver" },
+                {
+                    $and: [
+                        { receivedUser: "Staff" },
+                        { multipleReceivedUser: true },
+                        { previousReceivedUser: "Driver" }
+                    ]
                 }
-            },
-            {
-                $group: {
-                    _id: null,
-                    totalCollected: {
-                        $sum: forStaffReport
-                            ? "$givenAmountByStaff"  // For staff reports, sum givenAmountByStaff
-                            : forDriverReport
+            ]
+        }
+    },
+    {
+        $project: {
+            _id: 1,
+            fileNumber: 1,
+            receivedUser: 1,
+            previousReceivedUser: 1,
+            multipleReceivedUser: 1,
+            totalAmount: 1,
+            receivedAmountDriver: 1,
+            receivedAmount: 1,
+            amountType: {
+                $cond: [
+                    { $eq: ["$receivedUser", "Driver"] },
+                    "DIRECT_DRIVER_RECEIPT",
+                    {
+                        $cond: [
+                            {
+                                $and: [
+                                    { $eq: ["$receivedUser", "Staff"] },
+                                    { $eq: ["$multipleReceivedUser", true] },
+                                    { $eq: ["$previousReceivedUser", "Driver"] }
+                                ]
+                            },
+                            "STAFF_RECEIVED_AFTER_DRIVER",
+                            "OTHER"
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+]);
+
+console.log('Documents being processed in aggregation:');
+console.log(JSON.stringify(debugAggregation, null, 2));
+
+// Now run your original aggregation with the corrected totalOverall
+const aggregationResult = await Booking.aggregate([
+    {
+        $match: {
+            ...query,
+            ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
+            ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
+            ...(forDriverReport && {
+                $or: [
+                    // ------------------------------------
+                    { receivedUser: { $ne: 'Staff' } },
+                    { receivedUser: 'Staff', partialReceivedAmountStaff: true },
+                    { receivedUser: "Driver" },
+                    {
+                        $and: [
+                            { receivedUser: "Staff" },
+                            { multipleReceivedUser: true },
+                            { previousReceivedUser: "Driver" }
+                        ]
+                    }
+                ]
+            }),
+            ...(forStaffReport && {
+                $or: [
+                    { receivedUser: 'Staff' },
+                    { previousReceivedUser: 'Staff' }
+                ]
+            })
+        }
+    },
+  {
+  $group: {
+    _id: null,
+    totalCollected: {
+      $sum: forStaffReport
+        ? "$givenAmountByStaff"
+        : forDriverReport
+          ? {
+              $cond: [
+                {
+                  $or: [
+                    // Case 1: Staff with partial received amount
+                    {
+                      $and: [
+                        { $eq: ["$receivedUser", "Staff"] },
+                        { $eq: ["$partialReceivedAmountStaff", true] }
+                      ]
+                    },
+                    // Case 2: Previous Staff with partial received amount
+                    {
+                      $and: [
+                        { $eq: ["$previousReceivedUser", "Staff"] },
+                        { $eq: ["$partialReceivedAmountStaff", true] }
+                      ]
+                    },
+                    // Case 3: Special multiple received user case
+                    {
+                      $and: [
+                        { $eq: ["$receivedUser", "Staff"] },
+                        { $eq: ["$multipleReceivedUser", true] },
+                        { $eq: ["$previousReceivedUser", "Driver"] }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  $cond: [
+                    // The specific condition you asked about
+                    {
+                      $and: [
+                        { $eq: ["$receivedAmount", "$totalAmount"] },
+                        { $eq: ["$receivedUser", "Staff"] },
+                        { $eq: ["$multipleReceivedUser", true] },
+                        { $eq: ["$previousReceivedUser", "Driver"] }
+                      ]
+                    },
+                    "$receivedAmount",        // Use when condition is true
+                    {                        // Else check another condition
+                      $cond: [
+                        {
+                          $and: [
+                            
+                            { $eq: ["$receivedUser", "Staff"] },
+                            { $eq: ["$multipleReceivedUser", true] },
+                            { $eq: ["$previousReceivedUser", "Driver"] }
+                          ]
+                        },
+                        "$receivedAmountDriver",  // Use for multiple received users case
+                        "$receivedAmountStaff"   // Default for other Staff cases
+                      ]
+                    }
+                  ]
+                },
+                "$receivedAmount"  // Fallback for non-Staff cases
+              ]
+            }
+          : forCompanyReport
+            ? "$receivedAmountByCompany"
+            : "$receivedAmount"
+    },
+           totalOverall: {
+  $sum: 
+    forStaffReport 
+      ? "$receivedAmountStaff"
+       : forDriverReport
                                 ? {
                                     $cond: [
                                         {
@@ -746,140 +896,91 @@ if (forDriverReport) {
                                                 },
                                                 {
                                                     $and: [
-                                                        { $eq: ["$previousReceivedUser", "Staff"] },
+                                                        { $eq: ["$receivedUser", "Staff"] },
                                                         { $eq: ["$partialReceivedAmountStaff", true] }
                                                     ]
+                                                }
+                                            ]
+                                        },
+                                        "$totalAmount",
+                                        {
+                                            $cond: [
+                                                {
+                                                    $or: [
+                                                        { $ne: ["$receivedUser", "Staff"] },
+                                                        { $ne: ["$previousReceivedUser", "Staff"] }
+                                                    ]
                                                 },
-                                                 // New condition added to the OR clause
-                    {
-                        $and: [
-                            { $eq: ["$receivedUser", "Staff"] },
-                            { $eq: ["$multipleReceivedUser", true] },
-                            { $eq: ["$previousReceivedUser", "Driver"] }
-                        ]
-                    }
-                                            ]
-                                        },
-                                       // Modified then clause to handle the new condition
-            {
-                $cond: [
-                    {
-                        $and: [
-                            { $eq: ["$receivedUser", "Staff"] },
-                            { $eq: ["$multipleReceivedUser", true] },
-                            { $eq: ["$previousReceivedUser", "Driver"] }
-                        ]
-                    },
-                    "$receivedAmountDriver",  // Use this if the new condition is true
-                    "$receivedAmountStaff"  // Otherwise use the original value
-                ]
-            },
-            "$receivedAmount" 
-             // Else clause remains the same
-        ]
-    }
-                                : forCompanyReport
-                                    ? "$receivedAmountByCompany"
-                                    : "$receivedAmount"
-                    },
-                    
-                    totalOverall: {
-                        $sum: forStaffReport
-                            ? "$receivedAmountStaff"
-                           : forDriverReport
-            ? {
-                $cond: [
-                    {
-                        $or: [
-                            { $ne: ["$receivedUser", "Staff"] },
-                            { $ne: ["$previousReceivedUser", "Staff"] },
-                            {
-                                $and: [
-                                    { $eq: ["$receivedUser", "Staff"] },
-                                    { $eq: ["$multipleReceivedUser", true] },
-                                    { $eq: ["$previousReceivedUser", "Driver"] }
-                                ]
-                            }
-                        ]
-                    },
-                    "$totalAmount",
-                    {
-                        $cond: [
-                            {
-                                $and: [
-                                    { $eq: ["$receivedUser", "Staff"] },
-                                    { $eq: ["$multipleReceivedUser", true] },
-                                    { $eq: ["$previousReceivedUser", "Driver"] }
-                                ]
-                            },
-                            "$receivedAmountDriver",
-                            0
-                        ]
-                    }
-                ]
-            }
-                                : forCompanyReport
-                                    ? "$totalAmount"
-                                    : "$totalAmount"
-                    },
-                    // Separate pipeline for advance calculation
-                    advanceData: {
-                        $push: {
-                            $cond: [
-                                {
-                                    $or: [
-                                        {
-                                            $and: [
-                                                { $eq: ["$receivedUser", "Staff"] },
-                                                { $eq: ["$fileNumber", "Advance Deduction"] },
-                                                staffId ? { $eq: ["$receivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
-                                            ]
-                                        },
-                                        {
-                                            $and: [
-                                                { $eq: ["$previousReceivedUser", "Staff"] },
-                                                { $eq: ["$fileNumber", "Advance Deduction"] },
-                                                staffId ? { $eq: ["$previousReceivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                                "$totalAmount",
+                                                0
                                             ]
                                         }
                                     ]
+                                }
+        : forCompanyReport
+          ? "$totalAmount"
+          : "$totalAmount"
+},
+            advanceData: {
+                $push: {
+                    $cond: [
+                        {
+                            $or: [
+                                {
+                                    $and: [
+                                        { $eq: ["$receivedUser", "Staff"] },
+                                        { $eq: ["$fileNumber", "Advance Deduction"] },
+                                        staffId ? { $eq: ["$receivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                    ]
                                 },
                                 {
-                                    receivedAmount: { $toDouble: "$receivedAmount" },
-                                    givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
-                                },
-                                null
-                            ]
-                        }
-                    }
-                }
-            },
-            {
-                $project: {
-                    totalCollected: 1,
-                    totalOverall: 1,
-                    advanceToCollectFromStaff: {
-                        $let: {
-                            vars: {
-                                advanceItems: {
-                                    $filter: {
-                                        input: "$advanceData",
-                                        as: "item",
-                                        cond: { $ne: ["$$item", null] }
-                                    }
+                                    $and: [
+                                        { $eq: ["$previousReceivedUser", "Staff"] },
+                                        { $eq: ["$fileNumber", "Advance Deduction"] },
+                                        staffId ? { $eq: ["$previousReceivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                    ]
                                 }
-                            },
-                            in: {
-                                $subtract: [
-                                    { $sum: "$$advanceItems.receivedAmount" },
-                                    { $sum: "$$advanceItems.givenAmountByStaff" }
-                                ]
+                            ]
+                        },
+                        {
+                            receivedAmount: { $toDouble: "$receivedAmount" },
+                            givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
+                        },
+                        null
+                    ]
+                }
+            }
+        }
+    },
+    {
+        $project: {
+            totalCollected: 1,
+            totalOverall: 1,
+            advanceToCollectFromStaff: {
+                $let: {
+                    vars: {
+                        advanceItems: {
+                            $filter: {
+                                input: "$advanceData",
+                                as: "item",
+                                cond: { $ne: ["$$item", null] }
                             }
                         }
+                    },
+                    in: {
+                        $subtract: [
+                            { $sum: "$$advanceItems.receivedAmount" },
+                            { $sum: "$$advanceItems.givenAmountByStaff" }
+                        ]
                     }
                 }
             }
-        ]);
+        }
+    }
+]);
+
+console.log('============ AGGREGATION RESULTS ============');
+console.log('Full aggregation result:', JSON.stringify(aggregationResult, null, 2));
 
         console.log('Aggregation result:', JSON.stringify(aggregationResult, null, 2));
 
@@ -990,6 +1091,24 @@ exports.updateBooking = async (req, res) => {
 
             return res.status(404).json({ message: 'Booking not found' });
         }
+        // Handle payment settlement updates
+        if (updatedData.paymentSettlement) {
+            // Set receivedUser and receivedUserId when payment is settled
+            if (booking.driver) {
+                updatedData.receivedUser = 'Driver';
+                updatedData.receivedUserId = booking.driver._id;
+            } else if (booking.provider) {
+                updatedData.receivedUser = 'Provider';
+                updatedData.receivedUserId = booking.provider._id;
+            }
+            
+            routeLogger.info({
+                bookingId: id,
+                receivedUser: updatedData.receivedUser,
+                receivedUserId: updatedData.receivedUserId
+            }, 'Payment settlement updated with receiver info');
+        }
+
 
         if (updatedData.workType === 'PaymentWork') {
             updatedData.company = null
@@ -1600,15 +1719,24 @@ exports.verifyBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-
+// Check image counts and update pending flags
+        const pickupImageCount = booking.pickupImages ? booking.pickupImages.length : 0;
+        const dropoffImageCount = booking.dropoffImages ? booking.dropoffImages.length : 0;
+        
+        // Update pending flags based on image counts
+        booking.pickupImagePending = pickupImageCount < 3;
+        booking.dropoffImagePending = dropoffImageCount < 3;
+        
+        // Save the updated pending flags
+        await booking.save();
         if (booking.cashPending) {
             return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
         }
-        if (booking.pickupImagePending && booking.pickupImages.length < 3) {
-            return res.status(400).json({ message: 'Pickup images is pending.' });
+        if (booking.pickupImagePending) {
+            return res.status(400).json({ message: 'Pickup images are pending. Minimum 3 images required.' });
         }
-        if (booking.dropoffImagePending && booking.dropoffImages) {
-            return res.status(400).json({ message: 'Drop of image is pending.' });
+        if (booking.dropoffImagePending) {
+            return res.status(400).json({ message: 'Dropoff images are pending. Minimum 3 images required.' });
         }
         if (booking.inventoryImagePending && !booking.inventoryImage) {
             return res.status(400).json({ message: 'Inventory Image is pending.' });
@@ -1671,7 +1799,9 @@ exports.verifyBooking = async (req, res) => {
         const updateData = {
             verified: true,
             verifiedBy: new mongoose.Types.ObjectId(verifiedBy), // Add the user who verified the booking
-            verifiedAt: new Date() // Add timestamp of verification
+            verifiedAt: new Date(), // Add timestamp of verification
+              pickupImagePending: booking.pickupImagePending,
+            dropoffImagePending: booking.dropoffImagePending
         };
         if (booking.provider) {
             updateData.feedbackCheck = true;

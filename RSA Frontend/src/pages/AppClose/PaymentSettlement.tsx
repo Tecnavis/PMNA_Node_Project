@@ -8,7 +8,8 @@ import { axiosInstance } from "../../config/axiosConfig";
 
 interface Booking {
   _id?: string;
-  receivedUser?: string;
+   receivedUser?: string;
+  receivedUserId?: string;
   companyBooking: boolean;
   approve: boolean;
   receivedAmount: number;
@@ -112,8 +113,11 @@ useEffect(() => {
     }
   
     try {
-      // Prepare update data with the new status
-      const updateData = { status: "Order Completed" };
+    // Prepare update data with payment settlement info
+    const updateData = { 
+      status: "Order Completed",
+      paymentSettlement: true // This will trigger the receivedUser logic
+    };
   
       // Update the booking by sending a PUT request to the backend
       await axiosInstance.put(`${backendUrl}/booking/${itemId}`, updateData);

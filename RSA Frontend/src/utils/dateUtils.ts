@@ -6,7 +6,29 @@ export const dateFormate = (isoString: string) => {
     }
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
+// Convert ISOString to date and time format (MM-DD-YYYY HH:MM:SS AM/PM)
+export const formattedDateTime = (isoString: string) => {
+    const date = new Date(isoString);
 
+    if (isNaN(date.getTime())) {
+        return 'N/A';
+    }
+
+    const datePart = date.toLocaleDateString('en-GB', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+    });
+    
+    const timePart = date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+    });
+
+    return `${datePart} ${timePart}`;
+};
 // Convert ISOString date to YYYY-MM-DD fomate
 export const formatToInputDate = (isoString: string) => {
     if (!isoString) return "";

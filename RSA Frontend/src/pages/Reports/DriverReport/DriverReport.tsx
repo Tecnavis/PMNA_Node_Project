@@ -284,11 +284,26 @@ const DriverCashCollectionsReport = () => {
             headerClassName: 'text-center',
             render: (record: Booking) => <div className='flex justify-center'>{record.customerVehicleNumber}</div>
         },
-        {
-            accessor: 'totalAmount',
-            title: 'Payable Amount By Customer',
-            render: (record: Booking) => <div className='flex justify-center'>{record.workType === 'PaymentWork' ? record.totalAmount : "0.00"}{record.cashPending && record.partialPayment && `(Partialy paid : ${record.partialAmount})`}</div>
-        },
+       {
+  accessor: 'totalAmount',
+  title: 'Payable Amount By Customer',
+  render: (record: Booking) => (
+    <div className='flex justify-center'>
+      {record.workType === 'PaymentWork' ? record.totalAmount : "0.00"}
+      {record.cashPending && record.partialPayment && (
+        <>
+         
+          <span className="text-green-600 font-semibold">
+             {` (Partialy Received : (${record.partialAmount} `} 
+            By {record.receivedUser} {`)`}
+          </span>
+         
+        </>
+      )}
+    </div>
+  )
+}
+,
        {
     accessor: 'receivedAmount',
   title: 'Amount Received From The Driver',
@@ -401,12 +416,22 @@ render: (booking: Booking) => {
           // New condition for multiple received users both being Staff
       if (booking.multipleReceivedUser === true && 
           booking.receivedUser === 'Staff' && 
-          booking.previousReceivedUser === 'Staff') {
+          booking.previousReceivedUser === 'Driver') {
         return <div className='text-center'>0</div>;
       }
-      if (booking.partialReceivedAmountStaff === false) {
-        return <div className='text-center'>0</div>;
-      }
+      const effectiveReceivedAmount = 
+  (booking.receivedAmountDriver === booking.receivedAmount && 
+   booking.receivedAmountStaff === booking.givenAmountByStaff)
+    ? booking.totalAmount
+    : booking.receivedAmount;
+    //   if (booking.partialReceivedAmountStaff === false) {
+    //     return <div className='text-center'>0</div>;
+    //   }
+    if (booking.receivedUser === 'Staff' && 
+    booking.multipleReceivedUser === true && 
+    booking.previousReceivedUser === 'Driver') {
+  return <div className='text-center'>{(booking.receivedAmountDriver || 0).toFixed(2)}</div>;
+}
       if (booking.partialReceivedAmountStaff === true) {
         const balance = booking.totalAmount - (booking.receivedAmountStaff || 0);
         return (
@@ -416,6 +441,7 @@ render: (booking: Booking) => {
         );
       }
     }
+
 
     // Handle regular payments
     const effectiveReceivedAmount = booking.receivedAmount || 0;
