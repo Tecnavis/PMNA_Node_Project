@@ -264,13 +264,13 @@ const DriverCashCollectionsReport = () => {
                     }}
                 /> : null
         },
-        {
-            accessor: 'createdAt',
-            title: 'Date',
-            render: (record: Booking) => record.createdAt
-                ? new Date(record.createdAt).toLocaleDateString()
-                : ""
-        },
+     {
+    accessor: 'createdAt',
+    title: 'Date',
+    render: (record: Booking) => record.createdAt
+        ? new Date(record.createdAt).toLocaleDateString('en-GB') // DD/MM/YYYY format
+        : ""
+},
         {
             accessor: 'fileNumber',
             title: 'File Number',

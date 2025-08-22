@@ -69,25 +69,39 @@ exports.createReceivedDetails = async (req, res) => {
   const bookingQuery = {
   status: 'Order Completed',
   workType: 'PaymentWork',
- receivedUser: { $ne: 'Staff' },
-//--------------888888888888888888888888888888888=========================
- $or: [
-      // { receivedUser: { $ne: 'Staff' } }, // Original condition
-
+  [entityField]: entityId,
+    $nor: [
+    {
+      $and: [
+        { receivedUser: 'Staff' },
+        { previousReceivedUser: { $exists: false } },
+        { partialReceivedAmountStaff: false }
+      ]
+    }
+  ],
+  $or: [
+    // Original conditions...
     { 
-   $or: [
-                    {
-                        $or: [
-                            { cashPending: false },
-                            { cashPending: { $exists: false } }
-                        ]
-                    },
+      $or: [
+        { receivedUser: { $ne: 'Staff' } },
+        { receivedUser: { $exists: false } },
+        
+       
+        
+        {
+          $or: [
+            { cashPending: false },
+            { cashPending: { $exists: false } },
+            { receivedUser: 'Driver' },
+            { receivedUser: { $exists: false } }
+          ]
+        },
                  
 
                     {
                         $or: [
                             // Non-staff cases
-                            { receivedUser: { $nin: ['Staff', 'Admin'] } },
+                            // { receivedUser: { $nin: ['Staff', 'Admin'] } },
                             { receivedUser: { $exists: false } },
                             // Staff cases (current or previous)
                             {
@@ -95,7 +109,8 @@ exports.createReceivedDetails = async (req, res) => {
                                     {
                                         $and: [
                                             { receivedUser: 'Staff' },
-                                            { partialReceivedAmountStaff: true }
+                                            { partialReceivedAmountStaff: true },
+                                              { cashPending: false },
                                         ]
                                     },
                                     {
@@ -124,6 +139,7 @@ exports.createReceivedDetails = async (req, res) => {
                 ],
       $expr: { $gt: ["$totalAmount", "$receivedAmount"] }
     },
+    // ---------------------------==============================
     { 
    status: 'Order Completed',
                 workType: 'PaymentWork',
