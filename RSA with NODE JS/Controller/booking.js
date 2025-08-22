@@ -792,6 +792,7 @@ const aggregationResult = await Booking.aggregate([
                     { receivedUser: { $ne: 'Staff' } },
                     { receivedUser: 'Staff', partialReceivedAmountStaff: true },
                     { receivedUser: "Driver" },
+  { receivedUser: { $exists: false } },
                     {
                         $and: [
                             { receivedUser: "Staff" },
@@ -827,6 +828,7 @@ const aggregationResult = await Booking.aggregate([
                         { $eq: ["$partialReceivedAmountStaff", true] }
                       ]
                     },
+                   
                     // Case 2: Previous Staff with partial received amount
                     {
                       $and: [
@@ -844,6 +846,19 @@ const aggregationResult = await Booking.aggregate([
                     }
                   ]
                 },
+                {
+          $cond: [
+            // The specific condition you asked about - return 0
+            {
+              $and: [
+                { $eq: ["$receivedUser", "Staff"] },
+                { $eq: ["$multipleReceivedUser", true] },
+                { $eq: ["$previousReceivedUser", "Driver"] },
+                { $eq: ["$receivedAmountDriver", "$receivedAmount"] },
+                { $ne: ["$receivedAmountStaff", "$givenAmountByStaff"] }
+              ]
+            },
+            '$totalAmount', // Return 0 when all these conditions are met
                 {
                   $cond: [
                     // The specific condition you asked about
@@ -869,9 +884,11 @@ const aggregationResult = await Booking.aggregate([
                         "$receivedAmountDriver",  // Use for multiple received users case
                         "$receivedAmountStaff"   // Default for other Staff cases
                       ]
-                    }
-                  ]
-                },
+                }
+              ]
+            }
+          ]
+        },
                 "$receivedAmount"  // Fallback for non-Staff cases
               ]
             }

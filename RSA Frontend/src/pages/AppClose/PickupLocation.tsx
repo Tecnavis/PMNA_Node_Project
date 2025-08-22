@@ -86,7 +86,26 @@ const CombinedDeliveryUploadPage = () => {
   const [images, setImages] = useState<(File | null)[]>(Array(6).fill(null));
   const [previews, setPreviews] = useState<(string | null)[]>(Array(6).fill(null));
   const [imageFiles, setImageFiles] = useState<(File | null)[]>(Array(6).fill(null));
+// ----------------------------
+  const [displayDeliveryTime, setDisplayDeliveryTime] = useState("");
 
+// Convert time from 24h to 12h AM/PM format
+const convertToAmPm = (time24h: string): string => {
+  if (!time24h) return '';
+  
+  const [hours, minutes] = time24h.split(':');
+  const hour = parseInt(hours, 10);
+  
+  if (hour === 0) {
+    return `12:${minutes} AM`;
+  } else if (hour === 12) {
+    return `12:${minutes} PM`;
+  } else if (hour > 12) {
+    return `${hour - 12}:${minutes} PM`;
+  } else {
+    return `${hour}:${minutes} AM`;
+  }
+};
   // Fetch existing booking data if itemId exists
   useEffect(() => {
     if (itemId) {
@@ -162,7 +181,9 @@ const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, index: number) => {
 
   // Count of uploaded images
   const uploadedCount = previews.filter((img) => img !== null).length;
-
+  useEffect(() => {
+    setDisplayDeliveryTime(convertToAmPm(deliveryTime));
+  }, [deliveryTime]);
   const handleSubmit = async () => {
   setLoading(true);
   try {
@@ -303,17 +324,25 @@ const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, index: number) => {
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none"
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Pickup Time
-              </label>
-              <input
-                type="time"
-                value={deliveryTime}
-                onChange={(e) => setDeliveryTime(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none"
-              />
-            </div>
+       
+<div className="flex-1">
+  <div className="flex justify-between items-center mb-1">
+    <label className="block text-sm font-semibold text-gray-700">
+      Pickup Time
+    </label>
+    {deliveryTime && (
+      <span className="text-sm text-red-600 font-medium">
+        {convertToAmPm(deliveryTime)}
+      </span>
+    )}
+  </div>
+  <input
+    type="time"
+    value={deliveryTime}
+    onChange={(e) => setDeliveryTime(e.target.value)}
+    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none"
+  />
+</div>
           </div>
 
           {/* Customer Number */}
