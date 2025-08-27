@@ -99,16 +99,21 @@ const fetchBookings = async () => {
     const response = await axios.get(`${backendUrl}/booking`, {
       params: {
         showroomId: showroom._id,
+         forShowroomReport: true,
         search,
         page,
-        limit: pageSize
+        limit: pageSize,
+        
       }
     });
     
     // Map bookings to include totalAmountShowroom
-    const updatedBookings = response.data.bookings.map((booking: Booking) => ({
+       const updatedBookings = response.data.bookings.map((booking: Booking) => ({
       ...booking,
-      totalAmountShowroom: (booking?.insuranceAmount || 0) + (booking?.showroomAmount || 0)
+      totalAmountShowroom: (booking?.insuranceAmount || 0) + (booking?.showroomAmount || 0),
+      receivedAmountShowroom: booking?.receivedAmountShowroom || 0,
+      showroomAmount: booking?.showroomAmount || 0,
+      insuranceAmount: booking?.insuranceAmount || 0
     }));
     
     setBookings(updatedBookings);
@@ -145,24 +150,38 @@ useEffect(() => {
     }));
   };
 
-  const handleApprove = async (bookingId: string, action: Boolean) => {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "Do you want to approve this booking?",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, confirm it!'
-    });
-    if (result.isConfirmed) {
-      await axios.put(`${BASE_URL}/booking/${bookingId}`, {
-        approve: action
+const handleApprove = async (bookingId: string, action: Boolean) => {
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "Do you want to approve this booking?",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, confirm it!'
+  });
+  
+  if (result.isConfirmed) {
+    try {
+      setLoadingStates(prev => ({...prev, [bookingId]: true}));
+      
+      // Use backendUrl instead of BASE_URL
+      await axios.put(`${backendUrl}/booking/${bookingId}`, {
+        showroomApprove: action
       });
-      fetchBookings();
-      Swal.fire('Confirmed!', 'The booking updated success.', 'success');
+      
+      // Refresh the bookings list
+      await fetchBookings();
+      
+      Swal.fire('Confirmed!', 'The booking updated successfully.', 'success');
+    } catch (error: any) {
+      console.error("Error approving booking:", error);
+      Swal.fire('Error!', error.response?.data?.message || 'Failed to update booking.', 'error');
+    } finally {
+      setLoadingStates(prev => ({...prev, [bookingId]: false}));
     }
-  };
+  }
+};
 
   const handleReceivedAmount = async (bookingId: string) => {
     const result = await Swal.fire({
@@ -205,11 +224,11 @@ useEffect(() => {
   };
 
   // Function to calculate balance (adjust if your showroom logic is different)
-  const calculateBalance = (amount: string | number, receivedAmount: string | number) => {
-    const parsedAmount = Number(amount) || 0;
-    const parsedReceivedAmount = Number(receivedAmount) || 0;
-    return (parsedAmount - parsedReceivedAmount).toFixed(2);
-  };
+const calculateBalance = (amount: string | number | undefined, receivedAmountShowroom: string | number | undefined) => {
+  const parsedAmount = Number(amount) || 0;
+  const parsedReceivedAmount = Number(receivedAmountShowroom) || 0;
+  return (parsedAmount - parsedReceivedAmount).toFixed(2);
+};
 
   const handleSelectAll = () => {
     if (selectedBookings.size === bookings.length) {
@@ -219,7 +238,7 @@ useEffect(() => {
       // Select all
       const allIds = new Set(
         bookings
-          .filter(booking => !booking.approve)
+          .filter(booking => !booking.showroomApprove)
           .map((booking) => booking._id)
       );
       const idsArray = Array.from(allIds);
@@ -252,10 +271,10 @@ useEffect(() => {
       render: (record: Booking) =>
         record._id !== 'total' ? <input
           type="checkbox"
-          disabled={record.approve}
+          disabled={record.showroomApprove}
           checked={selectedBookings.has(record._id)}
           onChange={() => {
-            if (record.approve) return; // Prevent state update if disabled
+            if (record.showroomApprove) return; // Prevent state update if disabled
             setSelectedBookings((prevSelected) => {
               const updatedSelection = new Set(prevSelected);
               if (updatedSelection.has(record._id)) {
@@ -273,7 +292,7 @@ useEffect(() => {
       title: 'Date',
       cellsClassName: 'text-center',
       render: (record: Booking) =>
-        `${new Date(record.createdAt || '').toLocaleDateString()}, ${new Date(record.createdAt || '').toLocaleTimeString()}`
+        `${new Date(record.createdAt || '').toLocaleDateString()}, ${new Date(record.createdAt || '').toLocaleDateString('en-GB')}`
     },
     { accessor: 'fileNumber', title: 'File Number', cellsClassName: 'text-center', },
     {
@@ -314,7 +333,7 @@ useEffect(() => {
     )
   },
     {
-      accessor: 'receivedAmount',
+      accessor: 'receivedAmountShowroom',
       cellsClassName: 'text-center',
       title: 'Received Amount(from showroom)',
       render: (booking: Booking) => (
@@ -324,11 +343,11 @@ useEffect(() => {
             value={inputValues[booking._id] || booking.receivedAmountShowroom || ''}
             onChange={(e) => handleInputChange(booking._id, e.target.value)}
             className=' border py-2 px-2 border-gray-500 rounded-md h-9'
-            disabled={booking.approve}
+            disabled={booking.showroomApprove}
           />
           <button
             onClick={() => handleReceivedAmount(booking._id)}
-            disabled={booking.approve || loadingStates[booking._id]}
+            disabled={booking.showroomApprove || loadingStates[booking._id]}
             style={{
               backgroundColor:
                 Number(calculateBalance(booking.totalAmountShowroom || 0, inputValues[booking._id] || booking.receivedAmountShowroom || 0)) === 0
@@ -374,15 +393,22 @@ useEffect(() => {
       title: 'Status',
       cellsClassName: 'text-center',
       render: (record: Booking) =>
-        <button className={`px-2 py-1 ${record.approve ? ' text-green-500' : 'text-red-500'} rounded`}>{record.approve ? 'Approved' : 'Not Approved	'}</button>
+        <button className={`px-2 py-1 ${record.showroomApprove ? ' text-green-500' : 'text-red-500'} rounded`}>{record.showroomApprove ? 'Approved' : 'Not Approved	'}</button>
     },
-    {
-      accessor: 'approve',
-      title: 'Approve',
-      cellsClassName: 'text-center',
-      render: (record: Booking) =>
-        <button className={`px-2 py-1 bg-green-500 text-white rounded`} onClick={() => record.approve ? null :  handleApprove(record._id, !record.approve)}>{record.approve ? "Approved" : "Approve"}</button>
-    },
+   {
+  accessor: 'showroomApprove',
+  title: 'Approve',
+  cellsClassName: 'text-center',
+  render: (record: Booking) => (
+    <button 
+      className={`px-2 py-1 ${record.showroomApprove ? 'bg-gray-400' : 'bg-green-500'} text-white rounded`}
+      onClick={() => !record.showroomApprove && handleApprove(record._id, true)}
+      disabled={record.showroomApprove || loadingStates[record._id]}
+    >
+      {loadingStates[record._id] ? 'Processing...' : record.showroomApprove ? "Approved" : "Approve"}
+    </button>
+  )
+}
   ];
 
   const handleMonth = (month: string) => {
@@ -410,24 +436,27 @@ useEffect(() => {
   };
 
   const calculateFinacials = (newBookings: Booking[] = bookings) => {
-    let totalCollectedAmount = 0;
-    let balaceAmount = 0;
-    let overallAmount = 0;
+  let totalCollectedAmount = 0;
+  let balanceAmount = 0;
+  let overallAmount = 0;
 
-    newBookings?.forEach((booking) => {
+  newBookings?.forEach((booking) => {
+    const showroomAmount = booking.showroomAmount || 0;
+    const insuranceAmount = booking.insuranceAmount || 0;
+    const receivedAmount = booking.receivedAmountShowroom || 0;
+    const partialAmount = booking.partialAmount || 0;
 
-      totalCollectedAmount += booking.partialPayment ? booking.partialAmount || 0 : booking.receivedAmount || 0;
+    totalCollectedAmount += booking.partialPayment ? partialAmount : receivedAmount;
 
-      balaceAmount += booking.partialPayment
-        ? (booking.totalAmount || 0) - (booking.partialAmount || 0)
-        : (booking.totalAmount || 0) + (booking.receivedAmount);
+    balanceAmount += booking.partialPayment
+      ? (showroomAmount + insuranceAmount) - partialAmount
+      : (showroomAmount + insuranceAmount) - receivedAmount;
 
-      overallAmount += booking.totalAmount || 0
+    overallAmount += showroomAmount + insuranceAmount;
+  });
 
-    })
-
-    return [totalCollectedAmount, balaceAmount, overallAmount]
-  }
+  return [totalCollectedAmount, balanceAmount, overallAmount];
+};
 
   const handleNavigateInvoicePage = () => {
     setInVoiceLoading(true)

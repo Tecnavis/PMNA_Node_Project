@@ -14,6 +14,7 @@ import FeedbackModal from './FeedbackModal';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { FiAlertTriangle, FiCheck, FiZoomIn } from 'react-icons/fi';
 import { FiUpload, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { ROLES } from '../../constants/roles'
 
 export interface Booking {
     _id: string;
@@ -1232,9 +1233,11 @@ const handleRemoveDropoffImage = async (index: number) => {
                                         <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
                                             Edit
                                         </button>
-                                        <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
-                                            Verify
-                                        </button>
+                                      {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                    <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
+                        Verify
+                    </button>
+                )}
                                     </>
                                 ) : (
                                     booking.verified &&

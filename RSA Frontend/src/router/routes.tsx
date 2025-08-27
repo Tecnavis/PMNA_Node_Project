@@ -15,6 +15,7 @@ const MarketingExecutives = lazy(() => import('../pages/MarketingExecutive/Marke
 const StatusTable = lazy(() => import('../pages/Screen/StatusTable'));
 const PaymentWorkReport = lazy(() => import('../pages/PaymentManagment/PaymentWorkReport'))
 const PaymentReportStaff = lazy(() => import('../pages/PaymentManagment/PaymentReportStaff'))
+const PaymentReportShowroom = lazy(() => import('../pages/PaymentManagment/PaymentReportShowroom'))
 
 const DriverSalaryReport = lazy(() => import('../pages/Reports/DriverReport/SalaryReport'))
 const DieselExpences = lazy(() => import('../pages/Expences/DieselExpences'))
@@ -268,6 +269,10 @@ const routes = [
      {
         path: '/payment-report-staff',
         element: <PaymentReportStaff />,
+    },
+      {
+        path: '/payment-report-showroom',
+        element: <PaymentReportShowroom />,
     },
     {
         path: '/staffcashreport/:id',

@@ -65,6 +65,26 @@ export interface Staff {
     cashInHand?: number;
     // Add other staff properties as needed
 }
+export interface Showroom {
+    _id: string;
+    name: string;
+   
+    cashInHand?: number;
+    // Add other staff properties as needed
+}
+export interface PaymentTransaction {
+  _id: string;
+  showroomId: string;
+  showroomName: string;
+  collectedAmount: number;
+  previousBalance: number;
+  newBalance: number;
+
+  remark: string;
+  createdAt: string;
+  paymentMode: string;
+  referenceNumber: string;
+}
 export interface ReceivedDetails {
     _id: string;
     fileNumber: string;

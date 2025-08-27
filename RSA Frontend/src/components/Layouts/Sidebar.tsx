@@ -299,7 +299,11 @@ const Sidebar = () => {
                                              <li>
                                                 <NavLink to="/payment-report-staff">{t('Staff Payment Report')}</NavLink>
                                             </li>
+                                            
                                                                         )}
+                                                                         <li>
+                                                <NavLink to="/payment-report-showroom">{t('Showroom Payment Report')}</NavLink>
+                                            </li>
                                             <li>
                                                 <NavLink to="/pmnr-report">{t('Payment Work Report')}</NavLink>
                                             </li>

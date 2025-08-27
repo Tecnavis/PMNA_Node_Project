@@ -52,6 +52,7 @@ multipleReceivedUser:{ type: Boolean },
         type: String,
         enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff']
     },
+     showroomApprove:{type:Boolean},
     bookedBy: { type: String },
     pickupDate: { type: Date },
     pickupTime: { type: Date },
