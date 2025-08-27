@@ -64,19 +64,19 @@ const ShowroomInvoice = () => {
     // Calculate total payable amount
     const totalPayableAmount = booking
         .filter((b: any) => b.workType !== 'RSAWork' && (!b.cashPending || b.partialPayment))
-        .reduce((total: number, b: any) => total + (Number(b.totalAmount) || 0), 0);
+        .reduce((total: number, b: any) => total + (Number(b.showroomAmount) || 0), 0);
 
     // Calculate total balance amount
     const totalBalanceAmount = booking
         .filter((b: any) => b.workType !== 'RSAWork' && (!b.cashPending || b.partialPayment))
-        .reduce((total: any, booking: any) => total + Number(booking.totalAmount - (booking.partialPayment ? booking.partialAmount : booking.receivedAmount)), 0);
+        .reduce((total: any, booking: any) => total + Number(booking.showroomAmount - (booking.partialPayment ? booking.partialAmount : booking.receivedAmountShowroom)), 0);
 
     const columnsForShowroom = [
         { key: 'id', label: 'SL.NO' },
         { key: 'serviceType', label: 'Service Type' },
         { key: 'Vehicle Number', label: 'Vehicle Number' },
         { key: 'amountOfBooking', label: 'Payable Amount', class: 'text-center' },
-        { key: 'receivedAmount', label: 'Amount Received', class: 'text-center' },
+        { key: 'receivedAmountShowroom', label: 'Amount Received', class: 'text-center' },
         { key: 'balanceSalary', label: 'Balance', class: 'text-center' },
     ];
 
@@ -159,13 +159,13 @@ const ShowroomInvoice = () => {
                                             {column.key === 'serviceType' && (booking.serviceType.serviceName || "N/A")}
                                             {column.key === 'Vehicle Number' && (booking.customerVehicleNumber || "N/A")}
                                             {column.key === 'fileNumber' && (booking?.fileNumber || "N/A")}
-                                            {column.key === 'amountOfBooking' && (booking?.totalAmount || 0)}
-                                            {column.key === 'payableAmount' && role === 'driver' && (booking.workType === 'RSAWork' ? 'Company Work' : booking?.totalAmount || 0)}
-                                            {column.key === 'receivedAmount' &&
-                                                (booking.workType === 'RSAWork' ? 0 : (booking.partialPayment ? booking.partialAmount : booking?.receivedAmount || 0))
+                                            {column.key === 'amountOfBooking' && (booking?.showroomAmount || 0)}
+                                            {column.key === 'payableAmount' && role === 'driver' && (booking.workType === 'RSAWork' ? 'Company Work' : booking?.showroomAmount || 0)}
+                                            {column.key === 'receivedAmountShowroom' &&
+                                                (booking.workType === 'RSAWork' ? 0 : (booking.partialPayment ? booking.partialAmount : booking?.receivedAmountShowroom || 0))
                                             }
                                             {column.key === 'balanceSalary' &&
-                                                (booking.workType === 'RSAWork' ? 0 : (booking?.totalAmount || 0) - (booking.partialPayment ? booking.partialAmount : booking?.receivedAmount || 0))
+                                                (booking.workType === 'RSAWork' ? 0 : (booking?.showroomAmount || 0) - (booking.partialPayment ? booking.partialAmount : booking?.receivedAmountShowroom || 0))
                                             }
                                         </td>
                                     ))}

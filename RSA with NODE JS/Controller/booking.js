@@ -688,42 +688,13 @@ if (showroomId) {
                 booking.partialReceivedAmountStaff === true) {
                 return total + (booking.receivedAmountStaff || 0);
             }
+               if (forShowroomReport) {
+                // Calculate showroom-specific balance
+                return total + (booking.receivedAmountShowroom || 0);
+            }
             return total + (booking.receivedAmount || 0);
         }, 0);
         query.workType = { $ne: 'RSAWork' };
-
-// ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        // Aggregate data for total amounts
-       // Add this right before your aggregation pipeline
-console.log('============ DEBUGGING DRIVER REPORT ============');
-console.log('Query being used for aggregation:', JSON.stringify({
-    ...query,
-    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
-    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
-    ...(forDriverReport && {
-        $or: [
-            { receivedUser: { $ne: 'Staff' } },
-            { receivedUser: 'Staff', partialReceivedAmountStaff: true },
-            { receivedUser: "Driver" },
-            {
-                $and: [
-                    { receivedUser: "Staff" },
-                    { multipleReceivedUser: true },
-                    { previousReceivedUser: "Driver" }
-                ]
-            }
-        ]
-    }),
-    ...(forStaffReport && {
-        $or: [
-            { receivedUser: 'Staff' },
-            { previousReceivedUser: 'Staff' }
-        ]
-    })
-}, null, 2));
-
-// Also log the driverId being used
-console.log('Driver ID being queried:', driverId);
 
 // Add this temporary aggregation to see what documents are being processed
 const debugAggregation = await Booking.aggregate([
@@ -784,7 +755,7 @@ const aggregationResult = await Booking.aggregate([
     {
         $match: {
             ...query,
-            ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { cashPending: false }),
+            ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) &&  { cashPending: false }),
             ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
             ...(forDriverReport && {
                 $or: [
@@ -807,6 +778,10 @@ const aggregationResult = await Booking.aggregate([
                     { receivedUser: 'Staff' },
                     { previousReceivedUser: 'Staff' }
                 ]
+            }),
+              ...(forShowroomReport && {
+                // Add any specific conditions for showroom reports if needed
+                showroom: showroomId ? new mongoose.Types.ObjectId(showroomId) : { $exists: true }
             })
         }
     },
@@ -893,9 +868,11 @@ const aggregationResult = await Booking.aggregate([
               ]
             }
           : forCompanyReport
-            ? "$receivedAmountByCompany"
-            : "$receivedAmount"
-    },
+                                    ? "$receivedAmountByCompany"
+                                    : forShowroomReport
+                                        ? "$receivedAmountShowroom" // Showroom received amount
+                                        : "$receivedAmount"
+                    },
            totalOverall: {
   $sum: 
     forStaffReport 
@@ -934,10 +911,12 @@ const aggregationResult = await Booking.aggregate([
                                         }
                                     ]
                                 }
-        : forCompanyReport
-          ? "$totalAmount"
-          : "$totalAmount"
-},
+               : forCompanyReport
+                                    ? "$totalAmount"
+                                    : forShowroomReport
+                                        ? "$showroomAmount" // Showroom total amount
+                                        : "$totalAmount"
+                    },
             advanceData: {
                 $push: {
                     $cond: [
@@ -1006,8 +985,7 @@ console.log('Full aggregation result:', JSON.stringify(aggregationResult, null, 
             {
                 $match: {
                     ...query,
-                    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined) && { partialPayment: true }),
-                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
+    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) && { partialPayment: true }),                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
                     ...(forDriverReport && { receivedUser: { $ne: 'Staff' } })
 
                 }

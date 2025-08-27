@@ -46,6 +46,7 @@ var dieselExpensesRouter = require('./routes/dieselExpense')
 var executivesRouter = require('./routes/executive')
 var transactionsRouter = require('./routes/transaction.js')
 // var showroomVerification = require('./routes/ShowroomVerification.js')
+var showroomPaymentRoutes = require('./routes/showroomPaymentRoutes.js')
 
 
 // Connect to database
@@ -107,6 +108,7 @@ app.use('/bookingnote', bookingNotesRouter);
 app.use('/advance-payment', advanceRouter);
 app.use('/cash-received-details', cashReceivedDetails);
 app.use('/cash-received-details-staff', cashReceivedDetailsStaff);
+app.use('/showroom-payments', showroomPaymentRoutes);
 
 app.use('/cash-collection-details', cashCollectionDetails);
 

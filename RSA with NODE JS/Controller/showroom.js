@@ -10,6 +10,7 @@ const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
 const { StatusCodes } = require('http-status-codes');
 const LoggerFactory = require('../utils/logger/LoggerFactory');
 const { setVerifiedShowroomsThisMonth } = require('../services/showroomService');
+const { updateShowroomFinancials } = require('../services/serviceCenterService');
 
 // Create a showroom
 exports.createShowroom = async (req, res) => {
@@ -114,18 +115,32 @@ exports.getShowrooms = async (req, res) => {
   try {
     const routeLogger = LoggerFactory.createChildLogger({
       route: '/showroom',
-      handler: 'createShowroom',
+      handler: 'getShowrooms',
     });
-    routeLogger.info('Showroom fething...');
+    routeLogger.info('Fetching showrooms...');
 
-    const showrooms = await Showroom.find()
-      .populate('showroomId')
-
-    routeLogger.info({ ShowroomCount: showrooms.length }, 'Showroom fetched successfully.');
+    const showrooms = await Showroom.find().populate('showroomId');
+    
+    // Update financials for each showroom
+    const updatePromises = showrooms.map(async (showroom) => {
+      try {
+        await updateShowroomFinancials(showroom._id);
+        routeLogger.debug(`Updated financials for showroom: ${showroom._id}`);
+      } catch (error) {
+        routeLogger.error(`Failed to update financials for showroom ${showroom._id}:`, error);
+        // Don't throw here to avoid breaking the whole request
+      }
+    });
+    
+    // Wait for all financial updates to complete
+    await Promise.all(updatePromises);
+    
+    routeLogger.info({ ShowroomCount: showrooms.length }, 'Showrooms fetched and financials updated successfully.');
 
     return res.status(200).json(showrooms);
 
   } catch (error) {
+    routeLogger.error('Error fetching showrooms:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -135,6 +150,10 @@ exports.getShowroomById = async (req, res) => {
   try {
     const showroom = await Showroom.findById(req.params.id);
     if (!showroom) return res.status(404).json({ message: 'showroom not found' });
+    
+    // Update financials for this specific showroom
+    await updateShowroomFinancials(showroom._id);
+    
     res.status(200).json(showroom);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -181,8 +200,17 @@ exports.getPaginatedShowrooms = async (req, res) => {
       .limit(limit);
 
       const developedShowrooms = await setVerifiedShowroomsThisMonth(showrooms)
-
-    return res.status(200).json({
+// Update financials for each showroom
+    const updatePromises = developedShowrooms.map(async (showroom) => {
+      try {
+        await updateShowroomFinancials(showroom._id);
+      } catch (error) {
+        console.error(`Failed to update financials for showroom ${showroom._id}:`, error);
+      }
+    });
+    
+    await Promise.all(updatePromises);
+        return res.status(200).json({
       success: true,
       message: "Showroom retrieved successfully.",
       data: developedShowrooms,
@@ -212,8 +240,17 @@ exports.filterGetShowrooms = async (req, res) => {
         ]
       };
     }
-
     const showrooms = await Showroom.find(filter);
+    // Update financials for each showroom
+    const updatePromises = showrooms.map(async (showroom) => {
+      try {
+        await updateShowroomFinancials(showroom._id);
+      } catch (error) {
+        console.error(`Failed to update financials for showroom ${showroom._id}:`, error);
+      }
+    });
+    
+    await Promise.all(updatePromises);
     res.json(showrooms);
   } catch (error) {
     res.status(500).json({ error: error.message });

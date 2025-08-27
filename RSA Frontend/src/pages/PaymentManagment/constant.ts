@@ -1,6 +1,6 @@
 import { DataTableColumn } from "mantine-datatable";
 import { dateFormate, formattedTime } from "../../utils/dateUtils";
-import { Staff } from './types'; // Make sure to import the Staff type
+import { PaymentTransaction, Staff } from './types'; // Make sure to import the Staff type
 import { AdvanceData, CashCollectionDetails, ReceivedDetails, ReceivedDetailsStaff } from "./types";
 const roundToNearestMinute = (date: Date) => {
   const roundedDate = new Date(date);
@@ -27,6 +27,45 @@ const getColorForDateTime = (dateTime: Date) => {
   const h = Math.abs(hash) % 360;
   return `hsl(${h}, 70%, 85%)`;
 };
+// Payment Transactions Columns
+export const PaymentTransactionsColumns: DataTableColumn<PaymentTransaction>[] = [
+  {
+    accessor: 'createdAt',
+    title: 'Date',
+    render: (record: PaymentTransaction) => new Date(record.createdAt).toLocaleDateString(),
+  },
+  {
+    accessor: 'showroomName',
+    title: 'Showroom',
+  },
+  {
+    accessor: 'previousBalance',
+    title: 'Previous Balance',
+    render: (record: PaymentTransaction) => `₹${record.previousBalance.toLocaleString()}`,
+  },
+  {
+    accessor: 'collectedAmount',
+    title: 'Collected Amount',
+    render: (record: PaymentTransaction) => `₹${record.collectedAmount.toLocaleString()}`,
+  },
+  {
+    accessor: 'newBalance',
+    title: 'New Balance',
+    render: (record: PaymentTransaction) => `₹${record.newBalance.toLocaleString()}`,
+  },
+  {
+    accessor: 'paymentMode',
+    title: 'Payment Mode',
+  },
+  {
+    accessor: 'referenceNumber',
+    title: 'Reference',
+  },
+  {
+    accessor: 'remark',
+    title: 'Remarks',
+  },
+];
 //Columns Titles
 // --------------------------------------
 export const AdvanceDetailsTableColumn: DataTableColumn<AdvanceData>[] = [

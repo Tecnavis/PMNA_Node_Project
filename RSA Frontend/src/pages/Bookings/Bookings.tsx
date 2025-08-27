@@ -62,8 +62,8 @@ export interface Booking {
     cancelImage: string,// new prop
     company: Company | string
     partialAmount?: number;
-     receivedAmountShowroom?: number;
-      totalAmountShowroom?: number;
+  receivedAmountShowroom?: number;
+  totalAmountShowroom?: number;
     bookedByModel?:string;
     partialReceivedAmountStaff?:Boolean;
     partialAmountStaff?:number;
@@ -76,6 +76,7 @@ export interface Booking {
     dummyProviderName: string,// new prop
     companyBooking: boolean,// new prop
     approve: boolean,// new prop
+    showroomApprove:boolean;
     feedbackCheck: boolean,// new prop
     receivedAmountStaff?:number;
     givenAmountByStaff?:number;
