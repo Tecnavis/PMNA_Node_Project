@@ -178,27 +178,25 @@ const Preview = () => {
 
     // checking the token
 
-    const gettingToken = () => {
-        const token = localStorage.getItem('token');
-        const role = localStorage.getItem('role');
-        if (role === 'admin') {
-            setRole(role);
-        } else if (role !== 'admin') {
-            const name = localStorage.getItem('name');
-            if (name) {
-                setRole(`${role}-${name}`);
-            } else {
-                console.error('No user found');
-            }
-        }
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            console.error('Token  found in localStorage');
+  const gettingToken = () => {
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('role'); // Rename to avoid conflict
+    const name = localStorage.getItem('name');
+    
+    if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        if (userRole) {
+            setRole(userRole); // Just set the role string
+            // If you need the name for display, store it separately
         } else {
-            navigate('/auth/boxed-signin');
-            console.error('Token not found in localStorage');
+            console.error('Role not found in localStorage');
         }
-    };
+    } else {
+        navigate('/auth/boxed-signin');
+        console.error('Token not found in localStorage');
+    }
+};
 
     // fetching booking by id
     const fetchBookingById = async () => {
@@ -1233,11 +1231,15 @@ const handleRemoveDropoffImage = async (index: number) => {
                                         <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
                                             Edit
                                         </button>
-                                      {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
-                    <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
-                        Verify
-                    </button>
-                )}
+                        {(
+    role === ROLES.VERIFIER || 
+    role.startsWith(ROLES.ADMIN) || 
+    role.startsWith(ROLES.SECONDARY_ADMIN)
+) && (
+    <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
+        Verify
+    </button>
+)}
                                     </>
                                 ) : (
                                     booking.verified &&
