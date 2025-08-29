@@ -267,12 +267,9 @@ exports.addBookingForShowroom = async (req, res) => {
         });
     }
 }
-
-// Controller to create a booking
 exports.createBookingNoAuth = async (req, res) => {
     try {
         const bookingData = req.body;
-
         const routeLogger = LoggerFactory.createChildLogger({
             route: '/new-booking',
             handler: 'createBookingNoAuth',
@@ -282,39 +279,49 @@ exports.createBookingNoAuth = async (req, res) => {
             doneBy: req?.user || 'unknown'
         }, 'New Booking(Whatsapp API) creation process started...');
 
-        // Handle the case where 'company' is an empty string
+        // Handle company field
         if (!bookingData.company || bookingData.company === "") {
-            bookingData.company = null; // Or you can delete the field entirely if required
+            bookingData.company = null;
         }
 
-        console.log(bookingData)
-        if (bookingData.fileNumber) {
+        // Handle fileNumber field - ensure it's never null
+        if (!bookingData.fileNumber || bookingData.fileNumber === "") {
+            // Generate a unique fileNumber or use a default value
+            bookingData.fileNumber = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         }
 
-
-        // Fetch driver details
-        // Validate ObjectId
+        // Validate ObjectIds
         if (!mongoose.Types.ObjectId.isValid(bookingData.baselocation)) bookingData.baselocation = null;
         if (!mongoose.Types.ObjectId.isValid(bookingData.showroom)) bookingData.showroom = null;
         if (!mongoose.Types.ObjectId.isValid(bookingData.serviceType)) bookingData.serviceType = null;
-        bookingData.isWhatsappBooking = true
+        
+        bookingData.isWhatsappBooking = true;
         const newBooking = new Booking(bookingData);
 
         await newBooking.save();
 
         routeLogger.info({
-            fileNumber: newBooking.fileNumber || 'unknown',
+            fileNumber: newBooking.fileNumber,
             doneBy: req.user || 'unknown'
-        }, 'New Booking(Whatsapp API) created successfull.');
+        }, 'New Booking(Whatsapp API) created successfully.');
 
         res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
     } catch (error) {
-        console.log(error)
+        console.log(error);
         if (error.name === "ValidationError") {
             return res.status(400).json({
                 success: false,
                 message: "Validation failed",
                 errors: error.errors,
+            });
+        }
+
+        // Handle duplicate key error specifically
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: "Duplicate booking detected",
+                error: "A booking with this file number already exists",
             });
         }
 
