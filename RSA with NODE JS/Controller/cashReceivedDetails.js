@@ -89,6 +89,15 @@ exports.createReceivedDetails = async (req, res) => {
       ]
     }
   ],
+    $nor: [
+    {
+      $and: [
+   { cashPending: false },
+ 
+  { receivedUser: 'Staff' },
+      ]
+    }
+  ],
   $or: [
     // Original conditions...
     { 

@@ -267,6 +267,8 @@ exports.addBookingForShowroom = async (req, res) => {
         });
     }
 }
+
+// Controller to create a booking
 exports.createBookingNoAuth = async (req, res) => {
     try {
         const bookingData = req.body;
