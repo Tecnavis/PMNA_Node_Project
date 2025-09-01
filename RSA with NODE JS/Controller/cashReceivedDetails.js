@@ -70,34 +70,27 @@ exports.createReceivedDetails = async (req, res) => {
   status: 'Order Completed',
   workType: 'PaymentWork',
   [entityField]: entityId,
-    $nor: [
-    {
-      $and: [
-        { receivedUser: 'Staff' },
-        { previousReceivedUser: { $exists: false } },
-        { partialReceivedAmountStaff: false }
-      ]
-    }
-  ],
-  $nor: [
-    {
-      $and: [
-   { cashPending: true },
- 
-  { receivedUser: { $exists: false } }
-
-      ]
-    }
-  ],
-    $nor: [
-    {
-      $and: [
-   { cashPending: false },
- 
-  { receivedUser: 'Staff' },
-      ]
-    }
-  ],
+   $nor: [
+  { // Condition A
+    $and: [
+      { receivedUser: 'Staff' },
+      { previousReceivedUser: { $exists: false } },
+      { partialReceivedAmountStaff: false }
+    ]
+  },
+  { // Condition B - The one you care about
+    $and: [
+      { cashPending: true },
+      { receivedUser: { $exists: false } }
+    ]
+  },
+  { // Condition C
+    $and: [
+      { cashPending: false },
+      { receivedUser: 'Staff' }
+    ]
+  }
+],
   $or: [
     // Original conditions...
     { 
