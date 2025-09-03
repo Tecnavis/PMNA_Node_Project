@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactModal from 'react-modal'
 import { debounce } from 'lodash';
@@ -65,46 +65,64 @@ const Status: React.FC = () => {
     const [query, setQuery] = useState<string>('');
     const [showAll, setShowAll] = useState(false);
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    const currentTabRef = useRef<Tabs>(Tabs.OngoingBookings);
 
     const navigate = useNavigate();
     const role = localStorage.getItem('role') || ''
-
+ useEffect(() => {
+        currentTabRef.current = tab;
+    }, [tab]);
 const handlePageChange = (page: number) => {
     if (page === currentPage || page < 1 || page > totalPages) return;
     fetchBookings(query, page); // Pass current query
 };
 
- const fetchBookings = useCallback(
-    async (search: string, page: number = 1, limit: number = 10) => {
-        setLoader(true);
+const fetchBookings = useCallback(async (search: string, page: number = 1, limit: number = 10) => {
+    const abortController = new AbortController();
+    
+    setLoader(true);
+    const currentTab = currentTabRef.current;
+    
+    let status: string = currentTab === Tabs.CompletedBookings
+        ? 'Order Completed'
+        : currentTab === Tabs.CashPendingBookings
+            ? Tabs.CashPendingBookings
+            : Tabs.OngoingBookings;
 
-        let status: string = tab === Tabs.CompletedBookings
-            ? 'Order Completed'
-            : tab === Tabs.CashPendingBookings
-                ? Tabs.CashPendingBookings
-                : Tabs.OngoingBookings;
+    try {
+        const response = await axiosInstance.get(`/booking/status-based`, {
+            params: {
+                page,
+                limit: showAll ? undefined : limit,
+                search: search.trim(),
+                status,
+                showAll
+            },
+            signal: abortController.signal
+        });
 
-        try {
-            const response = await axiosInstance.get(`/booking/status-based`, {
-                params: {
-                    page,
-                    limit: showAll ? undefined : limit,
-                    search: search.trim(),
-                    status,
-                    showAll
-                }
-            });
-
+        if (currentTabRef.current === currentTab) {
             setBookings(response.data.bookings);
             setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
             setCurrentPage(response.data.page);
-        } catch (error) {
-            console.error("Error fetching bookings", error);
-        } finally {
+        }
+    } catch (error: any) {
+        if (error.name === 'CanceledError') {
+            console.log('Request canceled');
+            return;
+        }
+        console.error("Error fetching bookings", error);
+        if (currentTabRef.current === currentTab) {
+            setBookings([]);
+        }
+    } finally {
+        if (currentTabRef.current === currentTab) {
             setLoader(false);
         }
-    }, [tab, showAll] // REMOVE query and currentPage from dependencies
-);
+    }
+    
+    return () => abortController.abort();
+}, [showAll]);
 
 const debouncedFetchBookings = useMemo(
     () => debounce((search: string, page: number = 1) => {
@@ -117,8 +135,17 @@ const debouncedFetchBookings = useMemo(
     fetchBookings(query, 1, 10); // Pass current query
 };
 const handleChangeTabs = (tabName: Tabs) => {
+    // Cancel any pending debounced searches
+    debouncedFetchBookings.cancel();
+    
+    // Reset search and pagination
+    // setQuery('');
+    setCurrentPage(1);
+    
+    // Update tab state
     setTab(tabName);
-    fetchBookings(query, 1); // Pass current query
+    
+    // Don't call fetchBookings here - let useEffect handle it
 };
     const handlePaymentSettlement = (record: Booking) => {
         setSelectedBooking(record);
@@ -242,9 +269,11 @@ fetchBookings(query, 1);
             }
         }
     };
- useEffect(() => {
-    fetchBookings(query, 1); // Add query parameter
-}, [tab, fetchBookings, query]); // Add dependencies
+useEffect(() => {
+    // Clear previous bookings when tab changes to avoid showing stale data
+    setBookings([]);
+    fetchBookings(query, 1);
+}, [tab, fetchBookings]); // Remove query from dependencies
 
     // Helper function to update a single booking in state
     const updateBookingInState = (
@@ -267,52 +296,51 @@ fetchBookings(query, 1);
         );
     };
 
-    useEffect(() => {
-        try {
-            const socketInstance = connectSocket("test@example.com");
-            setSocket(socketInstance);
+  useEffect(() => {
+    try {
+        const socketInstance = connectSocket("test@example.com");
+        setSocket(socketInstance);
 
-            socketInstance.on("newChanges", async (data: SocketData) => {
-                try {
-                    if (!data.type) return;
+        socketInstance.on("newChanges", async (data: SocketData) => {
+            try {
+                if (!data.type) return;
 
-                    if (data.status) {
-                        if (data.status === 'Order Completed') {
-                            console.log("status order completed", data)
-                            setBookings(prev => prev.filter(booking => booking._id !== data.bookingId));
-                        } else {
-                            console.log("status other", data)
-                            setBookings(prev => updateBookingInState(prev, data.bookingId, data.updatedBooking as Booking));
-                        }
-                        return;
-                    } else if (data.type === 'newBooking') {
-                        console.log("status other", data)
-                        if (Tabs.OngoingBookings === tab && data.newBooking) {
-                            setBookings(prevData => [...prevData, data.newBooking as Booking]);
-                        }
+                const currentTab = currentTabRef.current;
+
+                if (data.status) {
+                    if (data.status === 'Order Completed') {
+                        setBookings(prev => prev.filter(booking => booking._id !== data.bookingId));
                     } else {
-                        console.log("else case", data)
-                        const response = await axiosInstance.get(`/booking/${data.bookingId}`);
-                        const updatedBooking = response.data;
-                        setBookings(prev => updateBookingInState(prev, data.bookingId, updatedBooking));
-
-                        if (shouldRefetchForTab(updatedBooking.status, tab)) {
-fetchBookings(query, 1);
-                        }
+                        setBookings(prev => updateBookingInState(prev, data.bookingId, data.updatedBooking as Booking));
                     }
-                } catch (err) {
-                    console.error("Error handling socket data:", err);
-                }
-            });
+                    return;
+                } else if (data.type === 'newBooking') {
+                    if (Tabs.OngoingBookings === currentTab && data.newBooking) {
+                        setBookings(prevData => [...prevData, data.newBooking as Booking]);
+                    }
+                } else {
+                    const response = await axiosInstance.get(`/booking/${data.bookingId}`);
+                    const updatedBooking = response.data;
+                    setBookings(prev => updateBookingInState(prev, data.bookingId, updatedBooking));
 
-            return () => {
-                socketInstance.off("newChanges");
-                disconnectSocket();
-            };
-        } catch (error) {
-            console.error("Socket setup failed:", error);
-        }
-    }, [tab]);
+                    if (shouldRefetchForTab(updatedBooking.status, currentTab)) {
+                        // Use the current search query when refetching
+                        fetchBookings(query, 1);
+                    }
+                }
+            } catch (err) {
+                console.error("Error handling socket data:", err);
+            }
+        });
+
+        return () => {
+            socketInstance.off("newChanges");
+            disconnectSocket();
+        };
+    } catch (error) {
+        console.error("Socket setup failed:", error);
+    }
+}, [query, fetchBookings]); // Keep query dependency
 
     const openFeedbackModal = async (id: string) => {
         setIsOpen(true);
@@ -389,11 +417,17 @@ fetchBookings(query, 1);
         setReceivedUser(e.target.value);
     };
 
-    useEffect(() => {
-        return () => {
-            debouncedFetchBookings.cancel();
-        };
-    }, [debouncedFetchBookings]);
+useEffect(() => {
+    // Cancel any pending debounced calls
+    debouncedFetchBookings.cancel();
+    
+    // Immediately clear bookings and show loader
+    setBookings([]);
+    setLoader(true);
+    
+    // Fetch new data for the current tab WITH the current search query
+    fetchBookings(query, 1);
+}, [tab, fetchBookings, query]); // Add query back to dependencies
 
     return <div>
         <div className="container-fluid">
@@ -405,12 +439,22 @@ fetchBookings(query, 1);
                     </h5>
                     {/* Search Bar */}
                     <div className="flex-grow sm:w-auto w-full ml-3">
-                       <input
+                   <input
     type="text"
+    value={query}
     onChange={(e) => {
         const searchValue = e.target.value;
         setQuery(searchValue);
-        debouncedFetchBookings(searchValue, 1); // Pass the value directly
+        
+        // Cancel previous debounced call
+        debouncedFetchBookings.cancel();
+        
+        // If search is empty, fetch immediately
+        if (searchValue.trim() === '') {
+            fetchBookings('', 1);
+        } else {
+            debouncedFetchBookings(searchValue, 1);
+        }
     }}
     placeholder="Search..."
     className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
@@ -418,6 +462,11 @@ fetchBookings(query, 1);
                     </div>
                 </div>
             </div>
+{loader && (
+    <div className="flex justify-center items-center py-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    </div>
+)}
             <div className='w-full'>
                 <div
                     className="border-b border-gray-200 dark:border-gray-700"

@@ -1389,7 +1389,6 @@ exports.addPickupImages = async (req, res) => {
     const { id } = req.params;
 
     try {
-
         const routeLogger = LoggerFactory.createChildLogger({
             route: '/add-pickup-image',
             handler: 'addPickupImages',
@@ -1405,50 +1404,112 @@ exports.addPickupImages = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        // Get new image paths from the uploaded files
-        const newImages = req.files && req.files.length ? req.files.map(file => file.filename) : [];
-        console.log(newImages)
-
-        if (!newImages.length) {
+        // Validate files were uploaded
+        if (!req.files || !req.files.length) {
             return res.status(400).json({ message: 'No images were uploaded.' });
         }
 
-        // Calculate the total number of images (existing + new)
-        const totalImages = booking.pickupImages.length + newImages.length; // For pickup
+        // Get new image paths with validation
+        const newImages = req.files.map(file => {
+            if (!file.filename) {
+                routeLogger.warn('File missing filename property', { file });
+                throw new Error('Invalid file upload');
+            }
+            return file.filename;
+        });
 
-        // If total images exceed the limit, return an error
+        routeLogger.info(`Processing ${newImages.length} new images`);
+
+        // Calculate the total number of images
+        const totalImages = booking.pickupImages.length + newImages.length;
+
         if (totalImages > 6) {
             return res.status(400).json({
                 message: `Limit exceeded. You can upload a maximum of 6 images for pickup images. You already have ${booking.pickupImages.length} images.`,
             });
         }
 
-        // Push new images to the pickupImages array
-        booking.pickupImages.push(...newImages);
-        // ✅ Set pickupImagePending based on count
-        if (booking.pickupImages.length < 3) {
-            booking.pickupImagePending = true;
-        } else {
-            booking.pickupImagePending = false;
+        // Add retry mechanism for database save
+        const maxRetries = 3;
+        let retryCount = 0;
+        let savedSuccessfully = false;
+
+        while (retryCount < maxRetries && !savedSuccessfully) {
+            try {
+                // Use atomic update to prevent race conditions
+                const updatedBooking = await Booking.findByIdAndUpdate(
+                    id,
+                    {
+                        $push: { 
+                            pickupImages: { 
+                                $each: newImages 
+                            } 
+                        },
+                        $set: { 
+                            pickupImagePending: booking.pickupImages.length + newImages.length < 3 
+                        }
+                    },
+                    { 
+                        new: true,
+                        runValidators: true 
+                    }
+                );
+
+                if (!updatedBooking) {
+                    throw new Error('Booking update failed');
+                }
+
+                savedSuccessfully = true;
+                booking.pickupImages = updatedBooking.pickupImages;
+                booking.pickupImagePending = updatedBooking.pickupImagePending;
+
+                routeLogger.info({
+                    fileNumber: booking.fileNumber || 'unknown',
+                    doneBy: req.user || 'unknown',
+                    imagesAdded: newImages.length,
+                    totalImages: updatedBooking.pickupImages.length
+                }, 'Pickup images added successfully....');
+
+            } catch (dbError) {
+                retryCount++;
+                routeLogger.warn(`Database save attempt ${retryCount} failed`, {
+                    error: dbError.message,
+                    retryCount
+                });
+
+                if (retryCount === maxRetries) {
+                    throw new Error(`Failed to save after ${maxRetries} attempts: ${dbError.message}`);
+                }
+
+                // Wait before retrying (exponential backoff)
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            }
         }
-        // Save the updated booking
-        await booking.save();
 
-        routeLogger.info({
-            fileNumber: booking.fileNumber || 'unknown',
-            doneBy: req.user || 'unknown'
-        }, 'Pickup images added successfully....');
-
-        // Respond with the updated pickup images
         res.status(200).json({
             message: 'Pickup images added successfully',
             pickupImages: booking.pickupImages,
             pickupImagePending: booking.pickupImagePending,
-
+            imagesAdded: newImages.length,
+            totalImages: booking.pickupImages.length
         });
+
     } catch (error) {
         console.error('Error in addPickupImages:', error);
-        res.status(500).json({ message: 'Error updating booking', error: error.message });
+        
+        // Log detailed error information
+        routeLogger.error({
+            error: error.message,
+            stack: error.stack,
+            bookingId: id,
+            filesCount: req.files ? req.files.length : 0
+        }, 'Failed to add pickup images');
+
+        res.status(500).json({ 
+            message: 'Error updating booking', 
+            error: error.message,
+            suggestion: 'Please try uploading the images again'
+        });
     }
 };
 
@@ -1601,9 +1662,7 @@ exports.removeAllDropoffImages = async (req, res) => {
 };
 // add dropoff images
 exports.addDropoffImages = async (req, res) => {
-
     const { id } = req.params;
-
     const routeLogger = LoggerFactory.createChildLogger({
         route: '/change-pickup-image',
         handler: 'changeDropoffImages',
@@ -1614,56 +1673,110 @@ exports.addDropoffImages = async (req, res) => {
     }, 'The process to add the dropOf image for the booking has started....');
 
     try {
-        // Find the booking document by ID
         const booking = await Booking.findById(id);
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
-        // Get new image paths from the uploaded files
-        const newImages = req.files && req.files.length ? req.files.map(file => file.filename) : [];
-        console.log(newImages)
-
-        if (!newImages.length) {
+        // Validate uploaded files
+        if (!req.files || !req.files.length) {
             return res.status(400).json({ message: 'No images were uploaded.' });
         }
 
-        // Calculate the total number of images (existing + new)
-        const totalImages = booking.dropoffImages.length + newImages.length; // For dropoff
+        const newImages = req.files.map(file => {
+            if (!file.filename) {
+                routeLogger.warn('File missing filename property', { file });
+                throw new Error('Invalid file upload');
+            }
+            return file.filename;
+        });
 
-        // If total images exceed the limit, return an error
+        routeLogger.info(`Processing ${newImages.length} new dropoff images`);
+
+        // Check image limit (uncomment if needed)
+        // const totalImages = booking.dropoffImages.length + newImages.length;
         // if (totalImages > 6) {
-        //     return res.status(400).json({
-        //         message: `Limit exceeded. You can upload a maximum of 6 images for dropoff images. You already have ${booking.dropoffImages.length} images.`,
-        //     });
+        //     return res.status(400).json({ message: `Limit exceeded. Max 6 images allowed. Current: ${booking.dropoffImages.length}` });
         // }
 
-        // Push new images to the pickupImages array
-        booking.dropoffImages.push(...newImages);
-        // ✅ Set dropoffImagePending based on count
-        if (booking.dropoffImages.length < 3) {
-            booking.dropoffImagePending = true;
-        } else {
-            booking.dropoffImagePending = false;
+        // Retry mechanism for database save
+        const maxRetries = 3;
+        let retryCount = 0;
+        let savedSuccessfully = false;
+
+        while (retryCount < maxRetries && !savedSuccessfully) {
+            try {
+                const updatedBooking = await Booking.findByIdAndUpdate(
+                    id,
+                    {
+                        $push: { 
+                            dropoffImages: { 
+                                $each: newImages 
+                            } 
+                        },
+                        $set: { 
+                            dropoffImagePending: booking.dropoffImages.length + newImages.length < 3 
+                        }
+                    },
+                    { 
+                        new: true,
+                        runValidators: true 
+                    }
+                );
+
+                if (!updatedBooking) {
+                    throw new Error('Booking update failed');
+                }
+
+                savedSuccessfully = true;
+                booking.dropoffImages = updatedBooking.dropoffImages;
+                booking.dropoffImagePending = updatedBooking.dropoffImagePending;
+
+                routeLogger.info({
+                    fileNumber: booking.fileNumber || 'unknown',
+                    doneBy: req.user || 'unknown',
+                    imagesAdded: newImages.length,
+                    totalImages: updatedBooking.dropoffImages.length
+                }, 'Dropoff images added successfully....');
+
+            } catch (dbError) {
+                retryCount++;
+                routeLogger.warn(`Database save attempt ${retryCount} failed`, {
+                    error: dbError.message,
+                    retryCount
+                });
+
+                if (retryCount === maxRetries) {
+                    throw new Error(`Failed to save after ${maxRetries} attempts: ${dbError.message}`);
+                }
+
+                // Exponential backoff before retry
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            }
         }
-        // Save the updated booking
-        await booking.save();
 
-        routeLogger.info({
-            fileNumber: booking.fileNumber || 'unknown',
-            doneBy: req.user || 'unknown'
-        }, 'DropOff images added successfully....');
-
-        // Respond with the updated dropoff images
         res.status(200).json({
             message: 'Dropoff images added successfully',
             dropoffImages: booking.dropoffImages,
             dropoffImagePending: booking.dropoffImagePending,
-
+            imagesAdded: newImages.length,
+            totalImages: booking.dropoffImages.length
         });
+
     } catch (error) {
         console.error('Error in addDropoffImages:', error);
-        res.status(500).json({ message: 'Error updating booking', error: error.message });
+        routeLogger.error({
+            error: error.message,
+            stack: error.stack,
+            bookingId: id,
+            filesCount: req.files ? req.files.length : 0
+        }, 'Failed to add dropoff images');
+
+        res.status(500).json({ 
+            message: 'Error updating booking', 
+            error: error.message,
+            suggestion: 'Please try uploading the images again'
+        });
     }
 };
 
