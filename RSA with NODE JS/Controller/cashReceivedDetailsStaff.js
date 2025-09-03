@@ -90,14 +90,18 @@ const bookings = await Booking.find({
 })
 .sort({ createdAt: 1 })
 .session(session);
+// Debug logging
+console.log(`Found ${bookings.length} eligible bookings`);
+console.log(`Amount to distribute: ₹${remainingAmount}`);
+
     for (const booking of bookings) {
-      if (remainingAmount <= 0) break;
+     
 
  
     
    // Use the same logic for both types
 const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);     
-      if (allocatableAmount > 0) {
+  if (allocatableAmount > 0 && remainingAmount > 0) {
     const amountToApply = Math.min(remainingAmount, allocatableAmount);
     
          // Update booking with new given amount
@@ -110,8 +114,12 @@ const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountBySt
     selectedBookingIds.push(booking._id);
     appliedAmounts.push(amountToApply);
     await booking.save({ session });
+ console.log(`Applied ₹${amountToApply} to booking ${booking._id}, Remaining: ₹${remainingAmount}`);
   }
 }
+
+console.log(`Final remaining amount: ₹${remainingAmount}`);
+console.log(`Processed ${selectedBookingIds.length} bookings`);
 
     // ===== ADVANCE DEDUCTION (if remaining) =====
     let advanceDeductionApplied = 0;
