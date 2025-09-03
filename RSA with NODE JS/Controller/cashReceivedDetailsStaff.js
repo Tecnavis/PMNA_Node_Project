@@ -52,65 +52,51 @@ exports.createReceivedDetailsStaff = async (req, res) => {
     const selectedBookingIds = [];
     const appliedAmounts = [];
 
-     const bookings = await Booking.find({
-        status: 'Order Completed',
-         workType: 'PaymentWork',
-  cashPending: false,
-        receivedUser: 'Staff',
-        $or: [
-        // Regular staff bookings (cashPending false)
-        { 
-            $and: [
-                { 
-                    $or: [
-                        { receivedUser: 'Staff', receivedUserId: staffId },
-                        { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-                    ]
-                },
-              
-                { 
-                    $expr: {
-                        $gt: [
-                            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-                            0
-                        ]
-                    }
-                }
-            ]
-        },
-        // Partial payment bookings (cashPending true)
-        { 
-            $and: [
-              
-                { cashPending: true },
-                { partialPayment: true },
-                { 
-                    $expr: {
-                        $gt: [
-                            "$receivedAmountStaff",
-                            { $ifNull: ["$givenAmountByStaff", 0] }
-                        ]
-                    }
-                }
-            ]
-        }
-    ]
+// Simplified and corrected query
+const bookings = await Booking.find({
+  status: 'Order Completed',
+  workType: 'PaymentWork',
+  $or: [
+    // Regular completed bookings (cashPending: false)
+    { 
+      cashPending: false,
+      $or: [
+        { receivedUser: 'Staff', receivedUserId: staffId },
+        { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+      ],
+      $expr: {
+        $gt: [
+          { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+          0
+        ]
+      }
+    },
+    // Partial payment bookings (cashPending: true)
+    { 
+      cashPending: true,
+      partialPayment: true,
+      $or: [
+        { receivedUser: 'Staff', receivedUserId: staffId },
+        { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+      ],
+      $expr: {
+        $gt: [
+          { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+          0
+        ]
+      }
+    }
+  ]
 })
 .sort({ createdAt: 1 })
 .session(session);
     for (const booking of bookings) {
       if (remainingAmount <= 0) break;
 
- let allocatableAmount;
+ 
     
-    // Different calculation for cashPending true bookings
-    if (booking.cashPending && booking.partialPayment) {
-        // For partial payments, we can allocate up to receivedAmountStaff
-        allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
-    } else {
-        // Regular calculation for non-partial payments
-        allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
-    }      
+   // Use the same logic for both types
+const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);     
       if (allocatableAmount > 0) {
     const amountToApply = Math.min(remainingAmount, allocatableAmount);
     
