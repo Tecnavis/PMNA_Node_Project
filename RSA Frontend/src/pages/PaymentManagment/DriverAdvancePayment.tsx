@@ -238,7 +238,16 @@ const settleReceivedAmount = async () => {
     });
     return;
   }
-
+  const amount = Number(receivedAmount);
+  if (amount === 0) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Invalid Amount',
+      text: 'Amount must be greater than zero.',
+      confirmButtonColor: '#3085d6',
+    });
+    return;
+  }
   try {
     // Add confirmation dialog
     const confirmation = await Swal.fire({

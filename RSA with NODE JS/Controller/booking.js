@@ -2207,7 +2207,13 @@ exports.settleAmount = async (req, res) => {
         const { id } = req.params;
         const { partialAmount, receivedUser, role, receivedAmount, receivedUserId } = req.body;
         const currentUserId = req.user.id || req.user._id; // The user making the request
-
+ // VALIDATION: Check if amount is not zero
+        const amount = Number(partialAmount || receivedAmount || 0);
+        if (amount === 0) {
+            return res.status(400).json({ 
+                message: 'Amount cannot be zero. Please provide a valid amount.' 
+            });
+        }
         const booking = await Booking.findById(id);
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });

@@ -194,6 +194,19 @@ fetchBookings(query, 1);
     };
 
    const handleSavePayment = async () => {
+    // Convert to number and check if it's valid and greater than 0
+    const amount = Number(paymentAmount);
+    
+    if (!amount || amount <= 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Amount',
+            text: 'Please enter a valid amount greater than zero',
+            confirmButtonColor: '#3085d6',
+        });
+        return;
+    }
+
     setLoader(true);
     try {
         // You'll need to get the selected driver's ID from your state
