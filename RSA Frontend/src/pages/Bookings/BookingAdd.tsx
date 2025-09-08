@@ -348,6 +348,7 @@ const BookingAdd: React.FC = () => {
                     destination: `${destination.lat},${destination.lng}`,
                     api_key: import.meta.env.VITE_REACT_APP_API_KEY,
                 },
+                 timeout: 30000,
             });
 
             // Extract distance from the correct path
@@ -362,6 +363,10 @@ const BookingAdd: React.FC = () => {
 
     const calculateDistances = async () => {
         const originCoords = latitudeAndLongitude?.split(',').map(Number);
+        if (isNaN(originCoords[0]) || isNaN(originCoords[1])) {
+  console.error('Invalid origin coordinates');
+  return;
+}
         const origin = { lat: originCoords[0], lng: originCoords[1] };
 
         const distancePromises = baseLocations.map(async (location) => {
