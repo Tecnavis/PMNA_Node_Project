@@ -380,7 +380,7 @@ const fetchServiceKmExceededVehicle = async () => {
                                             )
                                         }
                                         <div className='flex flex-row gap-1'>
-                                            {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (
+                                            {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER,ROLES.Manager].includes(role) && (
                                                 <button
                                                     className="btn btn-danger text-white rounded-md py-2 px-3"
                                                     onClick={() => handleDismissRecord(record)}
@@ -388,7 +388,7 @@ const fetchServiceKmExceededVehicle = async () => {
                                                     Dismiss
                                                 </button>
                                             )}
-                                            {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (
+                                            {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER,ROLES.Manager].includes(role) && (
                                                 <button
                                                     className="btn btn-primary text-white rounded-md py-2 px-3"
                                                     onClick={()=>handleRenewal(record._id)}

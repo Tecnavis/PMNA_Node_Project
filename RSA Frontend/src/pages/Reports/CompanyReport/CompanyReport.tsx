@@ -492,7 +492,7 @@ const CompanyReport = () => {
                 return booking._id !== 'total' && (
                     <div className='flex items-center justify-center gap-1'>
                         {
-                            [ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER, ROLES.accountant].includes(role) ? <>
+                            [ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER, ROLES.accountant, ROLES.Manager].includes(role) ? <>
                                 <input
                                     type="text"
                                     value={invoiceValues[booking._id] || ''}

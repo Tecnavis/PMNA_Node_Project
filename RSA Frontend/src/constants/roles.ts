@@ -5,4 +5,5 @@ export const ROLES = {
     VERIFIER: "verifier",
     accountant: "accountant",
     CALL_EXECUTIVE: "call executive",
+    Manager: "manager",
 };

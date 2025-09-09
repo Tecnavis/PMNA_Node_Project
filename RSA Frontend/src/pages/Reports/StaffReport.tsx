@@ -274,7 +274,7 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                                     </div>
                                 ),
                             },
-                            ...([ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role)
+                            ...([ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role)
                                 ? [
                                       {
                                           accessor: 'action',
