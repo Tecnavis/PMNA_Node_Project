@@ -1,8 +1,7 @@
 import { axiosInstance as axios } from "../config/axiosConfig";
 
 export async function getDistance(currentLat: string, currentLng: string, pickupLocation: any) {
-
-    const response = await axios.post('https://api.olamaps.io/routing/v1/directions', null, {
+    const response = await axios.post('/olamaps-proxy', null, {  // Use relative URL to your proxy
         params: {
             origin: `${currentLat},${currentLng}`,
             destination: `${pickupLocation.lat},${pickupLocation.lng}`,
