@@ -189,10 +189,18 @@ const Index = () => {
 
     };
 
-    const fetchServiceKmExceededVehicle = async () => {
-        const res = await axios.get(`${BASE_URL}/vehicle/exceeded-service`)
-        setExceededRecords(res.data.vehicles)
-    }
+   // Example for your vehicle query
+const fetchServiceKmExceededVehicle = async () => {
+  try {
+    const res = await axios.get(`${BASE_URL}/vehicle/exceeded-service`, {
+      timeout: 15000 // 15 second timeout
+    });
+    setExceededRecords(res.data.vehicles);
+  } catch (error) {
+    console.error('Fetch service km exceeded vehicle failed:', error);
+    // Handle error appropriately
+  }
+};
 
     const handleDismissRecord = async (record: Record) => {
         try {

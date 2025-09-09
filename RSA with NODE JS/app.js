@@ -46,7 +46,9 @@ var dieselExpensesRouter = require('./routes/dieselExpense')
 var executivesRouter = require('./routes/executive')
 var transactionsRouter = require('./routes/transaction.js')
 // var showroomVerification = require('./routes/ShowroomVerification.js')
-var showroomPaymentRoutes = require('./routes/showroomPaymentRoutes.js')
+var showroomPaymentRoutes = require('./routes/showroomPaymentRoutes.js');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const { default: axios } = require('axios');
 
 
 // Connect to database
@@ -58,12 +60,44 @@ setupAgendaJobs().then(() => {
 
 const logger1 = LoggerFactory.initialize({});
 
+// FIXED PROXY HANDLER - Add this BEFORE CORS middleware
+app.use('/olamaps-proxy', async (req, res) => {
+  try {
+    // Add CORS headers
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', '*');
+    
+    // Handle OPTIONS preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+    
+    // Forward to Olamaps API
+    const response = await axios({
+      method: req.method,
+      url: `https://api.olamaps.io/routing/v1/directions`,
+      params: req.query,
+      data: req.body,
+      timeout: 30000
+    });
+    
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error('Proxy error:', error);
+    const status = error.response?.status || 500;
+    const data = error.response?.data || { error: 'Proxy failed' };
+    res.status(status).json(data);
+  }
+});
+
+// Your existing CORS middleware should come AFTER the proxy
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['*'],
   exposedHeaders: ['Content-Type', 'Authorization'],
-}))
+}));
 
 app.set('views', path.join(__dirname, 'views'));
 

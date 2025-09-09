@@ -342,14 +342,14 @@ const BookingAdd: React.FC = () => {
     // checking the pickup location and baselocation distance
     const getDistanceAndDuration = async (origin: any, destination: any, id: any) => {
         try {
-            const response = await axios.post(`https://api.olamaps.io/routing/v1/directions`, null, {
-                params: {
-                    origin: `${origin.lat},${origin.lng}`,
-                    destination: `${destination.lat},${destination.lng}`,
-                    api_key: import.meta.env.VITE_REACT_APP_API_KEY,
-                },
-                 timeout: 30000,
-            });
+           const response = await axios.post(`${backendUrl}/olamaps-proxy`, null, {
+  params: {
+    origin: `${origin.lat},${origin.lng}`,
+    destination: `${destination.lat},${destination.lng}`,
+    api_key: import.meta.env.VITE_REACT_APP_API_KEY,
+  },
+  timeout: 30000,
+});
 
             // Extract distance from the correct path
             const distance = response.data.routes[0]?.legs[0]?.distance;
