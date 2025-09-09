@@ -341,7 +341,7 @@ const CompletedBookings: React.FC = () => {
                                                         </button>
                                                     </Tippy>
                                                 </li>
-                                                {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.accountant].includes(role) && items.feedbackCheck && (
+                                                {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.accountant,ROLES.Manager].includes(role) && items.feedbackCheck && (
                                                     <li>
                                                         <Tippy content="Accountant verify">
                                                             <button type="button">

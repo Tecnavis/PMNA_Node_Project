@@ -367,13 +367,13 @@ render: (booking: Booking) => {
                                 value={inputValues[booking._id] || 0}
                                 onChange={(e) => updateInputValues(booking._id, +e.target.value)}
                                 className="border border-gray-300 rounded px-2 py-1 mr-2 w-20"
-                                disabled={booking.approve}
+                  disabled={booking.approve || ROLES.Manager === role} // Disable for Manager
                                 min="0"
                             />
                             <button
-                                onClick={() => [ROLES.VERIFIER].includes(role) ? null : handleUpdateAmount(booking._id)}
-                                disabled={booking.approve || loadingStates[booking._id]}
-                                className={`px-3 py-1 rounded text-white ${
+                                onClick={() => [ROLES.VERIFIER, ROLES.Manager].includes(role) ? null : handleUpdateAmount(booking._id)}
+ disabled={booking.approve || loadingStates[booking._id] || ROLES.Manager === role}                              
+   className={`px-3 py-1 rounded text-white ${
                                     Number(
                                         calculateBalance(
                                             parseFloat(booking.totalAmount?.toString() || '0'),

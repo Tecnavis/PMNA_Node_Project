@@ -375,13 +375,17 @@ const fetchStaffReceivedDetails = async () => {
               value={inputValues[booking._id] || booking.givenAmountByStaff || 0}
               onChange={(e) => updateInputValues(booking._id, +e.target.value)}
               className="border border-gray-300 rounded px-2 py-1 mr-2 w-24"
-              disabled={booking.approve}
+              disabled={booking.approve || ROLES.Manager === role} // Disable for Manager
               min="0"
               step="0.01"
             />
             <button
-              onClick={() => handleUpdateAmount(booking._id)}
-              disabled={booking.approve || loadingStates[booking._id]}
+              onClick={() => {
+                if (ROLES.Manager !== role) { // Only execute if not Manager
+                  handleUpdateAmount(booking._id);
+                }
+              }}
+              disabled={booking.approve || loadingStates[booking._id] || ROLES.Manager === role} // Disable for Manager
               className={`px-3 py-1 rounded text-white ${
                 calculateBalance(
                   booking.receivedAmountStaff,
@@ -389,7 +393,7 @@ const fetchStaffReceivedDetails = async () => {
                 ) === 0
                   ? 'bg-green-500 hover:bg-green-600'
                   : 'bg-red-500 hover:bg-red-600'
-              }`}
+              } ${ROLES.Manager === role ? 'opacity-50 cursor-not-allowed' : ''}`} // Additional styling for disabled state
             >
               {loadingStates[booking._id] ? '...' : 'OK'}
             </button>

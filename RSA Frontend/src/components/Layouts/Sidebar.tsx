@@ -121,7 +121,7 @@ const Sidebar = () => {
                                                 <NavLink to="/completedbookings">{t('Driver Completed Bookings')}</NavLink>
                                             </li>
                                         )}
-                                        {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.VERIFIER,ROLES.accountant].includes(role) && (
+                                        {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.VERIFIER,ROLES.accountant,ROLES.Manager].includes(role) && (
                                             <li>
                                                 <NavLink to="/approvedbookings">{t('Service Details')}</NavLink>
                                             </li>
@@ -131,7 +131,7 @@ const Sidebar = () => {
                                 </AnimateHeight>
                             </li>
                             {/* User */}
-                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
                                 <li className="menu nav-item">
                                     <button type="button" className={`${currentMenu === 'users' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('users')}>
                                         <div className="flex items-center">
@@ -193,7 +193,7 @@ const Sidebar = () => {
                                 </li>
                             )}
                             {/* Service Type */}
-                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
                                 <li className="menu nav-item">
                                     <button type="button" className={`${currentMenu === 'service' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('service')}>
                                         <div className="flex items-center">
@@ -215,7 +215,7 @@ const Sidebar = () => {
                                 </li>
                             )}
                             {/* Vehicle Details */}
-                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
                                 <li className="menu nav-item">
                                     <button type="button" className={`${currentMenu === 'vehicle-details' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('vehicle-details')}>
                                         <div className="flex items-center">
@@ -240,7 +240,7 @@ const Sidebar = () => {
                                 </li>
                             )}
                             {/* Baselocation */}
-                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
                                 <li className="nav-item">
                                     <NavLink to="/baselocation" className="group">
                                         <div className="flex items-center">
@@ -251,7 +251,7 @@ const Sidebar = () => {
                                 </li>
                             )}
                             {/* Feedback */}
-                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
                                 <li className="nav-item">
                                     <NavLink to="/feedback" className="group">
                                         <div className="flex items-center">
@@ -262,7 +262,7 @@ const Sidebar = () => {
                                 </li>
                             )}
                             {/* // Showroom */}
-                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
                                 < li className="nav-item">
                                     <NavLink to="/showroom" className="group">
                                         <div className="flex items-center">
@@ -273,7 +273,7 @@ const Sidebar = () => {
                                 </li>
                             )}
                             {/* Payment Managment */}
-                            {![ROLES.VERIFIER, ROLES.CALL_EXECUTIVE].includes(role) && (
+                            {![ROLES.VERIFIER, ROLES.CALL_EXECUTIVE,ROLES.Manager].includes(role) && (
                                 <li className="menu nav-item">
                                     <button type="button" className={`${currentMenu === 'Payment Management' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('Payment Management')}>
                                         <div className="flex items-center">
@@ -371,7 +371,7 @@ const Sidebar = () => {
                                 </li>
                             )}
                             {/* Reward */}
-                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
                                 <li className="menu nav-item">
                                     <button type="button" className={`${currentMenu === 'rewards' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('rewards')}>
                                         <div className="flex items-center">

@@ -346,7 +346,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                                                 Salary
                                             </button>
                                             {/* =------------------------------------------ */}
-                                                                                  {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role) && (
+                                                                                  {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
 
                                            <button 
     type="button" 

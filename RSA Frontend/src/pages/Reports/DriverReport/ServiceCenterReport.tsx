@@ -16,6 +16,7 @@ import { LocateIcon } from 'lucide-react';
 import { Booking } from '../../Bookings/Bookings';
 import { BASE_URL } from '../../../config/axiosConfig';
 import Swal from 'sweetalert2';
+import { ROLES } from '../../../constants/roles';
 
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -311,11 +312,17 @@ const calculateBalance = (amount: string | number | undefined, receivedAmountSho
                 [record._id]: Number(e.target.value),
               })
             }
+             disabled={ROLES.Manager === role}
           />
-          <button
-            className='bg-green-500 text-white p-2 rounded'
-            onClick={() => handlePayablemount(record._id)}
-          >
+            <button
+        className='bg-green-500 text-white p-2 rounded'
+        onClick={() => {
+          if (ROLES.Manager !== role) { // Only execute if not Manager
+            handlePayablemount(record._id);
+          }
+        }}
+        disabled={ROLES.Manager === role} // Disable for Manager
+      >
             OK
           </button>
         </div>
@@ -332,39 +339,43 @@ const calculateBalance = (amount: string | number | undefined, receivedAmountSho
       </span>
     )
   },
-    {
-      accessor: 'receivedAmountShowroom',
-      cellsClassName: 'text-center',
-      title: 'Received Amount(from showroom)',
-      render: (booking: Booking) => (
-        <div style={{ display: 'flex', alignItems: 'center' }} className='flex gap-2'>
-          <input
-            type="text"
-            value={inputValues[booking._id] || booking.receivedAmountShowroom || ''}
-            onChange={(e) => handleInputChange(booking._id, e.target.value)}
-            className=' border py-2 px-2 border-gray-500 rounded-md h-9'
-            disabled={booking.showroomApprove}
-          />
-          <button
-            onClick={() => handleReceivedAmount(booking._id)}
-            disabled={booking.showroomApprove || loadingStates[booking._id]}
-            style={{
-              backgroundColor:
-                Number(calculateBalance(booking.totalAmountShowroom || 0, inputValues[booking._id] || booking.receivedAmountShowroom || 0)) === 0
-                  ? '#28a745'
-                  : '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.25rem',
-              padding: '0.5rem',
-              cursor: 'pointer',
-            }}
-          >
-            {loadingStates[booking._id] ? 'Loading...' : 'OK'}
-          </button>
-        </div>
-      )
-    },
+  {
+  accessor: 'receivedAmountShowroom',
+  cellsClassName: 'text-center',
+  title: 'Received Amount(from showroom)',
+  render: (booking: Booking) => (
+    <div style={{ display: 'flex', alignItems: 'center' }} className='flex gap-2'>
+      <input
+        type="text"
+        value={inputValues[booking._id] || booking.receivedAmountShowroom || ''}
+        onChange={(e) => handleInputChange(booking._id, e.target.value)}
+        className='border py-2 px-2 border-gray-500 rounded-md h-9'
+        disabled={booking.showroomApprove || ROLES.Manager === role} // Disable for Manager
+      />
+      <button
+        onClick={() => {
+          if (ROLES.Manager !== role) { // Only execute if not Manager
+            handleReceivedAmount(booking._id);
+          }
+        }}
+        disabled={booking.showroomApprove || loadingStates[booking._id] || ROLES.Manager === role} // Disable for Manager
+        style={{
+          backgroundColor:
+            Number(calculateBalance(booking.totalAmountShowroom || 0, inputValues[booking._id] || booking.receivedAmountShowroom || 0)) === 0
+              ? '#28a745'
+              : '#dc3545',
+          color: 'white',
+          border: 'none',
+          borderRadius: '0.25rem',
+          padding: '0.5rem',
+          cursor: ROLES.Manager === role ? 'not-allowed' : 'pointer', // Change cursor for Manager
+        }}
+      >
+        {loadingStates[booking._id] ? 'Loading...' : 'OK'}
+      </button>
+    </div>
+  )
+},
    {
     accessor: 'balance',
     title: 'Balance(from showroom)',
