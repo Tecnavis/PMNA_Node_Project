@@ -8,6 +8,7 @@ interface BookingStats {
   feedbackBookings: number;
   accountantVerifiedBookings: number;
   cashPendingBookings: number;
+  totalBookings: number;
 }
 
 interface TimePeriodStats {
@@ -18,6 +19,7 @@ interface TimePeriodStats {
 
 const BookingDashboard: React.FC = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  
   const [stats, setStats] = useState<TimePeriodStats>({
     today: {
       newBookings: 0,
@@ -25,7 +27,8 @@ const BookingDashboard: React.FC = () => {
       verifiedBookings: 0,
       feedbackBookings: 0,
       accountantVerifiedBookings: 0,
-      cashPendingBookings: 0
+      cashPendingBookings: 0,
+      totalBookings: 0
     },
     yesterday: {
       newBookings: 0,
@@ -33,7 +36,8 @@ const BookingDashboard: React.FC = () => {
       verifiedBookings: 0,
       feedbackBookings: 0,
       accountantVerifiedBookings: 0,
-      cashPendingBookings: 0
+      cashPendingBookings: 0,
+      totalBookings: 0
     },
     dayBeforeYesterday: {
       newBookings: 0,
@@ -41,7 +45,8 @@ const BookingDashboard: React.FC = () => {
       verifiedBookings: 0,
       feedbackBookings: 0,
       accountantVerifiedBookings: 0,
-      cashPendingBookings: 0
+      cashPendingBookings: 0,
+      totalBookings: 0
     }
   });
   const [loading, setLoading] = useState(true);
@@ -59,11 +64,13 @@ const BookingDashboard: React.FC = () => {
       dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
       
       const formatDate = (date: Date) => date.toISOString().split('T')[0];
-       console.log('Fetching data for dates:', {
-      today: formatDate(currentDate),
-      yesterday: formatDate(yesterday),
-      dayBeforeYesterday: formatDate(dayBeforeYesterday)
-    });
+      
+      console.log('Fetching data for dates:', {
+        today: formatDate(currentDate),
+        yesterday: formatDate(yesterday),
+        dayBeforeYesterday: formatDate(dayBeforeYesterday)
+      });
+      
       // Fetch data for all three time periods
       const [todayData, yesterdayData, dayBeforeData] = await Promise.all([
         axios.get(`${backendUrl}/booking`, {
@@ -72,11 +79,10 @@ const BookingDashboard: React.FC = () => {
             endingDate: formatDate(currentDate),
             all: true
           }
-          
         }).catch(error => {
-        console.error('Today data fetch error:', error);
-        return { data: { bookings: [] } };
-      }),
+          console.error('Today data fetch error:', error);
+          return { data: { bookings: [] } };
+        }),
         axios.get(`${backendUrl}/booking`, {
           params: {
             startDate: formatDate(yesterday),
@@ -84,9 +90,9 @@ const BookingDashboard: React.FC = () => {
             all: true
           }
         }).catch(error => {
-        console.error('Today data fetch error:', error);
-        return { data: { bookings: [] } };
-      }),
+          console.error('Yesterday data fetch error:', error);
+          return { data: { bookings: [] } };
+        }),
         axios.get(`${backendUrl}/booking`, {
           params: {
             startDate: formatDate(dayBeforeYesterday),
@@ -94,24 +100,27 @@ const BookingDashboard: React.FC = () => {
             all: true
           }
         }).catch(error => {
-        console.error('Today data fetch error:', error);
-        return { data: { bookings: [] } };
-      }),
-        
+          console.error('Day before yesterday data fetch error:', error);
+          return { data: { bookings: [] } };
+        }),
       ]);
-       console.log('API Responses:', {
-      today: todayData.data,
-      yesterday: yesterdayData.data,
-      dayBefore: dayBeforeData.data
-    });
+      
+      console.log('API Responses:', {
+        today: todayData.data,
+        yesterday: yesterdayData.data,
+        dayBefore: dayBeforeData.data
+      });
+      
       const processBookings = (bookings: any[]): BookingStats => {
+        const total = bookings.length;
         return {
           newBookings: bookings.filter(b => b.status === 'Booking Added').length,
           completedBookings: bookings.filter(b => b.status === 'Order Completed').length,
           verifiedBookings: bookings.filter(b => b.verified === true).length,
           feedbackBookings: bookings.filter(b => b.feedbackCheck === true).length,
           accountantVerifiedBookings: bookings.filter(b => b.accountantVerified === true).length,
-          cashPendingBookings: bookings.filter(b => b.cashPending === true).length
+          cashPendingBookings: bookings.filter(b => b.cashPending === true).length,
+          totalBookings: total
         };
       };
       
@@ -132,15 +141,16 @@ const BookingDashboard: React.FC = () => {
     fetchStats();
   }, [selectedDate]);
 
-  // Calculate max value for scaling the chart
-  // Alternative type-safe approach
-const allValues: number[] = [];
-Object.values(stats).forEach((period: BookingStats) => {
-  Object.values(period).forEach(value => {
-    allValues.push(value as number);
+  // Calculate max value for scaling the chart (exclude totalBookings from calculation)
+  const allValues: number[] = [];
+  Object.values(stats).forEach((period: BookingStats) => {
+    Object.entries(period).forEach(([key, value]) => {
+      if (key !== 'totalBookings') {
+        allValues.push(value as number);
+      }
+    });
   });
-});
-const maxValue = Math.max(...allValues);
+  const maxValue = Math.max(...allValues, 1);
 
   const categories = [
     { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500' },
@@ -151,11 +161,36 @@ const maxValue = Math.max(...allValues);
     { key: 'cashPendingBookings', label: 'Cash Pending', color: 'bg-orange-500' }
   ];
 
-  const timePeriods = [
-    { key: 'today', label: 'Today' },
-    { key: 'yesterday', label: 'Yesterday' },
-    { key: 'dayBeforeYesterday', label: 'Days before yesterday' }
+  // Calculate total bookings for each time period
+  const calculateTotalBookings = (periodStats: BookingStats): number => {
+    return periodStats.totalBookings; // Use the stored totalBookings value
+  };
+
+  // Single timePeriods declaration
+ const timePeriods = [
+    { 
+      key: 'today', 
+      label: 'Today',
+      total: calculateTotalBookings(stats.today),
+      bgColor: 'bg-blue-50', // Light blue background for today
+      borderColor: 'border-blue-200' // Blue border for today
+    },
+    { 
+      key: 'yesterday', 
+      label: 'Yesterday',
+      total: calculateTotalBookings(stats.yesterday),
+      bgColor: 'bg-green-50', // Light green background for yesterday
+      borderColor: 'border-green-200' // Green border for yesterday
+    },
+    { 
+      key: 'dayBeforeYesterday', 
+      label: 'Days before yesterday',
+      total: calculateTotalBookings(stats.dayBeforeYesterday),
+      bgColor: 'bg-purple-50', // Light purple background for day before yesterday
+      borderColor: 'border-purple-200' // Purple border for day before yesterday
+    }
   ];
+
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
@@ -176,55 +211,61 @@ const maxValue = Math.max(...allValues);
         </div>
       </div>
 
-      {/* Bar Chart Container */}
+      {/* Vertical Bar Chart Container */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Booking Statistics</h2>
         
-         {/* Add a visual guide for debugging */}
-  <div className="relative h-64 mb-4 border border-gray-200 rounded">
-    {/* Y-axis guide lines */}
-    <div className="absolute left-0 right-0 h-px bg-gray-100 top-1/4"></div>
-    <div className="absolute left-0 right-0 h-px bg-gray-100 top-1/2"></div>
-    <div className="absolute left-0 right-0 h-px bg-gray-100 top-3/4"></div>
-    
-    <div className="flex justify-between items-end h-full px-4">
-      {timePeriods.map((period) => {
-        const periodData = stats[period.key as keyof TimePeriodStats];
-        return (
-          <div key={period.key} className="flex flex-col items-center flex-1">
-            <div className="text-center mb-2 text-sm font-medium">
-              {period.label}
-            </div>
-            <div className="flex items-end justify-center space-x-2 h-48 w-full">
-              {categories.map((category) => {
-                const value = periodData[category.key as keyof BookingStats];
-                const height = maxValue > 0 ? Math.max((value / maxValue) * 100, 5) : 5; // Minimum 5% height
+        {/* Vertical chart layout */}
+        <div className="space-y-6"> {/* Reduced space between graphs */}
+          {timePeriods.map((period) => {
+            const periodData = stats[period.key as keyof TimePeriodStats];
+            const totalBookings = period.total;
+            
+            return (
+              <div 
+                key={period.key} 
+                className={`${period.bgColor} ${period.borderColor} border-2 rounded-lg p-4 shadow-sm`}
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-md font-medium text-gray-800">{period.label}</h3>
+                  <span className="text-sm text-gray-700 bg-white px-3 py-1 rounded-full border">
+                    Total: {totalBookings} bookings
+                  </span>
+                </div>
                 
-                console.log(`Bar: ${category.key}, Value: ${value}, Height: ${height}%`);
-                
-                return (
-                  <div key={category.key} className="flex flex-col items-center">
-                    <div
-                      className={`${category.color} w-10 rounded-t transition-all duration-300 flex items-end justify-center min-h-[2px]`}
-                      style={{ height: `${height}%` }}
-                      title={`${category.label}: ${value}`}
-                    >
-                      <span className="text-white text-xs font-bold">
-                        {value > 0 ? value : ''}
-                      </span>
-                    </div>
-                    <div className="text-xs mt-1 text-center text-gray-600 truncate w-16">
-                      {category.label.split(' ')[0]}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  </div>
+                <div className="flex items-end space-x-4 h-48 px-4">
+                  {categories.map((category) => {
+                    const value = periodData[category.key as keyof BookingStats];
+                    const height = maxValue > 0 ? Math.max((value / maxValue) * 100, 5) : 5;
+                    const percentage = totalBookings > 0 ? ((value / totalBookings) * 100).toFixed(1) : '0';
+                    
+                    return (
+                      <div key={category.key} className="flex flex-col items-center flex-1">
+                        <div
+                          className={`${category.color} w-10 rounded-t transition-all duration-300 flex items-end justify-center min-h-[2px] relative`}
+                          style={{ height: `${height}%` }}
+                          title={`${category.label}: ${value} out of ${totalBookings} (${percentage}%)`}
+                        >
+                          <span className="text-white text-xs font-bold">
+                            {value > 0 ? value : ''}
+                          </span>
+                        </div>
+                        <div className="text-xs mt-2 text-center text-gray-700 font-medium truncate w-16">
+                          {category.label.split(' ')[0]}
+                        </div>
+                        {totalBookings > 0 && (
+                          <div className="text-xs text-gray-600 mt-1 font-semibold">
+                            {percentage}%
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         {/* Legend */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mt-6">
@@ -237,7 +278,7 @@ const maxValue = Math.max(...allValues);
         </div>
       </div>
 
-      {/* Data Table */}
+      {/* Enhanced Data Table with percentages */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-lg font-semibold mb-4">Detailed Statistics</h2>
         <div className="overflow-x-auto">
@@ -246,7 +287,12 @@ const maxValue = Math.max(...allValues);
               <tr className="bg-gray-100">
                 <th className="px-4 py-2 text-left">Category</th>
                 {timePeriods.map((period) => (
-                  <th key={period.key} className="px-4 py-2 text-center">{period.label}</th>
+                  <th key={period.key} className="px-4 py-2 text-center">
+                    <div className={`${period.bgColor} py-1 rounded`}>
+                      {period.label}
+                    </div>
+                    <div className="text-xs font-normal">(Total: {period.total})</div>
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -254,11 +300,19 @@ const maxValue = Math.max(...allValues);
               {categories.map((category) => (
                 <tr key={category.key} className="border-b">
                   <td className="px-4 py-2 font-medium">{category.label}</td>
-                  {timePeriods.map((period) => (
-                    <td key={period.key} className="px-4 py-2 text-center">
-                      {stats[period.key as keyof TimePeriodStats][category.key as keyof BookingStats]}
-                    </td>
-                  ))}
+                  {timePeriods.map((period) => {
+                    const value = stats[period.key as keyof TimePeriodStats][category.key as keyof BookingStats];
+                    const percentage = period.total > 0 ? ((value / period.total) * 100).toFixed(1) : '0.0';
+                    
+                    return (
+                      <td key={period.key} className="px-4 py-2 text-center">
+                        <div className="font-semibold">{value}</div>
+                        <div className="text-xs text-gray-600">
+                          ({percentage}%)
+                        </div>
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
