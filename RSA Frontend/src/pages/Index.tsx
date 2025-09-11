@@ -11,6 +11,10 @@ import { VehicleRecord } from './VehicleDetails/VehicleCompliance';
 import { BASE_URL } from '../config/axiosConfig';
 import { ROLES } from '../constants/roles';
 import AddVehicleCompliance from './VehicleDetails/addVehicleCompliance';
+import BookingDashboard from './Bookings/BookingChart';
+import { FaChartBar, FaTimes } from 'react-icons/fa';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { BarChart3, ChartBarIcon, X } from 'lucide-react';
 
 interface Record {
     _id: string,
@@ -27,6 +31,7 @@ const Index = () => {
     const [openRenewal, setOpenRenewal] = useState<boolean>(false);
     const [expiredRecords, setExpiredRecords] = useState<Record[]>([]);
     const [exceededRecords, setExceededRecords] = useState<VehicleRecord[]>([]);
+    const [showBookingDashboard, setShowBookingDashboard] = useState<boolean>(false);
 
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -323,7 +328,31 @@ const fetchServiceKmExceededVehicle = async () => {
                     <span>Bookings</span>
                 </li>
             </ul>
-
+ {/* Toggle Button for Booking Dashboard */}
+    <div className="mb-6 flex justify-end">
+    <button
+        onClick={() => setShowBookingDashboard(!showBookingDashboard)}
+        className="btn btn-primary flex items-center gap-2"
+    >
+        {showBookingDashboard ? (
+            <>
+                <X className="w-4 h-4" />
+                <span>Hide Graph</span>
+            </>
+        ) : (
+            <>
+                <BarChart3 className="w-4 h-4" />
+                <span>Show Graph</span>
+            </>
+        )}
+    </button>
+</div>
+        {showBookingDashboard ? (
+            // Show Booking Dashboard when toggled
+            <div className="flex mb-6">
+                <BookingDashboard />
+            </div>
+        ) : (
             <div className="pt-5">
                 <div className="grid xl:grid-cols-1 gap-6 mb-6">
                     <div className="grid xl:grid-cols-4 gap-4 mb-6">
@@ -347,6 +376,7 @@ const fetchServiceKmExceededVehicle = async () => {
                             <h5 className="font-semibold text-lg mb-3">Completed Bookings</h5>
                             <p className="text-2xl">{salesByCategory.series[3]}</p>
                         </div>
+                       
                     </div>
 
                     {
@@ -359,7 +389,7 @@ const fetchServiceKmExceededVehicle = async () => {
 
                             return (
                                 <div key={index} className="w-full gap-5">
-                                    <div className={`w-full h-16 ${bgColor} rounded-xl flex items-center justify-between px-4 border-l-4 border-blue-500  shadow`}>
+                                    <div  className={`w-full h-16 ${bgColor} rounded-xl flex items-center justify-between px-4 border-l-4 border-blue-500  shadow` }>
                                         {
                                             compareDates(record.expiryDate, today) ? (
                                                 <span>
@@ -420,25 +450,9 @@ const fetchServiceKmExceededVehicle = async () => {
                             </div>
                         ))
                     }
+                   
                     <div className="panel h-full bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg shadow-lg p-6">
-                        <div className="flex items-center justify-between mb-5">
-                            <h5 className="font-semibold text-lg">Bookings By Category</h5>
-                            <div className="flex space-x-2 rtl:space-x-reverse">
-                                <button className="bg-gray-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-gray-700">Refresh</button>
-                                <button className="bg-gray-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-gray-700">Export</button>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
-                                {loading ? (
-                                    <div className="min-h-[325px] grid place-content-center bg-white dark:bg-gray-900 dark:bg-opacity-[0.08]">
-                                        <span className="animate-spin border-2 border-gray-300 dark:border-gray-700 !border-l-transparent rounded-full w-5 h-5 inline-flex"></span>
-                                    </div>
-                                ) : (
-                                    <ReactApexChart series={salesByCategory.series} options={salesByCategory.options} type="donut" height={460} />
-                                )}
-                            </div>
-                        </div>
+                 
                     </div>
                     <AddVehicleCompliance
                         open={openRenewal}
@@ -451,10 +465,11 @@ const fetchServiceKmExceededVehicle = async () => {
                         isEditMode={true}
                         id={recordId}
                     />
-                </div>
+                         </div>
             </div>
-        </div>
-    );
+        )}
+    </div>
+);
 };
 
 export default Index;
