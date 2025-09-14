@@ -153,9 +153,9 @@ const BookingDashboard: React.FC = () => {
 
   const categories = [
     { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500', blinkMain: true },
-    { key: 'completedBookings', label: 'Driver Completed Booking', color: 'bg-green-500', blinkMain: false },
+    { key: 'completedBookings', label: 'Driver Completed Booking', color: 'bg-pink-500', blinkMain: false },
     { key: 'verifiedBookings', label: 'Verifier', color: 'bg-purple-500', blinkMain: false },
-    { key: 'feedbackBookings', label: 'Feedback', color: 'bg-yellow-500', blinkMain: false },
+    { key: 'feedbackBookings', label: 'Feedback', color: 'bg-yellow-100', blinkMain: false },
     { key: 'accountantVerifiedBookings', label: 'Accountant', color: 'bg-red-500', blinkMain: false },
     { key: 'cashPendingBookings', label: 'Cash Pending', color: 'bg-orange-500', blinkMain: true }
   ];
