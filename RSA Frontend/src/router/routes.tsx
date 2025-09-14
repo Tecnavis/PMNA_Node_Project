@@ -155,6 +155,8 @@ const DCPReprort = lazy(() => import('../pages/Reports/DCPReport'))
 const DriverReport = lazy(() => import('../pages/Reports/DriverReport/DriverReport'))
 const VehicleDetails = lazy(() => import('../pages/VehicleDetails/VehicleDetails'))
 const Status = lazy(() => import('../pages/Status/Status'))
+const BookingDashboard = lazy(() => import('../pages/Bookings/BookingChart'))
+
 const ShowroomReport = lazy(() => import('../pages/Reports/ShowroomReport'))
 const Leaves = lazy(() => import('../pages/Leaves/Leaves'))
 const StaffReport = lazy(() => import('../pages/Reports/StaffReport'))
@@ -394,6 +396,10 @@ const routes = [
     {
         path: '/Status',
         element: <Status />,
+    },
+    {
+        path: '/bookingDashBoard',
+        element: <BookingDashboard />,
     },
     {
         path: '/pickupLocation',

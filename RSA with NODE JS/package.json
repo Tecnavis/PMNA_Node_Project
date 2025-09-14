@@ -8,6 +8,7 @@
     "dev": "nodemon ./bin/www"
   },
   "dependencies": {
+    "@tabler/icons-react": "^3.34.1",
     "agenda": "^5.0.0",
     "axios": "^1.10.0",
     "bcrypt": "^5.1.1",
@@ -38,7 +39,8 @@
     "pino-elasticsearch": "^8.1.0",
     "rotating-file-stream": "^3.2.6",
     "socket.io": "^4.8.1",
-    "twilio": "^5.5.1"
+    "twilio": "^5.5.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "pino-pretty": "^13.0.0"

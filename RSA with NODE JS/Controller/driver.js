@@ -5,7 +5,7 @@ const Driver = require('../Model/driver');
 const Leaves = require('../Model/leaves');
 const Booking = require('../Model/booking');
 const { sendOtp, verifyOtp } = require('../services/otpService');
-const { updateDriverFinancials } = require('../services/driverService');
+const { updateDriverFinancials, updateScheduledBookingsForDriver } = require('../services/driverService');
 const Expense = require('../Model/expense'); // Adjust path as needed
 const Advance = require('../Model/advance'); // If you use advances
 const { default: mongoose } = require('mongoose');
@@ -61,6 +61,11 @@ exports.getDrivers = async (req, res) => {
     const driverIds = drivers.map(driver => driver._id);
 
     await Promise.all(
+      driverIds.map(driverId => updateScheduledBookingsForDriver(driverId))
+    );
+
+    // THEN: Update financials as before
+    await Promise.all(
       drivers.map(driver =>
         updateDriverFinancials(
           driver._id,
@@ -68,6 +73,7 @@ exports.getDrivers = async (req, res) => {
         )
       )
     );
+
 
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -126,7 +132,10 @@ exports.filtergetDrivers = async (req, res) => {
     }
 
     const drivers = await Driver.find(filter).populate('vehicle.serviceType');
-    
+      // FIRST: Check and update scheduled bookings for filtered drivers
+    await Promise.all(
+      drivers.map(driver => updateScheduledBookingsForDriver(driver._id))
+    );
     // Update all drivers' financials and get the updated documents
     const updatedDrivers = await Promise.all(
       drivers.map(async (driver) => {
@@ -148,6 +157,7 @@ exports.getDriverById = async (req, res) => {
   try {
     const driver = await Driver.findById(req.params.id)
       .populate('vehicle.serviceType');
+    await updateScheduledBookingsForDriver(driver._id);
 
     // calulating net total amount in hand ans totla salary
     updateDriverFinancials(driver._id, driver.advance)

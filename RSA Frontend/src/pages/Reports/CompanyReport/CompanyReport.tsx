@@ -23,7 +23,8 @@ import { CLOUD_IMAGE, NON_COMPLETED_STATUS } from '../../../constants/status';
 import { ROLES } from '../../../constants/roles';
 import { Dialog, Transition } from '@headlessui/react';
 import { dateFormate } from '../../../utils/dateUtils';
-
+import { IconFileSpreadsheet } from '@tabler/icons-react';
+import * as XLSX from 'xlsx';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -79,6 +80,34 @@ const CompanyReport = () => {
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
 
     const printRef = useRef<HTMLDivElement>(null);
+     const [excelModalOpen, setExcelModalOpen] = useState(false);
+   const [excelOptions, setExcelOptions] = useState({
+    siNumber: true,
+    fileNumber: true,
+    date: true,
+    driver: true,
+    vehicleNumber: true,
+    distance: true,
+    serviceType: true,
+    totalAmount: true,
+    receivedAmountCompany: true,
+    invoiceNumber: true,
+    // Add more fields as needed
+  });
+  // Define all possible Excel export options
+ const excelExportFields = [
+    { id: 'siNumber', label: 'SI Number' },
+    { id: 'fileNumber', label: 'File Number' },
+    { id: 'date', label: 'Date' },
+    { id: 'driver', label: 'Driver' },
+    { id: 'vehicleNumber', label: 'Vehicle Number' },
+    { id: 'distance', label: 'Distance' },
+    { id: 'serviceType', label: 'Service Type' },
+    { id: 'totalAmount', label: 'Total Amount' },
+    { id: 'receivedAmountCompany', label: 'Received Amount (Company)' },
+    { id: 'invoiceNumber', label: 'Invoice Number' },
+    // Add more fields as needed
+  ];
     // checking the token
     const gettingToken = () => {
         const token = localStorage.getItem('token');
@@ -268,7 +297,53 @@ const CompanyReport = () => {
             })
         }
     };
+// Function to handle checkbox changes
+ const handleExcelOptionChange = (fieldId) => {
+    setExcelOptions(prev => ({
+      ...prev,
+      [fieldId]: !prev[fieldId]
+    }));
+  };
 
+  // Function to generate Excel file
+  const generateExcel = () => {
+    // Filter bookings based on selected options
+    const dataToExport = bookings.map((booking, index) => {
+      const row = {};
+      
+      // Add SI Number (serial number)
+      if (excelOptions.siNumber) row['SI Number'] = index + 1;
+      
+      if (excelOptions.fileNumber) row['File Number'] = booking.fileNumber || '';
+      if (excelOptions.date) row['Date'] = booking.createdAt || '';
+      
+      // Add the new fields
+      if (excelOptions.driver) row['Driver'] = booking.driver?.name || booking.driver || '';
+      if (excelOptions.vehicleNumber) row['Vehicle Number'] = booking.vehicleNumber || booking.vehicle || '';
+      if (excelOptions.distance) row['Distance'] = booking.totalDistence || booking.totalDistence || 0;
+      if (excelOptions.serviceType) row['Service Type'] = booking.serviceType?.serviceName || '';
+      
+      if (excelOptions.totalAmount) row['Total Amount'] = booking.totalAmount || 0;
+      if (excelOptions.receivedAmountCompany) row['Received Amount (Company)'] = booking.receivedAmountByCompany || 0;
+      if (excelOptions.invoiceNumber) row['Invoice Number'] = booking.invoiceNumber || '';
+      
+      return row;
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Bookings');
+    
+    // Generate Excel file
+    const fileName = `Company_Report_${company?.name || 'Unknown'}_${selectedMonth}_${selectedYear}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
+    // Close modal
+    setExcelModalOpen(false);
+  };
     const totalProfit = (): number => {
         // Initialize total profit
         let totalProfitAmount = 0;
@@ -867,6 +942,90 @@ const CompanyReport = () => {
                             ><IconPrinter />
                                 Print
                             </button>
+                            <button
+        className="btn btn-primary flex items-center gap-2"
+        onClick={() => setExcelModalOpen(true)}
+      >
+        <IconFileSpreadsheet className="w-5 h-5" />
+        Export to Excel
+      </button>
+
+      {/* Excel Export Modal */}
+      <Transition appear show={excelModalOpen} as={Fragment}>
+        <Dialog as="div" open={excelModalOpen} onClose={() => setExcelModalOpen(false)} className="relative z-50">
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800">
+                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+                    Export to Excel
+                  </Dialog.Title>
+                  
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-500 dark:text-gray-300 mb-4">
+                      Select the data you want to include in your Excel export:
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                      {excelExportFields.map(field => (
+                        <div key={field.id} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={field.id}
+                            checked={excelOptions[field.id]}
+                            onChange={() => handleExcelOptionChange(field.id)}
+                            className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                          />
+                          <label htmlFor={field.id} className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            {field.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={() => setExcelModalOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={generateExcel}
+                    >
+                      Generate Excel
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
                         </div>
                         <div className="flex items-center gap-5 ltr:ml-auto rtl:mr-auto">
                             <div className="text-right">

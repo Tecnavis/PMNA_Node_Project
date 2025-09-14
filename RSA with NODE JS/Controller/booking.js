@@ -106,34 +106,40 @@ exports.createBooking = async (req, res) => {
             bookingData.totalAmount -= bookingData.rewardAmount;
         }
 
+      // CRITICAL FIX: Set createdAt based on pickupDate if it exists
+        if (bookingData.pickupDate) {
+            bookingData.createdAt = new Date(bookingData.pickupDate);
+            bookingData.status = 'Scheduled'; // Different status for future bookings
+        } else {
+            bookingData.status = 'Booking Added'; // Immediate booking status
+        }
+
         const newBooking = new Booking(bookingData);
         await newBooking.save();
 
         routeLogger.info({
             fileNumber: bookingData.fileNumber,
             doneBy: req.user || 'unknown'
-        }, 'New Booking created successfull.');
+        }, 'New Booking created successfully.');
 
         const agendaInstance = await agenda;
         if (bookingData.pickupDate) {
+            const pickupTime = new Date(bookingData.pickupDate);
+            const now = new Date();
 
-            const dateNow = convertTo12HourFormat(bookingData.dateNow)
-            const pickupTime = convertTo12HourFormat(bookingData.pickupDate);
-
-            if (new Date(pickupTime) > new Date(dateNow)) {
-                console.log('Scheduling future job');
+            if (pickupTime > now) {
+                console.log('Scheduling future job for pickupDate:', pickupTime);
                 await agendaInstance.schedule(pickupTime, 'activate booking', {
                     bookingId: newBooking._id
                 });
-            }
-            else {
-                console.log('Running job immediately');
+            } else {
+                console.log('Running job immediately - pickupDate is in the past');
                 await agendaInstance.now('activate booking', {
                     bookingId: newBooking._id
                 });
             }
         } else {
-            console.log('Running job immediately 2');
+            console.log('Running job immediately - no pickupDate');
             await agendaInstance.now('activate booking', {
                 bookingId: newBooking._id
             });
@@ -522,6 +528,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
 };
 
 // Controller to get Booking Completed by search query
+// Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     const routeLogger = LoggerFactory.createChildLogger({
         route: '/booking',
@@ -546,16 +553,29 @@ exports.getAllBookings = async (req, res) => {
             companyId,
             verified,
             staffId,
-            all = false // Add this new parameter
-
+            all = false,
+            hasPickupDate // Add this parameter to filter by pickupDate
         } = req.query;
 
         // Convert page and limit to integers
         page = all ? 1 : parseInt(page, 10);
         limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
 
-
         const query = {};
+
+        // CRITICAL: Check and update bookings where pickupDate has been reached
+        await updateScheduledBookings();
+
+        // Handle pickupDate filter
+        if (hasPickupDate === 'true') {
+            query.pickupDate = { $exists: true, $ne: null };
+            // Optionally filter by status for scheduled bookings
+            if (!status) {
+                query.status = 'Scheduled';
+            }
+        } else if (hasPickupDate === 'false') {
+            query.pickupDate = { $exists: false };
+        }
 
         if (status) {
             if (Array.isArray(status)) {
@@ -579,40 +599,42 @@ exports.getAllBookings = async (req, res) => {
         if (providerId) {
             query.provider = new mongoose.Types.ObjectId(providerId);
         }
-// Add this to your backend controller
-if (showroomId) {
-  query.showroom = new mongoose.Types.ObjectId(showroomId);
-}
+
+        // Add this to your backend controller
+        if (showroomId) {
+            query.showroom = new mongoose.Types.ObjectId(showroomId);
+        }
+
         // If providerId as query then fetch company bookings
         if (companyId) {
             query.company = new mongoose.Types.ObjectId(companyId);
             query.workType = 'RSAWork'
         }
+
         //----------------------------------------
-       if (staffId) {
-    query.$and = [
-        {
-            $or: [
+        if (staffId) {
+            query.$and = [
                 {
-                    $and: [
-                        { receivedUserId: new mongoose.Types.ObjectId(staffId) },
-                        { receivedUser: 'Staff' }
-                    ]
-                },
-                {
-                    $and: [
-                        { previousReceivedUserId: new mongoose.Types.ObjectId(staffId) },
-                        { previousReceivedUser: 'Staff' }
+                    $or: [
+                        {
+                            $and: [
+                                { receivedUserId: new mongoose.Types.ObjectId(staffId) },
+                                { receivedUser: 'Staff' }
+                            ]
+                        },
+                        {
+                            $and: [
+                                { previousReceivedUserId: new mongoose.Types.ObjectId(staffId) },
+                                { previousReceivedUser: 'Staff' }
+                            ]
+                        }
                     ]
                 }
-            ]
+            ];
         }
-    ];
-}
 
         // Handle search
         if (search) {
-
             // Overridinf the custom plugin
             query._includeHidden = true;
 
@@ -626,7 +648,6 @@ if (showroomId) {
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
             } else {
-
                 const regex = new RegExp(searchQuery, 'i');
 
                 // Search conditions array
@@ -636,11 +657,11 @@ if (showroomId) {
                     { customerVehicleNumber: regex },
                 ];
 
-                const [matchingDrivers, matchingProviders, matchingCompanies,matchingShowrooms] = await Promise.all([
+                const [matchingDrivers, matchingProviders, matchingCompanies, matchingShowrooms] = await Promise.all([
                     Driver.find({ name: regex }).select('_id').lean(),
                     Provider.find({ name: regex }).select('_id').lean(),
                     Company.find({ name: regex }).select('_id').lean(),
-                     Showroom.find({ name: regex }).select('_id').lean()
+                    Showroom.find({ name: regex }).select('_id').lean()
                 ]);
 
                 if (matchingDrivers.length > 0) {
@@ -652,7 +673,7 @@ if (showroomId) {
                 if (matchingCompanies.length > 0) {
                     searchConditions.push({ company: { $in: matchingCompanies.map(c => c._id) } });
                 }
-                  if (matchingShowrooms.length > 0) {
+                if (matchingShowrooms.length > 0) {
                     searchConditions.push({ showroom: { $in: matchingShowrooms.map(c => c._id) } });
                 }
 
@@ -669,6 +690,7 @@ if (showroomId) {
                 $lte: endOfDay
             };
         }
+
         // Pagination and sorting by createdAt in descending order
         const total = await Booking.countDocuments(query);
         let bookings = await Booking.find(query)
@@ -680,12 +702,12 @@ if (showroomId) {
             .populate('provider')
             .populate('receivedUserId')
             .populate('previousReceivedUserId')
-            .skip(all ? 0 : (page - 1) * limit) // Skip only if not fetching all
+            .skip(all ? 0 : (page - 1) * limit)
             .limit(limit)
             .sort({ createdAt: -1 })
-            .lean()
-        //---------------------------
+            .lean();
 
+        //---------------------------
         const balanceAmount = bookings.reduce((total, booking) => {
             if (forStaffReport) {
                 const isStaffInvolved = booking.receivedUser === 'Staff' || booking.previousReceivedUser === 'Staff';
@@ -697,196 +719,187 @@ if (showroomId) {
                 booking.partialReceivedAmountStaff === true) {
                 return total + (booking.receivedAmountStaff || 0);
             }
-               if (forShowroomReport) {
+            if (forShowroomReport) {
                 // Calculate showroom-specific balance
                 return total + (booking.receivedAmountShowroom || 0);
             }
             return total + (booking.receivedAmount || 0);
         }, 0);
+
         query.workType = { $ne: 'RSAWork' };
 
-// Add this temporary aggregation to see what documents are being processed
-const debugAggregation = await Booking.aggregate([
-    {
-        $match: {
-            ...query,
-            ...(forDriverReport && { cashPending: false }),
-            $or: [
-                { receivedUser: "Driver" },
-                {
-                    $and: [
-                        { receivedUser: "Staff" },
-                        { multipleReceivedUser: true },
-                        { previousReceivedUser: "Driver" }
+        // Add this temporary aggregation to see what documents are being processed
+        const debugAggregation = await Booking.aggregate([
+            {
+                $match: {
+                    ...query,
+                    ...(forDriverReport && { cashPending: false }),
+                    $or: [
+                        { receivedUser: "Driver" },
+                        {
+                            $and: [
+                                { receivedUser: "Staff" },
+                                { multipleReceivedUser: true },
+                                { previousReceivedUser: "Driver" }
+                            ]
+                        }
                     ]
                 }
-            ]
-        }
-    },
-    {
-        $project: {
-            _id: 1,
-            fileNumber: 1,
-            receivedUser: 1,
-            previousReceivedUser: 1,
-            multipleReceivedUser: 1,
-            totalAmount: 1,
-            receivedAmountDriver: 1,
-            receivedAmount: 1,
-            amountType: {
-                $cond: [
-                    { $eq: ["$receivedUser", "Driver"] },
-                    "DIRECT_DRIVER_RECEIPT",
-                    {
+            },
+            {
+                $project: {
+                    _id: 1,
+                    fileNumber: 1,
+                    receivedUser: 1,
+                    previousReceivedUser: 1,
+                    multipleReceivedUser: 1,
+                    totalAmount: 1,
+                    receivedAmountDriver: 1,
+                    receivedAmount: 1,
+                    amountType: {
                         $cond: [
+                            { $eq: ["$receivedUser", "Driver"] },
+                            "DIRECT_DRIVER_RECEIPT",
+                            {
+                                $cond: [
+                                    {
+                                        $and: [
+                                            { $eq: ["$receivedUser", "Staff"] },
+                                            { $eq: ["$multipleReceivedUser", true] },
+                                            { $eq: ["$previousReceivedUser", "Driver"] }
+                                        ]
+                                    },
+                                    "STAFF_RECEIVED_AFTER_DRIVER",
+                                    "OTHER"
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
+        ]);
+
+        console.log('Documents being processed in aggregation:');
+        console.log(JSON.stringify(debugAggregation, null, 2));
+
+        // Now run your original aggregation with the corrected totalOverall
+        const aggregationResult = await Booking.aggregate([
+            {
+                $match: {
+                    ...query,
+                    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) && { cashPending: false }),
+                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
+                    ...(forDriverReport && {
+                        $or: [
+                            { receivedUser: { $ne: 'Staff' } },
+                            { receivedUser: 'Staff', partialReceivedAmountStaff: true },
+                            { receivedUser: "Driver" },
+                            { receivedUser: { $exists: false } },
                             {
                                 $and: [
-                                    { $eq: ["$receivedUser", "Staff"] },
-                                    { $eq: ["$multipleReceivedUser", true] },
-                                    { $eq: ["$previousReceivedUser", "Driver"] }
+                                    { receivedUser: "Staff" },
+                                    { multipleReceivedUser: true },
+                                    { previousReceivedUser: "Driver" }
                                 ]
-                            },
-                            "STAFF_RECEIVED_AFTER_DRIVER",
-                            "OTHER"
+                            }
                         ]
-                    }
-                ]
-            }
-        }
-    }
-]);
-
-console.log('Documents being processed in aggregation:');
-console.log(JSON.stringify(debugAggregation, null, 2));
-
-// Now run your original aggregation with the corrected totalOverall
-const aggregationResult = await Booking.aggregate([
-    {
-        $match: {
-            ...query,
-            ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) &&  { cashPending: false }),
-            ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
-            ...(forDriverReport && {
-                $or: [
-                    // ------------------------------------
-                    { receivedUser: { $ne: 'Staff' } },
-                    { receivedUser: 'Staff', partialReceivedAmountStaff: true },
-                    { receivedUser: "Driver" },
-  { receivedUser: { $exists: false } },
-                    {
-                        $and: [
-                            { receivedUser: "Staff" },
-                            { multipleReceivedUser: true },
-                            { previousReceivedUser: "Driver" }
+                    }),
+                    ...(forStaffReport && {
+                        $or: [
+                            { receivedUser: 'Staff' },
+                            { previousReceivedUser: 'Staff' }
                         ]
-                    }
-                ]
-            }),
-            ...(forStaffReport && {
-                $or: [
-                    { receivedUser: 'Staff' },
-                    { previousReceivedUser: 'Staff' }
-                ]
-            }),
-              ...(forShowroomReport && {
-                // Add any specific conditions for showroom reports if needed
-                showroom: showroomId ? new mongoose.Types.ObjectId(showroomId) : { $exists: true }
-            })
-        }
-    },
-  {
-  $group: {
-    _id: null,
-    totalCollected: {
-      $sum: forStaffReport
-        ? "$givenAmountByStaff"
-        : forDriverReport
-          ? {
-              $cond: [
-                {
-                  $or: [
-                    // Case 1: Staff with partial received amount
-                    {
-                      $and: [
-                        { $eq: ["$receivedUser", "Staff"] },
-                        { $eq: ["$partialReceivedAmountStaff", true] }
-                      ]
-                    },
-                   
-                    // Case 2: Previous Staff with partial received amount
-                    {
-                      $and: [
-                        { $eq: ["$previousReceivedUser", "Staff"] },
-                        { $eq: ["$partialReceivedAmountStaff", true] }
-                      ]
-                    },
-                    // Case 3: Special multiple received user case
-                    {
-                      $and: [
-                        { $eq: ["$receivedUser", "Staff"] },
-                        { $eq: ["$multipleReceivedUser", true] },
-                        { $eq: ["$previousReceivedUser", "Driver"] }
-                      ]
-                    }
-                  ]
-                },
-                {
-          $cond: [
-            // The specific condition you asked about - return 0
-            {
-              $and: [
-                { $eq: ["$receivedUser", "Staff"] },
-                { $eq: ["$multipleReceivedUser", true] },
-                { $eq: ["$previousReceivedUser", "Driver"] },
-                { $eq: ["$receivedAmountDriver", "$receivedAmount"] },
-                { $ne: ["$receivedAmountStaff", "$givenAmountByStaff"] }
-              ]
-            },
-            '$totalAmount', // Return 0 when all these conditions are met
-                {
-                  $cond: [
-                    // The specific condition you asked about
-                    {
-                      $and: [
-                        { $eq: ["$receivedAmount", "$totalAmount"] },
-                        { $eq: ["$receivedUser", "Staff"] },
-                        { $eq: ["$multipleReceivedUser", true] },
-                        { $eq: ["$previousReceivedUser", "Driver"] }
-                      ]
-                    },
-                    "$receivedAmount",        // Use when condition is true
-                    {                        // Else check another condition
-                      $cond: [
-                        {
-                          $and: [
-                            
-                            { $eq: ["$receivedUser", "Staff"] },
-                            { $eq: ["$multipleReceivedUser", true] },
-                            { $eq: ["$previousReceivedUser", "Driver"] }
-                          ]
-                        },
-                        "$receivedAmountDriver",  // Use for multiple received users case
-                        "$receivedAmountStaff"   // Default for other Staff cases
-                      ]
+                    }),
+                    ...(forShowroomReport && {
+                        showroom: showroomId ? new mongoose.Types.ObjectId(showroomId) : { $exists: true }
+                    })
                 }
-              ]
-            }
-          ]
-        },
-                "$receivedAmount"  // Fallback for non-Staff cases
-              ]
-            }
-          : forCompanyReport
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalCollected: {
+                        $sum: forStaffReport
+                            ? "$givenAmountByStaff"
+                            : forDriverReport
+                                ? {
+                                    $cond: [
+                                        {
+                                            $or: [
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$receivedUser", "Staff"] },
+                                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                                                    ]
+                                                },
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$previousReceivedUser", "Staff"] },
+                                                        { $eq: ["$partialReceivedAmountStaff", true] }
+                                                    ]
+                                                },
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$receivedUser", "Staff"] },
+                                                        { $eq: ["$multipleReceivedUser", true] },
+                                                        { $eq: ["$previousReceivedUser", "Driver"] }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            $cond: [
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$receivedUser", "Staff"] },
+                                                        { $eq: ["$multipleReceivedUser", true] },
+                                                        { $eq: ["$previousReceivedUser", "Driver"] },
+                                                        { $eq: ["$receivedAmountDriver", "$receivedAmount"] },
+                                                        { $ne: ["$receivedAmountStaff", "$givenAmountByStaff"] }
+                                                    ]
+                                                },
+                                                '$totalAmount',
+                                                {
+                                                    $cond: [
+                                                        {
+                                                            $and: [
+                                                                { $eq: ["$receivedAmount", "$totalAmount"] },
+                                                                { $eq: ["$receivedUser", "Staff"] },
+                                                                { $eq: ["$multipleReceivedUser", true] },
+                                                                { $eq: ["$previousReceivedUser", "Driver"] }
+                                                            ]
+                                                        },
+                                                        "$receivedAmount",
+                                                        {
+                                                            $cond: [
+                                                                {
+                                                                    $and: [
+                                                                        { $eq: ["$receivedUser", "Staff"] },
+                                                                        { $eq: ["$multipleReceivedUser", true] },
+                                                                        { $eq: ["$previousReceivedUser", "Driver"] }
+                                                                    ]
+                                                                },
+                                                                "$receivedAmountDriver",
+                                                                "$receivedAmountStaff"
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "$receivedAmount"
+                                    ]
+                                }
+                                : forCompanyReport
                                     ? "$receivedAmountByCompany"
                                     : forShowroomReport
-                                        ? "$receivedAmountShowroom" // Showroom received amount
+                                        ? "$receivedAmountShowroom"
                                         : "$receivedAmount"
                     },
-           totalOverall: {
-  $sum: 
-    forStaffReport 
-      ? "$receivedAmountStaff"
-       : forDriverReport
+                    totalOverall: {
+                        $sum: forStaffReport
+                            ? "$receivedAmountStaff"
+                            : forDriverReport
                                 ? {
                                     $cond: [
                                         {
@@ -920,83 +933,80 @@ const aggregationResult = await Booking.aggregate([
                                         }
                                     ]
                                 }
-               : forCompanyReport
+                                : forCompanyReport
                                     ? "$totalAmount"
                                     : forShowroomReport
-                                        ? "$showroomAmount" // Showroom total amount
+                                        ? "$showroomAmount"
                                         : "$totalAmount"
                     },
-            advanceData: {
-                $push: {
-                    $cond: [
-                        {
-                            $or: [
+                    advanceData: {
+                        $push: {
+                            $cond: [
                                 {
-                                    $and: [
-                                        { $eq: ["$receivedUser", "Staff"] },
-                                        { $eq: ["$fileNumber", "Advance Deduction"] },
-                                        staffId ? { $eq: ["$receivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                    $or: [
+                                        {
+                                            $and: [
+                                                { $eq: ["$receivedUser", "Staff"] },
+                                                { $eq: ["$fileNumber", "Advance Deduction"] },
+                                                staffId ? { $eq: ["$receivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                            ]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$previousReceivedUser", "Staff"] },
+                                                { $eq: ["$fileNumber", "Advance Deduction"] },
+                                                staffId ? { $eq: ["$previousReceivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                            ]
+                                        }
                                     ]
                                 },
                                 {
-                                    $and: [
-                                        { $eq: ["$previousReceivedUser", "Staff"] },
-                                        { $eq: ["$fileNumber", "Advance Deduction"] },
-                                        staffId ? { $eq: ["$previousReceivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
-                                    ]
-                                }
+                                    receivedAmount: { $toDouble: "$receivedAmount" },
+                                    givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
+                                },
+                                null
                             ]
-                        },
-                        {
-                            receivedAmount: { $toDouble: "$receivedAmount" },
-                            givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
-                        },
-                        null
-                    ]
+                        }
+                    }
                 }
-            }
-        }
-    },
-    {
-        $project: {
-            totalCollected: 1,
-            totalOverall: 1,
-            advanceToCollectFromStaff: {
-                $let: {
-                    vars: {
-                        advanceItems: {
-                            $filter: {
-                                input: "$advanceData",
-                                as: "item",
-                                cond: { $ne: ["$$item", null] }
+            },
+            {
+                $project: {
+                    totalCollected: 1,
+                    totalOverall: 1,
+                    advanceToCollectFromStaff: {
+                        $let: {
+                            vars: {
+                                advanceItems: {
+                                    $filter: {
+                                        input: "$advanceData",
+                                        as: "item",
+                                        cond: { $ne: ["$$item", null] }
+                                    }
+                                }
+                            },
+                            in: {
+                                $subtract: [
+                                    { $sum: "$$advanceItems.receivedAmount" },
+                                    { $sum: "$$advanceItems.givenAmountByStaff" }
+                                ]
                             }
                         }
-                    },
-                    in: {
-                        $subtract: [
-                            { $sum: "$$advanceItems.receivedAmount" },
-                            { $sum: "$$advanceItems.givenAmountByStaff" }
-                        ]
                     }
                 }
             }
-        }
-    }
-]);
+        ]);
 
-console.log('============ AGGREGATION RESULTS ============');
-console.log('Full aggregation result:', JSON.stringify(aggregationResult, null, 2));
-
-        console.log('Aggregation result:', JSON.stringify(aggregationResult, null, 2));
-
+        console.log('============ AGGREGATION RESULTS ============');
+        console.log('Full aggregation result:', JSON.stringify(aggregationResult, null, 2));
 
         const aggregationResult2 = await Booking.aggregate([
             {
                 $match: {
                     ...query,
-    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) && { partialPayment: true }),                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
+                    ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) && { partialPayment: true }),
+                    ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
                     ...(forDriverReport && { receivedUser: { $ne: 'Staff' } })
-
                 }
             },
             {
@@ -1020,10 +1030,12 @@ console.log('Full aggregation result:', JSON.stringify(aggregationResult, null, 
             advanceToCollectFromStaff,
             balanceAmountToCollect
         });
+
         routeLogger.info({
             doneBy: req.user || 'unknown',
             reportType: forStaffReport ? 'staff' : forDriverReport ? 'driver' : forCompanyReport ? 'company' : 'general'
         }, 'Booking fetch success.');
+
         return res.status(200).json({
             total,
             page: all ? 1 : page,
@@ -1035,8 +1047,7 @@ console.log('Full aggregation result:', JSON.stringify(aggregationResult, null, 
                 totalCollectedAmount,
                 overallAmount,
                 balanceAmountToCollect: balanceAmountToCollect,
-                advanceToCollectFromStaff // Include the new field in the response
-
+                advanceToCollectFromStaff
             }
         });
     } catch (error) {
@@ -1044,6 +1055,45 @@ console.log('Full aggregation result:', JSON.stringify(aggregationResult, null, 
         res.status(500).json({ message: 'Server error while fetching bookings' });
     }
 };
+
+// Helper function to update scheduled bookings when pickupDate is reached
+async function updateScheduledBookings() {
+    try {
+        const now = new Date();
+        const result = await Booking.updateMany(
+            {
+                status: 'Scheduled',
+                pickupDate: { $lte: now }
+            },
+            {
+                $set: {
+                    status: 'Booking Added',
+                    activatedAt: now
+                }
+            }
+        );
+
+        if (result.modifiedCount > 0) {
+            console.log(`Updated ${result.modifiedCount} bookings from Scheduled to Booking Added`);
+            
+            // Emit socket event for real-time updates
+            const updatedBookings = await Booking.find({
+                status: 'Booking Added',
+                activatedAt: { $gte: new Date(now.getTime() - 1000) } // Bookings updated in the last second
+            }).populate('baselocation company driver provider').lean();
+
+            updatedBookings.forEach(booking => {
+                io.emit("bookingActivated", {
+                    type: 'bookingActivated',
+                    bookingId: booking._id,
+                    booking: booking
+                });
+            });
+        }
+    } catch (error) {
+        console.error('Error updating scheduled bookings:', error);
+    }
+}
 
 // Controller to get a booking by ID
 exports.getBookingById = async (req, res) => {

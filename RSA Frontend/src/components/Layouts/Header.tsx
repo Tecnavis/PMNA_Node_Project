@@ -25,7 +25,8 @@ import { IoCalendarOutline } from "react-icons/io5";
 import { axiosInstance } from '../../config/axiosConfig';
 import Select from "react-select";
 import { IconAt } from '@tabler/icons-react';
-import { CheckCircleIcon } from 'lucide-react';
+import { BarChart3, CheckCircleIcon } from 'lucide-react';
+import BookingDashboard from '../../pages/Bookings/BookingChart';
 
 
 interface ServiceData {
@@ -248,6 +249,9 @@ const Header = () => {
                             </span>
                              <span onClick={() => navigate("/status")} className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
                                 <CheckCircleIcon className='size-5' />
+                            </span>
+                             <span onClick={() => navigate("/bookingDashBoard")} className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
+                                <BarChart3 className='size-5' />
                             </span>
                         </div>
                         <div>

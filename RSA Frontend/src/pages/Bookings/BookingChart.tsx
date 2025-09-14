@@ -51,6 +51,16 @@ const BookingDashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [blink, setBlink] = useState(false); // State for blinking animation
+
+  // Toggle blink state for animation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBlink(prev => !prev);
+    }, 1000); // Blink every second
+
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchStats = async () => {
     try {
@@ -141,56 +151,39 @@ const BookingDashboard: React.FC = () => {
     fetchStats();
   }, [selectedDate]);
 
-  // Calculate max value for scaling the chart (exclude totalBookings from calculation)
-  const allValues: number[] = [];
-  Object.values(stats).forEach((period: BookingStats) => {
-    Object.entries(period).forEach(([key, value]) => {
-      if (key !== 'totalBookings') {
-        allValues.push(value as number);
-      }
-    });
-  });
-  const maxValue = Math.max(...allValues, 1);
-
   const categories = [
-    { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500' },
-    { key: 'completedBookings', label: 'Driver Completed Booking', color: 'bg-green-500' },
-    { key: 'verifiedBookings', label: 'Verifier', color: 'bg-purple-500' },
-    { key: 'feedbackBookings', label: 'Feedback', color: 'bg-yellow-500' },
-    { key: 'accountantVerifiedBookings', label: 'Accountant', color: 'bg-red-500' },
-    { key: 'cashPendingBookings', label: 'Cash Pending', color: 'bg-orange-500' }
+    { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500', blinkMain: true },
+    { key: 'completedBookings', label: 'Driver Completed Booking', color: 'bg-green-500', blinkMain: false },
+    { key: 'verifiedBookings', label: 'Verifier', color: 'bg-purple-500', blinkMain: false },
+    { key: 'feedbackBookings', label: 'Feedback', color: 'bg-yellow-500', blinkMain: false },
+    { key: 'accountantVerifiedBookings', label: 'Accountant', color: 'bg-red-500', blinkMain: false },
+    { key: 'cashPendingBookings', label: 'Cash Pending', color: 'bg-orange-500', blinkMain: true }
   ];
 
-  // Calculate total bookings for each time period
-  const calculateTotalBookings = (periodStats: BookingStats): number => {
-    return periodStats.totalBookings; // Use the stored totalBookings value
-  };
-
   // Single timePeriods declaration
- const timePeriods = [
+  const timePeriods = [
     { 
       key: 'today', 
       label: 'Today',
-      total: calculateTotalBookings(stats.today),
-      bgColor: 'bg-blue-50', // Light blue background for today
-      borderColor: 'border-blue-200' // Blue border for today
+      total: stats.today.totalBookings,
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200'
     },
     { 
       key: 'yesterday', 
       label: 'Yesterday',
-      total: calculateTotalBookings(stats.yesterday),
-      bgColor: 'bg-green-50', // Light green background for yesterday
-      borderColor: 'border-green-200' // Green border for yesterday
+      total: stats.yesterday.totalBookings,
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200'
     },
     { 
       key: 'dayBeforeYesterday', 
       label: 'Days before yesterday',
-      total: calculateTotalBookings(stats.dayBeforeYesterday),
-      bgColor: 'bg-purple-50', // Light purple background for day before yesterday
-      borderColor: 'border-purple-200' // Purple border for day before yesterday
+      total: stats.dayBeforeYesterday.totalBookings,
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200'
     }
   ];
-
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
@@ -211,12 +204,12 @@ const BookingDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Vertical Bar Chart Container */}
+      {/* Stacked Bar Chart Container */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Booking Statistics</h2>
         
-        {/* Vertical chart layout */}
-        <div className="space-y-6"> {/* Reduced space between graphs */}
+        {/* Stacked chart layout */}
+        <div className="space-y-8">
           {timePeriods.map((period) => {
             const periodData = stats[period.key as keyof TimePeriodStats];
             const totalBookings = period.total;
@@ -233,31 +226,41 @@ const BookingDashboard: React.FC = () => {
                   </span>
                 </div>
                 
-                <div className="flex items-end space-x-4 h-48 px-4">
+                {/* Stacked bars for each category */}
+                <div className="space-y-4">
                   {categories.map((category) => {
                     const value = periodData[category.key as keyof BookingStats];
-                    const height = maxValue > 0 ? Math.max((value / maxValue) * 100, 5) : 5;
-                    const percentage = totalBookings > 0 ? ((value / totalBookings) * 100).toFixed(1) : '0';
+                    const remaining = totalBookings - value;
                     
                     return (
-                      <div key={category.key} className="flex flex-col items-center flex-1">
-                        <div
-                          className={`${category.color} w-10 rounded-t transition-all duration-300 flex items-end justify-center min-h-[2px] relative`}
-                          style={{ height: `${height}%` }}
-                          title={`${category.label}: ${value} out of ${totalBookings} (${percentage}%)`}
-                        >
-                          <span className="text-white text-xs font-bold">
-                            {value > 0 ? value : ''}
-                          </span>
+                      <div key={category.key} className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-medium">{category.label}</span>
+                          <span>{value} / {totalBookings}</span>
                         </div>
-                        <div className="text-xs mt-2 text-center text-gray-700 font-medium truncate w-16">
-                          {category.label.split(' ')[0]}
-                        </div>
-                        {totalBookings > 0 && (
-                          <div className="text-xs text-gray-600 mt-1 font-semibold">
-                            {percentage}%
+                        <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden flex">
+                          {/* Colored portion for the metric */}
+                          <div 
+                            className={`${category.color} h-full flex items-center justify-center text-white text-xs font-bold transition-all duration-500 ${
+                              category.blinkMain && blink ? 'opacity-10' : ''
+                            }`}
+                            style={{ width: totalBookings > 0 ? `${(value / totalBookings) * 100}%` : '0%' }}
+                            title={`${category.label}: ${value}`}
+                          >
+                            {value > 0 && (value / totalBookings) > 0.15 ? `${value}` : ''}
                           </div>
-                        )}
+                          
+                          {/* Green portion for remaining bookings */}
+                          <div 
+                            className={`bg-green-500 h-full flex items-center justify-center text-white text-xs font-bold transition-all duration-500 ${
+                              !category.blinkMain && blink ? 'opacity-10' : ''
+                            }`}
+                            style={{ width: totalBookings > 0 ? `${(remaining / totalBookings) * 100}%` : '0%' }}
+                            title={`Remaining: ${remaining}`}
+                          >
+                            {remaining > 0 && (remaining / totalBookings) > 0.15 ? `${remaining}` : ''}
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
@@ -275,6 +278,16 @@ const BookingDashboard: React.FC = () => {
               <span className="text-xs text-gray-600">{category.label}</span>
             </div>
           ))}
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
+            <span className="text-xs text-gray-600">Remaining Bookings</span>
+          </div>
+        </div>
+        
+        {/* Blinking explanation */}
+        <div className="mt-4 text-xs text-gray-500">
+          <span className="font-semibold">Note:</span> Colored portions blink for "New Booking Details" and "Cash Pending". 
+          Green portions blink for all other categories.
         </div>
       </div>
 
