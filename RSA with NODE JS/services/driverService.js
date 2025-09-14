@@ -416,8 +416,75 @@ async function calculateTotalSalary(driverId) {
     ]);
     return result[0]?.actualSalary || 0;
 }
+// Add this helper function to check and update scheduled bookings
+async function updateScheduledBookingsForDriver(driverId) {
+    try {
+        const now = new Date();
+        
+        // Find all scheduled bookings for this driver where pickupDate has passed
+        const bookingsToUpdate = await Booking.find({
+            driver: new mongoose.Types.ObjectId(driverId),
+            status: 'Scheduled',
+            pickupDate: { $lte: now }
+        });
+
+        if (bookingsToUpdate.length > 0) {
+            console.log(`Found ${bookingsToUpdate.length} scheduled bookings to update for driver ${driverId}`);
+            
+            // Update all matching bookings
+            const result = await Booking.updateMany(
+                {
+                    driver: new mongoose.Types.ObjectId(driverId),
+                    status: 'Scheduled',
+                    pickupDate: { $lte: now }
+                },
+                {
+                    $set: {
+                        status: 'Booking Added',
+                        activatedAt: now
+                    }
+                }
+            );
+
+            console.log(`Updated ${result.modifiedCount} bookings from Scheduled to Booking Added for driver ${driverId}`);
+
+            // Emit socket events for real-time updates (if you have socket.io setup)
+            if (result.modifiedCount > 0) {
+                const updatedBookings = await Booking.find({
+                    driver: new mongoose.Types.ObjectId(driverId),
+                    status: 'Booking Added',
+                    activatedAt: { $gte: new Date(now.getTime() - 1000) } // Bookings updated in the last second
+                }).populate('baselocation company driver provider').lean();
+
+                // If you have socket.io, emit events for each updated booking
+                // updatedBookings.forEach(booking => {
+                //     io.emit("bookingActivated", {
+                //         type: 'bookingActivated',
+                //         bookingId: booking._id,
+                //         booking: booking
+                //     });
+                // });
+            }
+
+            return result.modifiedCount;
+        }
+        
+        return 0;
+    } catch (error) {
+        console.error('Error updating scheduled bookings for driver:', error);
+        return 0;
+    }
+}
+
 // Update financial values in driver side
 async function updateDriverFinancials(driverId, advance = 0) {
+    try {
+        // FIRST: Check and update any scheduled bookings for this driver
+        const updatedBookingsCount = await updateScheduledBookingsForDriver(driverId);
+        
+        if (updatedBookingsCount > 0) {
+            console.log(`Updated ${updatedBookingsCount} scheduled bookings before financial calculation`);
+        }
     const netTotalAmount = await calculateNetTotalAmountInHand(driverId);
     const totalSalary = await calculateTotalSalary(driverId);
 
@@ -450,9 +517,13 @@ async function updateDriverFinancials(driverId, advance = 0) {
         driverId,
         updateData,
         { new: true }
-    );
+       );
 
-    return updatedDriver;
+        return updatedDriver;
+    } catch (error) {
+        console.error('Error in updateDriverFinancials:', error);
+        throw error;
+    }
 }
 
 // Function for update driver balance amount (balance amount to give to admin)
@@ -601,4 +672,5 @@ async function calculateMonthlySalary(driverId) {
 module.exports = {
     calculateNetTotalAmountInHand,
     updateDriverFinancials,
+    updateScheduledBookingsForDriver // Export the new function if needed elsewhere
 };

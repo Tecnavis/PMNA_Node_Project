@@ -819,7 +819,7 @@ const BookingAdd: React.FC = () => {
 
             const data = {
                 workType: workType,
-                pickupDate: pickupDate,
+            pickupDate: pickupDate ? new Date(pickupDate).toISOString() : null, // Convert to ISO string
                 company: selectedCompany?._id ?? '',
                 fileNumber: fileNumber,
                 location: location,
@@ -925,7 +925,12 @@ const BookingAdd: React.FC = () => {
             }
         }
     }
-
+// Add this function to format date for datetime-local input
+const formatDateForInput = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().slice(0, 16);
+};
     // getting booking by id
     useEffect(() => {
         if (!uid) {
@@ -941,7 +946,7 @@ const BookingAdd: React.FC = () => {
                 // Set fields with fallback values
                 setBookingRewardAmount(data.rewardAmount || 0)
                 setWorkType(data.workType || '');
-                setPickupDate(data.pickupDate || '');
+            setPickupDate(formatDateForInput(data.pickupDate) || '');
                 setSelectedCompany(data.company || null);
                 setFileNumber(data.fileNumber || '');
                 setLocation(data.location || '');
@@ -1022,7 +1027,7 @@ const BookingAdd: React.FC = () => {
         if (validate()) {
             const data: any = {
                 workType: workType,
-                pickupDate: pickupDate,
+            pickupDate: pickupDate ? new Date(pickupDate).toISOString() : null, // Convert to ISO string
                 fileNumber: fileNumber,
                 location: location,
                 latitudeAndLongitude: latitudeAndLongitude,
@@ -1105,7 +1110,20 @@ const BookingAdd: React.FC = () => {
             }
         }
     };
-
+const formatTimeAMPM = (dateString: string): string => {
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        let hours = date.getHours();
+        let minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+        
+        return `${hours}:${minutesStr} ${ampm}`;
+    };
     // validation for add or update driver
     const validate = (): boolean => {
         const formErrors: Record<string, string> = {};
@@ -1308,18 +1326,32 @@ const BookingAdd: React.FC = () => {
                             {errors.workType && <p className="text-red-500">{errors.workType}</p>}
                         </div>
                         {/* pickup date (optional)  */}
-                     <div>
-    <label htmlFor="pickupDate">
-        Pickup Date <span style={{ color: 'red' }}>(optional)</span>
-    </label>
-    <input
-        type="datetime-local"
-        id="pickupDate"
-        value={pickupDate}
-        onChange={(e) => setPickupDate(e.target.value)}
-        className="form-input"
-    />
-</div>
+      <div>
+            <label htmlFor="pickupDate">
+                Pickup Date <span style={{ color: 'red' }}>(optional)
+                     {/* Display AM/PM time */}
+            {pickupDate && (
+                <div style={{ 
+                    marginTop: '8px', 
+                    color: 'red', 
+                    fontSize: '14px' 
+                }}>
+                    Time: {formatTimeAMPM(pickupDate)}
+                </div>
+            )}
+                </span>
+            </label>
+            
+            <input
+                type="datetime-local"
+                id="pickupDate"
+                value={pickupDate}
+                onChange={(e) => setPickupDate(e.target.value)}
+                className="form-input"
+            />
+            
+           
+        </div>
                         {/* selcect company if the work type is RSAWork  */}
                         {workType === 'RSAWork' && (
                             <div>

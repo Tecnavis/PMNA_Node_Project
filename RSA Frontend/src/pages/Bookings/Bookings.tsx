@@ -458,6 +458,8 @@ cashPending:false,
 
                     {/* Canceled Bookings */}
                     <div className="bg-purple-500 text-white text-center px-3 py-1 rounded shadow">Canceled Bookings</div>
+                                        <div className="bg-pink-400 text-white text-center px-3 py-1 rounded shadow">Scheduled Bookings</div>
+
                 </div>
 
                 <div className="table-responsive mb-5">
@@ -492,14 +494,28 @@ cashPending:false,
                                 if (items.status === 'Rejected') {
                                     fileNumberColor = '#ef4444'; // If the status is Rejected, color it red
                                 }
+                                  if (items.status === 'Scheduled') {
+                                    fileNumberColor = 'pink'; // If the status is Rejected, color it red
+                                }
                                 if (items.cancelStatus) {
                                     fileNumberColor = '#a855f7'; // If the status is Rejected, color it red
                                 }
                                 return (
                                     <tr key={index}>
                                         <td>{index + 1}</td> {/* Index column */}
-                                        <td>{items.createdAt ? new Date(items.createdAt).toLocaleDateString('en-GB') : 'N/A'}</td>
-                                        <td>
+<td>
+  {items.createdAt ? 
+    new Date(items.createdAt).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }) 
+    : 'N/A'
+  }
+</td>                                        <td>
                                             <div style={{ background: fileNumberColor, padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px' }}>
                                                 <p>{items.fileNumber || "N/A"}</p>
                                             </div>{' '}
