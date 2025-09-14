@@ -304,8 +304,7 @@ const BookingDashboard: React.FC = () => {
                     <div className={`${period.bgColor} py-1 rounded`}>
                       {period.label}
                     </div>
-                    <div className="text-xs font-normal">(Total: {period.total})</div>
-                  </th>
+<div className="text-xl font-normal text-red-500">(Total: {period.total})</div>                  </th>
                 ))}
               </tr>
             </thead>
