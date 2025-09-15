@@ -106,7 +106,7 @@ const BookingDashboard: React.FC = () => {
         axios.get(`${backendUrl}/booking`, {
           params: {
             // Use a very early start date (e.g., 2000-01-01) and end at dayBeforeYesterday
-            startDate: '2024-01-01', // Or whatever your earliest possible date is
+            startDate: '2000-01-01', // Or whatever your earliest possible date is
             endingDate: formatDate(dayBeforeYesterday),
             all: true
           }
