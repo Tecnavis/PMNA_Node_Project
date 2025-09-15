@@ -14,7 +14,7 @@ interface BookingStats {
 interface TimePeriodStats {
   today: BookingStats;
   yesterday: BookingStats;
-  dayBeforeYesterday: BookingStats;
+  historical: BookingStats; // Changed from dayBeforeYesterday to historical
 }
 
 const BookingDashboard: React.FC = () => {
@@ -39,7 +39,7 @@ const BookingDashboard: React.FC = () => {
       cashPendingBookings: 0,
       totalBookings: 0
     },
-    dayBeforeYesterday: {
+    historical: { // Changed from dayBeforeYesterday to historical
       newBookings: 0,
       completedBookings: 0,
       verifiedBookings: 0,
@@ -51,13 +51,12 @@ const BookingDashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [blink, setBlink] = useState(false); // State for blinking animation
+  const [blink, setBlink] = useState(false);
 
-  // Toggle blink state for animation
   useEffect(() => {
     const interval = setInterval(() => {
       setBlink(prev => !prev);
-    }, 1000); // Blink every second
+    }, 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -78,11 +77,11 @@ const BookingDashboard: React.FC = () => {
       console.log('Fetching data for dates:', {
         today: formatDate(currentDate),
         yesterday: formatDate(yesterday),
-        dayBeforeYesterday: formatDate(dayBeforeYesterday)
+        historical: `All dates before ${formatDate(dayBeforeYesterday)}`
       });
       
-      // Fetch data for all three time periods
-      const [todayData, yesterdayData, dayBeforeData] = await Promise.all([
+      // Fetch data for today and yesterday as before
+      const [todayData, yesterdayData, historicalData] = await Promise.all([
         axios.get(`${backendUrl}/booking`, {
           params: {
             startDate: formatDate(currentDate),
@@ -103,14 +102,16 @@ const BookingDashboard: React.FC = () => {
           console.error('Yesterday data fetch error:', error);
           return { data: { bookings: [] } };
         }),
+        // Fetch ALL historical data before dayBeforeYesterday
         axios.get(`${backendUrl}/booking`, {
           params: {
-            startDate: formatDate(dayBeforeYesterday),
+            // Use a very early start date (e.g., 2000-01-01) and end at dayBeforeYesterday
+            startDate: '2024-01-01', // Or whatever your earliest possible date is
             endingDate: formatDate(dayBeforeYesterday),
             all: true
           }
         }).catch(error => {
-          console.error('Day before yesterday data fetch error:', error);
+          console.error('Historical data fetch error:', error);
           return { data: { bookings: [] } };
         }),
       ]);
@@ -118,7 +119,7 @@ const BookingDashboard: React.FC = () => {
       console.log('API Responses:', {
         today: todayData.data,
         yesterday: yesterdayData.data,
-        dayBefore: dayBeforeData.data
+        historical: historicalData.data
       });
       
       const processBookings = (bookings: any[]): BookingStats => {
@@ -137,7 +138,7 @@ const BookingDashboard: React.FC = () => {
       setStats({
         today: processBookings(todayData.data.bookings),
         yesterday: processBookings(yesterdayData.data.bookings),
-        dayBeforeYesterday: processBookings(dayBeforeData.data.bookings)
+        historical: processBookings(historicalData.data.bookings) // Changed from dayBeforeYesterday to historical
       });
       
     } catch (error) {
@@ -160,7 +161,7 @@ const BookingDashboard: React.FC = () => {
     { key: 'cashPendingBookings', label: 'Cash Pending', color: 'bg-orange-500', blinkMain: true }
   ];
 
-  // Single timePeriods declaration
+  // Updated timePeriods to include historical data
   const timePeriods = [
     { 
       key: 'today', 
@@ -177,9 +178,9 @@ const BookingDashboard: React.FC = () => {
       borderColor: 'border-green-200'
     },
     { 
-      key: 'dayBeforeYesterday', 
-      label: 'Days before yesterday',
-      total: stats.dayBeforeYesterday.totalBookings,
+      key: 'historical', // Changed from dayBeforeYesterday to historical
+      label: 'Historical (All Previous Days)',
+      total: stats.historical.totalBookings,
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200'
     }
@@ -239,7 +240,6 @@ const BookingDashboard: React.FC = () => {
                           <span>{value} / {totalBookings}</span>
                         </div>
                         <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden flex">
-                          {/* Colored portion for the metric */}
                           <div 
                             className={`${category.color} h-full flex items-center justify-center text-white text-xs font-bold transition-all duration-500 ${
                               category.blinkMain && blink ? 'opacity-10' : ''
@@ -250,7 +250,6 @@ const BookingDashboard: React.FC = () => {
                             {value > 0 && (value / totalBookings) > 0.15 ? `${value}` : ''}
                           </div>
                           
-                          {/* Green portion for remaining bookings */}
                           <div 
                             className={`bg-green-500 h-full flex items-center justify-center text-white text-xs font-bold transition-all duration-500 ${
                               !category.blinkMain && blink ? 'opacity-10' : ''
@@ -284,7 +283,6 @@ const BookingDashboard: React.FC = () => {
           </div>
         </div>
         
-        {/* Blinking explanation */}
         <div className="mt-4 text-xs text-gray-500">
           <span className="font-semibold">Note:</span> Colored portions blink for "New Booking Details" and "Cash Pending". 
           Green portions blink for all other categories.
@@ -304,7 +302,8 @@ const BookingDashboard: React.FC = () => {
                     <div className={`${period.bgColor} py-1 rounded`}>
                       {period.label}
                     </div>
-<div className="text-xl font-normal text-red-500">(Total: {period.total})</div>                  </th>
+                    <div className="text-xl font-normal text-red-500">(Total: {period.total})</div>
+                  </th>
                 ))}
               </tr>
             </thead>
