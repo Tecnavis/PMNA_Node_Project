@@ -14,7 +14,7 @@ interface BookingStats {
 interface TimePeriodStats {
   today: BookingStats;
   yesterday: BookingStats;
-  historical: BookingStats; // Changed from dayBeforeYesterday to historical
+  historical: BookingStats;
 }
 
 const BookingDashboard: React.FC = () => {
@@ -39,7 +39,7 @@ const BookingDashboard: React.FC = () => {
       cashPendingBookings: 0,
       totalBookings: 0
     },
-    historical: { // Changed from dayBeforeYesterday to historical
+    historical: {
       newBookings: 0,
       completedBookings: 0,
       verifiedBookings: 0,
@@ -105,8 +105,7 @@ const BookingDashboard: React.FC = () => {
         // Fetch ALL historical data before dayBeforeYesterday
         axios.get(`${backendUrl}/booking`, {
           params: {
-            // Use a very early start date (e.g., 2000-01-01) and end at dayBeforeYesterday
-            startDate: '2024-01-01', // Or whatever your earliest possible date is
+            startDate: '2000-01-01',
             endingDate: formatDate(dayBeforeYesterday),
             all: true
           }
@@ -138,7 +137,7 @@ const BookingDashboard: React.FC = () => {
       setStats({
         today: processBookings(todayData.data.bookings),
         yesterday: processBookings(yesterdayData.data.bookings),
-        historical: processBookings(historicalData.data.bookings) // Changed from dayBeforeYesterday to historical
+        historical: processBookings(historicalData.data.bookings)
       });
       
     } catch (error) {
@@ -153,15 +152,14 @@ const BookingDashboard: React.FC = () => {
   }, [selectedDate]);
 
   const categories = [
-    { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500', blinkMain: true },
-    { key: 'completedBookings', label: 'Driver Completed Booking', color: 'bg-pink-500', blinkMain: false },
-    { key: 'verifiedBookings', label: 'Verifier', color: 'bg-purple-500', blinkMain: false },
-    { key: 'feedbackBookings', label: 'Feedback', color: 'bg-yellow-100', blinkMain: false },
-    { key: 'accountantVerifiedBookings', label: 'Accountant', color: 'bg-red-500', blinkMain: false },
-    { key: 'cashPendingBookings', label: 'Cash Pending', color: 'bg-orange-500', blinkMain: true }
+    { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500', blinkMain: true, showOnlyRemaining: false },
+    { key: 'completedBookings', label: 'Driver Completed Booking', color: 'bg-pink-500', blinkMain: false, showOnlyRemaining: true },
+    { key: 'verifiedBookings', label: 'Verifier', color: 'bg-purple-500', blinkMain: false, showOnlyRemaining: true },
+    { key: 'feedbackBookings', label: 'Feedback', color: 'bg-yellow-500', blinkMain: false, showOnlyRemaining: true },
+    { key: 'accountantVerifiedBookings', label: 'Accountant', color: 'bg-red-500', blinkMain: false, showOnlyRemaining: true },
+    { key: 'cashPendingBookings', label: 'Cash Pending', color: 'bg-orange-500', blinkMain: true, showOnlyRemaining: false }
   ];
 
-  // Updated timePeriods to include historical data
   const timePeriods = [
     { 
       key: 'today', 
@@ -178,7 +176,7 @@ const BookingDashboard: React.FC = () => {
       borderColor: 'border-green-200'
     },
     { 
-      key: 'historical', // Changed from dayBeforeYesterday to historical
+      key: 'historical',
       label: 'Historical (All Previous Days)',
       total: stats.historical.totalBookings,
       bgColor: 'bg-purple-50',
@@ -302,7 +300,7 @@ const BookingDashboard: React.FC = () => {
                     <div className={`${period.bgColor} py-1 rounded`}>
                       {period.label}
                     </div>
-                    <div className="text-xl font-normal text-red-500">(Total: {period.total})</div>
+                    <div className="text-xs font-normal text-gray-600">(Total: {period.total})</div>
                   </th>
                 ))}
               </tr>
@@ -314,13 +312,30 @@ const BookingDashboard: React.FC = () => {
                   {timePeriods.map((period) => {
                     const value = stats[period.key as keyof TimePeriodStats][category.key as keyof BookingStats];
                     const percentage = period.total > 0 ? ((value / period.total) * 100).toFixed(1) : '0.0';
+                    const remaining = period.total - value;
+                    const remainingPercentage = period.total > 0 ? ((remaining / period.total) * 100).toFixed(1) : '0.0';
                     
                     return (
                       <td key={period.key} className="px-4 py-2 text-center">
-                        <div className="font-semibold">{value}</div>
-                        <div className="text-xs text-gray-600">
-                          ({percentage}%)
-                        </div>
+                        {/* For New Booking Details and Cash Pending, show both values */}
+                        {!category.showOnlyRemaining ? (
+                          <>
+                            <div className={`font-semibold ${blink ? 'text-blue-700' : 'text-blue-900'}`}>
+                              {value} 
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Remaining: {remaining}
+                            </div>
+                          </>
+                        ) : (
+                          // For Driver Completed, Verifier, Feedback, and Accountant, show only remaining value
+                          <div className={`text-lg font-bold ${blink ? 'text-green-700' : 'text-green-600'}`}>
+                            {remaining} 
+                            <div className="text-xs text-gray-600 mt-1">
+                              Completed: {value}
+                            </div>
+                          </div>
+                        )}
                       </td>
                     );
                   })}
