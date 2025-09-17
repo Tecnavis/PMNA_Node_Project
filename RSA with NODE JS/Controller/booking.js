@@ -1094,7 +1094,84 @@ async function updateScheduledBookings() {
         console.error('Error updating scheduled bookings:', error);
     }
 }
-
+// Add this to your backend controller file
+exports.getBookingStats = async (req, res) => {
+  const routeLogger = LoggerFactory.createChildLogger({
+    route: '/booking/stats',
+    handler: 'getBookingStats',
+  });
+  
+  try {
+    const { date } = req.query; // The selected date from frontend
+    
+    if (!date) {
+      return res.status(400).json({ message: 'Date parameter is required' });
+    }
+    
+    const selectedDate = new Date(date);
+    const yesterday = new Date(selectedDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const dayBeforeYesterday = new Date(selectedDate);
+    dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+    
+    // Format dates for queries
+    const formatDate = (date) => date.toISOString().split('T')[0];
+    
+    // Fetch data for all three periods in parallel
+    const [todayData, yesterdayData, historicalData] = await Promise.all([
+      // Today's bookings
+      Booking.find({
+        createdAt: {
+          $gte: new Date(`${formatDate(selectedDate)}T00:00:00.000Z`),
+          $lte: new Date(`${formatDate(selectedDate)}T23:59:59.999Z`)
+        }
+      }).lean(),
+      
+      // Yesterday's bookings
+      Booking.find({
+        createdAt: {
+          $gte: new Date(`${formatDate(yesterday)}T00:00:00.000Z`),
+          $lte: new Date(`${formatDate(yesterday)}T23:59:59.999Z`)
+        }
+      }).lean(),
+      
+      // Historical bookings (all before day before yesterday)
+      Booking.find({
+        createdAt: {
+          $lt: new Date(`${formatDate(dayBeforeYesterday)}T00:00:00.000Z`)
+        }
+      }).lean()
+    ]);
+    
+    // Process the data to get statistics
+    const processBookings = (bookings) => {
+      return {
+        newBookings: bookings.filter(b => b.status === 'Booking Added').length,
+        completedBookings: bookings.filter(b => b.status === 'Order Completed').length,
+        verifiedBookings: bookings.filter(b => b.verified === true).length,
+        feedbackBookings: bookings.filter(b => b.feedbackCheck === true).length,
+        accountantVerifiedBookings: bookings.filter(b => b.accountantVerified === true).length,
+        cashPendingBookings: bookings.filter(b => b.cashPending === true).length,
+        totalBookings: bookings.length
+      };
+    };
+    
+    const stats = {
+      today: processBookings(todayData),
+      yesterday: processBookings(yesterdayData),
+      historical: processBookings(historicalData)
+    };
+    
+    routeLogger.info({ selectedDate }, 'Booking stats fetched successfully');
+    
+    res.status(200).json(stats);
+  } catch (error) {
+    console.error('Error fetching booking stats:', error);
+    routeLogger.error({ error }, 'Error fetching booking stats');
+    res.status(500).json({ message: 'Server error while fetching booking stats' });
+  }
+};
 // Controller to get a booking by ID
 exports.getBookingById = async (req, res) => {
     const { id } = req.params;

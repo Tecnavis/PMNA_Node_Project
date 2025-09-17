@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
+import BookingSkeleton from './BookingSkeleton';
 
 interface BookingStats {
   newBookings: number;
@@ -49,9 +50,10 @@ const BookingDashboard: React.FC = () => {
       totalBookings: 0
     }
   });
-  const [loading, setLoading] = useState(true);
+   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [blink, setBlink] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -61,95 +63,34 @@ const BookingDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchStats = async () => {
+ const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      const currentDate = new Date(selectedDate);
-      const yesterday = new Date(currentDate);
-      yesterday.setDate(yesterday.getDate() - 1);
+      console.log('Fetching booking stats for date:', selectedDate);
       
-      const dayBeforeYesterday = new Date(currentDate);
-      dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
-      
-      const formatDate = (date: Date) => date.toISOString().split('T')[0];
-      
-      console.log('Fetching data for dates:', {
-        today: formatDate(currentDate),
-        yesterday: formatDate(yesterday),
-        historical: `All dates before ${formatDate(dayBeforeYesterday)}`
+      const response = await axios.get(`${backendUrl}/booking/stats`, {
+        params: { date: selectedDate },
+        timeout: 10000 // 10 second timeout
       });
       
-      // Fetch data for today and yesterday as before
-      const [todayData, yesterdayData, historicalData] = await Promise.all([
-        axios.get(`${backendUrl}/booking`, {
-          params: {
-            startDate: formatDate(currentDate),
-            endingDate: formatDate(currentDate),
-            all: true
-          }
-        }).catch(error => {
-          console.error('Today data fetch error:', error);
-          return { data: { bookings: [] } };
-        }),
-        axios.get(`${backendUrl}/booking`, {
-          params: {
-            startDate: formatDate(yesterday),
-            endingDate: formatDate(yesterday),
-            all: true
-          }
-        }).catch(error => {
-          console.error('Yesterday data fetch error:', error);
-          return { data: { bookings: [] } };
-        }),
-        // Fetch ALL historical data before dayBeforeYesterday
-        axios.get(`${backendUrl}/booking`, {
-          params: {
-            startDate: '2000-01-01',
-            endingDate: formatDate(dayBeforeYesterday),
-            all: true
-          }
-        }).catch(error => {
-          console.error('Historical data fetch error:', error);
-          return { data: { bookings: [] } };
-        }),
-      ]);
-      
-      console.log('API Responses:', {
-        today: todayData.data,
-        yesterday: yesterdayData.data,
-        historical: historicalData.data
-      });
-      
-      const processBookings = (bookings: any[]): BookingStats => {
-        const total = bookings.length;
-        return {
-          newBookings: bookings.filter(b => b.status === 'Booking Added').length,
-          completedBookings: bookings.filter(b => b.status === 'Order Completed').length,
-          verifiedBookings: bookings.filter(b => b.verified === true).length,
-          feedbackBookings: bookings.filter(b => b.feedbackCheck === true).length,
-          accountantVerifiedBookings: bookings.filter(b => b.accountantVerified === true).length,
-          cashPendingBookings: bookings.filter(b => b.cashPending === true).length,
-          totalBookings: total
-        };
-      };
-      
-      setStats({
-        today: processBookings(todayData.data.bookings),
-        yesterday: processBookings(yesterdayData.data.bookings),
-        historical: processBookings(historicalData.data.bookings)
-      });
+      console.log('API Response:', response.data);
+      setStats(response.data);
       
     } catch (error) {
       console.error('Error fetching booking stats:', error);
+      setError('Failed to load booking statistics. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, backendUrl]);
 
   useEffect(() => {
     fetchStats();
-  }, [selectedDate]);
+  }, [fetchStats]);
+
+ 
 
   const categories = [
     { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500', blinkMain: true, showOnlyRemaining: false },
@@ -184,10 +125,25 @@ const BookingDashboard: React.FC = () => {
     }
   ];
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    if (loading) {
+    return <BookingSkeleton />;
   }
-
+  if (error) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+          <button 
+            onClick={fetchStats}
+            className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-4 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6">
@@ -350,3 +306,4 @@ const BookingDashboard: React.FC = () => {
 };
 
 export default BookingDashboard;
+// ------------------------------------------------------------------
