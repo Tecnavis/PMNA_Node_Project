@@ -1095,6 +1095,7 @@ async function updateScheduledBookings() {
     }
 }
 // Add this to your backend controller file
+
 exports.getBookingStats = async (req, res) => {
   const routeLogger = LoggerFactory.createChildLogger({
     route: '/booking/stats',
@@ -1102,7 +1103,7 @@ exports.getBookingStats = async (req, res) => {
   });
   
   try {
-    const { date } = req.query; // The selected date from frontend
+    const { date } = req.query;
     
     if (!date) {
       return res.status(400).json({ message: 'Date parameter is required' });
@@ -1115,52 +1116,66 @@ exports.getBookingStats = async (req, res) => {
     const dayBeforeYesterday = new Date(selectedDate);
     dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 1);
     
-    // Format dates for queries
     const formatDate = (date) => date.toISOString().split('T')[0];
     
-    // Fetch data for all three periods in parallel
-    const [todayData, yesterdayData, historicalData] = await Promise.all([
-      // Today's bookings
-      Booking.find({
-        createdAt: {
-          $gte: new Date(`${formatDate(selectedDate)}T00:00:00.000Z`),
-          $lte: new Date(`${formatDate(selectedDate)}T23:59:59.999Z`)
-        }
-      }).lean(),
+    // Create date ranges
+    const todayStart = new Date(`${formatDate(selectedDate)}T00:00:00.000Z`);
+    const todayEnd = new Date(`${formatDate(selectedDate)}T23:59:59.999Z`);
+    
+    const yesterdayStart = new Date(`${formatDate(yesterday)}T00:00:00.000Z`);
+    const yesterdayEnd = new Date(`${formatDate(yesterday)}T23:59:59.999Z`);
+    
+    const historicalEnd = new Date(`${formatDate(dayBeforeYesterday)}T00:00:00.000Z`);
+    
+    // Build aggregation pipelines
+    const buildPipeline = (startDate, endDate = null) => {
+      const matchStage = {};
       
-      // Yesterday's bookings
-      Booking.find({
-        createdAt: {
-          $gte: new Date(`${formatDate(yesterday)}T00:00:00.000Z`),
-          $lte: new Date(`${formatDate(yesterday)}T23:59:59.999Z`)
-        }
-      }).lean(),
+      if (endDate) {
+        matchStage.createdAt = { $gte: startDate, $lte: endDate };
+      } else {
+        matchStage.createdAt = { $lt: startDate };
+      }
       
-      // Historical bookings (all before day before yesterday)
-      Booking.find({
-        createdAt: {
-          $lt: new Date(`${formatDate(dayBeforeYesterday)}T00:00:00.000Z`)
+      return [
+        { $match: matchStage },
+        {
+          $group: {
+            _id: null,
+            newBookings: { $sum: { $cond: [{ $eq: ['$status', 'Booking Added'] }, 1, 0] } },
+            completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'Order Completed'] }, 1, 0] } },
+            verifiedBookings: { $sum: { $cond: ['$verified', 1, 0] } },
+            feedbackBookings: { $sum: { $cond: ['$feedbackCheck', 1, 0] } },
+            accountantVerifiedBookings: { $sum: { $cond: ['$accountantVerified', 1, 0] } },
+            cashPendingBookings: { $sum: { $cond: ['$cashPending', 1, 0] } },
+            totalBookings: { $sum: 1 }
+          }
         }
-      }).lean()
+      ];
+    };
+    
+    // Execute all queries in parallel
+    const [todayStats, yesterdayStats, historicalStats] = await Promise.all([
+      Booking.aggregate(buildPipeline(todayStart, todayEnd)),
+      Booking.aggregate(buildPipeline(yesterdayStart, yesterdayEnd)),
+      Booking.aggregate(buildPipeline(historicalEnd)) // Historical data
     ]);
     
-    // Process the data to get statistics
-    const processBookings = (bookings) => {
-      return {
-        newBookings: bookings.filter(b => b.status === 'Booking Added').length,
-        completedBookings: bookings.filter(b => b.status === 'Order Completed').length,
-        verifiedBookings: bookings.filter(b => b.verified === true).length,
-        feedbackBookings: bookings.filter(b => b.feedbackCheck === true).length,
-        accountantVerifiedBookings: bookings.filter(b => b.accountantVerified === true).length,
-        cashPendingBookings: bookings.filter(b => b.cashPending === true).length,
-        totalBookings: bookings.length
-      };
+    // Default empty stats
+    const defaultStats = {
+      newBookings: 0,
+      completedBookings: 0,
+      verifiedBookings: 0,
+      feedbackBookings: 0,
+      accountantVerifiedBookings: 0,
+      cashPendingBookings: 0,
+      totalBookings: 0
     };
     
     const stats = {
-      today: processBookings(todayData),
-      yesterday: processBookings(yesterdayData),
-      historical: processBookings(historicalData)
+      today: todayStats[0] || defaultStats,
+      yesterday: yesterdayStats[0] || defaultStats,
+      historical: historicalStats[0] || defaultStats
     };
     
     routeLogger.info({ selectedDate }, 'Booking stats fetched successfully');
