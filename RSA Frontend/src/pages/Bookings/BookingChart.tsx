@@ -72,7 +72,7 @@ const BookingDashboard: React.FC = () => {
       
       const response = await axios.get(`${backendUrl}/booking/stats`, {
         params: { date: selectedDate },
-        timeout: 10000 // 10 second timeout
+        timeout: 30000 // 10 second timeout
       });
       
       console.log('API Response:', response.data);
@@ -128,22 +128,22 @@ const BookingDashboard: React.FC = () => {
     if (loading) {
     return <BookingSkeleton />;
   }
-  if (error) {
-    return (
-      <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-          <strong className="font-bold">Error: </strong>
-          <span className="block sm:inline">{error}</span>
-          <button 
-            onClick={fetchStats}
-            className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-4 rounded"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // if (error) {
+  //   return (
+  //     <div className="p-6 bg-gray-50 min-h-screen">
+  //       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+  //         <strong className="font-bold">Error: </strong>
+  //         <span className="block sm:inline">{error}</span>
+  //         <button 
+  //           onClick={fetchStats}
+  //           className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-4 rounded"
+  //         >
+  //           Retry
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6">
@@ -243,64 +243,79 @@ const BookingDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Enhanced Data Table with percentages */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">Detailed Statistics</h2>
-        <div className="overflow-x-auto">
-          <table className="min-w-full table-auto">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="px-4 py-2 text-left">Category</th>
-                {timePeriods.map((period) => (
-                  <th key={period.key} className="px-4 py-2 text-center">
-                    <div className={`${period.bgColor} py-1 rounded`}>
-                      {period.label}
+     {/* Enhanced Data Table with percentages */}
+<div className="bg-white rounded-lg shadow-md p-6">
+  <h2 className="text-lg font-semibold mb-4">Detailed Statistics</h2>
+  <div className="overflow-x-auto">
+    <table className="min-w-full table-auto">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="px-4 py-2 text-left">Category</th>
+          {timePeriods.map((period) => (
+            <th key={period.key} className="px-4 py-2 text-center">
+              <div className={`${period.bgColor} py-1 rounded`}>
+                {period.label}
+              </div>
+              <div className="text-xs font-normal text-gray-600">(Total: {period.total})</div>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {categories.map((category) => (
+          <tr key={category.key} className="border-b">
+            <td className="px-4 py-2 font-medium">{category.label}</td>
+            {timePeriods.map((period) => {
+              const value = stats[period.key as keyof TimePeriodStats][category.key as keyof BookingStats];
+              const remaining = period.total - value;
+              
+              // Define background colors for each time period
+              const getBgColor = (periodKey: string) => {
+                switch (periodKey) {
+                  case 'today':
+                    return 'bg-blue-100 hover:bg-blue-200';
+                  case 'yesterday':
+                    return 'bg-green-100 hover:bg-green-200';
+                  case 'historical':
+                    return 'bg-purple-100 hover:bg-purple-200';
+                  default:
+                    return 'bg-white';
+                }
+              };
+              
+              return (
+                <td 
+                  key={period.key} 
+                  className={`px-4 py-2 text-center ${getBgColor(period.key)} transition-colors duration-200`}
+                >
+                  {/* For New Booking Details and Cash Pending, show both values */}
+                  {!category.showOnlyRemaining ? (
+                    <>
+                      <div className={`font-semibold ${blink ? 'text-blue-700' : 'text-blue-900'}`}>
+                        {value} 
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Remaining: {remaining}
+                      </div>
+                    </>
+                  ) : (
+                    // For Driver Completed, Verifier, Feedback, and Accountant, show only remaining value
+                    <div className={`text-lg font-bold ${blink ? 'text-green-700' : 'text-green-600'}`}>
+                      {remaining} 
+                      <div className="text-xs text-gray-600 mt-1">
+                        Completed: {value}
+                      </div>
                     </div>
-                    <div className="text-xs font-normal text-gray-600">(Total: {period.total})</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((category) => (
-                <tr key={category.key} className="border-b">
-                  <td className="px-4 py-2 font-medium">{category.label}</td>
-                  {timePeriods.map((period) => {
-                    const value = stats[period.key as keyof TimePeriodStats][category.key as keyof BookingStats];
-                    const percentage = period.total > 0 ? ((value / period.total) * 100).toFixed(1) : '0.0';
-                    const remaining = period.total - value;
-                    const remainingPercentage = period.total > 0 ? ((remaining / period.total) * 100).toFixed(1) : '0.0';
-                    
-                    return (
-                      <td key={period.key} className="px-4 py-2 text-center">
-                        {/* For New Booking Details and Cash Pending, show both values */}
-                        {!category.showOnlyRemaining ? (
-                          <>
-                            <div className={`font-semibold ${blink ? 'text-blue-700' : 'text-blue-900'}`}>
-                              {value} 
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              Remaining: {remaining}
-                            </div>
-                          </>
-                        ) : (
-                          // For Driver Completed, Verifier, Feedback, and Accountant, show only remaining value
-                          <div className={`text-lg font-bold ${blink ? 'text-green-700' : 'text-green-600'}`}>
-                            {remaining} 
-                            <div className="text-xs text-gray-600 mt-1">
-                              Completed: {value}
-                            </div>
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
     </div>
   );
 };

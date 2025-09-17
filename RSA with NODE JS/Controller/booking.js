@@ -1113,7 +1113,7 @@ exports.getBookingStats = async (req, res) => {
     yesterday.setDate(yesterday.getDate() - 1);
     
     const dayBeforeYesterday = new Date(selectedDate);
-    dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+    dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 1);
     
     // Format dates for queries
     const formatDate = (date) => date.toISOString().split('T')[0];
