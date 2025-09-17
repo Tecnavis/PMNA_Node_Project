@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import BookingSkeleton from './BookingSkeleton';
 
@@ -21,34 +21,10 @@ interface TimePeriodStats {
 const BookingDashboard: React.FC = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   
-  const [stats, setStats] = useState<TimePeriodStats>({
-    today: {
-      newBookings: 0,
-      completedBookings: 0,
-      verifiedBookings: 0,
-      feedbackBookings: 0,
-      accountantVerifiedBookings: 0,
-      cashPendingBookings: 0,
-      totalBookings: 0
-    },
-    yesterday: {
-      newBookings: 0,
-      completedBookings: 0,
-      verifiedBookings: 0,
-      feedbackBookings: 0,
-      accountantVerifiedBookings: 0,
-      cashPendingBookings: 0,
-      totalBookings: 0
-    },
-    historical: {
-      newBookings: 0,
-      completedBookings: 0,
-      verifiedBookings: 0,
-      feedbackBookings: 0,
-      accountantVerifiedBookings: 0,
-      cashPendingBookings: 0,
-      totalBookings: 0
-    }
+ const [stats, setStats] = useState<TimePeriodStats>({
+    today: { newBookings: 0, completedBookings: 0, verifiedBookings: 0, feedbackBookings: 0, accountantVerifiedBookings: 0, cashPendingBookings: 0, totalBookings: 0 },
+    yesterday: { newBookings: 0, completedBookings: 0, verifiedBookings: 0, feedbackBookings: 0, accountantVerifiedBookings: 0, cashPendingBookings: 0, totalBookings: 0 },
+    historical: { newBookings: 0, completedBookings: 0, verifiedBookings: 0, feedbackBookings: 0, accountantVerifiedBookings: 0, cashPendingBookings: 0, totalBookings: 0 }
   });
    const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -63,45 +39,72 @@ const BookingDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
- const fetchStats = useCallback(async () => {
+  // Debounce function to prevent rapid API calls
+  const debounce = (func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func.apply(null, args), delay);
+    };
+  };
+
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('Fetching booking stats for date:', selectedDate);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
       const response = await axios.get(`${backendUrl}/booking/stats`, {
         params: { date: selectedDate },
-        timeout: 30000 // 10 second timeout
+        signal: controller.signal
       });
       
-      console.log('API Response:', response.data);
+      clearTimeout(timeoutId);
       setStats(response.data);
       
-    } catch (error) {
-      console.error('Error fetching booking stats:', error);
-      setError('Failed to load booking statistics. Please try again.');
+    } catch (error: any) {
+      if (axios.isCancel(error)) {
+        setError('Request timed out. Please try again.');
+      } else {
+        console.error('Error fetching booking stats:', error);
+        setError('Failed to load booking statistics. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   }, [selectedDate, backendUrl]);
 
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  // Debounced version of fetchStats
+  const debouncedFetchStats = useMemo(
+    () => debounce(fetchStats, 500),
+    [fetchStats]
+  );
 
+  useEffect(() => {
+    debouncedFetchStats();
+  }, [selectedDate, debouncedFetchStats]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBlink(prev => !prev);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
  
 
-  const categories = [
+ const categories = useMemo(() => [
     { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500', blinkMain: true, showOnlyRemaining: false },
     { key: 'completedBookings', label: 'Driver Completed Booking', color: 'bg-pink-500', blinkMain: false, showOnlyRemaining: true },
     { key: 'verifiedBookings', label: 'Verifier', color: 'bg-purple-500', blinkMain: false, showOnlyRemaining: true },
     { key: 'feedbackBookings', label: 'Feedback', color: 'bg-yellow-500', blinkMain: false, showOnlyRemaining: true },
     { key: 'accountantVerifiedBookings', label: 'Accountant', color: 'bg-red-500', blinkMain: false, showOnlyRemaining: true },
     { key: 'cashPendingBookings', label: 'Cash Pending', color: 'bg-orange-500', blinkMain: true, showOnlyRemaining: false }
-  ];
+  ], []);
 
-  const timePeriods = [
+  const timePeriods = useMemo(() => [
     { 
       key: 'today', 
       label: 'Today',
@@ -123,27 +126,27 @@ const BookingDashboard: React.FC = () => {
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200'
     }
-  ];
+  ], [stats]);
 
     if (loading) {
     return <BookingSkeleton />;
   }
-  // if (error) {
-  //   return (
-  //     <div className="p-6 bg-gray-50 min-h-screen">
-  //       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-  //         <strong className="font-bold">Error: </strong>
-  //         <span className="block sm:inline">{error}</span>
-  //         <button 
-  //           onClick={fetchStats}
-  //           className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-4 rounded"
-  //         >
-  //           Retry
-  //         </button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (error) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+          <button 
+            onClick={fetchStats}
+            className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-4 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-6">
