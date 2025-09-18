@@ -6,237 +6,347 @@ const ReceivedDetails = require('../Model/ReceivedDetails.js');
 const { withRetryableTransaction, networkErrorResponse, isNetworkError } = require('../utils/networkUtils.js');
 //...............................................................................................
 exports.createReceivedDetailsStaff = async (req, res) => {
+  let session;
   try {
-    const result = await withRetryableTransaction(async (session) => {
-      const { staffId, givenAmountToStaff, remark, totalStaffAmount } = req.body;
-      const userId = req.user.id || req.user._id;
-      const userRole = req.user.role;
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-      // Validation
-      if (!staffId || !givenAmountToStaff || givenAmountToStaff <= 0) {
-        return res.status(400).json({ 
-          success: false,
-          code: 'INVALID_INPUT',
-          message: 'Staff ID, given amount, and total amount are required and must be positive'
-        });
-      }
+    const { staffId, givenAmountToStaff, remark, totalStaffAmount } = req.body;
+    const userId = req.user.id || req.user._id;
 
-      // Check staff exists
-      const staff = await Staff.findById(staffId).session(session);
-      if (!staff) {
-        await session.abortTransaction();
-        return res.status(404).json({
-          success: false,
-          code: 'STAFF_NOT_FOUND',
-          message: 'Staff member not found'
-        });
-      }
+    // Validation
+    if (!staffId || !givenAmountToStaff || givenAmountToStaff <= 0) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        success: false,
+        code: 'INVALID_INPUT',
+        message: 'Staff ID, given amount, and total amount are required and must be positive'
+      });
+    }
 
-      // Calculate new balance
-      const currentCashInHand = staff.cashInHand || 0;
-      if (givenAmountToStaff > currentCashInHand) {
-        await session.abortTransaction();
-        return res.status(400).json({
-          success: false,
-          code: 'INSUFFICIENT_FUNDS',
-          message: `Staff only has ₹${currentCashInHand} available`
-        });
-      }
-      const newBalance = currentCashInHand - Number(givenAmountToStaff);
+    // Check staff exists
+    const staff = await Staff.findById(staffId).session(session);
+    if (!staff) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        code: 'STAFF_NOT_FOUND',
+        message: 'Staff member not found'
+      });
+    }
 
-      // ===== BOOKING DISTRIBUTION USING CURSOR =====
-      let remainingAmount = Number(givenAmountToStaff);
-      const selectedBookingIds = [];
-      const appliedAmounts = [];
+    // Calculate new balance
+    const currentCashInHand = staff.cashInHand || 0;
+    if (givenAmountToStaff > currentCashInHand) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        code: 'INSUFFICIENT_FUNDS',
+        message: `Staff only has ₹${currentCashInHand} available`
+      });
+    }
 
-      // Create cursor for large dataset
-      const bookingCursor = Booking.find({
-        status: 'Order Completed',
-        workType: 'PaymentWork',
-        $or: [
-          { 
-            cashPending: false,
-            $or: [
-              { receivedUser: 'Staff', receivedUserId: staffId },
-              { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-            ],
-            $expr: {
-              $gt: [
-                { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-                0
-              ]
-            }
-          },
-          { 
-            cashPending: true,
-            partialPayment: true,
-            $or: [
-              { receivedUser: 'Staff', receivedUserId: staffId },
-              { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-            ],
-            $expr: {
-              $gt: [
-                { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-                0
-              ]
-            }
-          }
-        ]
-      })
-      .sort({ createdAt: 1 })
-      .batchSize(100) // Process in batches of 100
-      .cursor({ session })
-      .addCursorFlag('noCursorTimeout', true); // Prevent cursor timeout
+    const newBalance = currentCashInHand - Number(givenAmountToStaff);
+    let remainingAmount = Number(givenAmountToStaff);
+    const selectedBookingIds = [];
+    const appliedAmounts = [];
 
-      console.log(`Starting distribution for amount: ₹${remainingAmount}`);
-
-      // Process bookings using cursor
-      for await (const booking of bookingCursor) {
-        if (remainingAmount <= 0) {
-          break; // Stop if no remaining amount
-        }
-
-        const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
-        
-        if (allocatableAmount > 0) {
-          const amountToApply = Math.min(remainingAmount, allocatableAmount);
-          
-          // Update booking with new given amount
-          booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
-          
-          // Check if full amount is received
-          if (Math.abs((booking.givenAmountByStaff + booking.receivedAmount) - booking.totalAmount) < 0.01) {
-            booking.receivedAmount = booking.totalAmount;
-          }
-          
-          remainingAmount -= amountToApply;
-          selectedBookingIds.push(booking._id);
-          appliedAmounts.push(amountToApply);
-          
-          await booking.save({ session });
-          
-          console.log(`Applied ₹${amountToApply} to booking ${booking._id}, Remaining: ₹${remainingAmount}`);
-        }
-      }
-
-      // Close the cursor explicitly
-      await bookingCursor.close();
-      
-      console.log(`Final remaining amount: ₹${remainingAmount}`);
-      console.log(`Processed ${selectedBookingIds.length} bookings`);
-
-      // ===== ADVANCE DEDUCTION (if remaining) =====
-      let advanceDeductionApplied = 0;
-      if (remainingAmount > 0) {
-        // Use cursor for advance records as well
-        const advanceCursor = ReceivedDetails.find({
-          fileNumber: "Advance Deduction",
+    // ===== DETERMINE DATASET SIZE AND CHOOSE APPROPRIATE STRATEGY =====
+    const bookingCount = await Booking.countDocuments({
+      status: 'Order Completed',
+      workType: 'PaymentWork',
+      $or: [
+        { 
+          cashPending: false,
           $or: [
             { receivedUser: 'Staff', receivedUserId: staffId },
+            { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
           ],
           $expr: {
             $gt: [
-              { $subtract: ["$receivedAmount", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
               0
             ]
           }
-        })
-        .sort({ createdAt: 1 })
-        .batchSize(100)
-        .cursor({ session })
-        .addCursorFlag('noCursorTimeout', true);
-
-        for await (const record of advanceCursor) {
-          if (remainingAmount <= 0) break;
-          
-          const allocatableAmount = record.receivedAmount - (record.givenAmountByStaff || 0);
-          if (allocatableAmount > 0) {
-            const amountToDeduct = Math.min(remainingAmount, allocatableAmount);
-            
-            record.givenAmountByStaff = amountToDeduct;
-            advanceDeductionApplied += amountToDeduct;
-            remainingAmount -= amountToDeduct;
-            
-            await record.save({ session });
+        },
+        { 
+          cashPending: true,
+          partialPayment: true,
+          $or: [
+            { receivedUser: 'Staff', receivedUserId: staffId },
+            { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+          ],
+          $expr: {
+            $gt: [
+              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              0
+            ]
           }
         }
-        
-        await advanceCursor.close();
-      }
+      ]
+    }).session(session);
 
-      // ===== CREATE CASH COLLECTION RECORD =====
-      const cashCollectionData = {
-        balance: newBalance.toString(),
-        currentCashInHand,
-        totalStaffAmount: Number(totalStaffAmount),
-        receivedUserId: userId,
-        staff: staffId,
-        givenAmountToStaff: Number(givenAmountToStaff),
-        remark: remark || 'No remarks provided',
-        processedBookings: selectedBookingIds,
-        appliedAmounts,
+    console.log(`Found ${bookingCount} eligible bookings`);
+
+    // Strategy selection based on dataset size
+    if (bookingCount > 1000) {
+      // LARGE DATASET: Use cursor with batch processing
+      await processLargeDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts);
+    } else {
+      // SMALL DATASET: Use regular find with sorting
+      await processSmallDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts);
+    }
+
+    // Update remaining amount after processing
+    const totalApplied = appliedAmounts.reduce((sum, amount) => sum + amount, 0);
+    remainingAmount -= totalApplied;
+
+    // ===== ADVANCE DEDUCTION (if remaining) =====
+    let advanceDeductionApplied = 0;
+    if (remainingAmount > 0) {
+      advanceDeductionApplied = await processAdvanceDeduction(
+        staffId, remainingAmount, session
+      );
+      remainingAmount -= advanceDeductionApplied;
+    }
+
+    // ===== CREATE CASH COLLECTION RECORD =====
+    const cashCollectionData = {
+      balance: newBalance.toString(),
+      currentCashInHand,
+      totalStaffAmount: Number(totalStaffAmount),
+      receivedUserId: userId,
+      staff: staffId,
+      givenAmountToStaff: Number(givenAmountToStaff),
+      remark: remark || 'No remarks provided',
+      processedBookings: selectedBookingIds,
+      appliedAmounts,
+      advanceDeductionApplied,
+      remainingAmount,
+      transactionStatus: remainingAmount > 0 ? 'PARTIAL' : 'COMPLETE'
+    };
+
+    const [cashCollectionDetail] = await CashCollectionDetailsStaff.create([cashCollectionData], { session });
+
+    // Update staff's cash in hand
+    staff.cashInHand = newBalance;
+    await staff.save({ session });
+
+    await session.commitTransaction();
+
+    res.status(201).json({
+      success: true,
+      message: remainingAmount > 0 ? 'Partial distribution completed' : 'Full distribution completed',
+      data: cashCollectionDetail,
+      distribution: {
+        bookings: {
+          count: selectedBookingIds.length,
+          total: totalApplied,
+          amounts: appliedAmounts
+        },
         advanceDeductionApplied,
-        remainingAmount,
-        transactionStatus: remainingAmount > 0 ? 'PARTIAL' : 'COMPLETE'
-      };
-
-      const [cashCollectionDetail] = await CashCollectionDetailsStaff.create([cashCollectionData], { session });
-
-      // Update staff's cash in hand
-      staff.cashInHand = newBalance;
-      await staff.save({ session });
-
-      return {
-        status: 201,
-        response: {
-          success: true,
-          message: remainingAmount > 0 ? 'Partial distribution completed' : 'Full distribution completed',
-          data: cashCollectionDetail,
-          distribution: {
-            bookings: {
-              count: selectedBookingIds.length,
-              total: appliedAmounts.reduce((a, b) => a + b, 0),
-              amounts: appliedAmounts
-            },
-            advanceDeductionApplied,
-            remainingAmount
-          },
-          audit: {
-            transactionId: session.id,
-            timestamp: new Date()
-          }
-        }
-      };
+        remainingAmount
+      }
     });
 
-    res.status(result.status).json(result.response);
-
   } catch (error) {
+    if (session) {
+      await session.abortTransaction();
+    }
+
     console.error('Staff payment processing error:', {
       error: error.message,
       stack: error.stack,
       endpoint: 'createReceivedDetailsStaff'
     });
 
-    if (isNetworkError(error)) {
-      const errorResponse = networkErrorResponse(error, {
-        endpoint: 'createReceivedDetailsStaff',
-        userId: req.user?.id
-      });
-      return res.status(503).json(errorResponse);
-    }
-
     res.status(500).json({
       success: false,
       code: 'PROCESSING_ERROR',
-      message: 'Failed to process staff payment',
-      referenceId: error.session?.id
+      message: 'Failed to process staff payment'
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
+// ===== PROCESSING STRATEGIES =====
 
+// For large datasets (>1000 records)
+async function processLargeDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts) {
+  const batchSize = 500;
+  let skip = 0;
+  let hasMore = true;
 
+  while (hasMore && remainingAmount > 0) {
+    const bookings = await Booking.find({
+      status: 'Order Completed',
+      workType: 'PaymentWork',
+      $or: [
+        { 
+          cashPending: false,
+          $or: [
+            { receivedUser: 'Staff', receivedUserId: staffId },
+            { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+          ],
+          $expr: {
+            $gt: [
+              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              0
+            ]
+          }
+        },
+        { 
+          cashPending: true,
+          partialPayment: true,
+          $or: [
+            { receivedUser: 'Staff', receivedUserId: staffId },
+            { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+          ],
+          $expr: {
+            $gt: [
+              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              0
+            ]
+          }
+        }
+      ]
+    })
+    .sort({ createdAt: 1 })
+    .skip(skip)
+    .limit(batchSize)
+    .session(session);
+
+    if (bookings.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    for (const booking of bookings) {
+      if (remainingAmount <= 0) break;
+
+      const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
+      
+      if (allocatableAmount > 0) {
+        const amountToApply = Math.min(remainingAmount, allocatableAmount);
+        
+        // Update booking
+        booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
+        
+        if (Math.abs((booking.givenAmountByStaff + booking.receivedAmount) - booking.totalAmount) < 0.01) {
+          booking.receivedAmount = booking.totalAmount;
+        }
+        
+        remainingAmount -= amountToApply;
+        selectedBookingIds.push(booking._id);
+        appliedAmounts.push(amountToApply);
+        
+        await booking.save({ session });
+      }
+    }
+
+    skip += batchSize;
+  }
+}
+
+// For small datasets (≤1000 records)
+async function processSmallDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts) {
+  const bookings = await Booking.find({
+    status: 'Order Completed',
+    workType: 'PaymentWork',
+    $or: [
+      { 
+        cashPending: false,
+        $or: [
+          { receivedUser: 'Staff', receivedUserId: staffId },
+          { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+        ],
+        $expr: {
+          $gt: [
+            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+            0
+          ]
+        }
+      },
+      { 
+        cashPending: true,
+        partialPayment: true,
+        $or: [
+          { receivedUser: 'Staff', receivedUserId: staffId },
+          { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+        ],
+        $expr: {
+          $gt: [
+            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+            0
+          ]
+        }
+      }
+    ]
+  })
+  .sort({ createdAt: 1 })
+  .session(session);
+
+  for (const booking of bookings) {
+    if (remainingAmount <= 0) break;
+
+    const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
+    
+    if (allocatableAmount > 0) {
+      const amountToApply = Math.min(remainingAmount, allocatableAmount);
+      
+      booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
+      
+      if (Math.abs((booking.givenAmountByStaff + booking.receivedAmount) - booking.totalAmount) < 0.01) {
+        booking.receivedAmount = booking.totalAmount;
+      }
+      
+      remainingAmount -= amountToApply;
+      selectedBookingIds.push(booking._id);
+      appliedAmounts.push(amountToApply);
+      
+      await booking.save({ session });
+    }
+  }
+}
+
+async function processAdvanceDeduction(staffId, remainingAmount, session) {
+  let totalDeducted = 0;
+  
+  const advanceRecords = await ReceivedDetails.find({
+    fileNumber: "Advance Deduction",
+    $or: [
+      { receivedUser: 'Staff', receivedUserId: staffId },
+    ],
+    $expr: {
+      $gt: [
+        { $subtract: ["$receivedAmount", { $ifNull: ["$givenAmountByStaff", 0] }] },
+        0
+      ]
+    }
+  })
+  .sort({ createdAt: 1 })
+  .session(session);
+
+  for (const record of advanceRecords) {
+    if (remainingAmount <= 0) break;
+    
+    const allocatableAmount = record.receivedAmount - (record.givenAmountByStaff || 0);
+    if (allocatableAmount > 0) {
+      const amountToDeduct = Math.min(remainingAmount, allocatableAmount);
+      
+      record.givenAmountByStaff = amountToDeduct;
+      totalDeducted += amountToDeduct;
+      remainingAmount -= amountToDeduct;
+      
+      await record.save({ session });
+    }
+  }
+
+  return totalDeducted;
+}
 exports.getReceivedDetailsStaff = async (req, res) => {
     try {
         const { staffId, driver, provider, search, page = 1, pageSize = 10 } = req.query;
