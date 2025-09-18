@@ -6,16 +6,13 @@ const ReceivedDetails = require('../Model/ReceivedDetails.js');
 const { withRetryableTransaction, networkErrorResponse, isNetworkError } = require('../utils/networkUtils.js');
 //...............................................................................................
 exports.createReceivedDetailsStaff = async (req, res) => {
-
-
-   try {
-    // Wrap the entire operation in a retryable transaction
+  try {
     const result = await withRetryableTransaction(async (session) => {
       const { staffId, givenAmountToStaff, remark, totalStaffAmount } = req.body;
       const userId = req.user.id || req.user._id;
       const userRole = req.user.role;
 
-    // Validation
+      // Validation
       if (!staffId || !givenAmountToStaff || givenAmountToStaff <= 0) {
         return res.status(400).json({ 
           success: false,
@@ -24,159 +21,166 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         });
       }
 
-    // Check staff exists
-    const staff = await Staff.findById(staffId).session(session);
-    if (!staff) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        success: false,
-        code: 'STAFF_NOT_FOUND',
-        message: 'Staff member not found'
-      });
-    }
+      // Check staff exists
+      const staff = await Staff.findById(staffId).session(session);
+      if (!staff) {
+        await session.abortTransaction();
+        return res.status(404).json({
+          success: false,
+          code: 'STAFF_NOT_FOUND',
+          message: 'Staff member not found'
+        });
+      }
 
-    // Calculate new balance
-    const currentCashInHand = staff.cashInHand || 0;
+      // Calculate new balance
+      const currentCashInHand = staff.cashInHand || 0;
       if (givenAmountToStaff > currentCashInHand) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        code: 'INSUFFICIENT_FUNDS',
-        message: `Staff only has ₹${currentCashInHand} available`
-      });
-    }
-    const newBalance = currentCashInHand - Number(givenAmountToStaff);
-
-    // ===== BOOKING DISTRIBUTION =====
-    let remainingAmount = Number(givenAmountToStaff);
-    const selectedBookingIds = [];
-    const appliedAmounts = [];
-
-// Simplified and corrected query
-const bookings = await Booking.find({
-  status: 'Order Completed',
-  workType: 'PaymentWork',
-  $or: [
-    // Regular completed bookings (cashPending: false)
-    { 
-      cashPending: false,
-      $or: [
-        { receivedUser: 'Staff', receivedUserId: staffId },
-        { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-      ],
-      $expr: {
-        $gt: [
-          { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-          0
-        ]
+        await session.abortTransaction();
+        return res.status(400).json({
+          success: false,
+          code: 'INSUFFICIENT_FUNDS',
+          message: `Staff only has ₹${currentCashInHand} available`
+        });
       }
-    },
-    // Partial payment bookings (cashPending: true)
-    { 
-      cashPending: true,
-      partialPayment: true,
-      $or: [
-        { receivedUser: 'Staff', receivedUserId: staffId },
-        { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-      ],
-      $expr: {
-        $gt: [
-          { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-          0
+      const newBalance = currentCashInHand - Number(givenAmountToStaff);
+
+      // ===== BOOKING DISTRIBUTION USING CURSOR =====
+      let remainingAmount = Number(givenAmountToStaff);
+      const selectedBookingIds = [];
+      const appliedAmounts = [];
+
+      // Create cursor for large dataset
+      const bookingCursor = Booking.find({
+        status: 'Order Completed',
+        workType: 'PaymentWork',
+        $or: [
+          { 
+            cashPending: false,
+            $or: [
+              { receivedUser: 'Staff', receivedUserId: staffId },
+              { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+            ],
+            $expr: {
+              $gt: [
+                { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+                0
+              ]
+            }
+          },
+          { 
+            cashPending: true,
+            partialPayment: true,
+            $or: [
+              { receivedUser: 'Staff', receivedUserId: staffId },
+              { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
+            ],
+            $expr: {
+              $gt: [
+                { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+                0
+              ]
+            }
+          }
         ]
-      }
-    }
-  ]
-})
-.sort({ createdAt: 1 })
-.session(session);
-// Debug logging
-console.log(`Found ${bookings.length} eligible bookings`);
-console.log(`Amount to distribute: ₹${remainingAmount}`);
+      })
+      .sort({ createdAt: 1 })
+      .batchSize(100) // Process in batches of 100
+      .cursor({ session })
+      .addCursorFlag('noCursorTimeout', true); // Prevent cursor timeout
 
-    for (const booking of bookings) {
-     
+      console.log(`Starting distribution for amount: ₹${remainingAmount}`);
 
- 
-    
-   // Use the same logic for both types
-const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);     
-  if (allocatableAmount > 0 && remainingAmount > 0) {
-    const amountToApply = Math.min(remainingAmount, allocatableAmount);
-    
-         // Update booking with new given amount
-        booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
-  // NEW: Check if givenAmountByStaff + receivedAmount equals totalAmount
-        if (Math.abs((booking.givenAmountByStaff + booking.receivedAmount) - booking.totalAmount) < 0.01) {
-            booking.receivedAmount = booking.totalAmount;
+      // Process bookings using cursor
+      for await (const booking of bookingCursor) {
+        if (remainingAmount <= 0) {
+          break; // Stop if no remaining amount
         }
-    remainingAmount -= amountToApply;
-    selectedBookingIds.push(booking._id);
-    appliedAmounts.push(amountToApply);
-    await booking.save({ session });
- console.log(`Applied ₹${amountToApply} to booking ${booking._id}, Remaining: ₹${remainingAmount}`);
-  }
-}
 
-console.log(`Final remaining amount: ₹${remainingAmount}`);
-console.log(`Processed ${selectedBookingIds.length} bookings`);
+        const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
+        
+        if (allocatableAmount > 0) {
+          const amountToApply = Math.min(remainingAmount, allocatableAmount);
+          
+          // Update booking with new given amount
+          booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
+          
+          // Check if full amount is received
+          if (Math.abs((booking.givenAmountByStaff + booking.receivedAmount) - booking.totalAmount) < 0.01) {
+            booking.receivedAmount = booking.totalAmount;
+          }
+          
+          remainingAmount -= amountToApply;
+          selectedBookingIds.push(booking._id);
+          appliedAmounts.push(amountToApply);
+          
+          await booking.save({ session });
+          
+          console.log(`Applied ₹${amountToApply} to booking ${booking._id}, Remaining: ₹${remainingAmount}`);
+        }
+      }
 
-    // ===== ADVANCE DEDUCTION (if remaining) =====
-    let advanceDeductionApplied = 0;
-if (remainingAmount > 0) {
-  // Improved advance records query
-  const advanceRecords = await ReceivedDetails.find({
-    fileNumber: "Advance Deduction",
-    $or: [
-      { receivedUser: 'Staff', receivedUserId: staffId },
-
-    ],
-    $expr: {
-      $gt: [
-        { $subtract: ["$receivedAmount", { $ifNull: ["$givenAmountByStaff", 0] }] },
-        0
-      ]
-    }
-  })
-  .sort({ createdAt: 1 })
-  .session(session);
-
-  for (const record of advanceRecords) {
-    if (remainingAmount <= 0) break;
-    
-    // Calculate allocatable amount safely
-    const allocatableAmount = record.receivedAmount - (record.givenAmountByStaff || 0);
-    if (allocatableAmount > 0) {
-      const amountToDeduct = Math.min(remainingAmount, allocatableAmount);
+      // Close the cursor explicitly
+      await bookingCursor.close();
       
-      // Update record with new given amount
-      record.givenAmountByStaff =  amountToDeduct;
-      advanceDeductionApplied += amountToDeduct;
-      remainingAmount -= amountToDeduct;
-      
-      await record.save({ session });
-    }
-  }
-}
+      console.log(`Final remaining amount: ₹${remainingAmount}`);
+      console.log(`Processed ${selectedBookingIds.length} bookings`);
 
-    // ===== CREATE CASH COLLECTION RECORD =====
-    const cashCollectionData = {
-      balance: newBalance.toString(),
-      currentCashInHand,
-      totalStaffAmount: Number(totalStaffAmount),
-      receivedUserId: userId,
-      staff: staffId,
-    
-      givenAmountToStaff: Number(givenAmountToStaff),
-      remark: remark || 'No remarks provided',
-      processedBookings: selectedBookingIds,
-      appliedAmounts,
-      advanceDeductionApplied,
-      remainingAmount,
-      transactionStatus: remainingAmount > 0 ? 'PARTIAL' : 'COMPLETE'
-    };
+      // ===== ADVANCE DEDUCTION (if remaining) =====
+      let advanceDeductionApplied = 0;
+      if (remainingAmount > 0) {
+        // Use cursor for advance records as well
+        const advanceCursor = ReceivedDetails.find({
+          fileNumber: "Advance Deduction",
+          $or: [
+            { receivedUser: 'Staff', receivedUserId: staffId },
+          ],
+          $expr: {
+            $gt: [
+              { $subtract: ["$receivedAmount", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              0
+            ]
+          }
+        })
+        .sort({ createdAt: 1 })
+        .batchSize(100)
+        .cursor({ session })
+        .addCursorFlag('noCursorTimeout', true);
 
-     const [cashCollectionDetail] = await CashCollectionDetailsStaff.create([cashCollectionData], { session });
+        for await (const record of advanceCursor) {
+          if (remainingAmount <= 0) break;
+          
+          const allocatableAmount = record.receivedAmount - (record.givenAmountByStaff || 0);
+          if (allocatableAmount > 0) {
+            const amountToDeduct = Math.min(remainingAmount, allocatableAmount);
+            
+            record.givenAmountByStaff = amountToDeduct;
+            advanceDeductionApplied += amountToDeduct;
+            remainingAmount -= amountToDeduct;
+            
+            await record.save({ session });
+          }
+        }
+        
+        await advanceCursor.close();
+      }
+
+      // ===== CREATE CASH COLLECTION RECORD =====
+      const cashCollectionData = {
+        balance: newBalance.toString(),
+        currentCashInHand,
+        totalStaffAmount: Number(totalStaffAmount),
+        receivedUserId: userId,
+        staff: staffId,
+        givenAmountToStaff: Number(givenAmountToStaff),
+        remark: remark || 'No remarks provided',
+        processedBookings: selectedBookingIds,
+        appliedAmounts,
+        advanceDeductionApplied,
+        remainingAmount,
+        transactionStatus: remainingAmount > 0 ? 'PARTIAL' : 'COMPLETE'
+      };
+
+      const [cashCollectionDetail] = await CashCollectionDetailsStaff.create([cashCollectionData], { session });
 
       // Update staff's cash in hand
       staff.cashInHand = newBalance;
@@ -205,7 +209,6 @@ if (remainingAmount > 0) {
       };
     });
 
-    // Send the successful response
     res.status(result.status).json(result.response);
 
   } catch (error) {
@@ -216,7 +219,6 @@ if (remainingAmount > 0) {
     });
 
     if (isNetworkError(error)) {
-      // Network error response
       const errorResponse = networkErrorResponse(error, {
         endpoint: 'createReceivedDetailsStaff',
         userId: req.user?.id
@@ -224,7 +226,6 @@ if (remainingAmount > 0) {
       return res.status(503).json(errorResponse);
     }
 
-    // Other errors
     res.status(500).json({
       success: false,
       code: 'PROCESSING_ERROR',
