@@ -577,13 +577,16 @@ exports.getAllBookings = async (req, res) => {
             query.pickupDate = { $exists: false };
         }
 
-        if (status) {
-            if (Array.isArray(status)) {
-                query.status = { $nin: status }
-            } else {
-                query.status = { $ne: status }
-            }
-        }
+       // In your getAllBookings function, modify the status handling:
+if (req.query.onlyScheduled === 'true') {
+    query.status = 'Scheduled';
+} else if (status) {
+    if (Array.isArray(status)) {
+        query.status = { $nin: status }
+    } else {
+        query.status = { $ne: status }
+    }
+}
 
         // If driverId as query then fetch drivers bookings
         if (driverId) {
@@ -1094,8 +1097,102 @@ async function updateScheduledBookings() {
         console.error('Error updating scheduled bookings:', error);
     }
 }
+// ------------------------------------------------------------------------------------
 // Add this to your backend controller file
+// Add this to your booking controller
+// Add this to your booking controller
+exports.getScheduledBookings = async (req, res) => {
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/booking/scheduled',
+        handler: 'getScheduledBookings',
+    });
+    
+    try {
+        let {
+            search,
+            page = 1,
+            limit = 10,
+            all = false
+        } = req.query;
 
+        // Convert page and limit to integers
+        page = all ? 1 : parseInt(page, 10);
+        limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
+
+        // CRITICAL: Check and update bookings where pickupDate has been reached
+        await updateScheduledBookings();
+
+        // Query specifically for Scheduled bookings
+        const query = { status: 'Scheduled' };
+
+        // Handle search
+        if (search) {
+            query._includeHidden = true;
+            const searchQuery = search.trim();
+            const regex = new RegExp(searchQuery, 'i');
+            
+            const searchConditions = [
+                { fileNumber: regex },
+                { mob1: regex },
+                { customerVehicleNumber: regex },
+            ];
+
+            const [matchingDrivers, matchingProviders, matchingCompanies, matchingShowrooms] = await Promise.all([
+                Driver.find({ name: regex }).select('_id').lean(),
+                Provider.find({ name: regex }).select('_id').lean(),
+                Company.find({ name: regex }).select('_id').lean(),
+                Showroom.find({ name: regex }).select('_id').lean()
+            ]);
+
+            if (matchingDrivers.length > 0) {
+                searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
+            }
+            if (matchingProviders.length > 0) {
+                searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
+            }
+            if (matchingCompanies.length > 0) {
+                searchConditions.push({ company: { $in: matchingCompanies.map(c => c._id) } });
+            }
+            if (matchingShowrooms.length > 0) {
+                searchConditions.push({ showroom: { $in: matchingShowrooms.map(c => c._id) } });
+            }
+
+            query.$or = searchConditions;
+        }
+
+        // Pagination and sorting
+        const total = await Booking.countDocuments(query);
+        let bookings = await Booking.find(query)
+            .populate('baselocation')
+            .populate('showroom')
+            .populate('serviceType')
+            .populate('company')
+            .populate('driver')
+            .populate('provider')
+            .populate('receivedUserId')
+            .populate('previousReceivedUserId')
+            .skip(all ? 0 : (page - 1) * limit)
+            .limit(limit)
+            .sort({ createdAt: -1 })
+            .lean();
+
+        routeLogger.info({
+            doneBy: req.user || 'unknown',
+            count: bookings.length
+        }, 'Scheduled bookings fetch success.');
+
+        return res.status(200).json({
+            total,
+            page: all ? 1 : page,
+            limit: all ? total : limit,
+            totalPages: all ? 1 : Math.ceil(total / limit),
+            bookings
+        });
+    } catch (error) {
+        console.error('Error fetching scheduled bookings:', error);
+        res.status(500).json({ message: 'Server error while fetching scheduled bookings' });
+    }
+};
 exports.getBookingStats = async (req, res) => {
   const routeLogger = LoggerFactory.createChildLogger({
     route: '/booking/stats',

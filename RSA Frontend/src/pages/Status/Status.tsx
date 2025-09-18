@@ -65,21 +65,39 @@ const Status: React.FC = () => {
     const [query, setQuery] = useState<string>('');
     const [showAll, setShowAll] = useState(false);
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
-    const currentTabRef = useRef<Tabs>(Tabs.OngoingBookings);
+ const currentTabRef = useRef<Tabs>(Tabs.OngoingBookings);
+    const socketRef = useRef<Socket | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const navigate = useNavigate();
     const role = localStorage.getItem('role') || '';
+    // Helper functions - DECLARE THESE FIRST
+    const updateBookingInState = useCallback((prevBookings: Booking[], bookingId: string, updateData: Partial<Booking>): Booking[] => {
+        return prevBookings.map((booking) => (booking._id === bookingId ? { ...booking, ...updateData } : booking));
+    }, []);
+
+    const shouldRefetchForTab = useCallback((status: string, currentTab: Tabs): boolean => {
+        return (status === 'Order Completed' && currentTab !== Tabs.CompletedBookings) || (status !== 'Order Completed' && currentTab === Tabs.CompletedBookings);
+    }, []);
+
     useEffect(() => {
         currentTabRef.current = tab;
     }, [tab]);
+
     const handlePageChange = (page: number) => {
         if (page === currentPage || page < 1 || page > totalPages) return;
-        fetchBookings(query, page); // Pass current query
+        fetchBookings(query, page);
     };
 
     const fetchBookings = useCallback(
         async (search: string, page: number = 1, limit: number = 10) => {
+            // Cancel previous request if any
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+
             const abortController = new AbortController();
+            abortControllerRef.current = abortController;
 
             setLoader(true);
             const currentTab = currentTabRef.current;
@@ -116,42 +134,124 @@ const Status: React.FC = () => {
                 if (currentTabRef.current === currentTab) {
                     setLoader(false);
                 }
+                abortControllerRef.current = null;
             }
-
-            return () => abortController.abort();
         },
         [showAll]
     );
 
     const debouncedFetchBookings = useMemo(
-        () =>
-            debounce((search: string, page: number = 1) => {
-                fetchBookings(search, page);
-            }, 500), // Reduced to 500ms for better responsiveness
+        () => debounce((search: string, page: number = 1) => {
+            fetchBookings(search, page);
+        }, 500),
         [fetchBookings]
     );
+
+    // Socket setup with proper cleanup
+    useEffect(() => {
+        const setupSocket = async () => {
+            try {
+                // Clean up existing socket
+                if (socketRef.current) {
+                    socketRef.current.off('newChanges');
+                    disconnectSocket();
+                }
+
+                const socketInstance = connectSocket('test@example.com');
+                socketRef.current = socketInstance;
+                setSocket(socketInstance);
+
+                const handleSocketData = async (data: SocketData) => {
+                    try {
+                        if (!data.type) return;
+
+                        const currentTab = currentTabRef.current;
+
+                        if (data.status) {
+                            if (data.status === 'Order Completed') {
+                                setBookings((prev) => prev.filter((booking) => booking._id !== data.bookingId));
+                            } else {
+                                setBookings((prev) => updateBookingInState(prev, data.bookingId, data.updatedBooking as Booking));
+                            }
+                            return;
+                        } else if (data.type === 'newBooking') {
+                            if (Tabs.OngoingBookings === currentTab && data.newBooking) {
+                                setBookings((prevData) => [...prevData, data.newBooking as Booking]);
+                            }
+                        } else {
+                            const response = await axiosInstance.get(`/booking/${data.bookingId}`);
+                            const updatedBooking = response.data;
+                            setBookings((prev) => updateBookingInState(prev, data.bookingId, updatedBooking));
+
+                            if (shouldRefetchForTab(updatedBooking.status, currentTab)) {
+                                fetchBookings(query, 1);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error handling socket data:', err);
+                    }
+                };
+
+                socketInstance.on('newChanges', handleSocketData);
+
+            } catch (error) {
+                console.error('Socket setup failed:', error);
+            }
+        };
+
+        setupSocket();
+
+        return () => {
+            // Cleanup socket
+            if (socketRef.current) {
+                socketRef.current.off('newChanges');
+                disconnectSocket();
+                socketRef.current = null;
+            }
+            
+            // Cleanup debounce
+            debouncedFetchBookings.cancel();
+            
+            // Cleanup abort controller
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, [query, fetchBookings, updateBookingInState, shouldRefetchForTab, debouncedFetchBookings]);
+
     const toggleShowAll = () => {
         setShowAll(!showAll);
-        fetchBookings(query, 1, 10); // Pass current query
+        fetchBookings(query, 1, 10);
     };
-    const handleChangeTabs = (tabName: Tabs) => {
-        // Cancel any pending debounced searches
+
+    // Tab change handler
+    const handleChangeTabs = useCallback((tabName: Tabs) => {
         debouncedFetchBookings.cancel();
-
-        // Reset search and pagination
-        // setQuery('');
+        setQuery('');
         setCurrentPage(1);
-
-        // Update tab state
         setTab(tabName);
+    }, [debouncedFetchBookings]);
 
-        // Don't call fetchBookings here - let useEffect handle it
-    };
     const handlePaymentSettlement = (record: Booking) => {
         setSelectedBooking(record);
-        setPaymentAmount((selectedBooking?.totalAmount ?? 0) - (selectedBooking?.receivedAmount ?? 0));
+        setPaymentAmount((record.totalAmount ?? 0) - (record.receivedAmount ?? 0));
         setShowPaymentModal(true);
     };
+
+    // Search effect
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            debouncedFetchBookings(query, 1);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [query, debouncedFetchBookings]);
+
+    // Tab change effect
+    useEffect(() => {
+        setBookings([]);
+        fetchBookings(query, 1);
+    }, [tab, fetchBookings, query]);
 
     const handleSettleCashPending = async (bookingId: string) => {
         // First show confirmation dialog
@@ -270,15 +370,7 @@ const Status: React.FC = () => {
         fetchBookings(query, 1);
     }, [tab, fetchBookings]); // Remove query from dependencies
 
-    // Helper function to update a single booking in state
-    const updateBookingInState = (prevBookings: Booking[], bookingId: string, updateData: Partial<Booking>): Booking[] => {
-        return prevBookings.map((booking) => (booking._id === bookingId ? { ...booking, ...updateData } : booking));
-    };
-
-    // Helper function to check if booking should be in a different tab
-    const shouldRefetchForTab = (status: string, currentTab: Tabs): boolean => {
-        return (status === 'Order Completed' && currentTab !== Tabs.CompletedBookings) || (status !== 'Order Completed' && currentTab === Tabs.CompletedBookings);
-    };
+   
 
     useEffect(() => {
         try {

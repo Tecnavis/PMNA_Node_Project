@@ -98,7 +98,15 @@ app.use(cors({
   allowedHeaders: ['*'],
   exposedHeaders: ['Content-Type', 'Authorization'],
 }));
-
+// ADD HEALTH CHECK ENDPOINT HERE
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    memory: process.memoryUsage(),
+    connections: io.engine?.clientsCount || 0,
+    timestamp: new Date().toISOString()
+  });
+});
 app.set('views', path.join(__dirname, 'views'));
 
 const limiter = rateLimit({

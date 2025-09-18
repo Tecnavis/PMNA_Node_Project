@@ -23,7 +23,8 @@ router.get('/', jwt, controller.getAllBookings);
 // Route to get booking
 router.get('/getordercompleted', jwt, controller.getOrderCompletedBookings);
 router.get('/stats', jwt, controller.getBookingStats);
-
+// Add this route
+router.get('/scheduled', jwt, controller.getScheduledBookings);
 // Route to distribute received amount
 router.patch('/distribute-amount', jwt, controller.distributeReceivedAmount);
 
