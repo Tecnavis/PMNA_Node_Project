@@ -51,8 +51,8 @@ exports.createReceivedDetailsStaff = async (req, res) => {
     const selectedBookingIds = [];
     const appliedAmounts = [];
 
-    // ===== DETERMINE DATASET SIZE AND CHOOSE APPROPRIATE STRATEGY =====
-    const bookingCount = await Booking.countDocuments({
+    // ===== FIXED: PROPERLY FILTER BY STAFF ID IN ALL CONDITIONS =====
+    const baseQuery = {
       status: 'Order Completed',
       workType: 'PaymentWork',
       $or: [
@@ -103,17 +103,18 @@ exports.createReceivedDetailsStaff = async (req, res) => {
           }
         }
       ]
-    }).session(session);
+    };
 
+    const bookingCount = await Booking.countDocuments(baseQuery).session(session);
     console.log(`Found ${bookingCount} eligible bookings for staff ${staffId}`);
 
     // Strategy selection based on dataset size
     if (bookingCount > 1000) {
       // LARGE DATASET: Use cursor with batch processing
-      await processLargeDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts);
+      await processLargeDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts, baseQuery);
     } else {
       // SMALL DATASET: Use regular find with sorting
-      await processSmallDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts);
+      await processSmallDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts, baseQuery);
     }
 
     // Update remaining amount after processing
@@ -191,71 +192,20 @@ exports.createReceivedDetailsStaff = async (req, res) => {
   }
 };
 
-// ===== PROCESSING STRATEGIES =====
+// ===== UPDATED PROCESSING FUNCTIONS =====
 
 // For large datasets (>1000 records)
-async function processLargeDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts) {
+async function processLargeDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts, baseQuery) {
   const batchSize = 500;
   let skip = 0;
   let hasMore = true;
 
   while (hasMore && remainingAmount > 0) {
-    const bookings = await Booking.find({
-      status: 'Order Completed',
-      workType: 'PaymentWork',
-      $or: [
-        { 
-          cashPending: false,
-          receivedUser: 'Staff',
-          receivedUserId: staffId,
-          $expr: {
-            $gt: [
-              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-              0
-            ]
-          }
-        },
-        { 
-          cashPending: false,
-          previousReceivedUser: 'Staff',
-          previousReceivedUserId: staffId,
-          $expr: {
-            $gt: [
-              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-              0
-            ]
-          }
-        },
-        { 
-          cashPending: true,
-          partialPayment: true,
-          receivedUser: 'Staff',
-          receivedUserId: staffId,
-          $expr: {
-            $gt: [
-              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-              0
-            ]
-          }
-        },
-        { 
-          cashPending: true,
-          partialPayment: true,
-          previousReceivedUser: 'Staff',
-          previousReceivedUserId: staffId,
-          $expr: {
-            $gt: [
-              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-              0
-            ]
-          }
-        }
-      ]
-    })
-    .sort({ createdAt: 1 })
-    .skip(skip)
-    .limit(batchSize)
-    .session(session);
+    const bookings = await Booking.find(baseQuery)
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(batchSize)
+      .session(session);
 
     if (bookings.length === 0) {
       hasMore = false;
@@ -290,61 +240,10 @@ async function processLargeDataset(staffId, remainingAmount, session, selectedBo
 }
 
 // For small datasets (≤1000 records)
-async function processSmallDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts) {
-  const bookings = await Booking.find({
-    status: 'Order Completed',
-    workType: 'PaymentWork',
-    $or: [
-      { 
-        cashPending: false,
-        receivedUser: 'Staff',
-        receivedUserId: staffId,
-        $expr: {
-          $gt: [
-            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-            0
-          ]
-        }
-      },
-      { 
-        cashPending: false,
-        previousReceivedUser: 'Staff',
-        previousReceivedUserId: staffId,
-        $expr: {
-          $gt: [
-            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-            0
-          ]
-        }
-      },
-      { 
-        cashPending: true,
-        partialPayment: true,
-        receivedUser: 'Staff',
-        receivedUserId: staffId,
-        $expr: {
-          $gt: [
-            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-            0
-          ]
-        }
-      },
-      { 
-        cashPending: true,
-        partialPayment: true,
-        previousReceivedUser: 'Staff',
-        previousReceivedUserId: staffId,
-        $expr: {
-          $gt: [
-            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-            0
-          ]
-        }
-      }
-    ]
-  })
-  .sort({ createdAt: 1 })
-  .session(session);
+async function processSmallDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts, baseQuery) {
+  const bookings = await Booking.find(baseQuery)
+    .sort({ createdAt: 1 })
+    .session(session);
 
   for (const booking of bookings) {
     if (remainingAmount <= 0) break;
