@@ -3,7 +3,6 @@ const Driver = require('../Model/driver');
 const Provider = require('../Model/provider');
 const Company = require('../Model/company');
 const Showroom = require('../Model/showroom');
-const ReceivedDetails = require('../Model/ReceivedDetails');
 const ShowroomStaff = require('../Model/showroomStaff');
 const mongoose = require('mongoose');
 const Vehicle = require('../Model/vehicle');
@@ -107,43 +106,34 @@ exports.createBooking = async (req, res) => {
             bookingData.totalAmount -= bookingData.rewardAmount;
         }
 
-      // Set initial status based on pickupDate
+      // CRITICAL FIX: Set createdAt based on pickupDate if it exists
         if (bookingData.pickupDate) {
-            const pickupTime = new Date(bookingData.pickupDate);
-            const currentTime = new Date();
-            
-            if (pickupTime > currentTime) {
-                // Future booking - set as scheduled
-                bookingData.status = 'scheduled';
-                bookingData.isScheduled = true;
-                bookingData.scheduledActivationTime = pickupTime;
-            } else {
-                // Past or current booking - set as active
-                bookingData.status = 'active';
-                bookingData.isScheduled = false;
-            }
+            bookingData.createdAt = new Date(bookingData.pickupDate);
+            bookingData.status = 'Scheduled'; // Different status for future bookings
         } else {
-            // No pickup date - set as active
-            bookingData.status = 'active';
-            bookingData.isScheduled = false;
+            bookingData.status = 'Booking Added'; // Immediate booking status
         }
 
         const newBooking = new Booking(bookingData);
         await newBooking.save();
 
-        // Schedule activation if it's a future booking
+        routeLogger.info({
+            fileNumber: bookingData.fileNumber,
+            doneBy: req.user || 'unknown'
+        }, 'New Booking created successfully.');
+
         const agendaInstance = await agenda;
         if (bookingData.pickupDate) {
             const pickupTime = new Date(bookingData.pickupDate);
-            const currentTime = new Date();
-            
-            if (pickupTime > currentTime) {
+            const now = new Date();
+
+            if (pickupTime > now) {
                 console.log('Scheduling future job for pickupDate:', pickupTime);
                 await agendaInstance.schedule(pickupTime, 'activate booking', {
                     bookingId: newBooking._id
                 });
             } else {
-                console.log('Running job immediately - pickupDate is in past');
+                console.log('Running job immediately - pickupDate is in the past');
                 await agendaInstance.now('activate booking', {
                     bookingId: newBooking._id
                 });
@@ -155,34 +145,29 @@ exports.createBooking = async (req, res) => {
             });
         }
 
-        res.status(201).json({ 
-            message: 'Booking created successfully', 
-            booking: newBooking,
-            isScheduled: bookingData.isScheduled
-        });
 
-        // Emit event only for active bookings (not scheduled ones)
-        if (newBooking.status === 'active') {
-            process.nextTick(async () => {
-                try {
-                    const populatedBooking = await Booking.findById(newBooking._id)
-                        .populate('baselocation company driver provider')
-                        .lean();
+        res.status(201).json({ message: 'Booking created successfully', booking: newBooking });
 
-                    if (populatedBooking) {
-                        io.emit("newChanges", {
-                            type: 'newBooking',
-                            bookingId: newBooking._id,
-                            newBooking: populatedBooking,
-                        });
-                    }
-                } catch (err) {
-                    console.error("Failed to populate and emit:", err.message);
+        // Populate and emit separately to improve response time
+        process.nextTick(async () => {
+            try {
+                const populatedBooking = await Booking.findById(newBooking._id)
+                    .populate('baselocation company driver provider')
+                    .lean();
+
+                if (populatedBooking) {
+                    io.emit("newChanges", {
+                        type: 'newBooking',
+                        bookingId: newBooking._id,
+                        newBooking: populatedBooking,
+                    });
                 }
-            });
-        }
-
+            } catch (err) {
+                console.error("Failed to populate and emit:", err.message);
+            }
+        });
     } catch (error) {
+
         routeLogger.FATAL({
             fileNumber: bookingData.fileNumber,
             doneBy: req.user || 'unknown'
@@ -203,6 +188,7 @@ exports.createBooking = async (req, res) => {
         });
     }
 };
+
 // Controller to create a booking for showroom and showroom staff dashboard
 exports.addBookingForShowroom = async (req, res) => {
     let bookingData = req.body;
@@ -568,7 +554,7 @@ exports.getAllBookings = async (req, res) => {
             verified,
             staffId,
             all = false,
-            includeScheduled = false // New parameter to include scheduled bookings
+            hasPickupDate // Add this parameter to filter by pickupDate
         } = req.query;
 
         // Convert page and limit to integers
@@ -577,17 +563,30 @@ exports.getAllBookings = async (req, res) => {
 
         const query = {};
 
-         // Filter by status - exclude scheduled bookings by default
-        if (status) {
-            if (Array.isArray(status)) {
-                query.status = { $in: status };
-            } else {
-                query.status = status;
+        // CRITICAL: Check and update bookings where pickupDate has been reached
+        await updateScheduledBookings();
+
+        // Handle pickupDate filter
+        if (hasPickupDate === 'true') {
+            query.pickupDate = { $exists: true, $ne: null };
+            // Optionally filter by status for scheduled bookings
+            if (!status) {
+                query.status = 'Scheduled';
             }
-        } else if (!includeScheduled) {
-            // Exclude scheduled bookings unless explicitly requested
-            query.status = { $ne: 'scheduled' };
+        } else if (hasPickupDate === 'false') {
+            query.pickupDate = { $exists: false };
         }
+
+       // In your getAllBookings function, modify the status handling:
+if (req.query.onlyScheduled === 'true') {
+    query.status = 'Scheduled';
+} else if (status) {
+    if (Array.isArray(status)) {
+        query.status = { $nin: status }
+    } else {
+        query.status = { $ne: status }
+    }
+}
 
         // If driverId as query then fetch drivers bookings
         if (driverId) {
@@ -617,19 +616,18 @@ exports.getAllBookings = async (req, res) => {
 
         //----------------------------------------
         if (staffId) {
-            const staffObjectId = new mongoose.Types.ObjectId(staffId);
             query.$and = [
                 {
                     $or: [
                         {
                             $and: [
-                                { receivedUserId: staffObjectId },
+                                { receivedUserId: new mongoose.Types.ObjectId(staffId) },
                                 { receivedUser: 'Staff' }
                             ]
                         },
                         {
                             $and: [
-                                { previousReceivedUserId: staffObjectId },
+                                { previousReceivedUserId: new mongoose.Types.ObjectId(staffId) },
                                 { previousReceivedUser: 'Staff' }
                             ]
                         }
@@ -694,46 +692,6 @@ exports.getAllBookings = async (req, res) => {
                 $gte: startOfDay,
                 $lte: endOfDay
             };
-        }
-
-        // Calculate advanceToCollectFromStaff separately
-        let advanceToCollectFromStaff = 0;
-        if (staffId && forStaffReport) {
-            const staffObjectId = new mongoose.Types.ObjectId(staffId);
-            
-            // Create date filter for advance calculation
-            const advanceDateFilter = {};
-            if (startDate && endingDate) {
-                const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
-                const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
-                advanceDateFilter.createdAt = { $gte: startOfDay, $lte: endOfDay };
-            }
-
-            const advanceResult = await ReceivedDetails.aggregate([
-                {
-                    $match: {
-                        fileNumber: "Advance Deduction",
-                        receivedUserId: staffObjectId,
-                        receivedUser: "Staff",
-                        ...advanceDateFilter
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        total: { 
-                            $sum: { 
-                                $subtract: [
-                                    { $ifNull: ["$receivedAmount", 0] }, 
-                                    { $ifNull: ["$givenAmountByStaff", 0] }
-                                ] 
-                            } 
-                        }
-                    }
-                }
-            ]);
-
-            advanceToCollectFromStaff = advanceResult[0]?.total || 0;
         }
 
         // Pagination and sorting by createdAt in descending order
@@ -983,6 +941,60 @@ exports.getAllBookings = async (req, res) => {
                                     : forShowroomReport
                                         ? "$showroomAmount"
                                         : "$totalAmount"
+                    },
+                    advanceData: {
+                        $push: {
+                            $cond: [
+                                {
+                                    $or: [
+                                        {
+                                            $and: [
+                                                { $eq: ["$receivedUser", "Staff"] },
+                                                { $eq: ["$fileNumber", "Advance Deduction"] },
+                                                staffId ? { $eq: ["$receivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                            ]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$previousReceivedUser", "Staff"] },
+                                                { $eq: ["$fileNumber", "Advance Deduction"] },
+                                                staffId ? { $eq: ["$previousReceivedUserId", new mongoose.Types.ObjectId(staffId)] } : true
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    receivedAmount: { $toDouble: "$receivedAmount" },
+                                    givenAmountByStaff: { $toDouble: "$givenAmountByStaff" }
+                                },
+                                null
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    totalCollected: 1,
+                    totalOverall: 1,
+                    advanceToCollectFromStaff: {
+                        $let: {
+                            vars: {
+                                advanceItems: {
+                                    $filter: {
+                                        input: "$advanceData",
+                                        as: "item",
+                                        cond: { $ne: ["$$item", null] }
+                                    }
+                                }
+                            },
+                            in: {
+                                $subtract: [
+                                    { $sum: "$$advanceItems.receivedAmount" },
+                                    { $sum: "$$advanceItems.givenAmountByStaff" }
+                                ]
+                            }
+                        }
                     }
                 }
             }
@@ -1011,6 +1023,7 @@ exports.getAllBookings = async (req, res) => {
         // Extract financial data from aggregation result
         const totalCollectedAmount = aggregationResult[0]?.totalCollected || 0;
         const overallAmount = aggregationResult[0]?.totalOverall || 0;
+        const advanceToCollectFromStaff = aggregationResult[0]?.advanceToCollectFromStaff || 0;
         let balanceAmountToCollect = overallAmount - totalCollectedAmount;
         balanceAmountToCollect += aggregationResult2[0]?.totalPartialAmount || 0
 
@@ -1045,26 +1058,134 @@ exports.getAllBookings = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching bookings' });
     }
 };
-// Get only scheduled bookings
-exports.getScheduledBookings = async (req, res) => {
+
+// Helper function to update scheduled bookings when pickupDate is reached
+async function updateScheduledBookings() {
     try {
-        const { page = 1, limit = 10 } = req.query;
-        
-        const query = { status: 'scheduled', isScheduled: true };
+        const now = new Date();
+        const result = await Booking.updateMany(
+            {
+                status: 'Scheduled',
+                pickupDate: { $lte: now }
+            },
+            {
+                $set: {
+                    status: 'Booking Added',
+                    activatedAt: now
+                }
+            }
+        );
+
+        if (result.modifiedCount > 0) {
+            console.log(`Updated ${result.modifiedCount} bookings from Scheduled to Booking Added`);
+            
+            // Emit socket event for real-time updates
+            const updatedBookings = await Booking.find({
+                status: 'Booking Added',
+                activatedAt: { $gte: new Date(now.getTime() - 1000) } // Bookings updated in the last second
+            }).populate('baselocation company driver provider').lean();
+
+            updatedBookings.forEach(booking => {
+                io.emit("bookingActivated", {
+                    type: 'bookingActivated',
+                    bookingId: booking._id,
+                    booking: booking
+                });
+            });
+        }
+    } catch (error) {
+        console.error('Error updating scheduled bookings:', error);
+    }
+}
+// ------------------------------------------------------------------------------------
+// Add this to your backend controller file
+// Add this to your booking controller
+// Add this to your booking controller
+exports.getScheduledBookings = async (req, res) => {
+    const routeLogger = LoggerFactory.createChildLogger({
+        route: '/booking/scheduled',
+        handler: 'getScheduledBookings',
+    });
+    
+    try {
+        let {
+            search,
+            page = 1,
+            limit = 10,
+            all = false
+        } = req.query;
+
+        // Convert page and limit to integers
+        page = all ? 1 : parseInt(page, 10);
+        limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
+
+        // CRITICAL: Check and update bookings where pickupDate has been reached
+        await updateScheduledBookings();
+
+        // Query specifically for Scheduled bookings
+        const query = { status: 'Scheduled' };
+
+        // Handle search
+        if (search) {
+            query._includeHidden = true;
+            const searchQuery = search.trim();
+            const regex = new RegExp(searchQuery, 'i');
+            
+            const searchConditions = [
+                { fileNumber: regex },
+                { mob1: regex },
+                { customerVehicleNumber: regex },
+            ];
+
+            const [matchingDrivers, matchingProviders, matchingCompanies, matchingShowrooms] = await Promise.all([
+                Driver.find({ name: regex }).select('_id').lean(),
+                Provider.find({ name: regex }).select('_id').lean(),
+                Company.find({ name: regex }).select('_id').lean(),
+                Showroom.find({ name: regex }).select('_id').lean()
+            ]);
+
+            if (matchingDrivers.length > 0) {
+                searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
+            }
+            if (matchingProviders.length > 0) {
+                searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
+            }
+            if (matchingCompanies.length > 0) {
+                searchConditions.push({ company: { $in: matchingCompanies.map(c => c._id) } });
+            }
+            if (matchingShowrooms.length > 0) {
+                searchConditions.push({ showroom: { $in: matchingShowrooms.map(c => c._id) } });
+            }
+
+            query.$or = searchConditions;
+        }
+
+        // Pagination and sorting
         const total = await Booking.countDocuments(query);
-        
-        const bookings = await Booking.find(query)
-            .populate('baselocation company driver provider')
-            .skip((page - 1) * limit)
-            .limit(parseInt(limit))
-            .sort({ pickupDate: 1 })
+        let bookings = await Booking.find(query)
+            .populate('baselocation')
+            .populate('showroom')
+            .populate('serviceType')
+            .populate('company')
+            .populate('driver')
+            .populate('provider')
+            .populate('receivedUserId')
+            .populate('previousReceivedUserId')
+            .skip(all ? 0 : (page - 1) * limit)
+            .limit(limit)
+            .sort({ createdAt: -1 })
             .lean();
 
-        res.status(200).json({
+        routeLogger.info({
+            doneBy: req.user || 'unknown',
+            count: bookings.length
+        }, 'Scheduled bookings fetch success.');
+
+        return res.status(200).json({
             total,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalPages: Math.ceil(total / limit),
+            page: all ? 1 : page,
+            limit: all ? total : limit,
+            totalPages: all ? 1 : Math.ceil(total / limit),
             bookings
         });
     } catch (error) {
@@ -1072,7 +1193,6 @@ exports.getScheduledBookings = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching scheduled bookings' });
     }
 };
-// -----------------push some che----------------
 exports.getBookingStats = async (req, res) => {
   const routeLogger = LoggerFactory.createChildLogger({
     route: '/booking/stats',
