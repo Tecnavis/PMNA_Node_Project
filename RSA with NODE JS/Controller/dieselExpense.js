@@ -112,8 +112,14 @@ exports.getAllExpenses = async (req, res) => {
         
         if (all === 'true') {
             expenses = await DieselExpense.find(query)
-                .sort({ createdAt: -1 }) // latest first
-                .populate('driver');
+                .sort({ createdAt: -1 })
+                .populate('driver')
+                .lean(); // Convert to plain objects
+            
+            // Filter out any null or invalid documents
+            expenses = expenses.filter(expense => 
+                expense && expense._id && typeof expense._id === 'object'
+            );
             totalCount = expenses.length;
         } else {
             const pageNumber = parseInt(page);
@@ -125,7 +131,13 @@ exports.getAllExpenses = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limitNumber)
-                .populate('driver');
+                .populate('driver')
+                .lean(); // Convert to plain objects
+            
+            // Filter out any null or invalid documents
+            expenses = expenses.filter(expense => 
+                expense && expense._id && typeof expense._id === 'object'
+            );
         }
 
         res.status(200).json({ 
@@ -136,7 +148,11 @@ exports.getAllExpenses = async (req, res) => {
             totalPages: all === 'true' ? 1 : Math.ceil(totalCount / limit)
         });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error('Error fetching diesel expenses:', error);
+        res.status(500).json({ 
+            message: 'Server error', 
+            error: error.message 
+        });
     }
 };
 // Get single expense by ID

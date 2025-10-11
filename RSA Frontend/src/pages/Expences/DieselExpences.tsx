@@ -79,23 +79,13 @@ const DieselExpenses = () => {
         showAll
       );
       
-      // Filter out any null or invalid expenses before setting state
-    const validExpenses = response.data.filter(expense => 
-      expense && expense._id && typeof expense._id === 'string'
-    );
-    
-    setExpenses(validExpenses);
-    setTotalPages(response.totalPages);
-    setTotalItems(response.total);
+      setExpenses(response.data);
+      setTotalPages(response.totalPages);
+      setTotalItems(response.total);
 
-    // Only set kmInputValues for valid expenses
-    const validKmInputs: Record<string, string | number> = {};
-    validExpenses.forEach((expense) => {
-      if (expense && expense._id) {
-        validKmInputs[expense._id] = expense.expenceKm || '';
-      }
-    });
-    setkmInputValues(validKmInputs);
+      response.data.forEach((expense) => {
+        setkmInputValues((prev) => ({ ...prev, [expense._id]: expense.expenceKm }))
+      })
 
     } catch (error) {
       console.error('Error fetching expenses:', error);
