@@ -478,27 +478,6 @@ const fetchStaffReceivedDetails = async () => {
         return balance; // Always return a string
     };
 
-    // const handleUpdateAmount = async (id: string) => {
-    //     const updatingBooking = bookings.filter((booking) => booking._id === id)
-    //     const givenAmountByStaff = inputValues[id]
-
-    //     if (!givenAmountByStaff || givenAmountByStaff <= 0) return;
-
-    //     if ((updatingBooking.receivedAmountStaff - updatingBooking.givenAmountByStaff) === 0) {
-    //         Swal.fire('Error!', 'Full amount receved successfully.', 'error');
-    //     }
-
-    //     try {
-    //         const res = await axios.patch(`${BASE_URL}/booking/sattle-amount/${id}`, { givenAmountByStaff });
-    //         fetchBookings();
-    //         Swal.fire('Balance!', 'The booking balance amount updated.', 'success');
-    //     } catch (error) {
-    //         console.error('Error updatebalnce amount:', error);
-    //         Swal.fire('Error!', 'Failed to update balance amount in booking.', 'error');
-    //     }
-    // }
-
-
     // Calculate the total selected bookings
     const calculateTotalSelectedBalance = () => {
         let totalBalances = 0;
@@ -542,11 +521,7 @@ const fetchStaffReceivedDetails = async () => {
     useEffect(() => {
         const updatedValues: Record<string, number> = {};
         bookings.forEach((booking) => {
-            // updatedValues[booking._id] = calculateBalance(
-            //     parseFloat(booking.receivedAmountStaff?.toString() || "0"),
-            //     booking.givenAmountByStaff,
-            //     booking.receivedUser
-            // );
+           
             updatedValues[booking._id] = booking.givenAmountByStaff;
         });
         setInputValues(updatedValues);

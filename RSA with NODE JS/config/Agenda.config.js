@@ -1,3 +1,4 @@
+// Agenda.config.js
 const Agenda = require('agenda');
 const activateBooking = require('../jobs/bookingJobs/activateBooking');
 const initAgenda = async () => {
