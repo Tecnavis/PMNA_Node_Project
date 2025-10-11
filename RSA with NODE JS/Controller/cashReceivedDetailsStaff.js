@@ -58,10 +58,19 @@ exports.createReceivedDetailsStaff = async (req, res) => {
       $or: [
         { 
           cashPending: false,
-          $or: [
-            { receivedUser: 'Staff', receivedUserId: staffId },
-            { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-          ],
+          receivedUser: 'Staff',
+          receivedUserId: staffId, // Specific staff ID
+          $expr: {
+            $gt: [
+              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              0
+            ]
+          }
+        },
+        { 
+          cashPending: false,
+          previousReceivedUser: 'Staff',
+          previousReceivedUserId: staffId, // Specific staff ID
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -72,10 +81,20 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         { 
           cashPending: true,
           partialPayment: true,
-          $or: [
-            { receivedUser: 'Staff', receivedUserId: staffId },
-            { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-          ],
+          receivedUser: 'Staff',
+          receivedUserId: staffId, // Specific staff ID
+          $expr: {
+            $gt: [
+              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              0
+            ]
+          }
+        },
+        { 
+          cashPending: true,
+          partialPayment: true,
+          previousReceivedUser: 'Staff',
+          previousReceivedUserId: staffId, // Specific staff ID
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -86,7 +105,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
       ]
     }).session(session);
 
-    console.log(`Found ${bookingCount} eligible bookings`);
+    console.log(`Found ${bookingCount} eligible bookings for staff ${staffId}`);
 
     // Strategy selection based on dataset size
     if (bookingCount > 1000) {
@@ -187,10 +206,19 @@ async function processLargeDataset(staffId, remainingAmount, session, selectedBo
       $or: [
         { 
           cashPending: false,
-          $or: [
-            { receivedUser: 'Staff', receivedUserId: staffId },
-            { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-          ],
+          receivedUser: 'Staff',
+          receivedUserId: staffId,
+          $expr: {
+            $gt: [
+              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              0
+            ]
+          }
+        },
+        { 
+          cashPending: false,
+          previousReceivedUser: 'Staff',
+          previousReceivedUserId: staffId,
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -201,10 +229,20 @@ async function processLargeDataset(staffId, remainingAmount, session, selectedBo
         { 
           cashPending: true,
           partialPayment: true,
-          $or: [
-            { receivedUser: 'Staff', receivedUserId: staffId },
-            { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-          ],
+          receivedUser: 'Staff',
+          receivedUserId: staffId,
+          $expr: {
+            $gt: [
+              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+              0
+            ]
+          }
+        },
+        { 
+          cashPending: true,
+          partialPayment: true,
+          previousReceivedUser: 'Staff',
+          previousReceivedUserId: staffId,
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -259,10 +297,19 @@ async function processSmallDataset(staffId, remainingAmount, session, selectedBo
     $or: [
       { 
         cashPending: false,
-        $or: [
-          { receivedUser: 'Staff', receivedUserId: staffId },
-          { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-        ],
+        receivedUser: 'Staff',
+        receivedUserId: staffId,
+        $expr: {
+          $gt: [
+            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+            0
+          ]
+        }
+      },
+      { 
+        cashPending: false,
+        previousReceivedUser: 'Staff',
+        previousReceivedUserId: staffId,
         $expr: {
           $gt: [
             { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -273,10 +320,20 @@ async function processSmallDataset(staffId, remainingAmount, session, selectedBo
       { 
         cashPending: true,
         partialPayment: true,
-        $or: [
-          { receivedUser: 'Staff', receivedUserId: staffId },
-          { previousReceivedUser: 'Staff', previousReceivedUserId: staffId }
-        ],
+        receivedUser: 'Staff',
+        receivedUserId: staffId,
+        $expr: {
+          $gt: [
+            { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
+            0
+          ]
+        }
+      },
+      { 
+        cashPending: true,
+        partialPayment: true,
+        previousReceivedUser: 'Staff',
+        previousReceivedUserId: staffId,
         $expr: {
           $gt: [
             { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -317,9 +374,8 @@ async function processAdvanceDeduction(staffId, remainingAmount, session) {
   
   const advanceRecords = await ReceivedDetails.find({
     fileNumber: "Advance Deduction",
-    $or: [
-      { receivedUser: 'Staff', receivedUserId: staffId },
-    ],
+    receivedUser: 'Staff',
+    receivedUserId: staffId, // Specific staff ID
     $expr: {
       $gt: [
         { $subtract: ["$receivedAmount", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -337,7 +393,7 @@ async function processAdvanceDeduction(staffId, remainingAmount, session) {
     if (allocatableAmount > 0) {
       const amountToDeduct = Math.min(remainingAmount, allocatableAmount);
       
-      record.givenAmountByStaff = amountToDeduct;
+      record.givenAmountByStaff = (record.givenAmountByStaff || 0) + amountToDeduct;
       totalDeducted += amountToDeduct;
       remainingAmount -= amountToDeduct;
       
