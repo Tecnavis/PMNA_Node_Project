@@ -51,7 +51,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
     const selectedBookingIds = [];
     const appliedAmounts = [];
 
-    // ===== FIXED: PROPERLY FILTER BY STAFF ID IN ALL CONDITIONS =====
+    // ===== FIXED QUERY - ONLY SPECIFIC STAFF'S BOOKINGS =====
     const baseQuery = {
       status: 'Order Completed',
       workType: 'PaymentWork',
@@ -59,7 +59,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         { 
           cashPending: false,
           receivedUser: 'Staff',
-          receivedUserId: staffId, // Specific staff ID
+          receivedUserId: new mongoose.Types.ObjectId(staffId), // Ensure proper ObjectId
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -70,7 +70,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
         { 
           cashPending: false,
           previousReceivedUser: 'Staff',
-          previousReceivedUserId: staffId, // Specific staff ID
+          previousReceivedUserId: new mongoose.Types.ObjectId(staffId), // Ensure proper ObjectId
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -82,7 +82,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
           cashPending: true,
           partialPayment: true,
           receivedUser: 'Staff',
-          receivedUserId: staffId, // Specific staff ID
+          receivedUserId: new mongoose.Types.ObjectId(staffId), // Ensure proper ObjectId
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -94,7 +94,7 @@ exports.createReceivedDetailsStaff = async (req, res) => {
           cashPending: true,
           partialPayment: true,
           previousReceivedUser: 'Staff',
-          previousReceivedUserId: staffId, // Specific staff ID
+          previousReceivedUserId: new mongoose.Types.ObjectId(staffId), // Ensure proper ObjectId
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -105,29 +105,38 @@ exports.createReceivedDetailsStaff = async (req, res) => {
       ]
     };
 
+    console.log('Base Query:', JSON.stringify(baseQuery, null, 2));
+    
     const bookingCount = await Booking.countDocuments(baseQuery).session(session);
     console.log(`Found ${bookingCount} eligible bookings for staff ${staffId}`);
 
+    // ===== FIXED: PASS BY REFERENCE USING OBJECT =====
+    const amountTracker = { remaining: remainingAmount };
+    
     // Strategy selection based on dataset size
     if (bookingCount > 1000) {
       // LARGE DATASET: Use cursor with batch processing
-      await processLargeDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts, baseQuery);
+      await processLargeDataset(staffId, amountTracker, session, selectedBookingIds, appliedAmounts, baseQuery);
     } else {
       // SMALL DATASET: Use regular find with sorting
-      await processSmallDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts, baseQuery);
+      await processSmallDataset(staffId, amountTracker, session, selectedBookingIds, appliedAmounts, baseQuery);
     }
 
-    // Update remaining amount after processing
+    // Update remaining amount from tracker
+    remainingAmount = amountTracker.remaining;
     const totalApplied = appliedAmounts.reduce((sum, amount) => sum + amount, 0);
-    remainingAmount -= totalApplied;
+
+    console.log(`After booking processing - Applied: ${totalApplied}, Remaining: ${remainingAmount}`);
 
     // ===== ADVANCE DEDUCTION (if remaining) =====
     let advanceDeductionApplied = 0;
     if (remainingAmount > 0) {
+      console.log(`Processing advance deduction for remaining: ${remainingAmount}`);
       advanceDeductionApplied = await processAdvanceDeduction(
         staffId, remainingAmount, session
       );
       remainingAmount -= advanceDeductionApplied;
+      console.log(`After advance deduction - Applied: ${advanceDeductionApplied}, Remaining: ${remainingAmount}`);
     }
 
     // ===== CREATE CASH COLLECTION RECORD =====
@@ -192,15 +201,17 @@ exports.createReceivedDetailsStaff = async (req, res) => {
   }
 };
 
-// ===== UPDATED PROCESSING FUNCTIONS =====
+// ===== UPDATED PROCESSING FUNCTIONS - USING OBJECT REFERENCE =====
 
 // For large datasets (>1000 records)
-async function processLargeDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts, baseQuery) {
+async function processLargeDataset(staffId, amountTracker, session, selectedBookingIds, appliedAmounts, baseQuery) {
   const batchSize = 500;
   let skip = 0;
   let hasMore = true;
 
-  while (hasMore && remainingAmount > 0) {
+  console.log(`Processing large dataset for staff ${staffId}, initial remaining: ${amountTracker.remaining}`);
+
+  while (hasMore && amountTracker.remaining > 0) {
     const bookings = await Booking.find(baseQuery)
       .sort({ createdAt: 1 })
       .skip(skip)
@@ -213,12 +224,14 @@ async function processLargeDataset(staffId, remainingAmount, session, selectedBo
     }
 
     for (const booking of bookings) {
-      if (remainingAmount <= 0) break;
+      if (amountTracker.remaining <= 0) break;
 
       const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
       
       if (allocatableAmount > 0) {
-        const amountToApply = Math.min(remainingAmount, allocatableAmount);
+        const amountToApply = Math.min(amountTracker.remaining, allocatableAmount);
+        
+        console.log(`Applying ${amountToApply} to booking ${booking._id}, allocatable: ${allocatableAmount}`);
         
         // Update booking
         booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
@@ -227,31 +240,39 @@ async function processLargeDataset(staffId, remainingAmount, session, selectedBo
           booking.receivedAmount = booking.totalAmount;
         }
         
-        remainingAmount -= amountToApply;
+        amountTracker.remaining -= amountToApply;
         selectedBookingIds.push(booking._id);
         appliedAmounts.push(amountToApply);
         
         await booking.save({ session });
+        
+        console.log(`Booking ${booking._id} updated. New remaining: ${amountTracker.remaining}`);
       }
     }
 
     skip += batchSize;
   }
+  
+  console.log(`Large dataset processing complete. Final remaining: ${amountTracker.remaining}`);
 }
 
 // For small datasets (≤1000 records)
-async function processSmallDataset(staffId, remainingAmount, session, selectedBookingIds, appliedAmounts, baseQuery) {
+async function processSmallDataset(staffId, amountTracker, session, selectedBookingIds, appliedAmounts, baseQuery) {
   const bookings = await Booking.find(baseQuery)
     .sort({ createdAt: 1 })
     .session(session);
 
+  console.log(`Processing small dataset for staff ${staffId}, found ${bookings.length} bookings, initial remaining: ${amountTracker.remaining}`);
+
   for (const booking of bookings) {
-    if (remainingAmount <= 0) break;
+    if (amountTracker.remaining <= 0) break;
 
     const allocatableAmount = booking.receivedAmountStaff - (booking.givenAmountByStaff || 0);
     
     if (allocatableAmount > 0) {
-      const amountToApply = Math.min(remainingAmount, allocatableAmount);
+      const amountToApply = Math.min(amountTracker.remaining, allocatableAmount);
+      
+      console.log(`Applying ${amountToApply} to booking ${booking._id}, allocatable: ${allocatableAmount}`);
       
       booking.givenAmountByStaff = (booking.givenAmountByStaff || 0) + amountToApply;
       
@@ -259,22 +280,28 @@ async function processSmallDataset(staffId, remainingAmount, session, selectedBo
         booking.receivedAmount = booking.totalAmount;
       }
       
-      remainingAmount -= amountToApply;
+      amountTracker.remaining -= amountToApply;
       selectedBookingIds.push(booking._id);
       appliedAmounts.push(amountToApply);
       
       await booking.save({ session });
+      
+      console.log(`Booking ${booking._id} updated. New remaining: ${amountTracker.remaining}`);
     }
   }
+  
+  console.log(`Small dataset processing complete. Final remaining: ${amountTracker.remaining}`);
 }
 
 async function processAdvanceDeduction(staffId, remainingAmount, session) {
   let totalDeducted = 0;
   
+  console.log(`Looking for advance records for staff ${staffId}`);
+  
   const advanceRecords = await ReceivedDetails.find({
     fileNumber: "Advance Deduction",
     receivedUser: 'Staff',
-    receivedUserId: staffId, // Specific staff ID
+    receivedUserId: new mongoose.Types.ObjectId(staffId), // Specific staff ID
     $expr: {
       $gt: [
         { $subtract: ["$receivedAmount", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -285,12 +312,16 @@ async function processAdvanceDeduction(staffId, remainingAmount, session) {
   .sort({ createdAt: 1 })
   .session(session);
 
+  console.log(`Found ${advanceRecords.length} advance records`);
+
   for (const record of advanceRecords) {
     if (remainingAmount <= 0) break;
     
     const allocatableAmount = record.receivedAmount - (record.givenAmountByStaff || 0);
     if (allocatableAmount > 0) {
       const amountToDeduct = Math.min(remainingAmount, allocatableAmount);
+      
+      console.log(`Deducting ${amountToDeduct} from advance record ${record._id}`);
       
       record.givenAmountByStaff = (record.givenAmountByStaff || 0) + amountToDeduct;
       totalDeducted += amountToDeduct;
