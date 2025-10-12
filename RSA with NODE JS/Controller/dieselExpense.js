@@ -111,14 +111,21 @@ exports.getAllExpenses = async (req, res) => {
         let totalCount;
         
         if (all === 'true') {
-            expenses = await DieselExpense.find(query)
+            // Use find with proper filtering to exclude null documents
+            expenses = await DieselExpense.find({ 
+                ...query,
+                _id: { $exists: true, $ne: null }
+            })
                 .sort({ createdAt: -1 })
                 .populate('driver')
-                .lean(); // Convert to plain objects
+                .lean();
             
-            // Filter out any null or invalid documents
+            // Additional client-side filtering for safety
             expenses = expenses.filter(expense => 
-                expense && expense._id && typeof expense._id === 'object'
+                expense && 
+                expense._id && 
+                typeof expense._id === 'object' &&
+                expense._id.toString
             );
             totalCount = expenses.length;
         } else {
@@ -126,17 +133,25 @@ exports.getAllExpenses = async (req, res) => {
             const limitNumber = parseInt(limit);
             const skip = (pageNumber - 1) * limitNumber;
             
-            totalCount = await DieselExpense.countDocuments(query);
-            expenses = await DieselExpense.find(query)
+            totalCount = await DieselExpense.countDocuments({ 
+                ...query,
+                _id: { $exists: true, $ne: null }
+            });
+            expenses = await DieselExpense.find({ 
+                ...query,
+                _id: { $exists: true, $ne: null }
+            })
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limitNumber)
                 .populate('driver')
-                .lean(); // Convert to plain objects
+                .lean();
             
-            // Filter out any null or invalid documents
             expenses = expenses.filter(expense => 
-                expense && expense._id && typeof expense._id === 'object'
+                expense && 
+                expense._id && 
+                typeof expense._id === 'object' &&
+                expense._id.toString
             );
         }
 
