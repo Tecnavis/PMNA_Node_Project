@@ -400,157 +400,159 @@ const DieselExpenses = () => {
                 <th className="px-4 py-3 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
-              <AnimatePresence>
-                {expenses.map((expense,index) => (
-                  <motion.tr
-                    key={expense.expenseId}
-                    className="hover:bg-gray-50"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <td>{index+1}</td>
-                    <td className="px-4 py-3 font-medium w-auto">{expense.expenseId}</td>
-                    <td className="px-4 py-3">
-                      <Tooltip title={`Driver ID: ${expense.driver._id}`}>
-                        <span className="cursor-help">{expense.driver.name}</span>
-                      </Tooltip>
-                    </td>
-                    <td className="px-4 py-3 max-w-xs">
-                      <div
-                        className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
-                        onClick={() => toggleDescription(expense._id)}
-                      >
-                        {expense.vehicleNumber}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 max-w-xs">
-                      <div
-                        className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
-                        onClick={() => toggleDescription(expense._id)}
-                      >
-                        {expense.description}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 max-w-xs">
-                      <div
-                        className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
-                        onClick={() => toggleDescription(expense._id)}
-                      >
-                        <input
-                          type="number"
-                          readOnly={[ROLES.ADMIN].includes(role) ? false : true}
-                          className='w-20 border py-1 px-2 rounded-md mr-1 border-gray-500 m-auto'
-                          value={kmInputValues[expense._id]}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChangeInputField(e.target.value, expense._id)}
-                        />
-                        {[ROLES.ADMIN].includes(role) && (
-                          <button
-                            className='bg-green-500 text-white rounded-md px-1 py-1'
-                            onClick={() => showConfirmationToast("Are you sure you want to update the kilometers?", () => handleUpdateKm(expense._id))}
-                          >
-                            Update
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-green-700">₹{expense.amount.toLocaleString()}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2 items-center -space-x-4">
-                        {expense.images.slice(0, 2).map((img, idx) => (
-                          <motion.div
-                            key={idx}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <img
-                              src={`${CLOUD_IMAGE}${img}`}
-                              alt={`Expense ${idx + 1}`}
-                              className=" shadow-sm cursor-pointer relative inline-block h-12 w-20 rounded-full border-2 border-white object-cover object-center hover:z-10 focus:z-10"
-                              onClick={() => openImageModal(`${CLOUD_IMAGE}${img}`, idx)}
-                            />
-                          </motion.div>
-                        ))}
-                        {expense.images.length > 2 && (
-                          <motion.div
-                            className="w-16 h-16 bg-indigo-100 rounded-lg flex items-center justify-center cursor-pointer"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.images[0]}`)}
-                          >
-                            <span className="text-indigo-600 font-medium">
-                              +{expense.images.length - 2}
-                            </span>
-                          </motion.div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {`${dateFormate(expense.createdAt)}, ${formattedTime(expense.createdAt)}`}
-                    </td>
-                    <td className="px-4 py-3">
-                      <motion.span
-                        className={`text-xs px-3 py-1 rounded-full font-medium ${expense.status === 'Approved' ?
-                          'bg-green-100 text-green-700' :
-                          expense.status === 'Rejected' ?
-                            'bg-red-100 text-red-700' :
-                            'bg-yellow-100 text-yellow-700'
-                          }`}
-                        initial={{ scale: 0.9 }}
-                        animate={{ scale: 1 }}
-                      >
-                        {expense.status}
-                      </motion.span>
-                    </td>
-                    <td className="px-4 py-3 mt-3 flex items-center justify-center gap-2">
-                      {/* Approve Button */}
-                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        <Button
-                          onClick={() => showConfirmationToast(
-                            "Are you sure you want to approve this expance.",
-                            () => handleStatusUpdate(expense._id, 'Approved')
-                          )}
-                          disabled={expense.status === 'Approved' || actionLoading[expense._id]}
-                          className={`${expense.status === 'Approved'
-                            ? 'bg-gray-300 cursor-not-allowed'
-                            : 'bg-green-600 hover:bg-green-700'
-                            } text-white px-3 py-1 rounded-lg flex items-center gap-1`}
-                        >
-                          {actionLoading[expense._id] ? (
-                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                          ) : (
-                            <Check size={16} />
-                          )}
-                        </Button>
-                      </motion.div>
+          <tbody className="divide-y divide-gray-200">
+  <AnimatePresence>
+    {expenses.map((expense, index) => (
+      expense && expense._id ? (
+        <motion.tr
+          key={expense._id.toString()}
+          className="hover:bg-gray-50"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          <td>{index + 1}</td>
+          <td className="px-4 py-3 font-medium w-auto">{expense.expenseId}</td>
+          <td className="px-4 py-3">
+            <Tooltip title={`Driver ID: ${expense.driver?._id || 'N/A'}`}>
+              <span className="cursor-help">{expense.driver?.name || 'Unknown Driver'}</span>
+            </Tooltip>
+          </td>
+          <td className="px-4 py-3 max-w-xs">
+            <div
+              className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
+              onClick={() => toggleDescription(expense._id)}
+            >
+              {expense.vehicleNumber}
+            </div>
+          </td>
+          <td className="px-4 py-3 max-w-xs">
+            <div
+              className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
+              onClick={() => toggleDescription(expense._id)}
+            >
+              {expense.description}
+            </div>
+          </td>
+          <td className="px-4 py-3 max-w-xs">
+            <div
+              className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
+              onClick={() => toggleDescription(expense._id)}
+            >
+              <input
+                type="number"
+                readOnly={[ROLES.ADMIN].includes(role) ? false : true}
+                className='w-20 border py-1 px-2 rounded-md mr-1 border-gray-500 m-auto'
+                value={kmInputValues[expense._id]}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChangeInputField(e.target.value, expense._id)}
+              />
+              {[ROLES.ADMIN].includes(role) && (
+                <button
+                  className='bg-green-500 text-white rounded-md px-1 py-1'
+                  onClick={() => showConfirmationToast("Are you sure you want to update the kilometers?", () => handleUpdateKm(expense._id))}
+                >
+                  Update
+                </button>
+              )}
+            </div>
+          </td>
+          <td className="px-4 py-3 font-semibold text-green-700">₹{expense.amount?.toLocaleString() || '0'}</td>
+          <td className="px-4 py-3">
+            <div className="flex gap-2 items-center -space-x-4">
+              {expense.images?.slice(0, 2).map((img, idx) => (
+                <motion.div
+                  key={idx}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <img
+                    src={`${CLOUD_IMAGE}${img}`}
+                    alt={`Expense ${idx + 1}`}
+                    className=" shadow-sm cursor-pointer relative inline-block h-12 w-20 rounded-full border-2 border-white object-cover object-center hover:z-10 focus:z-10"
+                    onClick={() => openImageModal(`${CLOUD_IMAGE}${img}`, idx)}
+                  />
+                </motion.div>
+              ))}
+              {expense.images && expense.images.length > 2 && (
+                <motion.div
+                  className="w-16 h-16 bg-indigo-100 rounded-lg flex items-center justify-center cursor-pointer"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.images[0]}`)}
+                >
+                  <span className="text-indigo-600 font-medium">
+                    +{expense.images.length - 2}
+                  </span>
+                </motion.div>
+              )}
+            </div>
+          </td>
+          <td className="px-4 py-3 whitespace-nowrap">
+            {`${dateFormate(expense.createdAt)}, ${formattedTime(expense.createdAt)}`}
+          </td>
+          <td className="px-4 py-3">
+            <motion.span
+              className={`text-xs px-3 py-1 rounded-full font-medium ${expense.status === 'Approved' ?
+                'bg-green-100 text-green-700' :
+                expense.status === 'Rejected' ?
+                  'bg-red-100 text-red-700' :
+                  'bg-yellow-100 text-yellow-700'
+                }`}
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+            >
+              {expense.status}
+            </motion.span>
+          </td>
+          <td className="px-4 py-3 mt-3 flex items-center justify-center gap-2">
+            {/* Approve Button */}
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <Button
+                onClick={() => showConfirmationToast(
+                  "Are you sure you want to approve this expance.",
+                  () => handleStatusUpdate(expense._id, 'Approved')
+                )}
+                disabled={expense.status === 'Approved' || actionLoading[expense._id]}
+                className={`${expense.status === 'Approved'
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700'
+                  } text-white px-3 py-1 rounded-lg flex items-center gap-1`}
+              >
+                {actionLoading[expense._id] ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <Check size={16} />
+                )}
+              </Button>
+            </motion.div>
 
-                      {/* Reject Button */}
-                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                        <Button
-                          onClick={() => showConfirmationToast(
-                            "Are you sure you want to reject this expance.?",
-                            () => handleStatusUpdate(expense._id, 'Rejected')
-                          )}
-                          disabled={expense.status === 'Rejected' || actionLoading[expense._id]}
-                          className={`${expense.status === 'Rejected'
-                            ? 'bg-gray-300 cursor-not-allowed'
-                            : 'bg-red-600 hover:bg-red-700'
-                            } text-white px-3 py-1 rounded-lg flex items-center gap-1`}
-                        >
-                          {actionLoading[expense._id] ? (
-                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                          ) : (
-                            <X size={16} />
-                          )}
-                        </Button>
-                      </motion.div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-            </tbody>
+            {/* Reject Button */}
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+              <Button
+                onClick={() => showConfirmationToast(
+                  "Are you sure you want to reject this expance.?",
+                  () => handleStatusUpdate(expense._id, 'Rejected')
+                )}
+                disabled={expense.status === 'Rejected' || actionLoading[expense._id]}
+                className={`${expense.status === 'Rejected'
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-700'
+                  } text-white px-3 py-1 rounded-lg flex items-center gap-1`}
+              >
+                {actionLoading[expense._id] ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <X size={16} />
+                )}
+              </Button>
+            </motion.div>
+          </td>
+        </motion.tr>
+      ) : null
+    ))}
+  </AnimatePresence>
+</tbody>
           </table>
         </div>
       <PaginationControls />
