@@ -51,15 +51,28 @@ exports.createReceivedDetailsStaff = async (req, res) => {
     const selectedBookingIds = [];
     const appliedAmounts = [];
 
-    // ===== FIXED QUERY - ONLY SPECIFIC STAFF'S BOOKINGS =====
+    // ===== FIXED: PROPER QUERY TO ONLY TARGET SPECIFIC STAFF'S BOOKINGS =====
+    const staffObjectId = new mongoose.Types.ObjectId(staffId);
+    
     const baseQuery = {
       status: 'Order Completed',
       workType: 'PaymentWork',
-      $or: [
-        { 
-          cashPending: false,
-          receivedUser: 'Staff',
-          receivedUserId: new mongoose.Types.ObjectId(staffId), // Ensure proper ObjectId
+      $and: [
+        {
+          // MUST BE FOR THE SPECIFIC STAFF - This is the key fix
+          $or: [
+            { 
+              receivedUser: 'Staff',
+              receivedUserId: staffObjectId
+            },
+            { 
+              previousReceivedUser: 'Staff', 
+              previousReceivedUserId: staffObjectId
+            }
+          ]
+        },
+        {
+          // MUST HAVE OUTSTANDING AMOUNT
           $expr: {
             $gt: [
               { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
@@ -67,58 +80,43 @@ exports.createReceivedDetailsStaff = async (req, res) => {
             ]
           }
         },
-        { 
-          cashPending: false,
-          previousReceivedUser: 'Staff',
-          previousReceivedUserId: new mongoose.Types.ObjectId(staffId), // Ensure proper ObjectId
-          $expr: {
-            $gt: [
-              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-              0
-            ]
-          }
-        },
-        { 
-          cashPending: true,
-          partialPayment: true,
-          receivedUser: 'Staff',
-          receivedUserId: new mongoose.Types.ObjectId(staffId), // Ensure proper ObjectId
-          $expr: {
-            $gt: [
-              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-              0
-            ]
-          }
-        },
-        { 
-          cashPending: true,
-          partialPayment: true,
-          previousReceivedUser: 'Staff',
-          previousReceivedUserId: new mongoose.Types.ObjectId(staffId), // Ensure proper ObjectId
-          $expr: {
-            $gt: [
-              { $subtract: ["$receivedAmountStaff", { $ifNull: ["$givenAmountByStaff", 0] }] },
-              0
-            ]
-          }
+        {
+          // PAYMENT STATUS CONDITIONS
+          $or: [
+            { 
+              cashPending: false
+            },
+            { 
+              cashPending: true,
+              partialPayment: true 
+            }
+          ]
         }
       ]
     };
 
-    console.log('Base Query:', JSON.stringify(baseQuery, null, 2));
+    console.log('Fixed Base Query:', JSON.stringify(baseQuery, null, 2));
     
     const bookingCount = await Booking.countDocuments(baseQuery).session(session);
     console.log(`Found ${bookingCount} eligible bookings for staff ${staffId}`);
 
-    // ===== FIXED: PASS BY REFERENCE USING OBJECT =====
+    // Test query to verify it only returns specific staff's bookings
+    const testBookings = await Booking.find(baseQuery).limit(5).session(session);
+    console.log('Sample bookings found:', testBookings.map(b => ({
+      id: b._id,
+      receivedUser: b.receivedUser,
+      receivedUserId: b.receivedUserId,
+      previousReceivedUser: b.previousReceivedUser,
+      previousReceivedUserId: b.previousReceivedUserId,
+      allocatable: b.receivedAmountStaff - (b.givenAmountByStaff || 0)
+    })));
+
     const amountTracker = { remaining: remainingAmount };
     
     // Strategy selection based on dataset size
     if (bookingCount > 1000) {
-      // LARGE DATASET: Use cursor with batch processing
       await processLargeDataset(staffId, amountTracker, session, selectedBookingIds, appliedAmounts, baseQuery);
     } else {
-      // SMALL DATASET: Use regular find with sorting
       await processSmallDataset(staffId, amountTracker, session, selectedBookingIds, appliedAmounts, baseQuery);
     }
 
@@ -201,9 +199,8 @@ exports.createReceivedDetailsStaff = async (req, res) => {
   }
 };
 
-// ===== UPDATED PROCESSING FUNCTIONS - USING OBJECT REFERENCE =====
+// ===== PROCESSING FUNCTIONS (Keep the same as your working version) =====
 
-// For large datasets (>1000 records)
 async function processLargeDataset(staffId, amountTracker, session, selectedBookingIds, appliedAmounts, baseQuery) {
   const batchSize = 500;
   let skip = 0;
@@ -256,7 +253,6 @@ async function processLargeDataset(staffId, amountTracker, session, selectedBook
   console.log(`Large dataset processing complete. Final remaining: ${amountTracker.remaining}`);
 }
 
-// For small datasets (≤1000 records)
 async function processSmallDataset(staffId, amountTracker, session, selectedBookingIds, appliedAmounts, baseQuery) {
   const bookings = await Booking.find(baseQuery)
     .sort({ createdAt: 1 })
@@ -301,7 +297,7 @@ async function processAdvanceDeduction(staffId, remainingAmount, session) {
   const advanceRecords = await ReceivedDetails.find({
     fileNumber: "Advance Deduction",
     receivedUser: 'Staff',
-    receivedUserId: new mongoose.Types.ObjectId(staffId), // Specific staff ID
+    receivedUserId: new mongoose.Types.ObjectId(staffId),
     $expr: {
       $gt: [
         { $subtract: ["$receivedAmount", { $ifNull: ["$givenAmountByStaff", 0] }] },
