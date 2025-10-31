@@ -164,3 +164,8 @@ app.use('/transactions', transactionsRouter);
 
 app.use(errorHandler);
 module.exports = app;
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ success:false, errorCode:'SERVER_ERROR' });
+});
