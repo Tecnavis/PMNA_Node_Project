@@ -107,8 +107,8 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
+// app.set('views', path.join(__dirname, 'views'));
+// -----------------------new edits.......................
 const limiter = rateLimit({
   windowMs: 10 * 1000,
   max: 100,
