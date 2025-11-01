@@ -108,7 +108,7 @@ app.get('/health', (req, res) => {
   });
 });
 // app.set('views', path.join(__dirname, 'views'));
-
+// -----------------------new edits.......................
 const limiter = rateLimit({
   windowMs: 10 * 1000,
   max: 100,
