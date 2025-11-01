@@ -417,7 +417,7 @@ cashPending:false,
             <div className="panel">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                     {/* Heading */}
-                    <h5 className="font-semibold text-lg dark:text-white-light sm:w-auto w-full text-center sm:text-left">New Booking Details.....to check issues...</h5>
+                    <h5 className="font-semibold text-lg dark:text-white-light sm:w-auto w-full text-center sm:text-left">New Booking Details</h5>
 
                     {/* Search Bar */}
                     <div className="flex-grow sm:w-auto w-full">
