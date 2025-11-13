@@ -8,7 +8,7 @@ const rateLimit = require('express-rate-limit');
 const StatusCodes = require('http-status-codes');
 
 var setupAgendaJobs = require('./config/Agenda.config.js')
-const { app, server, io } = require('./config/socket.js'); // Make sure io is exported from socket.js
+const { app, server } = require('./config/socket.js');
 const { errorHandler } = require('./Middileware/errorHandler.js');
 const LoggerFactory = require('./utils/logger/LoggerFactory');
 
@@ -45,9 +45,11 @@ var expenseRouter = require('./routes/expense')
 var dieselExpensesRouter = require('./routes/dieselExpense')
 var executivesRouter = require('./routes/executive')
 var transactionsRouter = require('./routes/transaction.js')
+// var showroomVerification = require('./routes/ShowroomVerification.js')
 var showroomPaymentRoutes = require('./routes/showroomPaymentRoutes.js');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { default: axios } = require('axios');
+
 
 // Connect to database
 connectDB()
@@ -58,7 +60,7 @@ setupAgendaJobs().then(() => {
 
 const logger1 = LoggerFactory.initialize({});
 
-// FIXED PROXY HANDLER
+// FIXED PROXY HANDLER - Add this BEFORE CORS middleware
 app.use('/olamaps-proxy', async (req, res) => {
   try {
     // Add CORS headers
@@ -89,7 +91,7 @@ app.use('/olamaps-proxy', async (req, res) => {
   }
 });
 
-// CORS middleware
+// Your existing CORS middleware should come AFTER the proxy
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -97,18 +99,7 @@ app.use(cors({
   exposedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// HEALTH CHECK ENDPOINT - Fixed io reference
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'healthy', 
-    memory: process.memoryUsage(),
-    connections: (global.io || io)?.engine?.clientsCount || 0, // Fixed io reference
-    timestamp: new Date().toISOString()
-  });
-});
-
 app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
 
 const limiter = rateLimit({
   windowMs: 10 * 1000,
@@ -130,7 +121,6 @@ app.use(express.urlencoded({ extended: false, limit: '50mb'  }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ALL YOUR API ROUTES
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/admin', adminRouter);
@@ -153,27 +143,16 @@ app.use('/advance-payment', advanceRouter);
 app.use('/cash-received-details', cashReceivedDetails);
 app.use('/cash-received-details-staff', cashReceivedDetailsStaff);
 app.use('/showroom-payments', showroomPaymentRoutes);
+
 app.use('/cash-collection-details', cashCollectionDetails);
+
 app.use('/attendance', attendanceRouter);
 app.use('/pmnr', pmnrRouter);
 app.use('/expense', expenseRouter);
 app.use('/diesel-expenses', dieselExpensesRouter);
 app.use('/marketing-executives', executivesRouter);
 app.use('/transactions', transactionsRouter);
+// app.use('/verification', showroomVerification);
 
-// SERVE REACT BUILD FILES - Add this after all API routes
-app.use(express.static(path.join(__dirname, '../client/build')));
-
-// CATCH-ALL HANDLER for client-side routing
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/build/index.html'));
-});
-
-// ERROR HANDLERS - Only once at the end
 app.use(errorHandler);
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ success:false, errorCode:'SERVER_ERROR' });
-});
-
 module.exports = app;
