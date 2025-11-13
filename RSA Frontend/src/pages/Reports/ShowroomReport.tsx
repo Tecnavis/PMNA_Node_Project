@@ -30,6 +30,8 @@ interface Showroom {
     };
   };
   cashInHand?: number;
+    bookingsCount?: number; // Add this field
+
 }
 
 const ShowroomReport = () => {
@@ -121,7 +123,33 @@ const ShowroomReport = () => {
               },
               { accessor: 'showroomId', title: 'Showroom ID', render: (showroom: Showroom) => <div>{showroom.showroomId}</div> },
               { accessor: 'cashInHand', title: 'Cash in Hand', render: (showroom: Showroom) => <div>₹{showroom.cashInHand ? showroom.cashInHand : 0}</div> },
-
+// In your ShowroomReport component, update the column:
+{
+  accessor: 'bookingsCount',
+  title: 'Bookings Count',
+  render: (showroom: Showroom) => (
+    <div className="flex justify-center">
+      <span className="relative inline-flex items-center justify-center">
+        {/* Star Badge */}
+        <div className="relative">
+          {/* Star SVG Background */}
+          <svg 
+            className="w-12 h-12 text-yellow-400 drop-shadow-lg" 
+            viewBox="0 0 24 24" 
+            fill="currentColor"
+          >
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+          
+          {/* Count Text */}
+          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-md">
+            {showroom.bookingsCount || 0}
+          </span>
+        </div>
+      </span>
+    </div>
+  ),
+},
               {
                 accessor: 'action',
                 title: 'Action',

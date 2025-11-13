@@ -17,7 +17,7 @@ router.get('/showroom-staff-profile',jwt, controller.getStaffProfile);
 router.get('/all-showrooms',jwt, controller.getPaginatedShowrooms);
 
 router.get('/filtered', jwt, controller.filterGetShowrooms);
-
+router.get('/bookings-stats', jwt, controller.getShowroomBookingStats);
 router.post('/staff-signin',  controller.staffLogin);
 router.post('/staff-signup',  controller.showroomStaffSignup);
 router.post('/add-staff',  controller.addStaffMember);
