@@ -158,6 +158,8 @@ const Status = lazy(() => import('../pages/Status/Status'))
 const BookingDashboard = lazy(() => import('../pages/Bookings/BookingChart'))
 
 const ShowroomReport = lazy(() => import('../pages/Reports/ShowroomReport'))
+const ServiceCenterBookings= lazy(() => import('../pages/Reports/ServiceCenterBookings'))
+
 const Leaves = lazy(() => import('../pages/Leaves/Leaves'))
 const StaffReport = lazy(() => import('../pages/Reports/StaffReport'))
 const AppBokk = lazy(() => import('../pages/AppClose/AppBokk'))
@@ -251,6 +253,10 @@ const routes = [
     {
         path: '/showroomreport',
         element: <ShowroomReport />,
+    },
+       {
+        path: '/serviceCenterBookings',
+        element: <ServiceCenterBookings />,
     },
     {
         path: '/staffreport',

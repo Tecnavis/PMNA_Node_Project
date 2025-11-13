@@ -160,10 +160,9 @@ exports.getShowroomById = async (req, res) => {
   }
 };
 
-// Get all showrooms
+// In your showroom controller
 exports.getPaginatedShowrooms = async (req, res) => {
   try {
-
     let { search, page = 1, limit = 25, addedBy } = req.query;
 
     page = parseInt(page, 10);
@@ -173,8 +172,8 @@ exports.getPaginatedShowrooms = async (req, res) => {
     const query = {};
 
     if (search) {
-      const serachQuery = search.trim()
-      const regex = new RegExp(serachQuery, 'i'); // case-insensitive search
+      const searchQuery = search.trim()
+      const regex = new RegExp(searchQuery, 'i');
 
       query.$or = [
         { name: regex },
@@ -183,13 +182,12 @@ exports.getPaginatedShowrooms = async (req, res) => {
         { position: regex },
         { state: regex },
         { district: regex },
-        { 'showroomId.name': regex }, // for populated fields
+        { 'showroomId.name': regex },
       ];
     }
 
     if (addedBy) {
       query.addedBy = { $ne: null }
-      // query.addedBy = addedBy
     }
 
     const totalCount = await Showroom.countDocuments(query);
@@ -199,8 +197,24 @@ exports.getPaginatedShowrooms = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-      const developedShowrooms = await setVerifiedShowroomsThisMonth(showrooms)
-// Update financials for each showroom
+    // Get bookings count for each showroom
+    const showroomsWithBookingsCount = await Promise.all(
+      showrooms.map(async (showroom) => {
+        const bookingsCount = await Booking.countDocuments({ 
+          showroom: showroom._id 
+        });
+        
+        // Convert to plain object and add bookingsCount
+        const showroomObj = showroom.toObject();
+        showroomObj.bookingsCount = bookingsCount;
+        
+        return showroomObj;
+      })
+    );
+
+    const developedShowrooms = await setVerifiedShowroomsThisMonth(showroomsWithBookingsCount);
+    
+    // Update financials for each showroom
     const updatePromises = developedShowrooms.map(async (showroom) => {
       try {
         await updateShowroomFinancials(showroom._id);
@@ -210,7 +224,8 @@ exports.getPaginatedShowrooms = async (req, res) => {
     });
     
     await Promise.all(updatePromises);
-        return res.status(200).json({
+    
+    return res.status(200).json({
       success: true,
       message: "Showroom retrieved successfully.",
       data: developedShowrooms,
@@ -223,7 +238,91 @@ exports.getPaginatedShowrooms = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Get showroom booking statistics with vehicle numbers
+exports.getShowroomBookingStats = async (req, res) => {
+  try {
+    let { search, page = 1, limit = 10 } = req.query;
+    
+    page = parseInt(page, 10);
+    limit = parseInt(limit, 10);
+    const skip = (page - 1) * limit;
 
+    const query = {};
+    if (search) {
+      const searchQuery = search.trim();
+      const regex = new RegExp(searchQuery, 'i');
+      query.$or = [
+        { name: regex },
+        { showroomId: regex },
+        { location: regex }
+      ];
+    }
+
+    // Calculate date for last 2 months
+    const twoMonthsAgo = new Date();
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+    const totalCount = await Showroom.countDocuments(query);
+
+    const showrooms = await Showroom.find(query)
+      .skip(skip)
+      .limit(limit);
+
+    const showroomsWithStats = await Promise.all(
+      showrooms.map(async (showroom) => {
+        // Total bookings count
+        const totalBookings = await Booking.countDocuments({ 
+          showroom: showroom._id 
+        });
+
+        // Last 2 months bookings count
+        const lastTwoMonthsBookings = await Booking.countDocuments({
+          showroom: showroom._id,
+          createdAt: { $gte: twoMonthsAgo }
+        });
+
+        // Get vehicle numbers (limited to 50 for performance)
+        const recentBookings = await Booking.find(
+          { showroom: showroom._id },
+          { customerVehicleNumber: 1, _id: 0 }
+        )
+        .sort({ createdAt: -1 })
+        .limit(50);
+
+        const vehicleNumbers = recentBookings
+          .map(booking => booking.customerVehicleNumber)
+          .filter(vehicleNum => vehicleNum && vehicleNum.trim() !== '')
+          .filter((vehicleNum, index, self) => self.indexOf(vehicleNum) === index); // Remove duplicates
+
+        return {
+          _id: showroom._id,
+          name: showroom.name,
+          showroomId: showroom.showroomId,
+          image: showroom.image,
+          totalBookings,
+          lastTwoMonthsBookings,
+          vehicleNumbers
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Showroom booking stats retrieved successfully",
+      data: showroomsWithStats,
+      page,
+      totalPages: Math.ceil(totalCount / limit),
+      totalCount
+    });
+
+  } catch (error) {
+    console.error('Error fetching showroom booking stats:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
 // Filtered get showrooms endpoint
 exports.filterGetShowrooms = async (req, res) => {
   try {

@@ -16,7 +16,7 @@ import IconMenuDocumentation from '../Icon/Menu/IconMenuDocumentation';
 import { TbCurrencyDollar, TbReport } from "react-icons/tb";
 import IconServer from '../Icon/IconServer';
 import { MdShareLocation } from 'react-icons/md';
-import { PiBuildingApartmentLight } from 'react-icons/pi';
+import { PiBuildingApartmentBold, PiBuildingApartmentDuotone, PiBuildingApartmentLight } from 'react-icons/pi';
 import IconBook from '../Icon/IconBook';
 import { BsCashStack } from 'react-icons/bs';
 import IconAt from '../Icon/IconAt';
@@ -268,6 +268,17 @@ const Sidebar = () => {
                                         <div className="flex items-center">
                                             <PiBuildingApartmentLight className="group-hover:!text-primary shrink-0" />
                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Showroom')}</span>
+                                        </div>
+                                    </NavLink>
+                                </li>
+                            )}
+                             {/* // Service center */}
+                            {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
+                                < li className="nav-item">
+                                    <NavLink to="/serviceCenterBookings" className="group">
+                                        <div className="flex items-center">
+                                            <PiBuildingApartmentBold className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Showroom Bookings Report')}</span>
                                         </div>
                                     </NavLink>
                                 </li>
