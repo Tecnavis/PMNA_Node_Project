@@ -108,17 +108,17 @@ const Status: React.FC = () => {
                 const response = await axiosInstance.get(`/booking/status-based`, {
                     params: {
                         page,
-                        limit: showAll ? undefined : limit,
+                        limit: limit, // Always use reasonable limit
                         search: search.trim(),
                         status,
-                        showAll,
+                        showAll: false, // Always false for safety
                     },
                     signal: abortController.signal,
                 });
 
                 if (currentTabRef.current === currentTab) {
                     setBookings(response.data.bookings);
-                    setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
+                    setTotalPages(response.data.totalPages);
                     setCurrentPage(response.data.page);
                 }
             } catch (error: any) {
@@ -137,7 +137,7 @@ const Status: React.FC = () => {
                 abortControllerRef.current = null;
             }
         },
-        [showAll]
+        [] // Remove showAll dependency
     );
 
     const debouncedFetchBookings = useMemo(
@@ -219,9 +219,11 @@ const Status: React.FC = () => {
         };
     }, [query, fetchBookings, updateBookingInState, shouldRefetchForTab, debouncedFetchBookings]);
 
+     // REMOVE showAll functionality entirely - it's causing memory issues
     const toggleShowAll = () => {
-        setShowAll(!showAll);
-        fetchBookings(query, 1, 10);
+        console.warn('Show all functionality disabled for performance reasons');
+        // setShowAll(!showAll);
+        // fetchBookings(query, 1, 10);
     };
 
     // Tab change handler
