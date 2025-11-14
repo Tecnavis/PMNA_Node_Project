@@ -2449,8 +2449,10 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
         // Convert page and limit to integers
         page = parseInt(page, 10);
         limit = parseInt(limit, 10);
-        if (showAll === 'true') {
-            limit = 1000000; // Or use Number.MAX_SAFE_INTEGER for all records
+        
+        // SAFETY CHECK: Prevent excessive limits
+        if (showAll === 'true' || limit > 1000) {
+            limit = 1000; // Maximum safe limit
         }
 
         let query = {};
@@ -2524,23 +2526,26 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 
         const total = await Booking.countDocuments(query);
 
+        // PROJECTION: Only select necessary fields to reduce memory usage
         const bookings = await Booking.find(query)
-            .populate('baselocation')
-            .populate('showroom')
-            .populate('serviceType')
-            .populate('company')
-            .populate('driver')
-            .skip(showAll === 'true' ? 0 : (page - 1) * limit) // Skip only if not showing all
+            .select('fileNumber mob1 customerVehicleNumber customerName bookedByModel status totalAmount receivedAmount cashPending createdAt driver baselocation showroom serviceType company')
+            .populate('baselocation', 'name')
+            .populate('showroom', 'name')
+            .populate('serviceType', 'name')
+            .populate('company', 'name')
+            .populate('driver', 'name phone')
+            .skip((page - 1) * limit)
             .limit(limit)
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean(); // Use lean() for better performance
 
         res.status(200).json({
             bookings,
             total,
-            page: showAll === 'true' ? 1 : page,
-            limit: showAll === 'true' ? total : limit,
-            totalPages: showAll === 'true' ? 1 : Math.ceil(total / limit),
-            showAll: showAll === 'true'
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            showAll: false // Always false for safety
         });
     } catch (error) {
         console.error('Error fetching bookings:', error.message);
