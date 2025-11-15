@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { useDispatch } from 'react-redux';
@@ -11,6 +10,7 @@ interface ShowroomBookingStats {
   _id: string;
   name: string;
   showroomId: string;
+  phone?: string; // Added phone field
   image?: string;
   totalBookings: number;
   lastTwoMonthsBookings: number;
@@ -32,6 +32,10 @@ const ServiceCenterBookings = () => {
   const [showrooms, setShowrooms] = useState<ShowroomBookingStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedShowroom, setExpandedShowroom] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'total' | 'lastTwoMonths'>('lastTwoMonths');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedShowrooms, setSelectedShowrooms] = useState<string[]>([]);
+  const [bookingFilter, setBookingFilter] = useState<'all' | '0-5' | '5-10' | '10+'>('all');
 
   // Fetch showroom booking statistics
   const fetchShowroomBookings = async (searchTerm = '', page = 1, limit = 10) => {
@@ -70,12 +74,159 @@ const ServiceCenterBookings = () => {
     fetchShowroomBookings(searchTerm);
   }, [searchTerm, navigate]);
 
+  // Sort showrooms based on selected criteria
+  const sortedShowrooms = [...showrooms].sort((a, b) => {
+    let valueA, valueB;
+    
+    if (sortBy === 'lastTwoMonths') {
+      valueA = a.lastTwoMonthsBookings;
+      valueB = b.lastTwoMonthsBookings;
+    } else {
+      valueA = a.totalBookings;
+      valueB = b.totalBookings;
+    }
+    
+    if (sortOrder === 'desc') {
+      return valueB - valueA;
+    } else {
+      return valueA - valueB;
+    }
+  });
+
+  const handleSort = (type: 'total' | 'lastTwoMonths') => {
+    if (sortBy === type) {
+      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortBy(type);
+      setSortOrder('desc');
+    }
+  };
+
+  // Selection handlers
+  const toggleSelectShowroom = (showroomId: string) => {
+    setSelectedShowrooms(prev =>
+      prev.includes(showroomId)
+        ? prev.filter(id => id !== showroomId)
+        : [...prev, showroomId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedShowrooms.length === filteredShowrooms.length) {
+      setSelectedShowrooms([]);
+    } else {
+      setSelectedShowrooms(filteredShowrooms.map(showroom => showroom._id));
+    }
+  };
+
+  // Filter showrooms based on booking count
+  const filteredShowrooms = sortedShowrooms.filter(showroom => {
+    switch (bookingFilter) {
+      case '0-5':
+        return showroom.lastTwoMonthsBookings >= 0 && showroom.lastTwoMonthsBookings <= 5;
+      case '5-10':
+        return showroom.lastTwoMonthsBookings > 5 && showroom.lastTwoMonthsBookings <= 10;
+      case '10+':
+        return showroom.lastTwoMonthsBookings > 10;
+      default:
+        return true;
+    }
+  });
+
+  // Get selected showrooms data
+  const getSelectedShowroomsData = () => {
+    return filteredShowrooms.filter(showroom => 
+      selectedShowrooms.includes(showroom._id)
+    );
+  };
+
+  // Print functionality
+  const handlePrint = () => {
+    const selectedData = getSelectedShowroomsData();
+    
+    if (selectedData.length === 0) {
+      alert('Please select at least one showroom to print.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Showroom Bookings Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; text-align: center; margin-bottom: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .summary { margin-bottom: 20px; padding: 15px; background-color: #e8f4fd; border-radius: 5px; }
+            .timestamp { color: #666; font-size: 14px; margin-bottom: 10px; }
+          </style>
+        </head>
+        <body>
+          <h1>Showroom Bookings Report</h1>
+          <div class="timestamp">Generated on: ${new Date().toLocaleString()}</div>
+          <div class="summary">
+            <strong>Summary:</strong> ${selectedData.length} showroom(s) selected | 
+            Filter: ${bookingFilter} bookings
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Showroom Name</th>
+                <th>Phone</th>
+                <th>Last 2 Months Bookings</th>
+                <th>Showroom ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${selectedData.map(showroom => `
+                <tr>
+                  <td>${showroom.name}</td>
+                  <td>${showroom.phone || 'N/A'}</td>
+                  <td>${showroom.lastTwoMonthsBookings}</td>
+                  <td>${showroom.showroomId}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+
+  // Get filter counts
+  const getFilterCounts = () => {
+    return {
+      '0-5': showrooms.filter(s => s.lastTwoMonthsBookings >= 0 && s.lastTwoMonthsBookings <= 5).length,
+      '5-10': showrooms.filter(s => s.lastTwoMonthsBookings > 5 && s.lastTwoMonthsBookings <= 10).length,
+      '10+': showrooms.filter(s => s.lastTwoMonthsBookings > 10).length,
+    };
+  };
+
+  const filterCounts = getFilterCounts();
+
   return (
     <div>
       <div className="panel mt-6">
+        {/* Header with Search and Print Button */}
         <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
           <h5 className="font-semibold text-lg dark:text-white-light">Showroom Bookings Report</h5>
-          <div className="ltr:ml-auto rtl:mr-auto">
+          <div className="ltr:ml-auto rtl:mr-auto flex flex-wrap gap-4">
             <input
               type="text"
               className="form-input w-auto"
@@ -83,7 +234,60 @@ const ServiceCenterBookings = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            
+            {/* Print Button */}
+            <button
+              onClick={handlePrint}
+              disabled={selectedShowrooms.length === 0}
+              className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Print Selected ({selectedShowrooms.length})
+            </button>
           </div>
+        </div>
+
+        {/* Filter Buttons */}
+        <div className="mb-6 flex flex-wrap gap-4">
+          <button
+            onClick={() => setBookingFilter('all')}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              bookingFilter === 'all'
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            All Showrooms ({showrooms.length})
+          </button>
+          <button
+            onClick={() => setBookingFilter('0-5')}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              bookingFilter === '0-5'
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            0-5 Bookings ({filterCounts['0-5']})
+          </button>
+          <button
+            onClick={() => setBookingFilter('5-10')}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              bookingFilter === '5-10'
+                ? 'bg-green-500 text-white border-green-500'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            5-10 Bookings ({filterCounts['5-10']})
+          </button>
+          <button
+            onClick={() => setBookingFilter('10+')}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              bookingFilter === '10+'
+                ? 'bg-red-500 text-white border-red-500'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            10+ Bookings ({filterCounts['10+']})
+          </button>
         </div>
 
         <div className="datatables">
@@ -92,13 +296,41 @@ const ServiceCenterBookings = () => {
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800">
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedShowrooms.length === filteredShowrooms.length && filteredShowrooms.length > 0}
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Showroom
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Total Bookings
+                  <th 
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => handleSort('total')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Total Bookings
+                      {sortBy === 'total' && (
+                        <span className="ml-1">
+                          {sortOrder === 'desc' ? '↓' : '↑'}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Last 2 Months
+                  <th 
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => handleSort('lastTwoMonths')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Last 2 Months
+                      {sortBy === 'lastTwoMonths' && (
+                        <span className="ml-1">
+                          {sortOrder === 'desc' ? '↓' : '↑'}
+                        </span>
+                      )}
+                    </div>
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Vehicle Numbers
@@ -106,8 +338,21 @@ const ServiceCenterBookings = () => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {showrooms.map((showroom) => (
-                  <tr key={showroom._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                {filteredShowrooms.map((showroom) => (
+                  <tr 
+                    key={showroom._id} 
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                      selectedShowrooms.includes(showroom._id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    }`}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedShowrooms.includes(showroom._id)}
+                        onChange={() => toggleSelectShowroom(showroom._id)}
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {showroom.image && (
@@ -124,6 +369,11 @@ const ServiceCenterBookings = () => {
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             ID: {showroom.showroomId}
                           </div>
+                          {showroom.phone && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              Phone: {showroom.phone}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -176,9 +426,9 @@ const ServiceCenterBookings = () => {
               </tbody>
             </table>
             
-            {showrooms.length === 0 && !loading && (
+            {filteredShowrooms.length === 0 && !loading && (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                No showrooms found
+                No showrooms found matching the current filter
               </div>
             )}
             

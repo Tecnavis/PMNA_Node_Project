@@ -10,6 +10,7 @@ const Expense = require('../Model/expense'); // Adjust path as needed
 const Advance = require('../Model/advance'); // If you use advances
 const { default: mongoose } = require('mongoose');
 const ReceivedDetails = require('../Model/ReceivedDetails'); // If you use advances
+const SettlementTransaction = require('../Model/settlementTransaction');
 
 
 exports.createDriver = async (req, res) => {
@@ -522,7 +523,29 @@ if (approvedExpenses.length > 0) {
                 driver: updatedDriver
             }
         });
+ // After settlement is completed, create transaction record
+const settlementTransactionData = {
+  driver: driverId, // Change from driverId to driver
+  settlementDate: currentSettlementDate,
+  totalSalary: totalTransferableSalary,
+  cashInHand: driver.cashInHand,
+  balanceAmount: driver.balanceAmount,
+  advance: driver.advance,
+  cashCollection: driver.cashInHand,
+  pendingExpenses: pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0), // Added safety check
+  settlementAmount: totalTransferableSalary - advanceDeduction,
+  createdBy: req.user?._id // Add createdBy field
+};
 
+console.log('Creating settlement transaction with data:', settlementTransactionData);
+
+try {
+  const settlementTransaction = await SettlementTransaction.create(settlementTransactionData);
+  console.log('Settlement transaction created successfully:', settlementTransaction._id);
+} catch (error) {
+  console.error('Error creating settlement transaction:', error);
+  // Don't throw error here, just log it so settlement still completes
+}
     } catch (error) {     
         console.error('Settlement error:', error);
         res.status(500).json({

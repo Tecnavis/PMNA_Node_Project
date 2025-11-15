@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '../store';
@@ -32,7 +32,8 @@ const Index = () => {
     const [expiredRecords, setExpiredRecords] = useState<Record[]>([]);
     const [exceededRecords, setExceededRecords] = useState<VehicleRecord[]>([]);
     const [showBookingDashboard, setShowBookingDashboard] = useState<boolean>(false);
-
+ const [userInteracted, setUserInteracted] = useState(false);
+    const [pendingAlerts, setPendingAlerts] = useState<{type: 'showroom' | 'whatsapp', count: number}[]>([]);
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
@@ -100,14 +101,100 @@ const Index = () => {
 
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
 
+    const [prevBookings, setPrevBookings] = useState({
+        showroom: 0,
+        whatsapp: 0
+    });
+    
+    // Refs for audio elements
+    const showroomAlertRef = useRef<HTMLAudioElement | null>(null);
+    const whatsappAlertRef = useRef<HTMLAudioElement | null>(null);
+
+    // Initialize audio elements
+    useEffect(() => {
+        showroomAlertRef.current = new Audio('/public/mixkit-signal-alert-771.wav');
+        whatsappAlertRef.current = new Audio('/public/mixkit-signal-alert-771.wav');
+        
+        // Optional: Preload audio files
+        showroomAlertRef.current.preload = 'auto';
+        whatsappAlertRef.current.preload = 'auto';
+        
+        return () => {
+            // Cleanup
+            if (showroomAlertRef.current) {
+                showroomAlertRef.current.pause();
+                showroomAlertRef.current = null;
+            }
+            if (whatsappAlertRef.current) {
+                whatsappAlertRef.current.pause();
+                whatsappAlertRef.current = null;
+            }
+        };
+    }, []);
+
+    // Initialize audio elements with user interaction
+    useEffect(() => {
+        const handleUserInteraction = () => {
+            setUserInteracted(true);
+            // Play any pending alerts
+            pendingAlerts.forEach(alert => {
+                if (alert.type === 'showroom') {
+                    playShowroomAlert();
+                } else {
+                    playWhatsappAlert();
+                }
+            });
+            setPendingAlerts([]);
+            
+            // Remove event listeners after first interaction
+            document.removeEventListener('click', handleUserInteraction);
+            document.removeEventListener('keydown', handleUserInteraction);
+            document.removeEventListener('touchstart', handleUserInteraction);
+        };
+
+        // Add event listeners for user interaction
+        document.addEventListener('click', handleUserInteraction);
+        document.addEventListener('keydown', handleUserInteraction);
+        document.addEventListener('touchstart', handleUserInteraction);
+
+        return () => {
+            document.removeEventListener('click', handleUserInteraction);
+            document.removeEventListener('keydown', handleUserInteraction);
+            document.removeEventListener('touchstart', handleUserInteraction);
+        };
+    }, [pendingAlerts]);
+
     const fetchBookings = async () => {
-
         const response = await axios.get(`${backendUrl}/dashboard`);
-        const data = response.data.bookingData[0]
-        setExpiredRecords(response.data.records)
+        const data = response.data.bookingData[0];
+        setExpiredRecords(response.data.records);
 
-        setBlink(data.newBookingsShowRoom > 0);
+        // Check for new ShowRoom bookings
+        if (data.newBookingsShowRoom > prevBookings.showroom) {
+            setBlink(true);
+            if (userInteracted) {
+                playShowroomAlert();
+            } else {
+                setPendingAlerts(prev => [...prev, { type: 'showroom', count: data.newBookingsShowRoom }]);
+            }
+        } else if (data.newBookingsShowRoom === 0) {
+            setBlink(false);
+        }
 
+        // Check for new WhatsApp bookings
+        if (data.whatsappBooking > prevBookings.whatsapp) {
+            if (userInteracted) {
+                playWhatsappAlert();
+            } else {
+                setPendingAlerts(prev => [...prev, { type: 'whatsapp', count: data.whatsappBooking }]);
+            }
+        }
+
+        // Update previous bookings state
+        setPrevBookings({
+            showroom: data.newBookingsShowRoom,
+            whatsapp: data.whatsappBooking
+        });
         setSalesByCategory({
             series: [data.newBookingsShowRoom, data.newBookingsOther, data.pendingBookings, data.completedBookings, data.whatsappBooking],
             options: {
@@ -193,7 +280,34 @@ const Index = () => {
         setLoading(false);
 
     };
+// Function to play ShowRoom booking alert
+    const playShowroomAlert = () => {
+        if (showroomAlertRef.current) {
+            showroomAlertRef.current.currentTime = 0; // Reset to start
+            showroomAlertRef.current.play().catch(error => {
+                console.warn('ShowRoom alert play failed:', error);
+            });
+        }
+    };
 
+    // Function to play WhatsApp booking alert
+    const playWhatsappAlert = () => {
+        if (whatsappAlertRef.current) {
+            whatsappAlertRef.current.currentTime = 0; // Reset to start
+            whatsappAlertRef.current.play().catch(error => {
+                console.warn('WhatsApp alert play failed:', error);
+            });
+        }
+    };
+
+    // Optional: Add manual trigger functions for testing
+    const testShowroomAlert = () => {
+        playShowroomAlert();
+    };
+
+    const testWhatsappAlert = () => {
+        playWhatsappAlert();
+    };
    // Example for your vehicle query
 const fetchServiceKmExceededVehicle = async () => {
   try {

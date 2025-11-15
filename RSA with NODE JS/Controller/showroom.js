@@ -265,6 +265,8 @@ exports.getShowroomBookingStats = async (req, res) => {
     const totalCount = await Showroom.countDocuments(query);
 
     const showrooms = await Showroom.find(query)
+          .select('name showroomId image phone') // Add phone here
+
       .skip(skip)
       .limit(limit);
 
@@ -299,6 +301,8 @@ exports.getShowroomBookingStats = async (req, res) => {
           name: showroom.name,
           showroomId: showroom.showroomId,
           image: showroom.image,
+                    phone: showroom.phone, // Add phone here
+
           totalBookings,
           lastTwoMonthsBookings,
           vehicleNumbers
