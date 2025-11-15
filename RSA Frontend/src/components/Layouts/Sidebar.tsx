@@ -463,6 +463,15 @@ const Sidebar = () => {
                                         )}
                                     </ul>
                                 </AnimateHeight>
+                                 <AnimateHeight duration={300} height={currentMenu === 'transaction' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        {/* {![ROLES.VERIFIER].includes(role) && ( */}
+                                            <li>
+                                                <NavLink to="/settlement-transaction">{t('Settlement Details')}</NavLink>
+                                            </li>
+                                        {/* )} */}
+                                    </ul>
+                                </AnimateHeight>
                             </li>
                         </ul>
                     </PerfectScrollbar>

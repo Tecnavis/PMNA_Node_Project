@@ -25,6 +25,8 @@ var providerRouter = require('./routes/provider');
 var driverRouter = require('./routes/driver');
 var companyRouter = require('./routes/company');
 var showroomRouter = require('./routes/showroom');
+var settlementTransactionRouter = require('./routes/settlementTransaction');
+
 var rewardRouter = require('./routes/reward');
 var bookingRouter = require('./routes/booking');
 var feedbackRouter = require('./routes/feedback')
@@ -213,6 +215,8 @@ app.use('/provider', providerRouter);
 app.use('/driver', driverRouter);
 app.use('/company', companyRouter);
 app.use('/showroom', showroomRouter);
+app.use('/settlementTransaction', settlementTransactionRouter);
+
 app.use('/reward', rewardRouter);
 app.use('/leaves', leavesRouter);
 app.use('/feedback', feedbackRouter);

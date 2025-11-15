@@ -3,6 +3,7 @@ import AttendanceRoute from '../pages/Attendance/Index';
 const Redeems = lazy(() => import('../pages/Rewards/Redeems'))
 const TransactionList = lazy(() => import('../pages/SalaryTransaction'))
 const DriverTransactionList = lazy(() => import('../pages/SalaryTransactionDetails'))
+const SettlementTransaction = lazy(() => import('../pages/SettlementTransaction/SettlementTransaction'))
 
 const AddExecutive = lazy(() => import('../pages/MarketingExecutive/AddExecutive'))
 const ExecutiveShowroomsTable = lazy(() => import('../pages/MarketingExecutive/ShowroomList'))
@@ -455,6 +456,10 @@ const routes = [
     {
         path: '/driversalary-transaction',
         element: <DriverTransactionList/>,
+    },
+     {
+        path: '/settlement-transaction',
+        element: <SettlementTransaction/>,
     },
     {
         path: '/logs',
