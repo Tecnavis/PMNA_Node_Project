@@ -10,11 +10,19 @@ interface ShowroomBookingStats {
   _id: string;
   name: string;
   showroomId: string;
-  phone?: string; // Added phone field
+  phone?: string;
   image?: string;
   totalBookings: number;
   lastTwoMonthsBookings: number;
   vehicleNumbers: string[];
+}
+
+interface PrintShowroomData {
+  name: string;
+  phone: string;
+  lastTwoMonthsBookings: number;
+  showroomId: string;
+  remark: string; // New field for remarks
 }
 
 const ServiceCenterBookings = () => {
@@ -36,9 +44,11 @@ const ServiceCenterBookings = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedShowrooms, setSelectedShowrooms] = useState<string[]>([]);
   const [bookingFilter, setBookingFilter] = useState<'all' | '0-5' | '5-10' | '10+'>('all');
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [remarks, setRemarks] = useState<{[key: string]: string}>({}); // Store remarks for each showroom
 
   // Fetch showroom booking statistics
-  const fetchShowroomBookings = async (searchTerm = '', page = 1, limit = 10) => {
+  const fetchShowroomBookings = async (searchTerm = '', page = 1, limit = pageSize) => {
     try {
       setLoading(true);
       const response = await axios.get(`${backendUrl}/showroom/bookings-stats`, {
@@ -56,7 +66,13 @@ const ServiceCenterBookings = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchShowroomBookings(searchTerm, page);
+    fetchShowroomBookings(searchTerm, page, pageSize);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+    fetchShowroomBookings(searchTerm, 1, size);
   };
 
   const toggleExpand = (showroomId: string) => {
@@ -133,14 +149,28 @@ const ServiceCenterBookings = () => {
     }
   });
 
-  // Get selected showrooms data
-  const getSelectedShowroomsData = () => {
-    return filteredShowrooms.filter(showroom => 
-      selectedShowrooms.includes(showroom._id)
-    );
+  // Handle remark change
+  const handleRemarkChange = (showroomId: string, remark: string) => {
+    setRemarks(prev => ({
+      ...prev,
+      [showroomId]: remark
+    }));
   };
 
-  // Print functionality
+  // Get selected showrooms data for printing
+  const getSelectedShowroomsData = (): PrintShowroomData[] => {
+    return filteredShowrooms
+      .filter(showroom => selectedShowrooms.includes(showroom._id))
+      .map(showroom => ({
+        name: showroom.name,
+        phone: showroom.phone || 'N/A',
+        lastTwoMonthsBookings: showroom.lastTwoMonthsBookings,
+        showroomId: showroom.showroomId,
+        remark: remarks[showroom._id] || '' // Use existing remark or empty string
+      }));
+  };
+
+  // Print functionality with Remarks column
   const handlePrint = () => {
     const selectedData = getSelectedShowroomsData();
     
@@ -158,56 +188,167 @@ const ServiceCenterBookings = () => {
         <head>
           <title>Showroom Bookings Report</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { color: #333; text-align: center; margin-bottom: 30px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-            th { background-color: #f5f5f5; font-weight: bold; }
-            tr:nth-child(even) { background-color: #f9f9f9; }
-            .summary { margin-bottom: 20px; padding: 15px; background-color: #e8f4fd; border-radius: 5px; }
-            .timestamp { color: #666; font-size: 14px; margin-bottom: 10px; }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              line-height: 1.4;
+            }
+            h1 { 
+              color: #333; 
+              text-align: center; 
+              margin-bottom: 10px; 
+              border-bottom: 2px solid #333;
+              padding-bottom: 10px;
+            }
+            .report-info {
+              text-align: center;
+              margin-bottom: 20px;
+              color: #666;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-top: 20px;
+              font-size: 14px;
+            }
+            th, td { 
+              border: 1px solid #ddd; 
+              padding: 12px; 
+              text-align: left; 
+            }
+            th { 
+              background-color: #f5f5f5; 
+              font-weight: bold;
+              position: sticky;
+              top: 0;
+            }
+            tr:nth-child(even) { 
+              background-color: #f9f9f9; 
+            }
+            .summary { 
+              margin-bottom: 20px; 
+              padding: 15px; 
+              background-color: #e8f4fd; 
+              border-radius: 5px;
+              border-left: 4px solid #2196F3;
+            }
+            .timestamp { 
+              color: #666; 
+              font-size: 14px; 
+              margin-bottom: 10px; 
+            }
+            .remark-cell {
+              min-height: 40px;
+              border: 1px dashed #ccc;
+            }
+            .footer {
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              font-size: 12px;
+              color: #666;
+            }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
           </style>
         </head>
         <body>
           <h1>Showroom Bookings Report</h1>
-          <div class="timestamp">Generated on: ${new Date().toLocaleString()}</div>
-          <div class="summary">
-            <strong>Summary:</strong> ${selectedData.length} showroom(s) selected | 
-            Filter: ${bookingFilter} bookings
+          <div class="report-info">
+            <div class="timestamp">Generated on: ${new Date().toLocaleString()}</div>
           </div>
+          
+          <div class="summary">
+            <strong>Report Summary:</strong><br>
+            • Total Showrooms: ${selectedData.length}<br>
+            • Booking Filter: ${bookingFilter === 'all' ? 'All Showrooms' : bookingFilter + ' bookings'}<br>
+            • Report Date: ${new Date().toLocaleDateString()}
+          </div>
+
           <table>
             <thead>
               <tr>
-                <th>Showroom Name</th>
-                <th>Phone</th>
-                <th>Last 2 Months Bookings</th>
-                <th>Showroom ID</th>
+                <th width="5%">#</th>
+                <th width="25%">Showroom Name</th>
+                <th width="15%">Phone</th>
+                <th width="15%">Last 2 Months Bookings</th>
+                <th width="40%">Remarks</th>
               </tr>
             </thead>
             <tbody>
-              ${selectedData.map(showroom => `
+              ${selectedData.map((showroom, index) => `
                 <tr>
-                  <td>${showroom.name}</td>
-                  <td>${showroom.phone || 'N/A'}</td>
-                  <td>${showroom.lastTwoMonthsBookings}</td>
-                  <td>${showroom.showroomId}</td>
+                  <td>${index + 1}</td>
+                  <td><strong>${showroom.name}</strong><br><small style="color: #666;">ID: ${showroom.showroomId}</small></td>
+                  <td>${showroom.phone}</td>
+                  <td style="text-align: center;">
+                    <span style="
+                      display: inline-block; 
+                      padding: 4px 12px; 
+                      background-color: ${showroom.lastTwoMonthsBookings > 10 ? '#4CAF50' : showroom.lastTwoMonthsBookings > 5 ? '#FF9800' : '#F44336'}; 
+                      color: white; 
+                      border-radius: 12px; 
+                      font-weight: bold;
+                      min-width: 30px;
+                    ">
+                      ${showroom.lastTwoMonthsBookings}
+                    </span>
+                  </td>
+                  <td class="remark-cell">
+                    ${showroom.remark || '&nbsp;'}
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
+
+          <div class="footer">
+            <p><strong>Note:</strong> This report shows booking statistics for the last 2 months. Remarks column is provided for additional notes and observations.</p>
+            <p>Printed by: User • Page 1 of 1</p>
+          </div>
+
+          <div class="no-print" style="margin-top: 20px; text-align: center;">
+            <button onclick="window.print()" style="
+              padding: 10px 20px; 
+              background: #2196F3; 
+              color: white; 
+              border: none; 
+              border-radius: 5px; 
+              cursor: pointer;
+            ">
+              Print Report
+            </button>
+            <button onclick="window.close()" style="
+              padding: 10px 20px; 
+              background: #f44336; 
+              color: white; 
+              border: none; 
+              border-radius: 5px; 
+              cursor: pointer; 
+              margin-left: 10px;
+            ">
+              Close Window
+            </button>
+          </div>
+
+          <script>
+            // Auto-print after window opens
+            setTimeout(() => {
+              window.print();
+            }, 500);
+          </script>
         </body>
       </html>
     `;
 
     printWindow.document.write(printContent);
     printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
   };
+
+  // Add remark input field in the table
+  const [editingRemark, setEditingRemark] = useState<string | null>(null);
 
   // Get filter counts
   const getFilterCounts = () => {
@@ -219,6 +360,48 @@ const ServiceCenterBookings = () => {
   };
 
   const filterCounts = getFilterCounts();
+
+  // Generate pagination buttons - show only 3 pages at a time
+  const getPaginationButtons = () => {
+    const buttons = [];
+    const maxVisiblePages = 3;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        buttons.push(i);
+      }
+    } else {
+      buttons.push(1);
+      
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+      
+      if (currentPage <= 2) {
+        end = 3;
+      }
+      if (currentPage >= totalPages - 1) {
+        start = totalPages - 2;
+      }
+      
+      if (start > 2) {
+        buttons.push('...');
+      }
+      
+      for (let i = start; i <= end; i++) {
+        if (i !== 1 && i !== totalPages) {
+          buttons.push(i);
+        }
+      }
+      
+      if (end < totalPages - 1) {
+        buttons.push('...');
+      }
+      
+      buttons.push(totalPages);
+    }
+    
+    return buttons;
+  };
 
   return (
     <div>
@@ -335,6 +518,9 @@ const ServiceCenterBookings = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Vehicle Numbers
                   </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Remarks
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -421,6 +607,39 @@ const ServiceCenterBookings = () => {
                         )}
                       </div>
                     </td>
+
+                    {/* Remarks Column */}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col space-y-2">
+                        {editingRemark === showroom._id ? (
+                          <div className="flex space-x-2">
+                            <input
+                              type="text"
+                              value={remarks[showroom._id] || ''}
+                              onChange={(e) => handleRemarkChange(showroom._id, e.target.value)}
+                              className="form-input flex-1 text-sm py-1 px-2"
+                              placeholder="Enter remarks..."
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => setEditingRemark(null)}
+                              className="btn btn-success py-1 px-2 text-xs"
+                            >
+                              ✓
+                            </button>
+                          </div>
+                        ) : (
+                          <div 
+                            className="min-h-8 p-2 border border-dashed border-gray-300 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                            onClick={() => setEditingRemark(showroom._id)}
+                          >
+                            {remarks[showroom._id] || (
+                              <span className="text-gray-400 text-sm">Click to add remarks...</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -443,46 +662,70 @@ const ServiceCenterBookings = () => {
       </div>
 
       {/* Pagination Controls */}
-      <div className="mt-4 flex justify-center">
-        <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-          <li>
-            <button
-              type="button"
-              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50"
-            >
-              <GrPrevious />
-            </button>
-          </li>
+      <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+        {/* Page Size Selector */}
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">Show:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            className="form-select py-1.5 text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={500}>500</option>
+          </select>
+          <span className="text-sm text-gray-600 dark:text-gray-400">entries</span>
+        </div>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-            <li key={pageNum}>
-              <button
-                type="button"
-                onClick={() => handlePageChange(pageNum)}
-                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                  currentPage === pageNum 
-                    ? 'bg-primary text-white' 
-                    : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                }`}
-              >
-                {pageNum}
-              </button>
-            </li>
+        {/* Pagination Buttons */}
+        <div className="flex items-center space-x-1 rtl:space-x-reverse">
+          <button
+            type="button"
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50"
+          >
+            <GrPrevious />
+          </button>
+
+          {getPaginationButtons().map((page, index) => (
+            <div key={index}>
+              {page === '...' ? (
+                <span className="flex justify-center font-semibold px-3.5 py-2 text-dark dark:text-white-light">
+                  ...
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page as number)}
+                  className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
+                    currentPage === page 
+                      ? 'bg-primary text-white' 
+                      : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
+                  }`}
+                >
+                  {page}
+                </button>
+              )}
+            </div>
           ))}
 
-          <li>
-            <button
-              type="button"
-              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50"
-            >
-              <GrNext />
-            </button>
-          </li>
-        </ul>
+          <button
+            type="button"
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50"
+          >
+            <GrNext />
+          </button>
+        </div>
+
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          Page {currentPage} of {totalPages}
+        </div>
       </div>
     </div>
   );

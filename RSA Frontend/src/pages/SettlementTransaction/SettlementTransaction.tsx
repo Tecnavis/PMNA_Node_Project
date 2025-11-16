@@ -161,17 +161,17 @@ const SettlementTransaction = () => {
         </div>
       ),
     },
-    {
-      accessor: 'balanceAmount',
-      title: 'Balance Amount',
-      render: (record: SettlementTransaction) => (
-        <div className={`text-right font-semibold ${
-          record.balanceAmount >= 0 ? 'text-green-600' : 'text-red-600'
-        }`}>
-          ₹{record.balanceAmount?.toLocaleString() || 0}
-        </div>
-      ),
-    },
+    // {
+    //   accessor: 'balanceAmount',
+    //   title: 'Balance Amount',
+    //   render: (record: SettlementTransaction) => (
+    //     <div className={`text-right font-semibold ${
+    //       record.balanceAmount >= 0 ? 'text-green-600' : 'text-red-600'
+    //     }`}>
+         
+    //     </div>
+    //   ),
+    // },
     {
       accessor: 'advance',
       title: 'Advance',
@@ -206,7 +206,8 @@ const SettlementTransaction = () => {
         <div className={`text-right font-bold text-lg ${
           record.settlementAmount >= 0 ? 'text-green-600' : 'text-red-600'
         }`}>
-          ₹{record.settlementAmount?.toLocaleString() || 0}
+          {/* ₹{record.settlementAmount?.toLocaleString() || 0} */}
+           ₹{record.balanceAmount?.toLocaleString() || 0}
         </div>
       ),
     },
