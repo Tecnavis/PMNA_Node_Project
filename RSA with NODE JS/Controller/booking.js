@@ -2441,7 +2441,7 @@ exports.getApprovedBookings = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching approved bookings' });
     }
 };
-
+// -------------------
 exports.getAllBookingsBasedOnStatus = async (req, res) => {
     try {
         let { status = '', search, page = 1, limit = 10, showAll = false } = req.query;
@@ -2527,16 +2527,16 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
         const total = await Booking.countDocuments(query);
 
         // PROJECTION: Only select necessary fields to reduce memory usage
-        const bookings = await Booking.find(query)
-            .select('fileNumber mob1 customerVehicleNumber customerName bookedByModel status totalAmount receivedAmount cashPending createdAt driver baselocation showroom serviceType company')
-            .populate('baselocation', 'name')
-            .populate('showroom', 'name')
-            .populate('serviceType', 'name')
-            .populate('company', 'name')
-            .populate('driver', 'name phone')
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .sort({ createdAt: -1 })
+      const bookings = await Booking.find(query)
+    .select('fileNumber mob1 customerVehicleNumber customerName bookedByModel status totalAmount receivedAmount cashPending createdAt driver baselocation showroom serviceType company location dropoffLocation dropoffTime pickupTime')
+    .populate('baselocation', 'name')
+    .populate('showroom', 'name')
+    .populate('serviceType', 'name')
+    .populate('company', 'name')
+    .populate('driver', 'name phone')
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .sort({ createdAt: -1 })
             .lean(); // Use lean() for better performance
 
         res.status(200).json({
