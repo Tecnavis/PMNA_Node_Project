@@ -58,14 +58,13 @@ exports.createDriver = async (req, res) => {
 exports.getDrivers = async (req, res) => {
   try {
     const drivers = await Driver.find().populate('vehicle.serviceType').lean();
-
     const driverIds = drivers.map(driver => driver._id);
 
     await Promise.all(
       driverIds.map(driverId => updateScheduledBookingsForDriver(driverId))
     );
 
-    // THEN: Update financials as before
+    // Update financials as before
     await Promise.all(
       drivers.map(driver =>
         updateDriverFinancials(
@@ -74,7 +73,6 @@ exports.getDrivers = async (req, res) => {
         )
       )
     );
-
 
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -86,28 +84,88 @@ exports.getDrivers = async (req, res) => {
       leaveDate: { $gte: startOfDay, $lt: endOfDay }
     }).lean();
 
-    // Fetch the last booking status for each driver
+    // Fetch the last booking data with service name only
     const lastBookings = await Booking.aggregate([
       { $match: { driver: { $in: driverIds } } },
-      { $sort: { updatedAt: -1 } }, // Sort by latest updatedAt
+      { $sort: { updatedAt: -1 } },
       {
         $group: {
           _id: "$driver",
-          status: { $first: "$status" }, // Get the latest status
+          status: { $first: "$status" },
+          vehicleNumber: { $first: "$vehicleNumber" },
+          serviceType: { $first: "$serviceType" }
+        }
+      },
+      {
+        $lookup: {
+          from: "servicetypes",
+          localField: "serviceType",
+          foreignField: "_id",
+          as: "serviceTypeDetails",
+          pipeline: [
+            {
+              $project: {
+                serviceName: 1 // Only fetch serviceName field
+              }
+            }
+          ]
+        }
+      },
+      {
+        $unwind: {
+          path: "$serviceTypeDetails",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          serviceTypeName: "$serviceTypeDetails.serviceName"
         }
       }
     ]);
 
     // Convert to lookup maps for fast access
     const leaveSet = new Set(leaves.map(leave => leave.driver.toString()));
-    const statusMap = new Map(lastBookings.map(booking => [booking._id.toString(), booking.status]));
+    const bookingMap = new Map();
+    
+    lastBookings.forEach(booking => {
+      bookingMap.set(booking._id.toString(), {
+        status: booking.status,
+        vehicleNumber: booking.vehicleNumber,
+        serviceTypeName: booking.serviceTypeName || null
+      });
+    });
 
-    // Merge data into driver objects
-    const updatedDrivers = drivers.map(driver => ({
-      ...driver,
-      isLeave: leaveSet.has(driver._id.toString()),
-      status: statusMap.get(driver._id.toString()) || "Unknown"
-    }));
+    // Update driver collection with the last booking information
+    await Promise.all(
+      drivers.map(async (driver) => {
+        const bookingInfo = bookingMap.get(driver._id.toString());
+        if (bookingInfo) {
+          // Update driver document with last booking info
+          await Driver.findByIdAndUpdate(driver._id, {
+            $set: {
+              lastBookingStatus: bookingInfo.status,
+              lastVehicleNumber: bookingInfo.vehicleNumber,
+              lastServiceType: bookingInfo.serviceTypeName // Store only service name string
+            }
+          });
+        }
+      })
+    );
+
+    // Merge data into driver objects for response
+    const updatedDrivers = drivers.map(driver => {
+      const bookingInfo = bookingMap.get(driver._id.toString());
+      return {
+        ...driver,
+        isLeave: leaveSet.has(driver._id.toString()),
+        status: bookingInfo?.status || "Unknown",
+        lastVehicleNumber: bookingInfo?.vehicleNumber || null,
+        lastServiceType: bookingInfo?.serviceTypeName || null,
+                lastBookingStatus: bookingInfo?.status || null
+
+      };
+    });
 
     res.json(updatedDrivers);
   } catch (error) {
