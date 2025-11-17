@@ -116,6 +116,9 @@ settlement: {
   lastSettlementAmount: {
     type: Number
   },
+     lastVehicleNumber: String,
+  lastServiceType: String,
+  lastBookingStatus: String,
   pendingExpensesCount: {
     type: Number,
     default: 0
