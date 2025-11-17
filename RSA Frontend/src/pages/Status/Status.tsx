@@ -53,6 +53,8 @@ const Status: React.FC = () => {
     const [loader, setLoader] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [totalPages, setTotalPages] = useState<number>(0);
+        const [pageSize, setPageSize] = useState<number>(10); // Add pageSize state
+
     const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -63,7 +65,6 @@ const Status: React.FC = () => {
     const [selectedBookingId, setSelectedBookingId] = useState<string>('');
     const [receivedUser, setReceivedUser] = useState<string>('');
     const [query, setQuery] = useState<string>('');
-    const [showAll, setShowAll] = useState(false);
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
  const currentTabRef = useRef<Tabs>(Tabs.OngoingBookings);
     const socketRef = useRef<Socket | null>(null);
@@ -89,8 +90,14 @@ const Status: React.FC = () => {
         fetchBookings(query, page);
     };
 
+    // Add page size change handler
+    const handlePageSizeChange = (newSize: number) => {
+        setPageSize(newSize);
+        setCurrentPage(1); // Reset to first page when changing page size
+        fetchBookings(query, 1, newSize);
+    };
     const fetchBookings = useCallback(
-        async (search: string, page: number = 1, limit: number = 10) => {
+        async (search: string, page: number = 1, limit: number = pageSize) => {
             // Cancel previous request if any
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
@@ -111,7 +118,6 @@ const Status: React.FC = () => {
                         limit: limit, // Always use reasonable limit
                         search: search.trim(),
                         status,
-                        showAll: false, // Always false for safety
                     },
                     signal: abortController.signal,
                 });
@@ -137,7 +143,7 @@ const Status: React.FC = () => {
                 abortControllerRef.current = null;
             }
         },
-        [] // Remove showAll dependency
+        [pageSize] // Add pageSize as dependency
     );
 
     const debouncedFetchBookings = useMemo(
@@ -219,20 +225,15 @@ const Status: React.FC = () => {
         };
     }, [query, fetchBookings, updateBookingInState, shouldRefetchForTab, debouncedFetchBookings]);
 
-     // REMOVE showAll functionality entirely - it's causing memory issues
-    const toggleShowAll = () => {
-        console.warn('Show all functionality disabled for performance reasons');
-        // setShowAll(!showAll);
-        // fetchBookings(query, 1, 10);
-    };
-
-    // Tab change handler
-    const handleChangeTabs = useCallback((tabName: Tabs) => {
-        debouncedFetchBookings.cancel();
-        setQuery('');
-        setCurrentPage(1);
-        setTab(tabName);
-    }, [debouncedFetchBookings]);
+  
+// Update tab change handler
+const handleChangeTabs = useCallback((tabName: Tabs) => {
+    debouncedFetchBookings.cancel();
+    setQuery('');
+    setCurrentPage(1);
+    setTab(tabName);
+    fetchBookings('', 1, pageSize);
+}, [debouncedFetchBookings, pageSize]);
 
     const handlePaymentSettlement = (record: Booking) => {
         setSelectedBooking(record);
@@ -250,10 +251,10 @@ const Status: React.FC = () => {
     }, [query, debouncedFetchBookings]);
 
     // Tab change effect
-    useEffect(() => {
-        setBookings([]);
-        fetchBookings(query, 1);
-    }, [tab, fetchBookings, query]);
+ useEffect(() => {
+    setBookings([]);
+    fetchBookings(query, 1, pageSize);
+}, [tab, fetchBookings, query, pageSize]);
 
     const handleSettleCashPending = async (bookingId: string) => {
         // First show confirmation dialog
@@ -938,67 +939,81 @@ const Status: React.FC = () => {
                     } */}
                     </div>
                     {/* Pagination */}
-                    {bookings.length > 0 && (
-                        <div className="flex flex-col items-center mt-4">
-                            <div className="flex justify-center items-center space-x-2 mb-2">
-                                <button
-                                    type="button"
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                        currentPage === 1 || showAll ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
-                                    }`}
-                                    disabled={currentPage === 1 || showAll}
-                                >
-                                    <GrPrevious />
-                                </button>
+{bookings.length > 0 && (
+    <div className="flex flex-col items-center mt-4">
+        <div className="flex justify-center items-center space-x-2 mb-2">
+            <button
+                type="button"
+                onClick={() => handlePageChange(currentPage - 1)}
+                className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                    currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+                disabled={currentPage === 1}
+            >
+                <GrPrevious />
+            </button>
 
-                                {!showAll &&
-                                    Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-                                        // Show only a subset of pages for better UX
-                                        let pageNum;
-                                        if (totalPages <= 5) {
-                                            pageNum = index + 1;
-                                        } else if (currentPage <= 3) {
-                                            pageNum = index + 1;
-                                        } else if (currentPage >= totalPages - 2) {
-                                            pageNum = totalPages - 4 + index;
-                                        } else {
-                                            pageNum = currentPage - 2 + index;
-                                        }
+            {Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+                // Show only a subset of pages for better UX
+                let pageNum;
+                if (totalPages <= 5) {
+                    pageNum = index + 1;
+                } else if (currentPage <= 3) {
+                    pageNum = index + 1;
+                } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + index;
+                } else {
+                    pageNum = currentPage - 2 + index;
+                }
 
-                                        return (
-                                            <button
-                                                key={index}
-                                                type="button"
-                                                onClick={() => handlePageChange(pageNum)}
-                                                className={`px-4 py-2 rounded-full transition ${currentPage === pageNum ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-blue-300'}`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    })}
+                return (
+                    <button
+                        key={index}
+                        type="button"
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-4 py-2 rounded-full transition ${
+                            currentPage === pageNum ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-blue-300'
+                        }`}
+                    >
+                        {pageNum}
+                    </button>
+                );
+            })}
 
-                                <button
-                                    type="button"
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                        currentPage === totalPages || showAll ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
-                                    }`}
-                                    disabled={currentPage === totalPages || showAll}
-                                >
-                                    <GrNext />
-                                </button>
-                            </div>
+            <button
+                type="button"
+                onClick={() => handlePageChange(currentPage + 1)}
+                className={`flex justify-center font-semibold p-2 rounded-full transition ${
+                    currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+                disabled={currentPage === totalPages}
+            >
+                <GrNext />
+            </button>
+        </div>
 
-                            <button
-                                type="button"
-                                onClick={toggleShowAll}
-                                className={`mt-2 px-4 py-2 rounded-full transition ${showAll ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-green-300'}`}
-                            >
-                                {showAll ? 'Pages' : 'All'}
-                            </button>
-                        </div>
-                    )}
+        {/* Page Size Selector */}
+        <div className="flex items-center space-x-2 mt-2">
+            <span className="text-sm text-gray-600 dark:text-gray-300">Show:</span>
+            <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600"
+            >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={500}>500</option>
+            </select>
+        </div>
+
+        {/* Page Info */}
+        <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+            Page {currentPage} of {totalPages} • Total {totalPages * pageSize} records
+        </div>
+    </div>
+)}
                     <ReactModal
                         isOpen={showPaymentModal}
                         onRequestClose={() => {
