@@ -43,6 +43,7 @@ export interface VehicleRecord {
     taxDueDismissedBy: string;
     emiDueDismissedBy: string;
     serviceKM: string;
+    recordId?:string
 }
 
 const VehicleCompliance: React.FC = () => {
