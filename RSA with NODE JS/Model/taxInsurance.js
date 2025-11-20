@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { deleteCloudinaryImage } = require("../config/multer");
 
 const TaxInsuranceSchema = new mongoose.Schema({
     emiDuedismissedBy: {
@@ -69,6 +70,23 @@ const TaxInsuranceSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    // PERMIT FEIDS
+    permitDue: {
+        type: Boolean,
+        default: false
+    },
+    permitDueDismissed: {
+        type: Boolean,
+        default: false
+    },
+    permitDueDismissedBy: {
+        type: String,
+        default: null
+    },
+    permitExpiryDate: {
+        type: Date,
+        required: true
+    },
     vehicleNumber: {
         type: String,
         required: true,
@@ -76,6 +94,22 @@ const TaxInsuranceSchema = new mongoose.Schema({
         trim: true
     }
 }, { timestamps: true });
+
+TaxInsuranceSchema.pre("findByIdAndDelete", async function (next) {
+    try {
+        const doc = await this.model.findOne(this.getFilter());
+        if (!doc) return next();
+
+        // Delete related Cloudinary images
+        await deleteCloudinaryImage(doc.insurancePaperUrl);
+        await deleteCloudinaryImage(doc.taxPaperUrl);
+
+        next();
+    } catch (err) {
+        console.error("Error during file cleanup:", err);
+        next(err);
+    }
+});
 
 const TaxInsurance = mongoose.model("TaxInsurance", TaxInsuranceSchema);
 

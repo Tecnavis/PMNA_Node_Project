@@ -23,6 +23,7 @@ const columns = [
     "Insurance Expiry",
     "Pollution Expiry",
     "EMI Expiry",
+    "Permit Expiry",
     "Insurance Paper",
     "Tax Paper",
     "Actions",
@@ -44,6 +45,9 @@ export interface VehicleRecord {
     emiDueDismissedBy: string;
     serviceKM: string;
     recordId?:string
+    permitDue: boolean;
+    permitDueDismissedBy: string;
+    permitExpiryDate: string;
 }
 
 const VehicleCompliance: React.FC = () => {
@@ -229,6 +233,16 @@ const VehicleCompliance: React.FC = () => {
                                     <span>{dateFormate(record.emiExpiryDate)}</span>
                                     {record.emiDueDismissedBy && <span><br />Dismissed by: {record.emiDueDismissedBy}</span>}
                                 </td>
+
+                                {/* Permit  */}
+                                <td
+                                    className={`${styles.tableCell} ${new Date(record.permitExpiryDate) < today ? "bg-green-200" : ""}`}
+                                    data-label="EMI Expiry"
+                                >
+                                    <span>{dateFormate(record.permitExpiryDate)}</span>
+                                    {record.emiDueDismissedBy && <span><br />Dismissed by: {record.permitDueDismissedBy}</span>}
+                                </td>
+
                                 <td className={styles.tableCell} data-label="Insurance Paper">
                                     <Link className='text-blue-600' to={`${CLOUD_IMAGE}${record.insurancePaperUrl}`}>View Tax Paper</Link>
                                 </td>

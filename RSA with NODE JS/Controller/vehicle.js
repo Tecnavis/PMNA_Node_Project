@@ -162,6 +162,7 @@ exports.addRecord = async (req, res) => {
             insuranceExpiryDate: req.body.insuranceExpiryDate,
             pollutionExpiryDate: req.body.pollutionExpiryDate,
             taxExpiryDate: req.body.taxExpiryDate,
+            permitExpiryDate: req.body.permitExpiryDate,
             taxPaperUrl,
             insurancePaperUrl
         })
@@ -228,7 +229,16 @@ exports.deleteRecord = async (req, res) => {
 exports.updateRecord = async (req, res) => {
     try {
         const { id } = req.params;
-        const { vehicleNumber, emiExpiryDate, insuranceExpiryDate, pollutionExpiryDate, taxExpiryDate, taxPaperChange, insurancePaperChange } = req.body;
+        const {
+            vehicleNumber,
+            emiExpiryDate,
+            insuranceExpiryDate,
+            pollutionExpiryDate,
+            taxExpiryDate,
+            permitExpiryDate,
+            taxPaperChange,
+            insurancePaperChange
+        } = req.body;
 
         let existingRecord = await TaxInsurance.findById(id);
         if (!existingRecord) {
@@ -271,6 +281,7 @@ exports.updateRecord = async (req, res) => {
         existingRecord.insuranceExpiryDate = insuranceExpiryDate;
         existingRecord.pollutionExpiryDate = pollutionExpiryDate;
         existingRecord.taxExpiryDate = taxExpiryDate;
+        existingRecord.permitExpiryDate = permitExpiryDate;
         existingRecord.insurancePaperUrl = insurancePaperUrl;
         existingRecord.taxPaperUrl = taxPaperUrl;
 
@@ -290,10 +301,13 @@ exports.getRecordById = async (req, res) => {
         if (!record) return res.status(404).json(record);
 
         const vehicle = await vehicleService.getVehicleByVehicleName(record.vehicleNumber)
-        record.vehicleId = vehicle._id;
+        if (vehicle) {
+            record.vehicleId = vehicle._id;
+        }
 
         res.status(200).json(record);
     } catch (error) {
+        console.log(error)
         res.status(500).json({ error: error.message });
     }
 };
@@ -312,7 +326,8 @@ exports.dismissExpiredRecord = async (req, res) => {
             EMI: { dueField: "emiDue", dismissedByField: "emiDuedismissedBy" },
             Insurance: { dueField: "insuranceDue", dismissedByField: "insuranceDueDismissedBy" },
             Pollution: { dueField: "pollutionDue", dismissedByField: "pollutionDueDismissedBy" },
-            Tax: { dueField: "taxDue", dismissedByField: "taxDueDismissedBy" }
+            Tax: { dueField: "taxDue", dismissedByField: "taxDueDismissedBy" },
+            Permit: { dueField: 'permitDue', dismissedByField: "permitDueDismissedBy" }
         };
 
         // Check if the provided type is valid
@@ -362,9 +377,9 @@ exports.getVehiclesExceedingServiceKM = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: "taxinsurances",           
-                    localField: "serviceVehicle",    
-                    foreignField: "vehicleNumber",   
+                    from: "taxinsurances",
+                    localField: "serviceVehicle",
+                    foreignField: "vehicleNumber",
                     as: "complianceRecord"
                 }
             },
@@ -407,7 +422,7 @@ exports.updateVehicleServiceStatus = async (req, res) => {
     try {
         const { vehicleId } = req.params;
         const { role } = req.body;
-        
+
         // Find the vehicle
         const vehicle = await Vehicle.findById(vehicleId);
         if (!vehicle) {

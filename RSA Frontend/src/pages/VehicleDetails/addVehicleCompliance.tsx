@@ -20,7 +20,7 @@ type AddVehicleComplianceType = {
     id?: string;
     isEditingForDissmissBtn?: boolean;
     recordType?: string;
-    dissmissVehicleNumber: string;
+    dissmissVehicleNumber?: string;
 };
 
 interface Errors {
@@ -33,6 +33,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
     const [insuranceExpiryDate, setInsuranceExpiryDate] = useState<string>('');
     const [pollutionExpiryDate, setPollutionExpiryDate] = useState<string>('');
     const [taxExpiryDate, setTaxExpiryDate] = useState<string>('');
+    const [permitExpiryDate, setPermitExpiryDate] = useState<string>('');
     const [insurancePaper, setInsurancePaper] = useState<File | null>(null);
     const [taxPaper, setTaxPaper] = useState<File | null>(null);
     const [taxPaperChange, setTaxPaperChange] = useState<boolean>(false);
@@ -103,6 +104,11 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
             isValid = false;
         }
 
+        if (!permitExpiryDate) {
+            newErrors.permitExpiryDate = 'Permit expiry is required';
+            isValid = false;
+        }
+
         if (!pollutionExpiryDate) {
             newErrors.pollutionExpiryDate = 'Pollution expiry is required';
             isValid = false;
@@ -166,6 +172,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
         formData.append('insuranceExpiryDate', insuranceExpiryDate);
         formData.append('pollutionExpiryDate', pollutionExpiryDate);
         formData.append('taxExpiryDate', taxExpiryDate);
+        formData.append('permitExpiryDate', permitExpiryDate);
         formData.append('insurancePaperChange', String(insurancePaperChange));
         formData.append('taxPaperChange', String(taxPaperChange));
 
@@ -215,7 +222,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
                 await axios.patch(`${backendUrl}/vehicle/compliance-record-dismiss`, {
                     type: recordType,
                     vehicleNumber: vehicleNumber,
-                    role
+                    role,
                 });
 
                 Swal.fire({
@@ -276,6 +283,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
                 setInsuranceExpiryDate(data?.insuranceExpiryDate || '');
                 setPollutionExpiryDate(data?.pollutionExpiryDate || '');
                 setTaxExpiryDate(data?.taxExpiryDate || '');
+                setPermitExpiryDate(data?.permitExpiryDate || '');
                 setTaxPaper(data?.taxPaperUrl || null);
                 setInsurancePaper(data?.insurancePaperUrl || null);
                 setVehicleId(data?.vehicleId || '');
@@ -287,14 +295,13 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
     }, [open, isEditMode, id]);
 
     return (
-        <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
+        <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description" sx={{ borderRadius: 1 }}>
             <Box
                 sx={{
                     ...style,
                     maxHeight: '97vh',
                     overflowY: 'auto',
-                    overflowX: 'hidden',
-                    borderRadius: 'rounded',
+                    borderRadius: 1,
                 }}
             >
                 <form onSubmit={handleSubmit}>
@@ -344,6 +351,19 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
                             className={`${styles.formInput} form-input`}
                         />
                         {formSubmitted && errors.pollutionExpiryDate && <span className="text-red-500 text-xs">{errors.pollutionExpiryDate}</span>}
+                    </div>
+                    <div>
+                        <label htmlFor="pllutionExpiryDate" style={{ color: '#afafaf' }}>
+                            Permit Expiry Date :
+                        </label>
+                        <input
+                            id="permitExpiryDate"
+                            defaultValue={formatToInputDate(permitExpiryDate)}
+                            onChange={(e) => setPermitExpiryDate(e.target.value)}
+                            type="date"
+                            className={`${styles.formInput} form-input`}
+                        />
+                        {formSubmitted && errors.permitExpiryDate && <span className="text-red-500 text-xs">{errors.permitExpiryDate}</span>}
                     </div>
                     <div>
                         <label htmlFor="emiExpiryDate" style={{ color: '#afafaf' }}>

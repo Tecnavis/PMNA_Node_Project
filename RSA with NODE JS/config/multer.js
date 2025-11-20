@@ -53,6 +53,23 @@ function patchFilenameField(req, res, next) {
     }
     next();
 }
+// Delete resources from cloudinary
+exports.deleteCloudinaryImage = async (url) => {
+    if (!url) return;
+
+    try {
+        const parts = url.split('/');
+        const file = parts.pop(); // xyz.png
+        const folder = parts.slice(parts.indexOf('upload') + 1).join('/'); // uploads
+        const publicId = `${folder}/${file.replace(/\.[^/.]+$/, "")}`;
+
+        await cloudinary.uploader.destroy(publicId);
+        return true;
+    } catch (err) {
+        console.error("Cloudinary delete failed:", err);
+        return false;
+    }
+};
 
 module.exports = {
     single: (fieldName) => [customMulter.single(fieldName), patchFilenameField],
