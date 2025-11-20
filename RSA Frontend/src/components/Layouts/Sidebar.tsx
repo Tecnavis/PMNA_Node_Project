@@ -373,6 +373,9 @@ const Sidebar = () => {
                                             <li>
                                                 <NavLink to="/otherexpences">{t('Other Expences')}</NavLink>
                                             </li>
+                                             <li>
+                                                <NavLink to="/companyexpences">{t('Company Expences')}</NavLink>
+                                            </li>
                                             <li>
                                                 <NavLink to="/dieselexpences">{t('Diesel Expence')}</NavLink>
                                             </li>

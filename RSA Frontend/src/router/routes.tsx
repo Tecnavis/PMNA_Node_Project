@@ -20,6 +20,8 @@ const PaymentReportShowroom = lazy(() => import('../pages/PaymentManagment/Payme
 
 const DriverSalaryReport = lazy(() => import('../pages/Reports/DriverReport/SalaryReport'))
 const DieselExpences = lazy(() => import('../pages/Expences/DieselExpences'))
+const CompanyExpences = lazy(() => import('../pages/Expences/CompanyExpenses'))
+
 const OtherExpences = lazy(() => import('../pages/Expences/OtherExpences'))
 const Expence = lazy(() => import('../pages/Reports/DriverReport/Expence'))
 const DriverAdvancePayment = lazy(() => import('../pages/PaymentManagment/DriverAdvancePayment'))
@@ -218,6 +220,10 @@ const routes = [
     {
         path: '/dieselexpences',
         element: <DieselExpences />,
+    },
+     {
+        path: '/companyexpences',
+        element: <CompanyExpences />,
     },
     {
         path: '/otherexpences',
