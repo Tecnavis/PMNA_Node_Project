@@ -27,5 +27,6 @@ router.put('/:id', imageUpload.array('images', 3), jwt, dieselExpenseController.
 
 // PATCH /diesel-expenses/:id/approve - approve existing diesel-expenses
 router.patch('/:id/approve', jwt, dieselExpenseController.toggleApproval);
+router.delete('/:id', jwt, dieselExpenseController.deleteExpensesByDriver);
 
 module.exports = router;

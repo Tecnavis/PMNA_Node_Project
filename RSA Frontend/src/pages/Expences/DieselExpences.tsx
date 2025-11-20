@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Tooltip, MenuItem, Select, FormControl, InputLabel, TextField } from '@mui/material';
-import { Check, X, ChevronLeft, ChevronRight, Download, Filter, FilePlus } from 'lucide-react';
+import { Check, X, ChevronLeft, ChevronRight, Download, Filter, FilePlus, Trash2 } from 'lucide-react';
 import { Button } from '@headlessui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   IDieselExpense
 } from '../../interface/Expences';
-import { getExpences, approveExpense, udpateDieselExpance } from '../../services/expencesService';
+import { getExpences, approveExpense, udpateDieselExpance, deleteDieselExpense } from '../../services/expencesService'; // Import delete function
 import { CLOUD_IMAGE } from '../../constants/status';
 import { formattedTime, dateFormate } from '../../utils/dateUtils';
 import Loader from '../../components/loader';
@@ -17,7 +17,6 @@ import { VehicleNames } from '../../interface/Vehicle';
 import ReusableModal from '../../components/modal';
 import DieselExpenseFormFormik from './AddDieselExpense';
 
-
 const DieselExpenses = () => {
   const [expenses, setExpenses] = useState<IDieselExpense[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -25,13 +24,14 @@ const DieselExpenses = () => {
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
   const [kmInputValues, setkmInputValues] = useState<Record<string, string | number>>({});
   const [openModal, setOpenModal] = useState<boolean>(false);
-  // -----------------------------------------------
+  
   // Filter states
   const [month, setMonth] = useState<string>('');
   const [year, setYear] = useState<string>('');
   const [vehicleNumber, setVehicleNumber] = useState<string>('');
   const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
   const [vehiclesNames, setVehiclesNames] = useState<VehicleNames[]>([]);
+  
   // loaders
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
@@ -61,11 +61,15 @@ const DieselExpenses = () => {
     { value: '2023', label: '2023' },
     { value: '2024', label: '2024' },
     { value: '2025', label: '2025' },
+        { value: '2026', label: '2026' },
+
+            { value: '2027', label: '2027' },
+
   ];
 
   const role = localStorage.getItem('role') || ''
 
- const fetchDieselExpences = async () => {
+  const fetchDieselExpences = async () => {
     try {
       setLoading(true);
       setFilterLoading(true);
@@ -95,6 +99,27 @@ const DieselExpenses = () => {
     }
   }
 
+  // DELETE OPERATION - Add this function
+  const handleDeleteExpense = async (expenseId: string, expenseDescription: string) => {
+    try {
+      setActionLoading(prev => ({ ...prev, [expenseId]: true }));
+      
+      await deleteDieselExpense(expenseId);
+      
+      // Show success message
+      alert(`Diesel expense "${expenseDescription.substring(0, 30)}..." deleted successfully!`);
+      
+      // Refresh the expenses list
+      fetchDieselExpences();
+      
+    } catch (error) {
+      console.error('Error deleting diesel expense:', error);
+      alert('Failed to delete expense. Please try again.');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [expenseId]: false }));
+    }
+  };
+
   const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchDieselExpences();
@@ -107,7 +132,7 @@ const DieselExpenses = () => {
     fetchDieselExpences();
   };
 
-  // Add pagination controls
+  // Pagination controls
   const PaginationControls = () => (
     <div className="flex items-center justify-between mt-4">
       <div className="flex items-center gap-2">
@@ -186,7 +211,6 @@ const DieselExpenses = () => {
     </div>
   );
 
-  // Update useEffect to include pagination dependencies
   useEffect(() => {
     fetchDieselExpences();
     fetchVehiclesNamesList();
@@ -363,9 +387,9 @@ const DieselExpenses = () => {
                   <div className="flex items-end gap-2 h-10">
                     <Button
                       type="submit"
-                      className={`bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg w-full flex items-center justify-center ${loading ? 'text-xs px-0 gap-1' : 'px-4'}`}
+                      className={`bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg w-full flex items-center justify-center ${filterLoading ? 'text-xs px-0 gap-1' : 'px-4'}`}
                     >
-                      Apply Filters {loading && (
+                      Apply Filters {filterLoading && (
                         <Loader />
                       )}
                     </Button>
@@ -386,8 +410,7 @@ const DieselExpenses = () => {
           <table className="min-w-full text-sm text-left text-gray-600">
             <thead className="bg-indigo-50 border-b text-indigo-700">
               <tr>
-                                <th className="px-4 py-3">Index</th>
-
+                <th className="px-4 py-3">Index</th>
                 <th className="px-4 py-3">Expense ID</th>
                 <th className="px-4 py-3">Driver</th>
                 <th className="px-4 py-3">Vehicle Number</th>
@@ -400,162 +423,182 @@ const DieselExpenses = () => {
                 <th className="px-4 py-3 text-center">Action</th>
               </tr>
             </thead>
-          <tbody className="divide-y divide-gray-200">
-  <AnimatePresence>
-    {expenses.map((expense, index) => (
-      expense && expense._id ? (
-        <motion.tr
-          key={expense._id.toString()}
-          className="hover:bg-gray-50"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-        >
-          <td>{index + 1}</td>
-          <td className="px-4 py-3 font-medium w-auto">{expense.expenseId}</td>
-          <td className="px-4 py-3">
-            <Tooltip title={`Driver ID: ${expense.driver?._id || 'N/A'}`}>
-              <span className="cursor-help">{expense.driver?.name || 'Unknown Driver'}</span>
-            </Tooltip>
-          </td>
-          <td className="px-4 py-3 max-w-xs">
-            <div
-              className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
-              onClick={() => toggleDescription(expense._id)}
-            >
-              {expense.vehicleNumber}
-            </div>
-          </td>
-          <td className="px-4 py-3 max-w-xs">
-            <div
-              className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
-              onClick={() => toggleDescription(expense._id)}
-            >
-              {expense.description}
-            </div>
-          </td>
-          <td className="px-4 py-3 max-w-xs">
-            <div
-              className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
-              onClick={() => toggleDescription(expense._id)}
-            >
-              <input
-                type="number"
-                readOnly={[ROLES.ADMIN].includes(role) ? false : true}
-                className='w-20 border py-1 px-2 rounded-md mr-1 border-gray-500 m-auto'
-                value={kmInputValues[expense._id]}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChangeInputField(e.target.value, expense._id)}
-              />
-              {[ROLES.ADMIN].includes(role) && (
-                <button
-                  className='bg-green-500 text-white rounded-md px-1 py-1'
-                  onClick={() => showConfirmationToast("Are you sure you want to update the kilometers?", () => handleUpdateKm(expense._id))}
-                >
-                  Update
-                </button>
-              )}
-            </div>
-          </td>
-          <td className="px-4 py-3 font-semibold text-green-700">₹{expense.amount?.toLocaleString() || '0'}</td>
-          <td className="px-4 py-3">
-            <div className="flex gap-2 items-center -space-x-4">
-              {expense.images?.slice(0, 2).map((img, idx) => (
-                <motion.div
-                  key={idx}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <img
-                    src={`${CLOUD_IMAGE}${img}`}
-                    alt={`Expense ${idx + 1}`}
-                    className=" shadow-sm cursor-pointer relative inline-block h-12 w-20 rounded-full border-2 border-white object-cover object-center hover:z-10 focus:z-10"
-                    onClick={() => openImageModal(`${CLOUD_IMAGE}${img}`, idx)}
-                  />
-                </motion.div>
-              ))}
-              {expense.images && expense.images.length > 2 && (
-                <motion.div
-                  className="w-16 h-16 bg-indigo-100 rounded-lg flex items-center justify-center cursor-pointer"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.images[0]}`)}
-                >
-                  <span className="text-indigo-600 font-medium">
-                    +{expense.images.length - 2}
-                  </span>
-                </motion.div>
-              )}
-            </div>
-          </td>
-          <td className="px-4 py-3 whitespace-nowrap">
-            {`${dateFormate(expense.createdAt)}, ${formattedTime(expense.createdAt)}`}
-          </td>
-          <td className="px-4 py-3">
-            <motion.span
-              className={`text-xs px-3 py-1 rounded-full font-medium ${expense.status === 'Approved' ?
-                'bg-green-100 text-green-700' :
-                expense.status === 'Rejected' ?
-                  'bg-red-100 text-red-700' :
-                  'bg-yellow-100 text-yellow-700'
-                }`}
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-            >
-              {expense.status}
-            </motion.span>
-          </td>
-          <td className="px-4 py-3 mt-3 flex items-center justify-center gap-2">
-            {/* Approve Button */}
-            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-              <Button
-                onClick={() => showConfirmationToast(
-                  "Are you sure you want to approve this expance.",
-                  () => handleStatusUpdate(expense._id, 'Approved')
-                )}
-                disabled={expense.status === 'Approved' || actionLoading[expense._id]}
-                className={`${expense.status === 'Approved'
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700'
-                  } text-white px-3 py-1 rounded-lg flex items-center gap-1`}
-              >
-                {actionLoading[expense._id] ? (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                  <Check size={16} />
-                )}
-              </Button>
-            </motion.div>
+            <tbody className="divide-y divide-gray-200">
+              <AnimatePresence>
+                {expenses.map((expense, index) => (
+                  expense && expense._id ? (
+                    <motion.tr
+                      key={expense._id.toString()}
+                      className="hover:bg-gray-50"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <td>{index + 1}</td>
+                      <td className="px-4 py-3 font-medium w-auto">{expense.expenseId}</td>
+                      <td className="px-4 py-3">
+                        <Tooltip title={`Driver ID: ${expense.driver?._id || 'N/A'}`}>
+                          <span className="cursor-help">{expense.driver?.name || 'Unknown Driver'}</span>
+                        </Tooltip>
+                      </td>
+                      <td className="px-4 py-3 max-w-xs">
+                        <div
+                          className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
+                          onClick={() => toggleDescription(expense._id)}
+                        >
+                          {expense.vehicleNumber}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 max-w-xs">
+                        <div
+                          className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
+                          onClick={() => toggleDescription(expense._id)}
+                        >
+                          {expense.description}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 max-w-xs">
+                        <div
+                          className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
+                          onClick={() => toggleDescription(expense._id)}
+                        >
+                          <input
+                            type="number"
+                            readOnly={[ROLES.ADMIN].includes(role) ? false : true}
+                            className='w-20 border py-1 px-2 rounded-md mr-1 border-gray-500 m-auto'
+                            value={kmInputValues[expense._id]}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChangeInputField(e.target.value, expense._id)}
+                          />
+                          {[ROLES.ADMIN].includes(role) && (
+                            <button
+                              className='bg-green-500 text-white rounded-md px-1 py-1'
+                              onClick={() => showConfirmationToast("Are you sure you want to update the kilometers?", () => handleUpdateKm(expense._id))}
+                            >
+                              Update
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-green-700">₹{expense.amount?.toLocaleString() || '0'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 items-center -space-x-4">
+                          {expense.images?.slice(0, 2).map((img, idx) => (
+                            <motion.div
+                              key={idx}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              <img
+                                src={`${CLOUD_IMAGE}${img}`}
+                                alt={`Expense ${idx + 1}`}
+                                className=" shadow-sm cursor-pointer relative inline-block h-12 w-20 rounded-full border-2 border-white object-cover object-center hover:z-10 focus:z-10"
+                                onClick={() => openImageModal(`${CLOUD_IMAGE}${img}`, idx)}
+                              />
+                            </motion.div>
+                          ))}
+                          {expense.images && expense.images.length > 2 && (
+                            <motion.div
+                              className="w-16 h-16 bg-indigo-100 rounded-lg flex items-center justify-center cursor-pointer"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.images[0]}`)}
+                            >
+                              <span className="text-indigo-600 font-medium">
+                                +{expense.images.length - 2}
+                              </span>
+                            </motion.div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {`${dateFormate(expense.createdAt)}, ${formattedTime(expense.createdAt)}`}
+                      </td>
+                      <td className="px-4 py-3">
+                        <motion.span
+                          className={`text-xs px-3 py-1 rounded-full font-medium ${expense.status === 'Approved' ?
+                            'bg-green-100 text-green-700' :
+                            expense.status === 'Rejected' ?
+                              'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}
+                          initial={{ scale: 0.9 }}
+                          animate={{ scale: 1 }}
+                        >
+                          {expense.status}
+                        </motion.span>
+                      </td>
+                      <td className="px-4 py-3 mt-3 flex items-center justify-center gap-2">
+                        {/* Approve Button */}
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Button
+                            onClick={() => showConfirmationToast(
+                              "Are you sure you want to approve this expense.",
+                              () => handleStatusUpdate(expense._id, 'Approved')
+                            )}
+                            disabled={expense.status === 'Approved' || actionLoading[expense._id]}
+                            className={`${expense.status === 'Approved'
+                              ? 'bg-gray-300 cursor-not-allowed'
+                              : 'bg-green-600 hover:bg-green-700'
+                              } text-white px-3 py-1 rounded-lg flex items-center gap-1`}
+                          >
+                            {actionLoading[expense._id] ? (
+                              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            ) : (
+                              <Check size={16} />
+                            )}
+                          </Button>
+                        </motion.div>
 
-            {/* Reject Button */}
-            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-              <Button
-                onClick={() => showConfirmationToast(
-                  "Are you sure you want to reject this expance.?",
-                  () => handleStatusUpdate(expense._id, 'Rejected')
-                )}
-                disabled={expense.status === 'Rejected' || actionLoading[expense._id]}
-                className={`${expense.status === 'Rejected'
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-red-600 hover:bg-red-700'
-                  } text-white px-3 py-1 rounded-lg flex items-center gap-1`}
-              >
-                {actionLoading[expense._id] ? (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                  <X size={16} />
-                )}
-              </Button>
-            </motion.div>
-          </td>
-        </motion.tr>
-      ) : null
-    ))}
-  </AnimatePresence>
-</tbody>
+                        {/* Reject Button */}
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Button
+                            onClick={() => showConfirmationToast(
+                              "Are you sure you want to reject this expense.?",
+                              () => handleStatusUpdate(expense._id, 'Rejected')
+                            )}
+                            disabled={expense.status === 'Rejected' || actionLoading[expense._id]}
+                            className={`${expense.status === 'Rejected'
+                              ? 'bg-gray-300 cursor-not-allowed'
+                              : 'bg-red-600 hover:bg-red-700'
+                              } text-white px-3 py-1 rounded-lg flex items-center gap-1`}
+                          >
+                            {actionLoading[expense._id] ? (
+                              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            ) : (
+                              <X size={16} />
+                            )}
+                          </Button>
+                        </motion.div>
+
+                        {/* DELETE Button - Only show for Admins */}
+                        {[ROLES.ADMIN].includes(role) && (
+                          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                            <Button
+                              onClick={() => showConfirmationToast(
+                                `Are you sure you want to delete expense "${expense.description.substring(0, 30)}..."? This action cannot be undone.`,
+                                () => handleDeleteExpense(expense._id, expense.description)
+                              )}
+                              disabled={actionLoading[expense._id]}
+                              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg flex items-center gap-1"
+                            >
+                              {actionLoading[expense._id] ? (
+                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                              ) : (
+                                <Trash2 size={16} />
+                              )}
+                            </Button>
+                          </motion.div>
+                        )}
+                      </td>
+                    </motion.tr>
+                  ) : null
+                ))}
+              </AnimatePresence>
+            </tbody>
           </table>
         </div>
-      <PaginationControls />
+        <PaginationControls />
 
         {/* Image Modal */}
         {selectedImage && (

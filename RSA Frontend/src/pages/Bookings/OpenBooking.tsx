@@ -49,6 +49,7 @@ export interface Booking {
         location: string;
     }; // Reference to Showroom
     totalDistence: number;
+    driverSalary: number;
     dropoffLocation: string;
     dropoffLatitudeAndLongitude: string;
     trapedLocation: string;
@@ -105,7 +106,6 @@ export interface Booking {
     };
     totalAmount?: number; // Optional field
     totalDriverDistence?: number; // Optional field
-    driverSalary?: number; // Optional field
     accidentOption?: string; // Optional field
     serviceCategory?: string; // Optional field
     insuranceAmount?: number; // Optional field
@@ -496,21 +496,22 @@ const Preview = () => {
 
     // Verifying booking
 
-    const verifyBooking = async () => {
-        try {
-            if (booking?.cashPending) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Cash is Pending',
-                    toast: true,
-                    position: 'top',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    padding: '10px 20px',
-                });
-                return; // Stop here, don't verify
-            }
-            // Check image counts
+   const verifyBooking = async () => {
+    try {
+        if (booking?.cashPending) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cash is Pending',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            return; // Stop here, don't verify
+        }
+
+        // Check image counts
         const pickupImageCount = booking?.pickupImages ? booking.pickupImages.length : 0;
         const dropoffImageCount = booking?.dropoffImages ? booking.dropoffImages.length : 0;
 
@@ -555,7 +556,63 @@ const Preview = () => {
             return;
         }
 
-            // If no pending, proceed
+        // Check if driver salary exceeds 1000 and require password
+        // Add null/undefined check for driverSalary
+        if (booking?.driverSalary && booking.driverSalary > 1000) {
+            const { value: password } = await Swal.fire({
+                title: 'Authorization Required',
+                html: `
+                    <div class="text-left">
+                        <p class="mb-2">Driver salary exceeds the limit:</p>
+                        <p class="font-bold text-warning">Driver Salary: ₹${booking.driverSalary}</p>
+                        <p class="text-sm mt-3">Please enter authorization password to verify this booking.</p>
+                    </div>
+                `,
+                input: 'password',
+                inputPlaceholder: 'Enter authorization password',
+                inputAttributes: {
+                    autocapitalize: 'off',
+                    autocorrect: 'off',
+                    maxlength: '20'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Verify Booking',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                showLoaderOnConfirm: true,
+                preConfirm: (inputPassword) => {
+                    if (!inputPassword) {
+                        Swal.showValidationMessage('Authorization password is required');
+                    } else if (inputPassword.length < 3) {
+                        Swal.showValidationMessage('Password is too short');
+                    }
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            });
+
+            if (!password) {
+                return; // User cancelled
+            }
+
+            // Proceed with verification with password
+            await axios.patch(`${backendUrl}/booking/verifybooking/${id}`, {
+                password: password
+            });
+            
+            navigate('/completedbookings');
+            Swal.fire({
+                icon: 'success',
+                title: 'Booking Verified Successfully',
+                text: 'High salary booking has been verified with authorization.',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+        } else {
+            // Normal verification without password (or if driverSalary is undefined/≤1000)
             await axios.patch(`${backendUrl}/booking/verifybooking/${id}`);
             navigate('/completedbookings');
             Swal.fire({
@@ -567,10 +624,45 @@ const Preview = () => {
                 timer: 3000,
                 padding: '10px 20px',
             });
-        } catch (error) {
-            console.error(error);
         }
-    };
+   } catch (error) {
+    console.error('Verification error:', error);
+    
+    // Enhanced error handling with proper type checking
+    const axiosError = error as AxiosError<{ message?: string }>;
+    
+    if (axiosError.response?.status === 401) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Access Denied',
+            text: 'The authorization password you entered is incorrect. Please contact administrator if you need access.',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#dc3545'
+        });
+    } else if (axiosError.response?.status === 400) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Authorization Required',
+            text: axiosError.response?.data?.message || 'Password authorization is required for this booking.',
+            confirmButtonText: 'OK'
+        });
+    } else if (axiosError.response?.status === 500) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Server Error',
+            text: 'Internal server error. Please try again later.',
+            confirmButtonText: 'OK'
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Verification Failed',
+            text: axiosError.response?.data?.message || 'An unexpected error occurred.',
+            confirmButtonText: 'OK'
+        });
+    }
+}
+};
     // Handling navigation to update
     const handleNavigateToBookingUpdate = (id: any, isMessageTrue: boolean) => {
         // Navigate to Page 2 with the boolean value in the URL
@@ -1215,48 +1307,63 @@ const handleRemoveDropoffImage = async (index: number) => {
                     {/* Notes section goes here */}
                     <BookingNotes role={role} id={id || ''} />
                     <div className="w-full border mt-8"></div>
-                    <div className="ltr:text-right rtl:text-left space-y-2 my-1 md:my-6">
-                        <div className="flex items-center justify-center font-semibold text-lg">
-                            <div className="flex-1">
-                                Payable Amount by Customer/Company :<span className="text-red-500 ml-2">₹ {booking?.totalAmount}</span>{' '}
-                            </div>
-                            {/* <div className="w-[37%]" style={{ color: 'red' }}>
-                                
-                            </div> */}
-                        </div>
-                        {booking?.status === 'Order Completed' ? (
-                            <div>
-                                {!booking.verified && !booking.feedbackCheck ? (
-                                    <>
-                                        <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
-                                            Edit
-                                        </button>
-                        {(
-    role === ROLES.VERIFIER || 
-    role.startsWith(ROLES.ADMIN) || 
-    role.startsWith(ROLES.SECONDARY_ADMIN)
-) && (
-    <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
-        Verify
+                   <div className="ltr:text-right rtl:text-left space-y-2 my-1 md:my-6">
+  <div className="flex items-center justify-center font-semibold text-lg">
+    <div className="flex-1">
+      Payable Amount by Customer/Company:
+      <span className="text-red-500 ml-2">₹ {booking?.totalAmount}</span>
+    </div>
+  </div>
+
+  {booking?.status === 'Order Completed' ? (
+    <div>
+      {(!booking.verified && !booking.feedbackCheck) || 
+       ((booking.verified || booking.feedbackCheck) && role.startsWith(ROLES.ADMIN)) ? (
+        <div className="space-y-2">
+          <button 
+            type="button" 
+            className="btn btn-info w-full" 
+            onClick={() => handleNavigateToBookingUpdate(id, true)}
+          >
+            Edit
+          </button>
+          
+          {(role === ROLES.VERIFIER || 
+            role.startsWith(ROLES.ADMIN) || 
+            role.startsWith(ROLES.SECONDARY_ADMIN)) && (
+            <button 
+              type="button" 
+              className="btn btn-success w-full" 
+              onClick={verifyBooking}
+            >
+              Verify
+            </button>
+          )}
+        </div>
+      ) : (
+        booking.verified &&
+        !booking.provider &&
+        !booking.feedbackCheck && (
+          <button 
+            type="button" 
+            className="btn btn-success w-full" 
+            onClick={openFeedbackModal}
+          >
+            Feedback
+          </button>
+        )
+      )}
+    </div>
+  ) : (
+    <button 
+      type="button" 
+      className="btn btn-info w-full" 
+      onClick={() => setModal5(true)}
+    >
+      Booking Completed
     </button>
-)}
-                                    </>
-                                ) : (
-                                    booking.verified &&
-                                    !booking.provider &&
-                                    !booking.feedbackCheck && (
-                                        <button type="button" className="btn btn-success w-full" onClick={openFeedbackModal}>
-                                            Feedback
-                                        </button>
-                                    )
-                                )}
-                            </div>
-                        ) : (
-                            <button type="button" className="btn btn-info w-full" onClick={() => setModal5(true)}>
-                                Booking Completed
-                            </button>
-                        )}
-                    </div>
+  )}
+</div>
                 </div>
             </div>
 
