@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Tooltip, MenuItem, Select, FormControl, InputLabel, TextField } from '@mui/material';
-import { Check, X, ChevronLeft, ChevronRight, Download, Filter, FilePlus, Trash2 } from 'lucide-react';
+import { Check, X, ChevronLeft, ChevronRight, Download, Filter, FilePlus, Trash2, Printer } from 'lucide-react';
 import { Button } from '@headlessui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,6 +18,8 @@ import {
   updateCompanyExpense, 
   deleteCompanyExpense 
 } from './expensesService';
+import logo from '../../assets/images/RSALogo.png'
+
 const CompanyExpenses = () => {
   const [expenses, setExpenses] = useState<ICompanyExpense[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -42,6 +44,9 @@ const CompanyExpenses = () => {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
 
+  // NEW: Total amount state
+  const [totalAmount, setTotalAmount] = useState<number>(0);
+
   const months = [
     { value: '01', label: 'January' },
     { value: '02', label: 'February' },
@@ -61,15 +66,16 @@ const CompanyExpenses = () => {
     { value: '2023', label: '2023' },
     { value: '2024', label: '2024' },
     { value: '2025', label: '2025' },
-        { value: '2026', label: '2026' },
+    { value: '2026', label: '2026' },
     { value: '2027', label: '2027' },
-
   ];
+
   const employees = [
     { value: 'employee1', label: 'John Doe' },
     { value: 'employee2', label: 'Jane Smith' },
     { value: 'employee3', label: 'Mike Johnson' },
   ];
+
   const categories = [
     { value: 'office_supplies', label: 'Office Supplies' },
     { value: 'utilities', label: 'Utilities' },
@@ -84,45 +90,71 @@ const CompanyExpenses = () => {
 
   const role = localStorage.getItem('role') || '';
 
+  // NEW: Function to calculate total amount
+  const calculateTotalAmount = (expenses: ICompanyExpense[]): number => {
+    return expenses.reduce((total, expense) => {
+      const amount = typeof expense.amount === 'string' 
+        ? parseFloat(expense.amount) 
+        : expense.amount;
+      return total + (isNaN(amount) ? 0 : amount);
+    }, 0);
+  };
+
+  // NEW: Function to get current filter description
+  const getFilterDescription = (): string => {
+    const monthLabel = months.find(m => m.value === month)?.label || 'All Months';
+    const yearLabel = year || 'All Years';
+    const categoryLabel = categories.find(c => c.value === category)?.label || 'All Categories';
+    
+    return `${monthLabel} ${yearLabel} - ${categoryLabel}`;
+  };
+
   // In your CompanyExpenses component
- const fetchCompanyExpenses = async () => {
-  try {
-    setLoading(true);
-    setFilterLoading(true);
+  const fetchCompanyExpenses = async () => {
+    try {
+      setLoading(true);
+      setFilterLoading(true);
 
-    console.log('Fetching expenses from:', import.meta.env.VITE_BACKEND_URL);
-    console.log('Token exists:', !!localStorage.getItem('token'));
+      console.log('Fetching expenses from:', import.meta.env.VITE_BACKEND_URL);
+      console.log('Token exists:', !!localStorage.getItem('token'));
 
-    const response = await getCompanyExpenses(
-      month, 
-      year, 
-      category,
-      employee,
-      currentPage,
-      itemsPerPage,
-      showAll
-    );
-    console.log("response",response)
-    setExpenses(response.data);
-    setTotalPages(response.totalPages);
-    setTotalItems(response.total);
+      const response = await getCompanyExpenses(
+        month, 
+        year, 
+        category,
+        employee,
+        currentPage,
+        itemsPerPage,
+        showAll
+      );
+      console.log("response", response);
+      
+      setExpenses(response.data);
+      setTotalPages(response.totalPages);
+      setTotalItems(response.total);
 
-    response.data.forEach((expense: ICompanyExpense) => {
-      setAmountInputValues((prev) => ({ ...prev, [expense._id]: expense.amount }))
-    });
+      // NEW: Calculate and set total amount
+      const calculatedTotal = calculateTotalAmount(response.data);
+      setTotalAmount(calculatedTotal);
 
-  } catch (error: any) {
-    console.error('Error fetching company expenses:', error);
-    if (error.code === 'ERR_NETWORK') {
-      console.error('Network error - Backend server is not reachable');
-      // You can show a user-friendly message here
+      response.data.forEach((expense: ICompanyExpense) => {
+        setAmountInputValues((prev) => ({ ...prev, [expense._id]: expense.amount }))
+      });
+
+    } catch (error: any) {
+      console.error('Error fetching company expenses:', error);
+      if (error.code === 'ERR_NETWORK') {
+        console.error('Network error - Backend server is not reachable');
+      }
+      // NEW: Reset total amount on error
+      setTotalAmount(0);
+    } finally {
+      setFilterLoading(false);
+      setLoading(false);
     }
-  } finally {
-    setFilterLoading(false);
-    setLoading(false);
-  }
-};
-// DELETE OPERATION - Add this function
+  };
+
+  // DELETE OPERATION
   const handleDeleteExpense = async (expenseId: string, expenseTitle: string) => {
     try {
       setActionLoading(prev => ({ ...prev, [expenseId]: true }));
@@ -142,8 +174,10 @@ const CompanyExpenses = () => {
       setActionLoading(prev => ({ ...prev, [expenseId]: false }));
     }
   };
+
   const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setCurrentPage(1); // Reset to first page when applying filters
     fetchCompanyExpenses();
   };
 
@@ -151,6 +185,8 @@ const CompanyExpenses = () => {
     setMonth('');
     setYear('');
     setCategory('');
+    setEmployee('');
+    setCurrentPage(1);
     fetchCompanyExpenses();
   };
 
@@ -238,7 +274,7 @@ const CompanyExpenses = () => {
   }, [currentPage, itemsPerPage, showAll]);
 
   // FIXED: Added proper type constraint for status
-  const handleStatusUpdate = async (expenseId: string, status: 'Approved' | 'Rejected') => {
+   const handleStatusUpdate = async (expenseId: string, status: 'Approved' | 'Rejected') => {
     try {
       setActionLoading(prev => ({ ...prev, [expenseId]: true }));
       await approveCompanyExpense(expenseId, status);
@@ -257,7 +293,6 @@ const CompanyExpenses = () => {
     }));
   };
 
-  // FIXED: Updated to work with single image
   const openImageModal = (imageUrl: string) => {
     setSelectedImage(imageUrl);
   };
@@ -284,10 +319,8 @@ const CompanyExpenses = () => {
     setAmountInputValues(prev => ({ ...prev, [expenseId]: value }));
   };
 
-  // FIXED: Added type conversion for amount
   const handleUpdateAmount = (expenseId: string) => {
     const amountValue = amountInputValues[expenseId];
-    // Convert to number if it's a string
     const numericAmount = typeof amountValue === 'string' 
       ? parseFloat(amountValue) 
       : amountValue;
@@ -304,34 +337,234 @@ const CompanyExpenses = () => {
     return foundCategory ? foundCategory.label : categoryValue;
   };
 
- // FIXED: Function to get full Cloudinary URL from public_id - handles both formats
-const getImageUrl = (imagePublicId: string): string => {
-  if (!imagePublicId) return '';
-  
-  const cloudName = 'dksxgbcyi'; // Your Cloudinary cloud name
-  
-  // Handle different public_id formats:
-  // 1. With folder: "company-expenses/f2k4z5ip1cp9fg7sftki"
-  // 2. Without folder: "p7hl9lzhuvpz3obnnwj6"
-  
-  if (imagePublicId.includes('/')) {
-    // Already has folder prefix
-    return `https://res.cloudinary.com/${cloudName}/image/upload/${imagePublicId}`;
-  } else {
-    // No folder prefix, assume it's in company-expenses folder
-    return `https://res.cloudinary.com/${cloudName}/image/upload/company-expenses/${imagePublicId}`;
+  const getImageUrl = (imagePublicId: string): string => {
+    if (!imagePublicId) return '';
+    
+    const cloudName = 'dksxgbcyi';
+    
+    if (imagePublicId.includes('/')) {
+      return `https://res.cloudinary.com/${cloudName}/image/upload/${imagePublicId}`;
+    } else {
+      return `https://res.cloudinary.com/${cloudName}/image/upload/company-expenses/${imagePublicId}`;
+    }
+  };
+
+  const handleImageClick = (imagePublicId: string) => {
+    const imageUrl = getImageUrl(imagePublicId);
+    if (imageUrl) {
+      console.log('Opening image URL:', imageUrl);
+      setSelectedImage(imageUrl);
+    }
+  };
+const handlePrintExpenses = () => {
+  // Create a print-friendly HTML content
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Company Expenses Report</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 20px; 
+          color: #333;
+        }
+        .company-header {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 20px;
+          padding-bottom: 20px;
+          border-bottom: 2px solid #4f46e5;
+        }
+        .company-logo {
+          height: 60px;
+          margin-right: 20px;
+        }
+        .company-info {
+          text-align: center;
+        }
+        .company-info h1 {
+          color: #4f46e5;
+          margin: 0 0 5px 0;
+          font-size: 24px;
+        }
+        .company-info .subtitle {
+          color: #666;
+          font-size: 14px;
+          margin: 0;
+        }
+        .report-header {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .report-header h2 {
+          color: #333;
+          margin: 0 0 10px 0;
+          font-size: 20px;
+        }
+        .filter-info {
+          text-align: center;
+          margin-bottom: 20px;
+          color: #666;
+          font-size: 14px;
+          background: #f8fafc;
+          padding: 10px;
+          border-radius: 6px;
+        }
+        .summary {
+          background: #f8fafc;
+          padding: 15px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+          border-left: 4px solid #4f46e5;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+          font-size: 12px;
+        }
+        th {
+          background-color: #4f46e5;
+          color: white;
+          padding: 12px 8px;
+          text-align: left;
+          border: 1px solid #ddd;
+          font-weight: bold;
+        }
+        td {
+          padding: 8px;
+          border: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+          background-color: #f9fafb;
+        }
+        .status-approved { 
+          color: #059669; 
+          background: #d1fae5; 
+          padding: 4px 8px; 
+          border-radius: 12px; 
+          font-size: 11px;
+        }
+        .status-pending { 
+          color: #d97706; 
+          background: #fef3c7; 
+          padding: 4px 8px; 
+          border-radius: 12px; 
+          font-size: 11px;
+        }
+        .status-rejected { 
+          color: #dc2626; 
+          background: #fee2e2; 
+          padding: 4px 8px; 
+          border-radius: 12px; 
+          font-size: 11px;
+        }
+        .total-row {
+          background-color: #4f46e5 !important;
+          color: white;
+          font-weight: bold;
+        }
+        .footer {
+          margin-top: 30px;
+          text-align: center;
+          color: #666;
+          font-size: 11px;
+          border-top: 1px solid #ddd;
+          padding-top: 10px;
+        }
+        @media print {
+          body { margin: 10mm; }
+          .no-print { display: none; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Company Header with Logo -->
+      <div class="company-header">
+        <img class="company-logo" src="${logo}" alt="Company Logo" onerror="this.style.display='none'" />
+        <div class="company-info">
+          <h1>RSA</h1>
+          <p class="subtitle">Expense Management System</p>
+        </div>
+      </div>
+      
+      <!-- Report Header -->
+      <div class="report-header">
+        <h2>Expenses Report</h2>
+        <div class="filter-info">
+          <strong>Period:</strong> ${getFilterDescription()} • 
+          <strong>Generated:</strong> ${new Date().toLocaleDateString()}
+        </div>
+      </div>
+      
+      <!-- Summary -->
+      <div class="summary">
+        <strong>Summary:</strong> ${totalItems} expenses • Total Amount: ₹${totalAmount.toLocaleString('en-IN')}
+      </div>
+      
+      <!-- Expenses Table -->
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Expense ID</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Amount (₹)</th>
+            <th>Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${expenses.map((expense, index) => `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${expense.expenseId}</td>
+              <td>${expense.title}</td>
+              <td>${getCategoryLabel(expense.category)}</td>
+              <td>${expense.description}</td>
+              <td>₹${(typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount).toLocaleString('en-IN')}</td>
+              <td>${dateFormate(expense.createdAt)}</td>
+              <td>
+                <span class="status-${expense.status.toLowerCase()}">
+                  ${expense.status}
+                </span>
+              </td>
+            </tr>
+          `).join('')}
+          <tr class="total-row">
+            <td colspan="5" style="text-align: right;"><strong>Total:</strong></td>
+            <td><strong>₹${totalAmount.toLocaleString('en-IN')}</strong></td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div class="footer">
+        Printed on ${new Date().toLocaleString()} • ${expenses.length} records displayed • RSA Company
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Open print window
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load before printing
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
   }
 };
-
-// FIXED: Function to handle image click safely
-const handleImageClick = (imagePublicId: string) => {
-  const imageUrl = getImageUrl(imagePublicId);
-  if (imageUrl) {
-    console.log('Opening image URL:', imageUrl);
-    setSelectedImage(imageUrl);
-  }
-};
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -339,31 +572,59 @@ const handleImageClick = (imagePublicId: string) => {
       transition={{ duration: 0.3 }}
     >
       <Card className="p-6 shadow-xl rounded-2xl bg-white">
-        <div className="flex justify-between items-center mb-6">
-          <motion.h2
-            className="text-2xl font-semibold text-indigo-700"
-            initial={{ x: -20 }}
-            animate={{ x: 0 }}
+      <div className="flex justify-between items-center mb-6">
+        <motion.h2
+          className="text-2xl font-semibold text-indigo-700"
+          initial={{ x: -20 }}
+          animate={{ x: 0 }}
+        >
+          Company Expenses
+        </motion.h2>
+        <div className='flex items-center justify-center gap-1'>
+          {/* Print Button - Add this */}
+          <Button
+            onClick={handlePrintExpenses}
+            disabled={expenses.length === 0}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Company Expenses
-          </motion.h2>
-          <div className='flex items-center justify-center gap-1'>
-            <Button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
-            >
-              <Filter size={18} />
-              Filters
-            </Button>
-            <Button
-              onClick={handleModal}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
-            >
-              <FilePlus size={18} />
-              Add Expense
-            </Button>
-          </div>
+            <Printer size={18} />
+            Print
+          </Button>
+          
+          <Button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+          >
+            <Filter size={18} />
+            Filters
+          </Button>
+          <Button
+            onClick={handleModal}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
+          >
+            <FilePlus size={18} />
+            Add Expense
+          </Button>
         </div>
+      </div>
+        
+         <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-lg"
+        >
+          <div className="flex flex-col md:flex-row justify-between items-center text-white">
+            <div>
+              <h3 className="text-lg font-semibold">Total Expenses</h3>
+              <p className="text-indigo-100 text-sm">
+                {getFilterDescription()} • {totalItems} expenses
+              </p>
+            </div>
+            <div className="text-right mt-2 md:mt-0">
+              <div className="text-3xl font-bold">₹{totalAmount.toLocaleString('en-IN')}</div>
+                        </div>
+          </div>
+        </motion.div>
         
         <AnimatePresence>
           {isFilterOpen && (
@@ -445,7 +706,7 @@ const handleImageClick = (imagePublicId: string) => {
           )}
         </AnimatePresence>
 
-        <div className="overflow-x-auto">
+         <div className="overflow-x-auto">
           <table className="min-w-full text-sm text-left text-gray-600">
             <thead className="bg-indigo-50 border-b text-indigo-700">
               <tr>
@@ -473,6 +734,7 @@ const handleImageClick = (imagePublicId: string) => {
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ duration: 0.2 }}
                     >
+                      {/* Your existing table rows remain the same */}
                       <td className="px-4 py-3">{index + 1}</td>
                       <td className="px-4 py-3 font-medium">{expense.expenseId}</td>
                       <td className="px-4 py-3 font-medium">{expense.title}</td>
@@ -513,29 +775,27 @@ const handleImageClick = (imagePublicId: string) => {
                           )}
                         </div>
                       </td>
-                  <td className="px-4 py-3">
-  {/* FIXED: Single image display with proper URL handling */}
-  {expense.image ? (
-    <motion.div
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
-      <img
-        src={getImageUrl(expense.image)}
-        alt="Expense Receipt"
-        className="shadow-sm cursor-pointer h-12 w-20 rounded-lg border-2 border-white object-cover object-center"
-        onClick={() => handleImageClick(expense.image)}
-        onError={(e) => {
-          // Fallback if image fails to load
-          console.error('Image failed to load:', expense.image);
-          e.currentTarget.style.display = 'none';
-        }}
-      />
-    </motion.div>
-  ) : (
-    <span className="text-gray-400 text-sm">No image</span>
-  )}
-</td>
+                      <td className="px-4 py-3">
+                        {expense.image ? (
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <img
+                              src={getImageUrl(expense.image)}
+                              alt="Expense Receipt"
+                              className="shadow-sm cursor-pointer h-12 w-20 rounded-lg border-2 border-white object-cover object-center"
+                              onClick={() => handleImageClick(expense.image)}
+                              onError={(e) => {
+                                console.error('Image failed to load:', expense.image);
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          </motion.div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No image</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {`${dateFormate(expense.createdAt)}, ${formattedTime(expense.createdAt)}`}
                       </td>
@@ -577,7 +837,6 @@ const handleImageClick = (imagePublicId: string) => {
                           </Button>
                         </motion.div>
 
-                        {/* Reject Button */}
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                           <Button
                             onClick={() => showConfirmationToast(
@@ -598,8 +857,8 @@ const handleImageClick = (imagePublicId: string) => {
                             )}
                           </Button>
                         </motion.div>
-                            {/* DELETE Button - Only show for Admins */}
-                        {[ROLES.ADMIN].includes(role) && (
+                        
+{[ROLES.ADMIN, ROLES.accountant].includes(role) && (
                           <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                             <Button
                               onClick={() => showConfirmationToast(
@@ -618,7 +877,6 @@ const handleImageClick = (imagePublicId: string) => {
                           </motion.div>
                         )}
                       </td>
-                     
                     </motion.tr>
                   ) : null
                 ))}
@@ -672,3 +930,4 @@ const handleImageClick = (imagePublicId: string) => {
 };
 
 export default CompanyExpenses;
+// -------------------------------------------------------------------------
