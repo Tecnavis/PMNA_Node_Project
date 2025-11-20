@@ -57,3 +57,59 @@ exports.loginAdmin = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+exports.updateAdminQR = async (req, res) => {
+  try {
+
+    const adminId = req.user?.id;
+    const admin = await Admin.findById(adminId);
+    const quImage = req.file
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+    
+    if(req.user.role === 'admin'){
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    if (!quImage) {
+      return res.status(400).json({ message: "QR image is required" });
+    }
+
+    admin.qrImage = {
+      url: quImage.path,
+      uploadedAt: new Date()
+    };
+
+    await admin.save();
+
+    return res.status(200).json({
+      message: "Admin QR updated successfully",
+      qrImage: admin.qrImage
+    });
+
+  } catch (error) {
+    console.error("updateAdminQR error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getAdminQR = async (req, res) => {
+  try {
+    const adminId = req.user?.id;
+    const admin = await Admin.findById(adminId);
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    return res.status(200).json({
+      qrImage: admin.qrImage?.url || null,
+    });
+
+  } catch (error) {
+    console.error("getAdminQR error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};

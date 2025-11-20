@@ -12,31 +12,35 @@ const adminSchema = new mongoose.Schema({
     required: true,
   },
   role: {
-    type:String,
-    default:'admin'
+    type: String,
+    default: 'admin'
   },
   tokens: { type: String, default: "" },
+  qrImage: {
+    url: { type: String, default: "" },
+    uploadedAt: { type: Date }
+  }
 });
 adminSchema.pre("save", async function (next) {
-    if (this.isModified("password") || this.isNew) {
-      if (!this.password.startsWith("$2b$")) {
-        try {
-          const hashedPassword = await bcrypt.hash(this.password, 10);
-          this.password = hashedPassword;
-          next()
-        } catch (err) {
-          console.log(err.message, "something went wrong in password hashing");
-          return next(err);
-        }
-      } else {
-        console.log("Password is already hashed.");
-        return next();
+  if (this.isModified("password") || this.isNew) {
+    if (!this.password.startsWith("$2b$")) {
+      try {
+        const hashedPassword = await bcrypt.hash(this.password, 10);
+        this.password = hashedPassword;
+        next()
+      } catch (err) {
+        console.log(err.message, "something went wrong in password hashing");
+        return next(err);
       }
     } else {
-      console.log("Password is not modified.");
+      console.log("Password is already hashed.");
       return next();
     }
-  });
+  } else {
+    console.log("Password is not modified.");
+    return next();
+  }
+});
 
 
 module.exports = mongoose.model('Admin', adminSchema)
