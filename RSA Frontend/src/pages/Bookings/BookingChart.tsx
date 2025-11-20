@@ -161,7 +161,79 @@ const BookingDashboard: React.FC = () => {
           />
         </div>
       </div>
-
+  {/* Enhanced Data Table with percentages */}
+<div className="bg-white rounded-lg shadow-md p-6">
+  <h2 className="text-lg font-semibold mb-4">Detailed Statistics</h2>
+  <div className="overflow-x-auto">
+    <table className="min-w-full table-auto">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="px-4 py-2 text-left">Category</th>
+          {timePeriods.map((period) => (
+            <th key={period.key} className="px-4 py-2 text-center">
+              <div className={`${period.bgColor} py-1 rounded`}>
+                {period.label}
+              </div>
+              <div className="text-xs font-normal text-gray-600">(Total: {period.total})</div>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {categories.map((category) => (
+          <tr key={category.key} className="border-b">
+            <td className="px-4 py-2 font-medium">{category.label}</td>
+            {timePeriods.map((period) => {
+              const value = stats[period.key as keyof TimePeriodStats][category.key as keyof BookingStats];
+              const remaining = period.total - value;
+              
+              // Define background colors for each time period
+              const getBgColor = (periodKey: string) => {
+                switch (periodKey) {
+                  case 'today':
+                    return 'bg-blue-100 hover:bg-blue-200';
+                  case 'yesterday':
+                    return 'bg-green-100 hover:bg-green-200';
+                  case 'historical':
+                    return 'bg-purple-100 hover:bg-purple-200';
+                  default:
+                    return 'bg-white';
+                }
+              };
+              
+              return (
+                <td 
+                  key={period.key} 
+                  className={`px-4 py-2 text-center ${getBgColor(period.key)} transition-colors duration-200`}
+                >
+                  {/* For New Booking Details and Cash Pending, show both values */}
+                  {!category.showOnlyRemaining ? (
+                    <>
+                      <div className={`font-semibold ${blink ? 'text-blue-700' : 'text-blue-900'}`}>
+                        {value} 
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Remaining: {remaining}
+                      </div>
+                    </>
+                  ) : (
+                    // For Driver Completed, Verifier, Feedback, and Accountant, show only remaining value
+                    <div className={`text-lg font-bold ${blink ? 'text-green-700' : 'text-green-600'}`}>
+                      {remaining} 
+                      <div className="text-xs text-gray-600 mt-1">
+                        Completed: {value}
+                      </div>
+                    </div>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
       {/* Stacked Bar Chart Container */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Booking Statistics</h2>
@@ -246,79 +318,7 @@ const BookingDashboard: React.FC = () => {
         </div>
       </div>
 
-     {/* Enhanced Data Table with percentages */}
-<div className="bg-white rounded-lg shadow-md p-6">
-  <h2 className="text-lg font-semibold mb-4">Detailed Statistics</h2>
-  <div className="overflow-x-auto">
-    <table className="min-w-full table-auto">
-      <thead>
-        <tr className="bg-gray-100">
-          <th className="px-4 py-2 text-left">Category</th>
-          {timePeriods.map((period) => (
-            <th key={period.key} className="px-4 py-2 text-center">
-              <div className={`${period.bgColor} py-1 rounded`}>
-                {period.label}
-              </div>
-              <div className="text-xs font-normal text-gray-600">(Total: {period.total})</div>
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {categories.map((category) => (
-          <tr key={category.key} className="border-b">
-            <td className="px-4 py-2 font-medium">{category.label}</td>
-            {timePeriods.map((period) => {
-              const value = stats[period.key as keyof TimePeriodStats][category.key as keyof BookingStats];
-              const remaining = period.total - value;
-              
-              // Define background colors for each time period
-              const getBgColor = (periodKey: string) => {
-                switch (periodKey) {
-                  case 'today':
-                    return 'bg-blue-100 hover:bg-blue-200';
-                  case 'yesterday':
-                    return 'bg-green-100 hover:bg-green-200';
-                  case 'historical':
-                    return 'bg-purple-100 hover:bg-purple-200';
-                  default:
-                    return 'bg-white';
-                }
-              };
-              
-              return (
-                <td 
-                  key={period.key} 
-                  className={`px-4 py-2 text-center ${getBgColor(period.key)} transition-colors duration-200`}
-                >
-                  {/* For New Booking Details and Cash Pending, show both values */}
-                  {!category.showOnlyRemaining ? (
-                    <>
-                      <div className={`font-semibold ${blink ? 'text-blue-700' : 'text-blue-900'}`}>
-                        {value} 
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        Remaining: {remaining}
-                      </div>
-                    </>
-                  ) : (
-                    // For Driver Completed, Verifier, Feedback, and Accountant, show only remaining value
-                    <div className={`text-lg font-bold ${blink ? 'text-green-700' : 'text-green-600'}`}>
-                      {remaining} 
-                      <div className="text-xs text-gray-600 mt-1">
-                        Completed: {value}
-                      </div>
-                    </div>
-                  )}
-                </td>
-              );
-            })}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-</div>
+   
     </div>
   );
 };

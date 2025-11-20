@@ -196,3 +196,38 @@ exports.getExpensesByDriver = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
+// Delete diesel expense
+exports.deleteExpensesByDriver = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const expense = await DieselExpense.findById(id);
+        if (!expense) {
+            return res.status(404).json({ message: 'Diesel expense not found' });
+        }
+
+        // Delete images from Cloudinary if they exist
+        if (expense.images && expense.images.length > 0) {
+            try {
+                for (const imageUrl of expense.images) {
+                    // Extract public_id from Cloudinary URL
+                    const publicId = imageUrl.split('/').pop().split('.')[0];
+                    await cloudinary.uploader.destroy(`diesel-expenses/${publicId}`);
+                }
+                console.log('All images deleted from Cloudinary for expense:', id);
+            } catch (error) {
+                console.error('Error deleting images from Cloudinary:', error);
+                // Continue with deletion even if image deletion fails
+            }
+        }
+
+        await DieselExpense.findByIdAndDelete(id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Diesel expense deleted successfully'
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
