@@ -2059,6 +2059,7 @@ exports.updateFilenumber = async (req, res) => {
 exports.verifyBooking = async (req, res) => {
     try {
         const { id } = req.params;
+        const { password } = req.body; // Get password from request body
         const verifiedBy = req.user.id || req.user._id;// Get the user ID from the authenticated request
 
         const routeLogger = LoggerFactory.createChildLogger({
@@ -2075,7 +2076,23 @@ exports.verifyBooking = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-// Check image counts and update pending flags
+
+        // Check driverSalary condition and validate password if needed
+        if (booking.driverSalary > 1000) {
+            if (!password) {
+                return res.status(400).json({ 
+                    message: 'Password required for verification. Driver salary exceeds 1000.' 
+                });
+            }
+            
+            if (password !== 'SALARY@RSA') {
+                return res.status(401).json({ 
+                    message: 'Invalid password. Please provide correct password to verify booking with driver salary > 1000.' 
+                });
+            }
+        }
+
+        // Check image counts and update pending flags
         const pickupImageCount = booking.pickupImages ? booking.pickupImages.length : 0;
         const dropoffImageCount = booking.dropoffImages ? booking.dropoffImages.length : 0;
         
@@ -2085,6 +2102,7 @@ exports.verifyBooking = async (req, res) => {
         
         // Save the updated pending flags
         await booking.save();
+        
         if (booking.cashPending) {
             return res.status(400).json({ message: 'Cannot verify. Cash is pending.' });
         }
@@ -2097,6 +2115,7 @@ exports.verifyBooking = async (req, res) => {
         if (booking.inventoryImagePending && !booking.inventoryImage) {
             return res.status(400).json({ message: 'Inventory Image is pending.' });
         }
+
         // Adjust cash in hand and salary similar to updatePickupByAdmin
         if (booking.workType === "RSAWork") {
             const selectedCompany = booking.company;
@@ -2156,12 +2175,14 @@ exports.verifyBooking = async (req, res) => {
             verified: true,
             verifiedBy: new mongoose.Types.ObjectId(verifiedBy), // Add the user who verified the booking
             verifiedAt: new Date(), // Add timestamp of verification
-              pickupImagePending: booking.pickupImagePending,
+            pickupImagePending: booking.pickupImagePending,
             dropoffImagePending: booking.dropoffImagePending
         };
+        
         if (booking.provider) {
             updateData.feedbackCheck = true;
         }
+        
         const updatedBooking = await Booking.findByIdAndUpdate(
             id,
             updateData,
@@ -2171,10 +2192,12 @@ exports.verifyBooking = async (req, res) => {
             select: 'name email', // Only populate these fields
             model: 'Staff' // Explicitly specify the model
         });
+        
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-// Call the vehicle service status check function after successful verification
+
+        // Call the vehicle service status check function after successful verification
         if (booking.driver && booking.totalDriverDistence) {
             const vehicleStatusResult = await checkVehicleServiceStatus(updatedBooking);
             if (!vehicleStatusResult.success) {
@@ -2190,6 +2213,7 @@ exports.verifyBooking = async (req, res) => {
                 }, 'Vehicle service status updated successfully');
             }
         }
+        
         routeLogger.info({
             fileNumber: updatedBooking.fileNumber || 'unknown',
             doneBy: req.user || 'unknown'

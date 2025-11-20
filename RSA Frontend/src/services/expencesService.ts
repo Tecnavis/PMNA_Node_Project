@@ -144,3 +144,26 @@ export const updateStatus = async (
     }
 };
 
+// Add this to your expencesService.ts
+export const deleteDieselExpense = async (
+  expenseId: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await axios.delete(`${BASE_URL}/diesel-expenses/${expenseId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      timeout: 10000
+    });
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('API Error:', error.response?.data || error.message);
+    throw error;
+  }
+};

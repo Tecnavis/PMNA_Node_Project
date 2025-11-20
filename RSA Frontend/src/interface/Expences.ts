@@ -44,3 +44,40 @@ export interface Expense {
 
   createdAt: string;
 }
+// In your interface/Expences.ts
+export interface ICompanyExpense {
+  _id: string;
+  expenseId: string;
+  title: string;
+  description: string;
+  category: string;
+  amount: number;
+  vendor?: string;
+  employee?: string;
+  image: string; // Changed from images to image (single string)
+  status: 'Pending' | 'Approved' | 'Rejected';
+  createdAt: string;
+  updatedAt: string;
+  approvedBy?: string;
+  rejectedBy?: string;
+}
+
+export interface ICompanyExpenseResponse {
+  success: boolean;
+  data: ICompanyExpense[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface ICreateExpenseData {
+  title: string;
+  description: string;
+  category: string;
+  amount: number;
+  vendor?: string;
+  employee?: string;
+  images: File[];
+}

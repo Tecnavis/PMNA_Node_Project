@@ -48,6 +48,8 @@ var dieselExpensesRouter = require('./routes/dieselExpense')
 var executivesRouter = require('./routes/executive')
 var transactionsRouter = require('./routes/transaction.js')
 var showroomPaymentRoutes = require('./routes/showroomPaymentRoutes.js');
+const companyExpenseRoutes = require('./routes/companyExpenses.js');
+
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { default: axios } = require('axios');
 
@@ -233,7 +235,7 @@ app.use('/expense', expenseRouter);
 app.use('/diesel-expenses', dieselExpensesRouter);
 app.use('/marketing-executives', executivesRouter);
 app.use('/transactions', transactionsRouter);
-
+app.use('/company-expenses', companyExpenseRoutes);
 // ============ MEMORY MONITORING MIDDLEWARE ============
 app.use((req, res, next) => {
   // Log memory usage for large responses
