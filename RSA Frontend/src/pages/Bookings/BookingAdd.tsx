@@ -20,6 +20,7 @@ import 'flatpickr/dist/themes/material_blue.css';
 import toast from 'react-hot-toast';
 import { redeemShowroomReward } from '../../services/rewardService';
 import ReddemModal from './ReddemModal';
+import RouteBookingMap from '../../components/RouteBookingMap';
 
 export interface Company {
     _id: string;
@@ -215,7 +216,6 @@ const BookingAdd: React.FC = () => {
     const [rewardAmount, setRewardAmount] = useState<number>(0);
     const [bookingRewardAmount, setBookingRewardAmount] = useState<number | null>(null);
     const [openRedeemModal, setOpenRedeemModal] = useState<boolean>(false);
-    // -------------------------------------------------------
     const [selectedEntity, setSelectedEntity] = useState<SelectedEntity | null>();
     const [selectedBaseLocation, setSelectedBaseLocation] = useState<{ id: string; latitudeAndLongitude: string } | null>(null);
     const [selectedShowroom, setSelectedShowroom] = useState<{ id: string; latitudeAndLongitude: string; name: string; insurenceAmount: number | null } | null>(null);
@@ -236,7 +236,7 @@ const BookingAdd: React.FC = () => {
     const [baseLat, baseLng] = selectedBaseLocation?.latitudeAndLongitude ? selectedBaseLocation?.latitudeAndLongitude.split(',') : [null, null];
     const [showroomLat, showroomLng] = selectedShowroom?.latitudeAndLongitude ? selectedShowroom?.latitudeAndLongitude.split(',') : [null, null];
     const uid = id.id;
-    //ref for states 
+    const [showMap, setShowMap] = useState<boolean>(false);
     const workTypeRef = useRef<HTMLInputElement>(null);
     const totalDistanceRef = useRef<HTMLInputElement>(null);
  const adjustmentValueRef = useRef<HTMLInputElement>(null);
@@ -256,8 +256,16 @@ const BookingAdd: React.FC = () => {
     const locationRef = useRef<HTMLInputElement>(null);
     const latitudeAndLongitudeRef = useRef<HTMLInputElement>(null);
     const baselocationRef = useRef<any>(null);
-    const selectedShowroomRef = useRef<any>(null);
-
+    const selectedShowroomRef = useRef<any>(null);// Your existing parseLatLng function (keep this)
+// Your existing parseLatLng function
+const parseLatLng = (latLngString: string): { lat: number; lng: number } | null => {
+  if (!latLngString) return null;
+  const coords = latLngString.split(',').map(coord => parseFloat(coord.trim()));
+  if (coords.length >= 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+    return { lat: coords[0], lng: coords[1] };
+  }
+  return null;
+};
     // check the page for token and redirect
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -1946,46 +1954,7 @@ const formatTimeAMPM = (dateString: string): string => {
                                 onChange={(e) => setCustomerVehicleNumber(e.target.value)}
                             />
                         </div>
-                        {/* <div>
-                            <label htmlFor="vehicleType">Select Vehicle Type by Tyre Number:</label>
-                            <select id="vehicleType" name="vehicleType" className="form-select" value={selectedVehicleType} onChange={handleChange}>
-                                <option value="" disabled>
-                                    Select a vehicle type
-                                </option>
-                                <optgroup label="Two-Wheelers (2 Tyres)">
-                                    <option value="bicycle">Bicycle</option>
-                                    <option value="motorcycle">Motorcycle</option>
-                                    <option value="scooter">Scooter</option>
-                                    <option value="moped">Moped</option>
-                                </optgroup>
-                                <optgroup label="Three-Wheelers (3 Tyres)">
-                                    <option value="auto-rickshaw">Auto-rickshaw</option>
-                                    <option value="tuk-tuk">Tuk-tuk</option>
-                                    <option value="motorized-tricycle">Motorized Tricycle</option>
-                                </optgroup>
-                                <optgroup label="Four-Wheelers (4 Tyres)">
-                                    <option value="car">Car</option>
-                                    <option value="jeep">Jeep</option>
-                                    <option value="suv">SUV</option>
-                                    <option value="pickup-truck">Pickup Truck</option>
-                                </optgroup>
-                                <optgroup label="Six-Wheelers (6 Tyres)">
-                                    <option value="truck">Medium-sized Truck</option>
-                                    <option value="bus">Bus</option>
-                                </optgroup>
-                                <optgroup label="Eight-Wheelers and Above">
-                                    <option value="large-truck">Large Truck</option>
-                                    <option value="heavy-duty-vehicle">Heavy-duty Vehicle</option>
-                                    <option value="crane">Crane</option>
-                                    <option value="tanker">Tanker</option>
-                                    <option value="articulated-lorry">Articulated Lorry</option>
-                                </optgroup>
-                                <optgroup label="Tracked Vehicles (No Tyres)">
-                                    <option value="bulldozer">Bulldozer</option>
-                                    <option value="tank">Tank</option>
-                                </optgroup>
-                            </select>
-                        </div> */}
+                       
                         <div>
                             <label htmlFor="brandName">Brand name </label>
                             <input id="brandName" type="text" placeholder="Enter brand name" className="form-input" value={brandName} onChange={(e) => setBrandName(e.target.value)} />
@@ -2108,6 +2077,37 @@ const formatTimeAMPM = (dateString: string): string => {
 
                                     {/* Main Content with Fixed Height */}
                                     <div className="p-5 h-[500px] flex flex-col">
+
+
+<div className="mt-4">
+  <button
+    type="button"
+    className="btn btn-primary mb-4"
+    onClick={() => setShowMap(!showMap)}
+  >
+    {showMap ? 'Hide Map' : 'Show Map View'}
+  </button>
+
+  {showMap && (
+    <RouteBookingMap
+      pickupLocation={
+        latitudeAndLongitude 
+          ? (() => {
+              const coords = parseLatLng(latitudeAndLongitude);
+              return coords ? { 
+                ...coords, 
+                name: location || 'Pickup Location', 
+                type: 'pickup' as const 
+              } : null;
+            })()
+          : null
+      }
+      drivers={drivers}
+      providers={providers}
+    />
+  )}
+</div>
+
                                         {/* Scrollable Table */}
                                         <div className="dark:text-white-dark/70 text-base font-medium text-[#1f2937] flex-grow overflow-y-auto">
                                             <div className="table-responsive">
