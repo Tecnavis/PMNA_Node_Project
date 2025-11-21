@@ -111,3 +111,23 @@
         font-size: 12px;
     }
 }
+/* Custom marker labels */
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Line label popups */
+.line-label-popup .leaflet-popup-content-wrapper {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+.line-label-popup .leaflet-popup-content {
+  margin: 0;
+}
+
+.line-label-popup .leaflet-popup-tip {
+  display: none;
+}
