@@ -217,43 +217,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
             if (isEditingForDissmissBtn) {
                 await handleUpdateServiceKm();
             }
-            // 3. Now run dismiss API
-            if (isEditingForDissmissBtn && recordType !== 'Service KM Exceeded') {
-                await axios.patch(`${backendUrl}/vehicle/compliance-record-dismiss`, {
-                    type: recordType,
-                    vehicleNumber: vehicleNumber,
-                    role,
-                });
-
-                Swal.fire({
-                    icon: 'success',
-                    title: `${recordType} dismissed successfully.`,
-                    toast: true,
-                    position: 'top',
-                    timer: 3000,
-                    showConfirmButton: false,
-                });
-            }
-            if (recordType == 'Service KM Exceeded') {
-                const response = await axios.put(`${backendUrl}/vehicle/${vehicleId}/update-status`, {
-                    role,
-                });
-
-                if (response.data) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: `Service status updated successfully`,
-                        text: `Vehicle and ${response.data.bookingsUpdated} bookings were updated`,
-                        toast: true,
-                        position: 'top',
-                        showConfirmButton: false,
-                        timer: 3000,
-                        padding: '10px 20px',
-                    });
-                } else {
-                    throw new Error(response.data.message || 'Something went wrong');
-                }
-            }
+            
             fetchComplianceDetails();
             clearState();
             handleClose();

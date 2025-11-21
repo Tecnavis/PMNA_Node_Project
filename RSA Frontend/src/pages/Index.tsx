@@ -340,6 +340,20 @@ const fetchServiceKmExceededVehicle = async () => {
             if (!result.isConfirmed) {
                 return
             } 
+            await axios.patch(`${backendUrl}/vehicle/compliance-record-dismiss`, {
+                    type: record.type,
+                    vehicleNumber: record.vehicleNumber,
+                    role,
+                });
+            
+            Swal.fire({
+                icon: 'success',
+                title: `${record.type} dismissed successfully.`,
+                toast: true,
+                position: 'top',
+                timer: 3000,
+                showConfirmButton: false,
+            });
             setRecordId(record._id);
             setDismissRecordType(record.type);
             setOpenCompilanceModalForDissmiss(true);
@@ -372,6 +386,25 @@ const fetchServiceKmExceededVehicle = async () => {
         });
 
         if (!result.isConfirmed) return;
+
+        const response = await axios.put(`${backendUrl}/vehicle/${vehicle._id}/update-status`, {
+            role,
+        });
+
+        if (response.data) {
+            Swal.fire({
+                icon: 'success',
+                title: `Service status updated successfully`,
+                text: `Vehicle and ${response.data.bookingsUpdated} bookings were updated`,
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+        } else {
+            throw new Error(response.data.message || 'Something went wrong');
+        }
 
         setRecordId(vehicle?.recordId || '');
         setDismissRecordType("Service KM Exceeded");
