@@ -24,7 +24,8 @@ const DieselExpenses = () => {
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
   const [kmInputValues, setkmInputValues] = useState<Record<string, string | number>>({});
   const [openModal, setOpenModal] = useState<boolean>(false);
-  
+    const [amountInputValues, setAmountInputValues] = useState<Record<string, string | number>>({}); // New state for amount
+
   // Filter states
   const [month, setMonth] = useState<string>('');
   const [year, setYear] = useState<string>('');
@@ -87,9 +88,10 @@ const DieselExpenses = () => {
       setTotalPages(response.totalPages);
       setTotalItems(response.total);
 
-      response.data.forEach((expense) => {
-        setkmInputValues((prev) => ({ ...prev, [expense._id]: expense.expenceKm }))
-      })
+       response.data.forEach((expense) => {
+        setkmInputValues((prev) => ({ ...prev, [expense._id]: expense.expenceKm }));
+        setAmountInputValues((prev) => ({ ...prev, [expense._id]: expense.amount })); // Initialize amount
+      });
 
     } catch (error) {
       console.error('Error fetching expenses:', error);
@@ -282,8 +284,42 @@ const DieselExpenses = () => {
     setkmInputValues(prev => ({ ...prev, [expenseId]: value }));
   }
 
-  const handleUpdateKm = (expenseId: string) => udpateDieselExpance(expenseId, { expenceKm: kmInputValues[expenseId] })
+// Update kilometers function
+  const handleUpdateKm = (expenseId: string) => {
+    udpateDieselExpance(expenseId, { expenceKm: kmInputValues[expenseId] })
+      .then(() => {
+        fetchDieselExpences(); // Refresh data
+      })
+      .catch(error => {
+        console.error('Error updating kilometers:', error);
+      });
+  }
 
+  // NEW: Update amount function
+  const handleUpdateAmount = (expenseId: string) => {
+    udpateDieselExpance(expenseId, { amount: amountInputValues[expenseId] })
+      .then(() => {
+        fetchDieselExpences(); // Refresh data
+      })
+      .catch(error => {
+        console.error('Error updating amount:', error);
+      });
+  }
+  // Handle kilometer input change
+  const handleChangeKmInput = (value: string, expenseId: string) => {
+    setkmInputValues(prev => ({
+      ...prev,
+      [expenseId]: value
+    }));
+  }
+
+  // NEW: Handle amount input change
+  const handleChangeAmountInput = (value: string, expenseId: string) => {
+    setAmountInputValues(prev => ({
+      ...prev,
+      [expenseId]: value
+    }));
+  }
   const fetchVehiclesNamesList = async () => {
     const list = await getVehiclesList()
     setVehiclesNames(list)
@@ -459,28 +495,60 @@ const DieselExpenses = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 max-w-xs">
-                        <div
-                          className={`cursor-pointer ${!expandedDescriptions[expense._id] && 'truncate'}`}
-                          onClick={() => toggleDescription(expense._id)}
-                        >
-                          <input
-                            type="number"
-                            readOnly={[ROLES.ADMIN].includes(role) ? false : true}
-                            className='w-20 border py-1 px-2 rounded-md mr-1 border-gray-500 m-auto'
-                            value={kmInputValues[expense._id]}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChangeInputField(e.target.value, expense._id)}
-                          />
-                          {[ROLES.ADMIN].includes(role) && (
-                            <button
-                              className='bg-green-500 text-white rounded-md px-1 py-1'
-                              onClick={() => showConfirmationToast("Are you sure you want to update the kilometers?", () => handleUpdateKm(expense._id))}
-                            >
-                              Update
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-green-700">₹{expense.amount?.toLocaleString() || '0'}</td>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+    readOnly={![ROLES.ADMIN, ROLES.accountant].includes(role)}
+                      className='w-20 border py-1 px-2 rounded-md border-gray-500'
+                      value={kmInputValues[expense._id]}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleChangeKmInput(e.target.value, expense._id)
+                      }
+                    />
+{[ROLES.ADMIN, ROLES.accountant].includes(role) && (
+                      <button
+                        className='bg-green-500 text-white rounded-md px-2 py-1 text-xs hover:bg-green-600 transition-colors'
+                        onClick={() => 
+                          showConfirmationToast(
+                            "Are you sure you want to update the kilometers?", 
+                            () => handleUpdateKm(expense._id)
+                          )
+                        }
+                      >
+                        Update
+                      </button>
+                    )}
+                  </div>
+                </td>
+
+                {/* Amount Column - UPDATED */}
+                <td className="px-4 py-3 max-w-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 mr-1">₹</span>
+                    <input
+                      type="number"
+                      readOnly={![ROLES.ADMIN].includes(role)}
+                      className='w-24 border py-1 px-2 rounded-md border-gray-500'
+                      value={amountInputValues[expense._id]}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleChangeAmountInput(e.target.value, expense._id)
+                      }
+                    />
+                    {[ROLES.ADMIN].includes(role) && (
+                      <button
+                        className='bg-green-500 text-white rounded-md px-2 py-1 text-xs hover:bg-green-600 transition-colors'
+                        onClick={() => 
+                          showConfirmationToast(
+                            "Are you sure you want to update the amount?", 
+                            () => handleUpdateAmount(expense._id)
+                          )
+                        }
+                      >
+                        Update
+                      </button>
+                    )}
+                  </div>
+                </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2 items-center -space-x-4">
                           {expense.images?.slice(0, 2).map((img, idx) => (

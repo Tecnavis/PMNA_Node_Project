@@ -96,7 +96,7 @@ const BookingDashboard: React.FC = () => {
  
 
  const categories = useMemo(() => [
-    { key: 'newBookings', label: 'New Booking Details', color: 'bg-blue-500', blinkMain: true, showOnlyRemaining: false },
+    { key: 'newBookings', label: 'Status: Booking Added', color: 'bg-blue-500', blinkMain: true, showOnlyRemaining: false },
     { key: 'completedBookings', label: 'Driver Completed Booking', color: 'bg-pink-500', blinkMain: false, showOnlyRemaining: true },
     { key: 'verifiedBookings', label: 'Verifier', color: 'bg-purple-500', blinkMain: false, showOnlyRemaining: true },
     { key: 'feedbackBookings', label: 'Feedback', color: 'bg-yellow-500', blinkMain: false, showOnlyRemaining: true },
@@ -209,7 +209,7 @@ const BookingDashboard: React.FC = () => {
                   {/* For New Booking Details and Cash Pending, show both values */}
                   {!category.showOnlyRemaining ? (
                     <>
-                      <div className={`font-semibold ${blink ? 'text-blue-700' : 'text-blue-900'}`}>
+                      <div className={`font-semibold ${blink ? 'text-blue-700' : 'text-red-500'}`}>
                         {value} 
                       </div>
                       <div className="text-xs text-gray-600">
@@ -234,6 +234,22 @@ const BookingDashboard: React.FC = () => {
     </table>
   </div>
 </div>
+ {/* Legend */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mt-6">
+          {categories.map((category) => (
+            <div key={category.key} className="flex items-center">
+              <div className={`w-4 h-4 ${category.color} rounded mr-2`}></div>
+              <span className="text-xs text-gray-600">{category.label}</span>
+            </div>
+          ))}
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
+            <span className="text-xs text-gray-600">Remaining Bookings</span>
+          </div>
+        </div>
+        
+      
+     
       {/* Stacked Bar Chart Container */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">Booking Statistics</h2>
@@ -312,10 +328,10 @@ const BookingDashboard: React.FC = () => {
           </div>
         </div>
         
-        <div className="mt-4 text-xs text-gray-500">
+        {/* <div className="mt-4 text-xs text-gray-500">
           <span className="font-semibold">Note:</span> Colored portions blink for "New Booking Details" and "Cash Pending". 
           Green portions blink for all other categories.
-        </div>
+        </div> */}
       </div>
 
    
