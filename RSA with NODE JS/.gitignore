@@ -4,3 +4,4 @@ seeds.js
 logs/
 logs
 *.log
+package-lock.json
