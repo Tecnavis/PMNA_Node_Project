@@ -229,7 +229,7 @@ const Status: React.FC = () => {
 // Update tab change handler
 const handleChangeTabs = useCallback((tabName: Tabs) => {
     debouncedFetchBookings.cancel();
-    setQuery('');
+    // setQuery('');
     setCurrentPage(1);
     setTab(tabName);
     fetchBookings('', 1, pageSize);
