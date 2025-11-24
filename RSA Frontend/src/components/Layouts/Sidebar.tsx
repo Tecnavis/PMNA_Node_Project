@@ -15,7 +15,7 @@ import IconMenuUsers from '../Icon/Menu/IconMenuUsers';
 import IconMenuDocumentation from '../Icon/Menu/IconMenuDocumentation';
 import { TbCurrencyDollar, TbReport } from "react-icons/tb";
 import IconServer from '../Icon/IconServer';
-import { MdShareLocation } from 'react-icons/md';
+import { MdLocalGasStation, MdShareLocation } from 'react-icons/md';
 import { PiBuildingApartmentBold, PiBuildingApartmentDuotone, PiBuildingApartmentLight } from 'react-icons/pi';
 import IconBook from '../Icon/IconBook';
 import { BsCashStack } from 'react-icons/bs';
@@ -246,6 +246,17 @@ const Sidebar = () => {
                                         <div className="flex items-center">
                                             <MdShareLocation className="group-hover:!text-primary shrink-0" />
                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Baselocation')}</span>
+                                        </div>
+                                    </NavLink>
+                                </li>
+                            )}
+                             {/* petrol */}
+                            {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
+                                <li className="nav-item">
+                                    <NavLink to="/petrol" className="group">
+                                        <div className="flex items-center">
+                                            <MdLocalGasStation className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Petrol Pump')}</span>
                                         </div>
                                     </NavLink>
                                 </li>

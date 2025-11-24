@@ -367,7 +367,7 @@ const RouteBookingMap: React.FC<RouteBookingMapProps> = ({
     const map = L.map(mapRef.current, {
       center: pickupLocation ? [pickupLocation.lat, pickupLocation.lng] : [10.984149564566444, 76.18771286441817],
       zoom: 15,
-      minZoom: 10,
+      minZoom: 8,
       maxZoom: 18,
       zoomControl: true
     });
