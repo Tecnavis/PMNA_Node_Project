@@ -52,3 +52,7 @@ exports.getCurrentMonthStart = () => {
     date.setHours(0, 0, 0, 0);
     return date;
 };
+
+exports.isSameDate = (newDate, OldDate) => {
+    return new Date(newDate).toISOString().split("T")[0] === new Date(OldDate).toISOString().split("T")[0];
+}

@@ -45,6 +45,9 @@ router.get('/:id', Jwt, controller.getVehicleById);
 // Route for updating a vehicle by ID
 router.put('/:id', Jwt, controller.updateVehicle);
 
+// Route for updating a vehicle servicekm field by compilance Record ID
+router.patch('/:vehicleNumber', Jwt, controller.updateServiceKm);
+
 // Route for deleting a vehicle by ID
 router.delete('/:id', Jwt, controller.deleteVehicle);
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { IRootState } from '../../store';
@@ -19,15 +19,17 @@ import IconMenuDatatables from '../Icon/Menu/IconMenuDatatables';
 import IconMenuForms from '../Icon/Menu/IconMenuForms';
 import IconMenuPages from '../Icon/Menu/IconMenuPages';
 import IconMenuMore from '../Icon/Menu/IconMenuMore';
-import RSAlogo from '../../assets/images/rsa-2[1].jpg'
-import { HiOutlineCalculator } from "react-icons/hi2";
-import { IoCalendarOutline } from "react-icons/io5";
+import RSAlogo from '../../assets/images/rsa-2[1].jpg';
+import { HiOutlineCalculator } from 'react-icons/hi2';
+import { IoCalendarOutline } from 'react-icons/io5';
 import { axiosInstance } from '../../config/axiosConfig';
-import Select from "react-select";
+import Select from 'react-select';
 import { IconAt } from '@tabler/icons-react';
-import { BarChart3, CheckCircleIcon } from 'lucide-react';
+import { BarChart3, CheckCircleIcon, QrCodeIcon } from 'lucide-react';
 import BookingDashboard from '../../pages/Bookings/BookingChart';
-
+import toast from 'react-hot-toast';
+import { getAdminQrApi, updateQrApi } from '../../services/adminService';
+import ReusableModal from '../modal';
 
 interface ServiceData {
     serviceName: string;
@@ -35,26 +37,31 @@ interface ServiceData {
     salaryPerKM: string;
     salary: string;
     _id: string;
-    firstKilometer: string,
-    additionalAmount: string,
-    firstKilometerAmount: string
+    firstKilometer: string;
+    additionalAmount: string;
+    firstKilometerAmount: string;
 }
 
 const Header = () => {
-
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [serviceTypes, setServiceTypes] = useState<ServiceData[]>([]);
     const [selectedService, setSelectedService] = useState<{ value: string; label: string } | null>(null);
     const [showDistanceInput, setShowDistanceInput] = useState(false);
-    const [distance, setDistance] = useState("");
+    const [distance, setDistance] = useState('');
     const [totalSalary, setTotalSalary] = useState<number>(0);
     let selectedServiceData = null;
     const [showSalary, setShowSalary] = useState(false);
+    const [isModalQROpen, setIsModalQROpen] = useState(false);
+    const [existingQr, setExistingQr] = useState<string | null>(null);
+    const [isLoadingQr, setIsLoadingQr] = useState(false);
+    const [isUpdatingQr, setIsUpdatingQr] = useState(false);
+
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Convert to react-select format
-    const serviceOptions = serviceTypes.map(service => ({
+    const serviceOptions = serviceTypes.map((service) => ({
         value: service._id,
-        label: service.serviceName
+        label: service.serviceName,
     }));
 
     const handleSelectChange = (newValue: { value: string; label: string } | null) => {
@@ -63,17 +70,17 @@ const Header = () => {
     // Function to fetch service types from Firestore
     const fetchServiceTypes = async () => {
         try {
-            const res = await axiosInstance.get('/servicetype')
-            const data = res.data
+            const res = await axiosInstance.get('/servicetype');
+            const data = res.data;
             setServiceTypes(data);
         } catch (error) {
-            console.error("Error fetching service types:", error);
+            console.error('Error fetching service types:', error);
         }
     };
 
     const handleCalculateSalary = async () => {
         if (!selectedService || !distance) {
-            alert("Please select a service and enter distance.");
+            alert('Please select a service and enter distance.');
             return;
         }
 
@@ -83,7 +90,7 @@ const Header = () => {
             const selectedServiceData: ServiceData = res.data;
 
             if (!selectedServiceData) {
-                alert("Selected service not found.");
+                alert('Selected service not found.');
                 return;
             }
 
@@ -91,7 +98,7 @@ const Header = () => {
             const distanceValue = parseFloat(distance);
 
             if (isNaN(distanceValue)) {
-                alert("Please enter a valid distance.");
+                alert('Please enter a valid distance.');
                 return;
             }
 
@@ -99,16 +106,14 @@ const Header = () => {
             const calculatedSalary = (Number(distanceValue) - Number(firstKilometer)) * Number(additionalAmount) + Number(firstKilometerAmount);
             setTotalSalary(isNaN(calculatedSalary) ? 0 : calculatedSalary);
         } catch (error) {
-            console.error("Error fetching service details:", error);
+            console.error('Error fetching service details:', error);
         }
     };
 
-
     const navigate = useNavigate();
     const location = useLocation();
-    const role = localStorage.getItem('role')
+    const role = localStorage.getItem('role');
     const email = localStorage.getItem('email');
-
 
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
@@ -198,13 +203,58 @@ const Header = () => {
     const [flag, setFlag] = useState(themeConfig.locale);
     const { t } = useTranslation();
 
-    // logout 
+    // logout
     const handleLogOut = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         localStorage.removeItem('name');
         navigate('/auth/boxed-signin', { replace: true });
-    }
+    };
+
+    const handleUploadQr = async () => {
+        setIsLoadingQr(true);
+        try {
+            const qrUrl = await getAdminQrApi();
+            setExistingQr(qrUrl);
+
+            if (qrUrl) {
+                setIsModalQROpen(true);
+            } else {
+                fileInputRef.current?.click();
+            }
+        } catch (error) {
+            console.error('Error fetching QR:', error);
+            toast.error('Failed to load QR code');
+            fileInputRef.current?.click();
+        } finally {
+            setIsLoadingQr(false);
+        }
+    };
+
+    const handleQrFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUpdatingQr(true);
+        const formData = new FormData();
+        formData.append('qr', file);
+        try {
+            const res = await updateQrApi(formData);
+            toast.success(res);
+            setIsModalQROpen(false);
+
+            // Refresh the QR image after successful upload
+            const updatedQrUrl = await getAdminQrApi();
+            setExistingQr(updatedQrUrl);
+        } catch (error) {
+            toast.error('QR update failed');
+        } finally {
+            setIsUpdatingQr(false)
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
 
     // When the modal opens, fetch service types
     useEffect(() => {
@@ -233,33 +283,43 @@ const Header = () => {
                     </div>
                     <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                         <div className="sm:ltr:mr-auto sm:rtl:ml-auto flex justify-center items-center gap-2">
-                            <span className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
+                            <span className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
                                 <HiOutlineCalculator
                                     onClick={() => {
                                         setSelectedService(null);
-                                        setDistance("");
+                                        setDistance('');
                                         setTotalSalary(0);
                                         setIsModalOpen(true);
                                         setShowSalary(true);
                                     }}
-                                    className=' hover:cursor-pointer size-5 text-gray-900 font-bold' />
+                                    className=" hover:cursor-pointer size-5 text-gray-900 font-bold"
+                                />
                             </span>
-                            <span onClick={() => navigate("/attendance")} className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
-                                <IoCalendarOutline className='size-5' />
+                            <span onClick={() => navigate('/attendance')} className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                                <IoCalendarOutline className="size-5" />
                             </span>
-                             <span onClick={() => navigate("/status")} className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
-                                <CheckCircleIcon className='size-5' />
+                            <span onClick={() => navigate('/status')} className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                                <CheckCircleIcon className="size-5" />
                             </span>
-                             <span onClick={() => navigate("/bookingDashBoard")} className='hover:cursor-pointer p-2 bg-gray-200 rounded-full'>
-                                <BarChart3 className='size-5' />
+                            <span onClick={() => navigate('/bookingDashBoard')} className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                                <BarChart3 className="size-5" />
+                            </span>
+                            <span className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                                {isLoadingQr ? (
+                                    <div className="size-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                                ) : (
+                                    <QrCodeIcon className="size-5" onClick={handleUploadQr} />
+                                )}
+                                <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleQrFileChange} />
                             </span>
                         </div>
                         <div>
                             {themeConfig.theme === 'light' ? (
                                 <button
-                                    className={`${themeConfig.theme === 'light' &&
+                                    className={`${
+                                        themeConfig.theme === 'light' &&
                                         'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                        }`}
+                                    }`}
                                     onClick={() => {
                                         dispatch(toggleTheme('dark'));
                                     }}
@@ -271,9 +331,10 @@ const Header = () => {
                             )}
                             {themeConfig.theme === 'dark' && (
                                 <button
-                                    className={`${themeConfig.theme === 'dark' &&
+                                    className={`${
+                                        themeConfig.theme === 'dark' &&
                                         'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                        }`}
+                                    }`}
                                     onClick={() => {
                                         dispatch(toggleTheme('system'));
                                     }}
@@ -283,9 +344,10 @@ const Header = () => {
                             )}
                             {themeConfig.theme === 'system' && (
                                 <button
-                                    className={`${themeConfig.theme === 'system' &&
+                                    className={`${
+                                        themeConfig.theme === 'system' &&
                                         'flex items-center p-2 rounded-full bg-white-light/40 dark:bg-dark/40 hover:text-primary hover:bg-white-light/90 dark:hover:bg-dark/60'
-                                        }`}
+                                    }`}
                                     onClick={() => {
                                         dispatch(toggleTheme('light'));
                                     }}
@@ -294,7 +356,6 @@ const Header = () => {
                                 </button>
                             )}
                         </div>
-
 
                         <div className="dropdown shrink-0 flex">
                             <Dropdown
@@ -308,9 +369,7 @@ const Header = () => {
                                         <div className="flex items-center px-4 py-4">
                                             <img className="rounded-md w-10 h-10 object-cover" src={RSAlogo} alt="userProfile" />
                                             <div className="ltr:pl-4 rtl:pr-4 truncate">
-                                                <h4 className="text-base">
-                                                    {role === 'admin' ? 'RSA Admin' : role}
-                                                </h4>
+                                                <h4 className="text-base">{role === 'admin' ? 'RSA Admin' : role}</h4>
                                                 <button type="button" className="text-black/60 hover:text-primary dark:text-dark-light/60 dark:hover:text-white">
                                                     {email ? email : 'RSA@gmail.com'}
                                                 </button>
@@ -319,11 +378,7 @@ const Header = () => {
                                     </li>
 
                                     <li className="border-t border-white-light dark:border-white-light/10">
-                                        <button
-                                            type="button"
-                                            className="text-danger !py-3 flex items-center w-full"
-                                            onClick={handleLogOut}
-                                        >
+                                        <button type="button" className="text-danger !py-3 flex items-center w-full" onClick={handleLogOut}>
                                             <IconLogout className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 rotate-90 shrink-0" />
                                             Sign Out
                                         </button>
@@ -331,7 +386,6 @@ const Header = () => {
                                 </ul>
                             </Dropdown>
                         </div>
-
                     </div>
                 </div>
 
@@ -857,21 +911,9 @@ const Header = () => {
                         <h2 className="text-xl font-semibold mb-4">Calculator</h2>
                         <div className="flex flex-col gap-3">
                             {/* ✅ Use react-select correctly */}
-                            <Select
-                                options={serviceOptions}
-                                value={selectedService}
-                                onChange={handleSelectChange}
-                                placeholder="Select Service Type"
-                                className="w-full"
-                            />
+                            <Select options={serviceOptions} value={selectedService} onChange={handleSelectChange} placeholder="Select Service Type" className="w-full" />
                             <div className="mt-4">
-                                <input
-                                    type="text"
-                                    value={distance}
-                                    onChange={(e) => setDistance(e.target.value)}
-                                    className="w-full border p-2 rounded"
-                                    placeholder="Enter distance"
-                                />
+                                <input type="text" value={distance} onChange={(e) => setDistance(e.target.value)} className="w-full border p-2 rounded" placeholder="Enter distance" />
                             </div>
                             <button className="bg-blue-500 text-white py-2 rounded" onClick={handleCalculateSalary}>
                                 Result
@@ -888,6 +930,32 @@ const Header = () => {
                     </div>
                 </div>
             )}
+            <ReusableModal isOpen={isModalQROpen} onClose={() => setIsModalQROpen(false)} title="" buttons={[]}>
+                <div className="flex flex-col items-center justify-center space-y-4 p-4">
+                    {/* Title */}
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">QR Code</h2>
+
+                    {/* QR Box */}
+                    <div className="w-64 h-64 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600">
+                        {existingQr ? (
+                            <img src={existingQr} alt="QR Code" className="w-full h-full object-contain transform transition-all duration-300 hover:scale-105" />
+                        ) : (
+                            <p className="text-gray-600 dark:text-gray-300">No QR available</p>
+                        )}
+                    </div>
+
+                    {/* Update Button */}
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-5 py-2.5 rounded-lg text-white font-medium bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                        {isUpdatingQr  ? <div className="size-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div> : 'Update QR'}
+                    </button>
+
+                    {/* Hidden file input */}
+                    <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleQrFileChange} />
+                </div>
+            </ReusableModal>
         </header>
     );
 };

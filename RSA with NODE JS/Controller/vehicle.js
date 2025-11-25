@@ -1,6 +1,8 @@
 const Vehicle = require("../Model/vehicle");
 const Booking = require('../Model/booking');
 const TaxInsurance = require('../Model/taxInsurance')
+const Driver = require('../Model/driver')
+const vehicleService = require('../services/vehicleService')
 
 // Create vehicle
 exports.createVehicle = async (req, res) => {
@@ -95,6 +97,34 @@ exports.updateVehicle = async (req, res) => {
     }
 };
 
+// Update Vehicle servicekm
+exports.updateServiceKm = async (req, res) => {
+    const { vehicleNumber } = req.params;
+    const { serviceKM } = req.body;
+    try {
+
+        if (serviceKM === undefined || serviceKM === null || serviceKM !== 0) {
+            return res.status(400).json({
+                success: false,
+                message: "serviceKM is required",
+            });
+        }
+
+        const updatedVehicle = await vehicleService.updateServiceKm(vehicleNumber, serviceKM);
+
+        return res.status(200).json({
+            success: true,
+            message: "Service KM updated successfully",
+            vehicle: updatedVehicle,
+        });
+    } catch (err) {
+        return res.status(err.status || 500).json({
+            success: false,
+            message: err.message || "Internal Server Error",
+        });
+    }
+};
+
 // Delete Staff
 exports.deleteVehicle = async (req, res) => {
     try {
@@ -132,6 +162,7 @@ exports.addRecord = async (req, res) => {
             insuranceExpiryDate: req.body.insuranceExpiryDate,
             pollutionExpiryDate: req.body.pollutionExpiryDate,
             taxExpiryDate: req.body.taxExpiryDate,
+            permitExpiryDate: req.body.permitExpiryDate,
             taxPaperUrl,
             insurancePaperUrl
         })
@@ -198,7 +229,16 @@ exports.deleteRecord = async (req, res) => {
 exports.updateRecord = async (req, res) => {
     try {
         const { id } = req.params;
-        const { vehicleNumber, emiExpiryDate, insuranceExpiryDate, pollutionExpiryDate, taxExpiryDate, taxPaperChange, insurancePaperChange } = req.body;
+        const {
+            vehicleNumber,
+            emiExpiryDate,
+            insuranceExpiryDate,
+            pollutionExpiryDate,
+            taxExpiryDate,
+            permitExpiryDate,
+            taxPaperChange,
+            insurancePaperChange
+        } = req.body;
 
         let existingRecord = await TaxInsurance.findById(id);
         if (!existingRecord) {
@@ -241,6 +281,7 @@ exports.updateRecord = async (req, res) => {
         existingRecord.insuranceExpiryDate = insuranceExpiryDate;
         existingRecord.pollutionExpiryDate = pollutionExpiryDate;
         existingRecord.taxExpiryDate = taxExpiryDate;
+        existingRecord.permitExpiryDate = permitExpiryDate;
         existingRecord.insurancePaperUrl = insurancePaperUrl;
         existingRecord.taxPaperUrl = taxPaperUrl;
 
@@ -256,10 +297,17 @@ exports.updateRecord = async (req, res) => {
 // Read record by ID
 exports.getRecordById = async (req, res) => {
     try {
-        const record = await TaxInsurance.findById(req.params.id)
+        const record = await TaxInsurance.findById(req.params.id).lean();
         if (!record) return res.status(404).json(record);
+
+        const vehicle = await vehicleService.getVehicleByVehicleName(record.vehicleNumber)
+        if (vehicle) {
+            record.vehicleId = vehicle._id;
+        }
+
         res.status(200).json(record);
     } catch (error) {
+        console.log(error)
         res.status(500).json({ error: error.message });
     }
 };
@@ -278,7 +326,8 @@ exports.dismissExpiredRecord = async (req, res) => {
             EMI: { dueField: "emiDue", dismissedByField: "emiDuedismissedBy" },
             Insurance: { dueField: "insuranceDue", dismissedByField: "insuranceDueDismissedBy" },
             Pollution: { dueField: "pollutionDue", dismissedByField: "pollutionDueDismissedBy" },
-            Tax: { dueField: "taxDue", dismissedByField: "taxDueDismissedBy" }
+            Tax: { dueField: "taxDue", dismissedByField: "taxDueDismissedBy" },
+            Permit: { dueField: 'permitDue', dismissedByField: "permitDueDismissedBy" }
         };
 
         // Check if the provided type is valid
@@ -319,10 +368,32 @@ exports.dismissExpiredRecord = async (req, res) => {
 // Get all vehicles exceeding serviceKM and not dismissed
 exports.getVehiclesExceedingServiceKM = async (req, res) => {
     try {
-        const vehicles = await Vehicle.find({
-            valid: false,
-            vehicleServiceDismissed: false,
-        });
+        const vehicles = await Vehicle.aggregate([
+            {
+                $match: {
+                    valid: false,
+                    vehicleServiceDismissed: false
+                }
+            },
+            {
+                $lookup: {
+                    from: "taxinsurances",
+                    localField: "serviceVehicle",
+                    foreignField: "vehicleNumber",
+                    as: "complianceRecord"
+                }
+            },
+            {
+                $addFields: {
+                    recordId: { $first: "$complianceRecord._id" }
+                }
+            },
+            {
+                $project: {
+                    complianceRecord: 0
+                }
+            }
+        ]);
 
         if (vehicles.length === 0) {
             return res.status(404).json({
@@ -362,10 +433,10 @@ exports.updateVehicleServiceStatus = async (req, res) => {
         }
 
         // Find the driver and service type associated with this vehicle
-        const driver = await Driver.findOne({ 
-            "vehicle.vehicleNumber": vehicle.serviceVehicle 
+        const driver = await Driver.findOne({
+            "vehicle.vehicleNumber": vehicle.serviceVehicle
         });
-        
+
         if (!driver) {
             return res.status(404).json({
                 success: false,

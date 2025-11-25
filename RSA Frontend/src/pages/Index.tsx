@@ -32,8 +32,12 @@ const Index = () => {
     const [expiredRecords, setExpiredRecords] = useState<Record[]>([]);
     const [exceededRecords, setExceededRecords] = useState<VehicleRecord[]>([]);
     const [showBookingDashboard, setShowBookingDashboard] = useState<boolean>(false);
- const [userInteracted, setUserInteracted] = useState(false);
+    const [userInteracted, setUserInteracted] = useState(false);
+    const [openCompilanceModalForDissmiss, setOpenCompilanceModalForDissmiss] = useState(false);
     const [pendingAlerts, setPendingAlerts] = useState<{type: 'showroom' | 'whatsapp', count: number}[]>([]);
+    const [dismissRecordType, setDismissRecordType] = useState<string>('');
+    const [dismissVehicleNumber, setDismissVehicleNumber] = useState<string>('');
+
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
@@ -320,7 +324,7 @@ const fetchServiceKmExceededVehicle = async () => {
     // Handle error appropriately
   }
 };
-
+    
     const handleDismissRecord = async (record: Record) => {
         try {
             const result = await Swal.fire({
@@ -330,32 +334,30 @@ const fetchServiceKmExceededVehicle = async () => {
                 showCancelButton: true,
                 confirmButtonColor: "#ef4444",
                 cancelButtonColor: "#e5e7eb",
-                confirmButtonText: "Yes, Dismiss it!"
+                confirmButtonText: "Yes, Dismiss and update record."
             });
 
-            if (!result.isConfirmed) return;
-
-            const response = await axios.patch(`${backendUrl}/vehicle/compliance-record-dismiss`, {
-                type: record.type,
-                role,
-                vehicleNumber: record.vehicleNumber
-            });
-
-            // Handle API response
-            if (response.data) {
-                fetchBookings()
-                Swal.fire({
-                    icon: 'success',
-                    title: `${record.type} due for vehicle ${record.vehicleNumber}  dismissed successfully.`,
-                    toast: true,
-                    position: 'top',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    padding: '10px 20px',
+            if (!result.isConfirmed) {
+                return
+            } 
+            await axios.patch(`${backendUrl}/vehicle/compliance-record-dismiss`, {
+                    type: record.type,
+                    vehicleNumber: record.vehicleNumber,
+                    role,
                 });
-            } else {
-                throw new Error(response.data.message || "Something went wrong");
-            }
+            
+            Swal.fire({
+                icon: 'success',
+                title: `${record.type} dismissed successfully.`,
+                toast: true,
+                position: 'top',
+                timer: 3000,
+                showConfirmButton: false,
+            });
+            setRecordId(record._id);
+            setDismissRecordType(record.type);
+            setOpenCompilanceModalForDissmiss(true);
+            setOpenRenewal(true);
 
         } catch (error: any) {
             Swal.fire({
@@ -380,17 +382,15 @@ const fetchServiceKmExceededVehicle = async () => {
             showCancelButton: true,
             confirmButtonColor: "#ef4444",
             cancelButtonColor: "#e5e7eb",
-            confirmButtonText: "Yes, Dismiss it!"
+            confirmButtonText: "Yes, Dismiss it and update record"
         });
 
         if (!result.isConfirmed) return;
 
         const response = await axios.put(`${backendUrl}/vehicle/${vehicle._id}/update-status`, {
-            role
+            role,
         });
 
-        fetchServiceKmExceededVehicle(); // Refresh bookings or vehicle data
-        
         if (response.data) {
             Swal.fire({
                 icon: 'success',
@@ -403,8 +403,14 @@ const fetchServiceKmExceededVehicle = async () => {
                 padding: '10px 20px',
             });
         } else {
-            throw new Error(response.data.message || "Something went wrong");
+            throw new Error(response.data.message || 'Something went wrong');
         }
+
+        setRecordId(vehicle?.recordId || '');
+        setDismissRecordType("Service KM Exceeded");
+        setDismissVehicleNumber(vehicle.serviceVehicle);
+        setOpenCompilanceModalForDissmiss(true);
+        setOpenRenewal(true);
     } catch (error: any) {
         Swal.fire({
             title: "Error",
@@ -569,17 +575,25 @@ const fetchServiceKmExceededVehicle = async () => {
                  
                     </div>
                     <AddVehicleCompliance
+                        isEditingForDissmissBtn={openCompilanceModalForDissmiss}
                         open={openRenewal}
-                        handleClose={() => {
-                            setOpenRenewal(false)
-                            setRecordId('')
-                        }}
-                        fetchComplianceDetails={()=> fetchServiceKmExceededVehicle()
-                        }
-                        isEditMode={true}
                         id={recordId}
+                        recordType={dismissRecordType} 
+                        dissmissVehicleNumber={dismissVehicleNumber}
+
+                        handleClose={() => {
+                            setOpenRenewal(false);
+                            setOpenCompilanceModalForDissmiss(false);
+                            setRecordId('');
+                            setDismissRecordType('');
+                            setDismissVehicleNumber('');
+                            fetchBookings();
+                            fetchServiceKmExceededVehicle();
+                        }}
+                        fetchComplianceDetails={fetchServiceKmExceededVehicle}
+                        isEditMode={true}
                     />
-                         </div>
+                    </div>
             </div>
         )}
     </div>

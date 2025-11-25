@@ -92,7 +92,8 @@ exports.dashboard = async (req, res) => {
                 { emiExpiryDate: { $lte: sevenDaysLater, $gte: today }, emiDue: false },
                 { insuranceExpiryDate: { $lte: sevenDaysLater, $gte: today }, insuranceDue: false, insuranceDueDismissed: false },
                 { pollutionExpiryDate: { $lte: sevenDaysLater, $gte: today }, pollutionDue: false, pollutionDueDismissed: false },
-                { taxExpiryDate: { $lte: sevenDaysLater, $gte: today }, taxDue: false, taxDueDismissed: false }
+                { taxExpiryDate: { $lte: sevenDaysLater, $gte: today }, taxDue: false, taxDueDismissed: false },
+                { permitExpiryDate: { $lte: sevenDaysLater, $gte: today }, permitDue: false, permitDueDismissed: false }
             ]
         }).lean();
 
@@ -139,6 +140,15 @@ exports.dashboard = async (req, res) => {
                     type: "Tax",
                     vehicleNumber: record.vehicleNumber,
                     expiryDate: record.taxExpiryDate,
+                });
+            }
+            if (!record.permitDue && !record.permitDueDismissed &&
+                new Date(record.permitExpiryDate) >= today && new Date(record.permitExpiryDate) <= sevenDaysLater) {
+                expiredFields.push({
+                    _id: record._id,
+                    type: "Permit",
+                    vehicleNumber: record.vehicleNumber,
+                    expiryDate: record.permitExpiryDate,
                 });
             }
 

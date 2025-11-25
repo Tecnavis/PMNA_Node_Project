@@ -1,4 +1,5 @@
 const Booking = require('../Model/booking');
+const Vehicle = require('../Model/vehicle');
 
 // Helper function to calculate total odometer for a vehicle
 const calculateTotalOdometer = async (vehicleNumber) => {
@@ -29,3 +30,43 @@ const calculateTotalOdometer = async (vehicleNumber) => {
     }
 };
 
+exports.updateServiceKm = async (vehicleNumber, serviceKM) => {
+    if (!serviceKM && serviceKM !== 0) {
+        const error = new Error("serviceKM is required");
+        error.status = 400;
+        throw error;
+    }
+
+    const vehicle = await Vehicle.findOneAndUpdate(
+        { serviceVehicle: vehicleNumber },
+        { $set: { serviceKM } },
+        { new: true }
+    );
+
+    if (!vehicle) {
+        const error = new Error("Vehicle not found");
+        error.status = 404;
+        throw error;
+    }
+
+    return vehicle;
+};
+
+exports.getVehicleByVehicleName = async (vehicleNumber) => {
+    if (!vehicleNumber) {
+        const error = new Error("vehicleNumber is required");
+        error.status = 400;
+        throw error;
+    }
+        const vehicle = await Vehicle.findOne(
+        { serviceVehicle: vehicleNumber }
+    );
+
+    if (!vehicle) {
+        const error = new Error("Vehicle not found");
+        error.status = 404;
+        throw error;
+    }
+
+    return vehicle;
+}
