@@ -1,5 +1,15 @@
 import { Driver } from "../pages/Reports/DCPReport";
-
+// In your interface/Expences.ts
+export interface IPetrolPump {
+  _id: string;
+  pumpName: string;
+  location: string;
+  latitude: string;
+  longitude: string;
+  contactNumber?: string;
+  address?: string;
+  fuelTypes: string[];
+}
 export interface IDieselExpense {
     _id: string;
     expenseId: string;
@@ -10,6 +20,8 @@ export interface IDieselExpense {
     description: string;
     amount: number;
     images: string[];
+      petrolPump: IPetrolPump; // Add this
+
     vehicleNumber?: string;
     expenceKm: number;
   status: 'Pending' | 'Approved' | 'Rejected';

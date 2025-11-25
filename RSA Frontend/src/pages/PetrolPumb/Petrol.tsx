@@ -62,7 +62,7 @@ const PetrolPump: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
     // Available fuel types
-    const availableFuelTypes = ['Petrol', 'Diesel', 'CNG', 'Premium Petrol', 'Premium Diesel'];
+    const availableFuelTypes = ['Petrol', 'Diesel', 'CNG', 'Premium Petrol', 'Diesel Exhaust Fluid'];
 
     // checking the token
     const gettingToken = () => {

@@ -12,6 +12,11 @@ const dieselExpenseSchema = new mongoose.Schema({
         ref: 'Driver',
         required: true
     },
+        petrolPump: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PetrolPump',
+        required: true // or false depending on your requirements
+    },
     description: {
         type: String,
         trim: true,
