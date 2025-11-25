@@ -48,29 +48,21 @@ const handleViewMore = (row: PMNRReport) => {
         setSelectedYear(year);
     };
 
-    const fetchMonthBookings = async (month: number, year: number) => {
+  const fetchMonthBookings = async (month: number, year: number) => {
     try {
         setLoading(true);
-        const startDate = new Date(Date.UTC(year, month - 1, 1));
-        const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
-
-        const res = await axiosInstance.get(`${BASE_URL}/booking/getordercompleted`, {
+        
+        const res = await axiosInstance.get(`${BASE_URL}/pmnr/monthly-bookings`, {
             params: {
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
-                all: true,
-                workType: 'PaymentWork' // Add workType filter
+                month: month,
+                year: year
             }
         });
         
-        // Additional client-side filtering as backup
-        const paymentWorkBookings = (res.data.bookings || []).filter(
-            (booking: any) => booking.workType === 'PaymentWork'
-        );
-        
-        setMonthBookings(paymentWorkBookings);
+        // The API now returns only PaymentWork bookings, so no client-side filtering needed
+        setMonthBookings(res.data.bookings || []);
     } catch (error) {
-        console.error("Error fetching bookings:", error);
+        console.error("Error fetching monthly bookings:", error);
         setMonthBookings([]);
     } finally {
         setLoading(false);
