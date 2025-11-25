@@ -48,27 +48,34 @@ const handleViewMore = (row: PMNRReport) => {
         setSelectedYear(year);
     };
 
-      const fetchMonthBookings = async (month: number, year: number) => {
-        try {
-            setLoading(true);
-            const startDate = new Date(Date.UTC(year, month - 1, 1));
-            const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+    const fetchMonthBookings = async (month: number, year: number) => {
+    try {
+        setLoading(true);
+        const startDate = new Date(Date.UTC(year, month - 1, 1));
+        const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
 
-            const res = await axiosInstance.get(`${BASE_URL}/booking/getordercompleted`, {
-                params: {
-                    startDate: startDate.toISOString(),
-                    endDate: endDate.toISOString(),
-                    all: true
-                }
-            });
-            setMonthBookings(res.data.bookings || []);
-        } catch (error) {
-            console.error("Error fetching bookings:", error);
-            setMonthBookings([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+        const res = await axiosInstance.get(`${BASE_URL}/booking/getordercompleted`, {
+            params: {
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                all: true,
+                workType: 'PaymentWork' // Add workType filter
+            }
+        });
+        
+        // Additional client-side filtering as backup
+        const paymentWorkBookings = (res.data.bookings || []).filter(
+            (booking: any) => booking.workType === 'PaymentWork'
+        );
+        
+        setMonthBookings(paymentWorkBookings);
+    } catch (error) {
+        console.error("Error fetching bookings:", error);
+        setMonthBookings([]);
+    } finally {
+        setLoading(false);
+    }
+};
 
     useEffect(() => {
         fetchReportResult();

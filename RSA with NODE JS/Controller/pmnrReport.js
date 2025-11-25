@@ -6,17 +6,19 @@ exports.pmnrReport = async (req, res) => {
     try {
         const pipeline = [];
 
+        // Base match conditions
+        const matchStage = {
+            $match: {
+                status: 'Order Completed',
+                workType: 'PaymentWork' // Changed from $ne: 'RSAWork' to exact match
+            }
+        };
+
         // If date range is given
         if (startDate && endDate) {
             const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
             const endOfDay = new Date(`${endDate}T23:59:59.999Z`);
-            pipeline.push({
-                $match: {
-                    createdAt: { $gte: startOfDay, $lte: endOfDay },
-                    status: 'Order Completed',
-                    workType: { $ne: 'RSAWork' }
-                }
-            });
+            matchStage.$match.createdAt = { $gte: startOfDay, $lte: endOfDay };
         }
         // If only year is given
         else if (year) {
@@ -24,24 +26,11 @@ exports.pmnrReport = async (req, res) => {
             if (!isNaN(parsedYear)) {
                 const startOfYear = new Date(Date.UTC(parsedYear, 0, 1, 0, 0, 0, 0));
                 const endOfYear = new Date(Date.UTC(parsedYear, 11, 31, 23, 59, 59, 999));
-                pipeline.push({
-                    $match: {
-                        createdAt: { $gte: startOfYear, $lte: endOfYear },
-                        status: 'Order Completed',
-                        workType: { $ne: 'RSAWork' }
-                    }
-                });
+                matchStage.$match.createdAt = { $gte: startOfYear, $lte: endOfYear };
             }
         }
-        // No date or year filter, just base filters
-        else {
-            pipeline.push({
-                $match: {
-                    status: 'Order Completed',
-                    workType: { $ne: 'RSAWork' }
-                }
-            });
-        }
+
+        pipeline.push(matchStage);
 
         // Project month and year
         pipeline.push({
