@@ -450,6 +450,8 @@ const DieselExpenses = () => {
                 <th className="px-4 py-3">Expense ID</th>
                 <th className="px-4 py-3">Driver</th>
                 <th className="px-4 py-3">Vehicle Number</th>
+                                <th className="px-4 py-3">Petrol Pump</th> {/* New Column */}
+
                 <th className="px-4 py-3">Description</th>
                 <th className="px-4 py-3">KiloMeter </th>
                 <th className="px-4 py-3">Amount (₹)</th>
@@ -485,6 +487,36 @@ const DieselExpenses = () => {
                         >
                           {expense.vehicleNumber}
                         </div>
+                      </td>
+                       <td className="px-4 py-3">
+                        {expense.petrolPump ? (
+                          <div className="max-w-xs">
+                            <Tooltip 
+                              title={
+                                <div className="text-xs">
+                                  <div><strong>Location:</strong> {expense.petrolPump.location}</div>
+                                  {expense.petrolPump.contactNumber && (
+                                    <div><strong>Contact:</strong> {expense.petrolPump.contactNumber}</div>
+                                  )}
+                                  {expense.petrolPump.address && (
+                                    <div><strong>Address:</strong> {expense.petrolPump.address}</div>
+                                  )}
+                                </div>
+                              }
+                            >
+                              <div className="cursor-help">
+                                <div className="font-medium text-indigo-600">
+                                  {expense.petrolPump.pumpName}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {expense.petrolPump.location}
+                                </div>
+                              </div>
+                            </Tooltip>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic">Not specified</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 max-w-xs">
                         <div

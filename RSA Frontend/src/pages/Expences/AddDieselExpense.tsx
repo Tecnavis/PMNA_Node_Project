@@ -6,10 +6,13 @@ import { createDieselExpance } from '../../services/expencesService';
 import { DriverDropdownItem } from '../../interface/Driver';
 import { getDriverForDropDown } from '../../services';
 import { VehicleNames } from '../../interface/Vehicle';
+import { getPetrolPumps } from './expensesService';
+import { IPetrolPump } from '../../interface/Expences';
 
 const DieselExpenseSchema = Yup.object().shape({
     expenseId: Yup.string().required('Expense ID is required'),
     driver: Yup.string().required('Driver is required'),
+    petrolPump: Yup.string().required('Petrol Pump is required'), // Add validation
     description: Yup.string().required('Description is required'),
     amount: Yup.number()
         .min(0, 'Amount must be positive')
@@ -31,16 +34,16 @@ interface DieselExpenseFormProps {
     onClose: () => void
 }
 
-export default function DieselExpenseFormFormik(
-    {
-        vehiclesNames,
-        fetchData,
-        onClose
-    }: DieselExpenseFormProps) {
+export default function DieselExpenseFormFormik({
+    vehiclesNames,
+    fetchData,
+    onClose
+}: DieselExpenseFormProps) {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const [drivers, setDriver] = useState<DriverDropdownItem[]>([]);
+    const [petrolPumps, setPetrolPumps] = useState<IPetrolPump[]>([]); // Add state for petrol pumps
 
     const handleSubmit = async (values: any, { resetForm }: any) => {
         setIsSubmitting(true);
@@ -50,18 +53,23 @@ export default function DieselExpenseFormFormik(
             // Append all fields except images
             formData.append('expenseId', values.expenseId);
             formData.append('driver', values.driver);
+            formData.append('petrolPump', values.petrolPump); // Add petrol pump
             formData.append('description', values.description);
             formData.append('amount', values.amount.toString());
             formData.append('vehicleNumber', values.vehicleNumber);
             formData.append('expenceKm', values.expenceKm.toString());
 
-            // Append each image file
-            values.images.forEach((img: File) => {
-                formData.append('images', img);
-            });
+           // Append each image file with proper field name
+        values.images.forEach((img: File, index: number) => {
+            console.log(`Appending image ${index}:`, img.name, img.size, img.type);
+            formData.append('images', img); // Field name should be 'images' (plural)
+        });
 
-            // // Simulate API call
-            console.log(formData);
+        // Debug: Check FormData contents
+        console.log('FormData entries:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
             await createDieselExpance(formData)
 
             setSubmitSuccess(true);
@@ -80,8 +88,20 @@ export default function DieselExpenseFormFormik(
         setDriver(data)
     }
 
+    // Add function to fetch petrol pumps
+    const fetchPetrolPumps = async () => {
+        try {
+            // You'll need to create this API function in your services
+            const response = await getPetrolPumps();
+            setPetrolPumps(response.data);
+        } catch (error) {
+            console.error('Error fetching petrol pumps:', error);
+        }
+    };
+
     useEffect(() => {
-        fetchDriverDropDownData()
+        fetchDriverDropDownData();
+        fetchPetrolPumps(); // Fetch petrol pumps on component mount
         console.log(vehiclesNames)
     }, [])
 
@@ -97,6 +117,7 @@ export default function DieselExpenseFormFormik(
                 initialValues={{
                     expenseId: '',
                     driver: '',
+                    petrolPump: '', // Add initial value
                     description: '',
                     amount: 0,
                     vehicleNumber: '',
@@ -140,6 +161,27 @@ export default function DieselExpenseFormFormik(
                                 ))}
                             </Field>
                             <ErrorMessage name="driver" component="div" className="mt-1 text-sm text-red-600" />
+                        </div>
+
+                        {/* Add Petrol Pump Field */}
+                        <div>
+                            <label htmlFor="petrolPump" className="block text-sm font-medium text-gray-700">
+                                Petrol Pump *
+                            </label>
+                            <Field
+                                as="select"
+                                name="petrolPump"
+                                id="petrolPump"
+                                className={`p-2 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${errors.petrolPump && touched.petrolPump ? 'border-red-500' : 'border'}`}
+                            >
+                                <option disabled value="">Select a petrol pump</option>
+                                {petrolPumps.map((pump) => (
+                                    <option key={pump._id} value={pump._id}>
+                                        {pump.pumpName} - {pump.location}
+                                    </option>
+                                ))}
+                            </Field>
+                            <ErrorMessage name="petrolPump" component="div" className="mt-1 text-sm text-red-600" />
                         </div>
 
                         <div>
@@ -211,55 +253,86 @@ export default function DieselExpenseFormFormik(
                             <ErrorMessage name="vehicleNumber" component="div" className="mt-1 text-sm text-red-600" />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Upload Images (2-3) *
-                            </label>
-                            <div className="mt-1 flex items-center">
-                                <label className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                    Choose Files
-                                    <input
-                                        type="file"
-                                        id="images"
-                                        name="images"
-                                        accept="image/*"
-                                        multiple
-                                        className="sr-only"
-                                        onChange={(e) => setFieldValue('images', Array.from(e.target.files || []))}
-                                    />
-                                </label>
-                                <span className="ml-3 text-sm text-gray-500">
-                                    {values.images.length > 0
-                                        ? `${values.images.length} file(s) selected`
-                                        : 'No files selected'}
-                                </span>
-                            </div>
-                            {values.images.length > 0 && (
-                                <div className="mt-2 grid grid-cols-3 gap-2">
-                                    {values.images.map((file: File, index: number) => (
-                                        <div key={index} className="relative">
-                                            <img
-                                                src={URL.createObjectURL(file)}
-                                                alt={`Preview ${index}`}
-                                                className=" w-full object-cover rounded"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const newImages = [...values.images];
-                                                    newImages.splice(index, 1);
-                                                    setFieldValue('images', newImages);
-                                                }}
-                                                className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                                            >
-                                                ×
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <ErrorMessage name="images" component="div" className="mt-1 text-sm text-red-600" />
+                      <div>
+    <label className="block text-sm font-medium text-gray-700">
+        Upload Images (2-3) *
+    </label>
+    <div className="mt-1 flex items-center">
+        <label className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Choose Files
+            <input
+                type="file"
+                id="images"
+                name="images"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    console.log('Selected files:', files);
+                    console.log('Number of files:', files.length);
+                    
+                    // Combine existing files with new ones
+                    const existingFiles = values.images || [];
+                    const allFiles = [...existingFiles, ...files];
+                    
+                    // Limit to 3 files maximum
+                    const finalFiles = allFiles.slice(0, 3);
+                    
+                    console.log('Final files:', finalFiles.length);
+                    setFieldValue('images', finalFiles);
+                    
+                    // Reset input to allow selecting same files again
+                    e.target.value = '';
+                }}
+            />
+        </label>
+        <span className="ml-3 text-sm text-gray-500">
+            {values.images?.length > 0
+                ? `${values.images.length} file(s) selected (Max: 3)`
+                : 'No files selected'}
+        </span>
+    </div>
+    
+    {/* Display validation error */}
+    {touched.images && errors.images && (
+        <div className="mt-1 text-sm text-red-600">{errors.images}</div>
+    )}
+    
+    {/* Preview images */}
+    {values.images?.length > 0 && (
+        <div className="mt-3">
+            <p className="text-sm text-gray-600 mb-2">Selected Images:</p>
+            <div className="grid grid-cols-3 gap-2">
+                {values.images.map((file: File, index: number) => (
+                    <div key={index} className="relative border rounded-lg p-1">
+                        <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-24 object-cover rounded"
+                        />
+                        <div className="text-xs text-center mt-1 truncate">
+                            {file.name}
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const newImages = [...values.images];
+                                newImages.splice(index, 1);
+                                setFieldValue('images', newImages);
+                            }}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                            ×
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )}
+
+    <ErrorMessage name="images" component="div" className="mt-1 text-sm text-red-600" />
+</div>
 
                         <div className="pt-4">
                             <button
