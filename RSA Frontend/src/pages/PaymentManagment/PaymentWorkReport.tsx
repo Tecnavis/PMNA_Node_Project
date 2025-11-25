@@ -24,20 +24,30 @@ const PaymentWorkReport = () => {
     const [selectedMonthData, setSelectedMonthData] = useState<{ month: number; year: number } | null>(null); 
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
     const fetchReportResult = async () => {
-        try {
-            setLoading(true);
-            const res = await axiosInstance.get(`${BASE_URL}/pmnr/report`, {
-                params: {
-                    year: +selectedYear
-                }
-            });
-            setReport(res.data);
-        } catch (error: any) {
-            console.error("Error fetching report:", error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+        setLoading(true);
+        const res = await axiosInstance.get(`${BASE_URL}/pmnr/report`, {
+            params: {
+                year: +selectedYear
+            }
+        });
+        
+        // Sort reports in descending order (most recent month first)
+        const sortedReports = res.data.sort((a: PMNRReport, b: PMNRReport) => {
+            // First sort by year descending, then by month descending
+            if (b.year !== a.year) {
+                return b.year - a.year;
+            }
+            return b.month - a.month;
+        });
+        
+        setReport(sortedReports);
+    } catch (error: any) {
+        console.error("Error fetching report:", error.message);
+    } finally {
+        setLoading(false);
+    }
+};
 const handleViewMore = (row: PMNRReport) => {
     setSelectedMonthData({ month: row.month, year: row.year });
     fetchMonthBookings(row.month, row.year);
