@@ -801,27 +801,36 @@ const parseLatLng = (latLngString: string): { lat: number; lng: number } | null 
             setTotalAmount(updatedAmount);
         }
     }, [trappedLocation, updatedAmount]);
-
+const validateCreditLimit = (): boolean => {
+    // Check if workType is RSAWork and company is selected
+    if (workType === 'RSAWork' && selectedCompany) {
+        // Check if cash in hand exceeds credit limit
+        if (selectedCompany.creditLimitAmount < cashInHand) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Exceeds credit limit amount',
+                text: `Cash in hand (${cashInHand}) exceeds the company's credit limit (${selectedCompany.creditLimitAmount}).`,
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            return false; // validation failed
+        }
+    }
+    return true; // validation passed
+};
     // handle create booking
     const handleSubmit = async (e: React.FormEvent) => {
         setLoading(true);
         e.preventDefault();
 
-        if (workType === 'RSAWork' && selectedCompany) {
-            if (selectedCompany.creditLimitAmount < cashInHand) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Exceeds credit limit amount',
-                    text: `Cash in hand (${cashInHand}) exceeds the company's credit limit (${selectedCompany.creditLimitAmount}).`,
-                    toast: true,
-                    position: 'top',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    padding: '10px 20px',
-                });
-                return; // stop form submission
-            }
-        }
+         // Strict credit limit validation
+    if (!validateCreditLimit()) {
+        setLoading(false);
+        return; // stop form submission
+    }
 
         if (validate()) {
 
@@ -1032,6 +1041,11 @@ const formatDateForInput = (dateString: string): string => {
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+          // Strict credit limit validation
+    if (!validateCreditLimit()) {
+        setLoading(false);
+        return; // stop form submission
+    }
         if (validate()) {
             const data: any = {
                 workType: workType,

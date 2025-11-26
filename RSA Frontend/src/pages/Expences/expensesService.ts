@@ -267,6 +267,16 @@ export const getExpenseStats = async (
     throw error;
   }
 };
+// In your services/expencesService.ts or similar file
+export const getPetrolPumps = async () => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/petrol-pumps`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching petrol pumps:', error);
+        throw error;
+    }
+};
 // Add this to your expensesService.ts
 export const deleteCompanyExpense = async (
   expenseId: string

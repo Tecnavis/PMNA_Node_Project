@@ -43,7 +43,7 @@ const petrolPumpSchema = new mongoose.Schema({
   fuelTypes: [{
     type: String,
     enum: {
-      values: ['Petrol', 'Diesel', 'CNG', 'Premium Petrol', 'Premium Diesel'],
+      values: ['Petrol', 'Diesel', 'CNG', 'Premium Petrol', 'Diesel Exhaust Fluid'],
       message: '{VALUE} is not a valid fuel type'
     }
   }]

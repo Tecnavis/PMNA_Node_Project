@@ -1,15 +1,17 @@
 const DieselExpense = require('../Model/dieselExpense');
+const PetrolPump = require('../Model/petrol'); // Make sure to import
 
-// Create a new diesel expense
+// In your createExpense controller
 exports.createExpense = async (req, res) => {
     try {
-        const { expenseId, driver, description, amount, vehicleNumber, expenceKm } = req.body;
+        const { expenseId, driver, description, amount, vehicleNumber, expenceKm, petrolPump } = req.body;
         
-        if (!expenseId || !driver || !description || !amount || !expenceKm || !vehicleNumber) {
+        if (!expenseId || !driver || !description || !amount || !expenceKm || !vehicleNumber || !petrolPump) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
 
-        if (!req.files && req.files < 2 || req.files > 3) {
+        // FIXED: Proper file validation
+        if (!req.files || req.files.length < 2 || req.files.length > 3) {
             return res.status(400).json({ message: 'Upload 2 to 3 images only' });
         }
 
@@ -18,6 +20,7 @@ exports.createExpense = async (req, res) => {
         const newExpense = new DieselExpense({
             expenseId,
             driver,
+            petrolPump,
             description,
             amount,
             images,
@@ -26,21 +29,32 @@ exports.createExpense = async (req, res) => {
         });
 
         await newExpense.save();
-        return res.status(201).json({ message: 'Expense created successfully', data: newExpense });
+        
+        // Populate petrol pump details in response
+        await newExpense.populate('petrolPump');
+        
+        return res.status(201).json({ 
+            message: 'Expense created successfully', 
+            data: newExpense 
+        });
     } catch (error) {
         return res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
-// Update an existing diesel expense
+// FIX THIS TOO in your updateExpense function:
 exports.updateExpense = async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
 
-        if (req.files && req.files < 2 || req.files > 3) {
-            const images = req.files.map((img) => img.fileName);
-            updates.images = images
+        // FIXED: Proper file validation for update
+        if (req.files) {
+            if (req.files.length < 2 || req.files.length > 3) {
+                return res.status(400).json({ message: 'Upload 2 to 3 images only' });
+            }
+            const images = req.files.map((img) => img.filename);
+            updates.images = images;
         }
 
         const updatedExpense = await DieselExpense.findByIdAndUpdate(id, updates, {
@@ -78,18 +92,7 @@ exports.toggleApproval = async (req, res) => {
     }
 };
 
-// Get all expenses - for Admin
-// exports.getAllExpenses = async (req, res) => {
-//     try {
-//         const expenses = await DieselExpense .find()
-//         .sort({ createdAt: -1 })           // ← sort descending by createdAt
-//         .populate('driver');
-
-//         res.status(200).json({ data: expenses });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// };
+// Update getAllExpenses to populate petrolPump
 exports.getAllExpenses = async (req, res) => {
     try {
         const { month, year, vehicleNumber, page = 1, limit = 10, all = false } = req.query;
@@ -111,16 +114,15 @@ exports.getAllExpenses = async (req, res) => {
         let totalCount;
         
         if (all === 'true') {
-            // Use find with proper filtering to exclude null documents
             expenses = await DieselExpense.find({ 
                 ...query,
                 _id: { $exists: true, $ne: null }
             })
                 .sort({ createdAt: -1 })
                 .populate('driver')
+                .populate('petrolPump') // Add this line
                 .lean();
             
-            // Additional client-side filtering for safety
             expenses = expenses.filter(expense => 
                 expense && 
                 expense._id && 
@@ -145,6 +147,7 @@ exports.getAllExpenses = async (req, res) => {
                 .skip(skip)
                 .limit(limitNumber)
                 .populate('driver')
+                .populate('petrolPump') // Add this line
                 .lean();
             
             expenses = expenses.filter(expense => 
@@ -170,12 +173,16 @@ exports.getAllExpenses = async (req, res) => {
         });
     }
 };
-// Get single expense by ID
+
+// Update getExpenseById to populate petrolPump
 exports.getExpenseById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const expense = await DieselExpense.findById(id).populate('driver');
+        const expense = await DieselExpense.findById(id)
+            .populate('driver')
+            .populate('petrolPump'); // Add this line
+            
         if (!expense) return res.status(404).json({ message: 'Expense not found' });
 
         res.status(200).json({ data: expense });
