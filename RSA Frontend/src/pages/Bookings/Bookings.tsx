@@ -169,6 +169,7 @@ export interface Booking {
     amountWithoutInsurance?: number; // Optional field
     createdAt?: Date;
     updatedAt?: Date;
+    pickupDate?: Date
 }
 
 const Bookings: React.FC = () => {
@@ -194,8 +195,11 @@ const Bookings: React.FC = () => {
         amountForCustomer: 0,
         cancelReason: '',
     });
-const [showingAll, setShowingAll] = useState(false);
-const [isLoading, setIsLoading] = useState(false);
+    const [showingAll, setShowingAll] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [scheduledBookings, setScheduledBookings] = useState<Booking[]>([]);
+    const [showScheduledBookings, setShowScheduledBookings] = useState<boolean>(false)
+    
 
 
   const handlePageChange = (page: any) => {
@@ -240,6 +244,40 @@ const fetchBookings = async (page = 1, limit = 10, showAll = false) => {
         setIsLoading(false);
     }
     };
+
+    // fetch all schedules bookings
+    const fetchScheduledBookings = async (page = 1, limit = 10, showAll = false) => {
+        try {
+            setIsLoading(true);
+            const params: any = { 
+                search, 
+                scheduledToday : true,
+                ...(showAll ? { all: true } : { page, limit })
+            };
+    
+            const response = await axios.get(`${backendUrl}/booking`, { params });
+    
+            setScheduledBookings(response.data.bookings);
+            setTotalPages(response.data.totalPages);
+            setCurrentPage(response.data.page);
+        } catch {
+            
+        }finally {
+            setIsLoading(false);
+        }
+    }
+
+    const toggleScheduledBookingHandler = () => {
+        const nextState = !showScheduledBookings;
+        setShowScheduledBookings(nextState);
+        setSearch('')
+
+        if (nextState) {
+            fetchScheduledBookings();
+        } else {
+            fetchBookings();
+        }
+    }
 
     // getting all company
 
@@ -427,6 +465,10 @@ cashPending:false,
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
                             onChange={(e) => {
                                 setSearch(e.target.value)
+                                if(showScheduledBookings){
+                                    fetchScheduledBookings()
+                                    return
+                                }
                                 fetchBookings()
                             }} // Trigger search on input change
                         />
@@ -458,7 +500,7 @@ cashPending:false,
 
                     {/* Canceled Bookings */}
                     <div className="bg-purple-500 text-white text-center px-3 py-1 rounded shadow">Canceled Bookings</div>
-                                        <div className="bg-pink-400 text-white text-center px-3 py-1 rounded shadow">Scheduled Bookings</div>
+                    <div className={`${showScheduledBookings && 'shadow-2xl  border border-black'} border bg-pink-400 text-white text-center px-3 py-1 rounded shadow hover:cursor-pointer`} onClick={toggleScheduledBookingHandler}>Scheduled Bookings</div>
 
                 </div>
 
@@ -477,16 +519,32 @@ cashPending:false,
                             </tr>
                         </thead>
                         <tbody>
-                            {bookings.map((items, index) => {
+                            {(showScheduledBookings ? scheduledBookings : bookings).map((items, index) => {
                                 // Determine the color for fileNumber based on the conditions
                                 let fileNumberColor = '';
                                 const currentDate = new Date();
                                 const bookingDate = items.createdAt ? new Date(items.createdAt) : new Date();
                                 const isToday = bookingDate.toLocaleDateString('en-GB') === currentDate.toLocaleDateString('en-GB');
+                                //@ts-expect-error
+                                const pickupString = items?.pickupDate?.replace('Z', '');
+                                const pickup = new Date(pickupString);
+                                
+                                const nowDateOnly = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+                                const pickupDateOnly = new Date(pickup.getFullYear(), pickup.getMonth(), pickup.getDate());
 
-                if (items.bookedByModel === 'Showroom') {
-                    fileNumberColor = isToday ? '#3b82f6' : '#f97316'; // Showroom today = blue, past = orange
-                                 } else if (items.bookedBy?.startsWith('RSA')) {
+                                // checking with pickup date is is today
+                                const isSameDay = nowDateOnly.getTime() === pickupDateOnly.getTime();
+
+                                let isPast = false;
+
+                                if (isSameDay) {
+                                  // Same day → compare time
+                                  isPast = currentDate.getTime() > pickup.getTime();  
+                                }   
+
+                                if (items.bookedByModel === 'Showroom') {
+                                    fileNumberColor = isToday ? '#3b82f6' : '#f97316'; // Showroom today = blue, past = orange
+                                } else if (items.bookedBy?.startsWith('RSA')) {
                                     fileNumberColor = isToday ? '#22c55e' : '#eab308'; // RSA today = green, past = yellow
                                 } else if (items.bookedBy?.startsWith('SHM')) {
                                     fileNumberColor = isToday ? '#3b82f6' : '#f97316'; // SHM today = blue, past = orange
@@ -499,6 +557,9 @@ cashPending:false,
                                 }
                                 if (items.cancelStatus) {
                                     fileNumberColor = '#a855f7'; // If the status is Rejected, color it red
+                                }
+                                if(isSameDay){
+                                    fileNumberColor = isPast ? '#22c55e' : 'pink'
                                 }
                                 return (
                                     <tr key={index}>

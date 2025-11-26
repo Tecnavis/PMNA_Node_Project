@@ -16,6 +16,7 @@ const SalaryTransaction = require('../Model/salaryTransaction')
 const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
 const { StatusCodes } = require('http-status-codes');
 const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
+const { chekcAndUpdatebookingIsEnable } = require('../services/bookingService');
 
 
 // Controller to create a booking
@@ -554,14 +555,16 @@ exports.getAllBookings = async (req, res) => {
             verified,
             staffId,
             all = false,
-            hasPickupDate // Add this parameter to filter by pickupDate
+            hasPickupDate, // Add this parameter to filter by pickupDate
+            scheduledToday
         } = req.query;
 
         // Convert page and limit to integers
         page = all ? 1 : parseInt(page, 10);
         limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
-
+        
         const query = {};
+        query._includeHidden = true;
 
         // CRITICAL: Check and update bookings where pickupDate has been reached
         await updateScheduledBookings();
@@ -578,15 +581,15 @@ exports.getAllBookings = async (req, res) => {
         }
 
        // In your getAllBookings function, modify the status handling:
-if (req.query.onlyScheduled === 'true') {
-    query.status = 'Scheduled';
-} else if (status) {
-    if (Array.isArray(status)) {
-        query.status = { $nin: status }
-    } else {
-        query.status = { $ne: status }
-    }
-}
+        if (req.query.onlyScheduled === 'true') {
+            query.status = 'Scheduled';
+        } else if (status) {
+            if (Array.isArray(status)) {
+                query.status = { $nin: status }
+            } else {
+                query.status = { $ne: status }
+            }
+        }
 
         // If driverId as query then fetch drivers bookings
         if (driverId) {
@@ -684,6 +687,18 @@ if (req.query.onlyScheduled === 'true') {
             }
         }
 
+        if (scheduledToday === 'true') {
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+            if(query.$or){
+                query.$or.push({ status: 'Scheduled' }, { pickupDate: { $gte: startOfToday, $lte: endOfToday } })
+            } else {
+                query.$or = [ { status: 'Scheduled' }, { pickupDate: { $gte: startOfToday, $lte: endOfToday } } ]
+            }
+        }
+
         if (startDate && endingDate) {
             const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
             const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
@@ -728,6 +743,8 @@ if (req.query.onlyScheduled === 'true') {
             }
             return total + (booking.receivedAmount || 0);
         }, 0);
+        // Add enable field to scheduled bookings
+        chekcAndUpdatebookingIsEnable(bookings)
 
         query.workType = { $ne: 'RSAWork' };
 

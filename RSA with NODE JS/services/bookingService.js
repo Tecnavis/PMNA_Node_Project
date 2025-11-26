@@ -85,3 +85,32 @@ exports.distributeReceivedAmount = async (driver, receivedAmount, remark) => {
         console.log(error, 'error from booking service.js ')
     }
 }
+
+// check and add field for booking enable or not enable
+exports.chekcAndUpdatebookingIsEnable = (bookings) => {
+    let now = new Date();
+
+    return bookings.map((booking) => {
+        if (booking.status !== 'Scheduled') {
+            const pickupString = String(booking?.pickupDate).replace('Z', '');
+            const pickup = new Date(pickupString);
+
+            const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const pickupDateOnly = new Date(pickup.getFullYear(), pickup.getMonth(), pickup.getDate());
+
+            // checking with pickup date is is today
+            const isSameDay = nowDateOnly.getTime() === pickupDateOnly.getTime();
+
+            let isPast = false;
+
+            if (isSameDay) {
+                // Same day -> compare time
+                isPast = now.getTime() > pickup.getTime();
+                booking.isEnable = isPast;
+            }
+        } else if (booking.status === 'Scheduled') {
+            booking.isEnable = false;
+        }
+        return booking
+    })
+}
