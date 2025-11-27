@@ -644,7 +644,7 @@ const calculateBalance = (amount: string | number | undefined, receivedAmountSho
               recordsPerPage={10}
               page={page}
               onPageChange={setPage}
-              recordsPerPageOptions={[10, 20, 50]}
+              recordsPerPageOptions={[10, 20, 50,100,200,500]}
               onRecordsPerPageChange={setPageSize}
               minHeight={400}
             />
