@@ -453,9 +453,15 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                                         >
                                             Cash Report
                                         </button>
+                                          <button type="button" className="btn btn-warning px-2 py-1 text-xs"
+                onClick={() => navigate(`/pending-payments/${company._id}`)}
+            >
+                Pending Payment
+            </button>
                                     </div>
                                 ),
                             },
+                           
                         ]}
                     />
                 </div>
