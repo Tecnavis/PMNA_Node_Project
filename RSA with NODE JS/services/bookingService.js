@@ -86,31 +86,58 @@ exports.distributeReceivedAmount = async (driver, receivedAmount, remark) => {
     }
 }
 
+function getIsEnable(booking) {
+    let fileNumberColor = '';
+    const currentDate = new Date();
+
+    // FIX: Convert UTC to LOCAL consistent date
+    const utc = new Date(booking.pickupDate);
+    const pickup = new Date(
+        utc.getUTCFullYear(),
+        utc.getUTCMonth(),
+        utc.getUTCDate(),
+        utc.getUTCHours(),
+        utc.getUTCMinutes(),
+        utc.getUTCSeconds()
+    );
+
+    const nowDateOnly = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        currentDate.getDate()
+    );
+
+    const pickupDateOnly = new Date(
+        pickup.getFullYear(),
+        pickup.getMonth(),
+        pickup.getDate()
+    );
+
+    const isSameDay = nowDateOnly.getTime() === pickupDateOnly.getTime();
+
+    let isPast = false;
+
+    if (isSameDay) {
+        isPast = currentDate.getTime() > pickup.getTime();
+    }
+
+    if (booking.status === 'Scheduled') {
+        fileNumberColor = 'pink';
+    }
+
+    if (isSameDay) {
+        fileNumberColor = isPast ? '#22c55e' : 'pink';
+    }
+
+    return fileNumberColor !== 'pink';
+}
+
+
 // check and add field for booking enable or not enable
 exports.chekcAndUpdatebookingIsEnable = (bookings) => {
-    let now = new Date();
-
     return bookings.map((booking) => {
-        if (booking.status !== 'Scheduled') {
-            const pickupString = String(booking?.pickupDate).replace('Z', '');
-            const pickup = new Date(pickupString);
-
-            const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const pickupDateOnly = new Date(pickup.getFullYear(), pickup.getMonth(), pickup.getDate());
-
-            // checking with pickup date is is today
-            const isSameDay = nowDateOnly.getTime() === pickupDateOnly.getTime();
-
-            let isPast = false;
-
-            if (isSameDay) {
-                // Same day -> compare time
-                isPast = now.getTime() > pickup.getTime();
-                booking.isEnable = isPast;
-            }
-        } else if (booking.status === 'Scheduled') {
-            booking.isEnable = false;
-        }
+        const isEnable = getIsEnable(booking);
+        booking.isEnable = isEnable;
         return booking
     })
 }
