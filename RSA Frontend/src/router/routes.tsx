@@ -28,6 +28,8 @@ const DriverAdvancePayment = lazy(() => import('../pages/PaymentManagment/Driver
 const ProviderAdvancePayment = lazy(() => import('../pages/PaymentManagment/ProviderAdvancePayment'))
 const ProviderReport = lazy(() => import('../pages/Reports/ProviderReport/ProviderReport'))
 const CompanyReport = lazy(() => import('../pages/Reports/CompanyReport/CompanyReport'))
+const PendingPayment = lazy(() => import('../pages/Reports/CompanyReport/PendingPayment'))
+
 const AdminAttendance = lazy(() => import('../pages/Attendance/AdminAttendance'))
 const StaffAttendance = lazy(() => import('../pages/Attendance/StaffAttendance'))
 const RewardsItem = lazy(() => import('../pages/Rewards/RewardsItems'))
@@ -258,6 +260,10 @@ const routes = [
     {
         path: '/company-report/:id',
         element: <CompanyReport />,
+    },
+     {
+        path: '/pending-payments/:id',
+        element: <PendingPayment />,
     },
     {
         path: '/showroomreport',

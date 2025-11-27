@@ -1315,57 +1315,48 @@ const handleRemoveDropoffImage = async (index: number) => {
     </div>
   </div>
 
-  {booking?.status === 'Order Completed' ? (
-    <div>
-      {(!booking.verified && !booking.feedbackCheck) || 
-       ((booking.verified || booking.feedbackCheck) && role.startsWith(ROLES.ADMIN)) ? (
-        <div className="space-y-2">
-          <button 
-            type="button" 
-            className="btn btn-info w-full" 
-            onClick={() => handleNavigateToBookingUpdate(id, true)}
-          >
-            Edit
-          </button>
-          
-          {(role === ROLES.VERIFIER || 
-            role.startsWith(ROLES.ADMIN) || 
-            role.startsWith(ROLES.SECONDARY_ADMIN)) && (
-            <button 
-              type="button" 
-              className="btn btn-success w-full" 
-              onClick={verifyBooking}
-            >
-              Verify
-            </button>
-          )}
-        </div>
-      ) : (
-        booking.verified &&
-        !booking.provider &&
-        !booking.feedbackCheck && (
-          <button 
-            type="button" 
-            className="btn btn-success w-full" 
-            onClick={openFeedbackModal}
-          >
-            Feedback
-          </button>
-        )
-      )}
-    </div>
-  ) : (
-    <button 
-      type="button" 
-      className="btn btn-info w-full" 
-      onClick={() => setModal5(true)}
-    >
-      Booking Completed
+   {booking?.status === 'Order Completed' ? (
+                            <div>
+                                {!booking.verified && !booking.feedbackCheck ? (
+                                    <>
+                                        <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
+                                            Edit
+                                        </button>
+                        {(
+    role === ROLES.VERIFIER || 
+    role.startsWith(ROLES.ADMIN) || 
+    role.startsWith(ROLES.SECONDARY_ADMIN)
+) && (
+    <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
+        Verify
     </button>
-  )}
-</div>
+)}
+                                    </>
+                                ) : (
+                                    booking.verified &&
+                                    !booking.provider &&
+                                    !booking.feedbackCheck && (
+                                        <button type="button" className="btn btn-success w-full" onClick={openFeedbackModal}>
+                                            Feedback
+                                        </button>
+                                    )
+                                )}
+                                <br />
+                                {(role.startsWith(ROLES.ADMIN) || role.startsWith(ROLES.SECONDARY_ADMIN)) && (booking.verified || booking.feedbackCheck) ? (
+    <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
+        Edit
+    </button>
+) : null}
+                            </div>
+                        ) : (
+                            <button type="button" className="btn btn-info w-full" onClick={() => setModal5(true)}>
+                                Booking Completed
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
+
 
             {/* modal for the order Complete  */}
 
