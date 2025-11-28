@@ -116,6 +116,7 @@ partialAmountStaff: { type: Number },
     discountAmount: { type: Number },
     serviceDue: { type: Boolean },
     receivedHistory: [ReceivedHistorySchema],
+    qrImage: { type: String },
 }, { timestamps: true });
 
 bookingSchema.plugin(visibleFilter);
