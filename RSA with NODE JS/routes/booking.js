@@ -97,4 +97,7 @@ router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
 //Route to approve booking
 router.patch('/settle-cash-pending/:id', jwt, controller.settleCashPendingBooking);
 
+// Upload payment qr code
+router.patch('/upload-payment-qr/:bookingId', jwt, upload.single('image'), controller.uploadPaymentQrCode);
+
 module.exports = router;

@@ -3462,3 +3462,43 @@ exports.settleCashPendingBooking = asyncErrorHandler(async (req, res) => {
         message: "Booking discount created successfully"
     });
 })
+
+exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res)=>{
+    const { bookingId } = req.params;
+
+    if (!bookingId?.trim()) {
+        throw new BadRequestError('BookingId is required.');
+    }
+
+    if (!req.file) {
+        throw new BadRequestError("QR image file is missing.");
+    }
+
+    const allowedMime = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!allowedMime.includes(req.file.mimetype)) {
+        throw new BadRequestError("Only image files (png, jpeg, webp) are allowed.");
+    }
+
+    const qrImage = req.file.filename;
+    if (!qrImage) {
+        throw new BadRequestError("Uploaded file is missing a file name property.");
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+        throw new NotFoundError('Booking not found');
+    };
+
+    booking.qrImage = qrImage;
+    await booking.save();
+
+    return res.status(200).json({
+        success: true,
+        message: "QR code uploaded successfully.",
+        data: {
+            bookingId: booking._id,
+            qrImage,
+        },
+    });
+})
