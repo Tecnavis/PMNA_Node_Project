@@ -1,7 +1,7 @@
 const roleAuth = (...allowedRoles) => {
   return (req, res, next) => {
     try {
-      const userRole = req.user?.user?.role;
+      const userRole = req.user?.user?.role || req.user?.role;
         
       if (!userRole) {
         return res.status(401).json({ message: "Unauthorized. No role found." });
