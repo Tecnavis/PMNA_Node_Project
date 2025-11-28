@@ -37,6 +37,14 @@ const dieselExpenseSchema = new mongoose.Schema({
         required: true,
         min: [0, 'Amount must be positive']
     },
+     totalDriverDistance: { type: Number, default: 0 },
+    previousExpenseDate: { type: Date },
+    calculationDateRange: {
+        from: { type: Date },
+        to: { type: Date }
+    },
+    bookingCount: { type: Number, default: 0 },
+    calculatedAt: { type: Date },
     images: {
         type: [String],
         validate: {

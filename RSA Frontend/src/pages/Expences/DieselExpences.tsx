@@ -450,6 +450,8 @@ const DieselExpenses = () => {
                 <th className="px-4 py-3">Expense ID</th>
                 <th className="px-4 py-3">Driver</th>
                 <th className="px-4 py-3">Vehicle Number</th>
+                                                <th className="px-4 py-3">Total KM</th> {/* New Column */}
+
                                 <th className="px-4 py-3">Petrol Pump</th> {/* New Column */}
 
                 <th className="px-4 py-3">Description</th>
@@ -488,6 +490,8 @@ const DieselExpenses = () => {
                           {expense.vehicleNumber}
                         </div>
                       </td>
+                                            <td className="px-4 py-3 font-medium w-auto text-danger">{expense.totalDriverDistance}</td>
+
                        <td className="px-4 py-3">
                         {expense.petrolPump ? (
                           <div className="max-w-xs">

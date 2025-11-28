@@ -19,6 +19,7 @@ export interface IDieselExpense {
     };
     description: string;
     amount: number;
+    totalDriverDistance:number;
     images: string[];
       petrolPump: IPetrolPump; // Add this
 

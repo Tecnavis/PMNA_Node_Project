@@ -1,5 +1,6 @@
 const DieselExpense = require('../Model/dieselExpense');
 const PetrolPump = require('../Model/petrol'); // Make sure to import
+const Booking = require('../Model/booking');
 
 // In your createExpense controller
 exports.createExpense = async (req, res) => {
@@ -17,6 +18,46 @@ exports.createExpense = async (req, res) => {
 
         const images = req.files.map((img) => img.filename);
 
+        // Find the previous diesel expense for the same vehicle
+        const previousExpense = await DieselExpense.findOne(
+            { vehicleNumber: vehicleNumber },
+            {},
+            { sort: { createdAt: -1 } } // Get the most recent expense
+        );
+
+        let totalDriverDistance = 0;
+        let startDate = null;
+        const currentDate = new Date();
+
+        // If previous expense exists, calculate bookings between dates
+        if (previousExpense) {
+            startDate = previousExpense.createdAt;
+            
+            // Find bookings between previous expense date and current date for the same vehicle
+            const bookings = await Booking.find({
+                vehicleNumber: vehicleNumber,
+                createdAt: {
+                    $gte: startDate,
+                    $lte: currentDate
+                }
+            });
+
+            // Calculate sum of totalDriverDistance
+            totalDriverDistance = bookings.reduce((sum, booking) => {
+                return sum + (booking.totalDriverDistence || 0);
+            }, 0);
+        } else {
+            // If no previous expense, get all bookings up to current date for this vehicle
+            const bookings = await Booking.find({
+                vehicleNumber: vehicleNumber,
+                createdAt: { $lte: currentDate }
+            });
+
+            totalDriverDistance = bookings.reduce((sum, booking) => {
+                return sum + (booking.totalDriverDistence || 0);
+            }, 0);
+        }
+
         const newExpense = new DieselExpense({
             expenseId,
             driver,
@@ -25,7 +66,13 @@ exports.createExpense = async (req, res) => {
             amount,
             images,
             vehicleNumber,
-            expenceKm
+            expenceKm,
+            totalDriverDistance, // Add the calculated distance
+            previousExpenseDate: startDate, // Store the previous expense date for reference
+            calculationDateRange: {
+                from: startDate,
+                to: currentDate
+            }
         });
 
         await newExpense.save();
