@@ -143,7 +143,7 @@ const Bookings: React.FC<BookingsTableProps> = ({
                 recordsPerPage={showPagination ? pageSize : bookings.length}
                 page={showPagination ? page : 1}
                 onPageChange={onPageChange || ((page: number) => { })}
-                recordsPerPageOptions={showPagination ? [10, 20, 50] : undefined}
+                recordsPerPageOptions={showPagination ? [10, 20, 50,100,200,500] : undefined}
                 onRecordsPerPageChange={onPageSizeChange || (() => { })}
                 withColumnBorders
                 verticalAlignment="center"

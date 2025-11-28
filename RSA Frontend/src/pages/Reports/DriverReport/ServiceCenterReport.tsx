@@ -17,6 +17,7 @@ import { Booking } from '../../Bookings/Bookings';
 import { BASE_URL } from '../../../config/axiosConfig';
 import Swal from 'sweetalert2';
 import { ROLES } from '../../../constants/roles';
+import RSALogo from '../../../assets/images/RSALogo.png';
 
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -69,7 +70,214 @@ const ShowroomCashCollectionsReport = () => {
 
   const printRef = useRef<HTMLDivElement>(null);
   const role = localStorage.getItem('role') || '';
+// Print functionality
 
+const handlePrint = () => {
+  const printContent = printRef.current;
+  if (!printContent) return;
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  // Filter bookings for the selected month and year
+  const filteredBookings = bookings.filter(booking => {
+    const bookingDate = new Date(booking.createdAt || '');
+    const bookingMonth = bookingDate.toLocaleString('en-US', { month: 'long' });
+    const bookingYear = bookingDate.getFullYear();
+    return bookingMonth === selectedMonth && bookingYear === selectedYear;
+  });
+
+  const printHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Showroom Cash Collection Report - ${selectedMonth} ${selectedYear}</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 20px;
+          color: #000;
+        }
+        .header-container {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 30px;
+          border-bottom: 2px solid #333;
+          padding-bottom: 20px;
+        }
+        .logo-section {
+          flex: 0 0 auto;
+        }
+        .logo {
+          max-width: 150px;
+          max-height: 80px;
+          object-fit: contain;
+        }
+        .title-section {
+          flex: 1;
+          text-align: center;
+        }
+        .print-header h1 { 
+          margin: 0; 
+          color: #333;
+          font-size: 24px;
+        }
+        .print-header h2 { 
+          margin: 5px 0; 
+          color: #666;
+          font-size: 18px;
+        }
+        .showroom-info {
+          margin-bottom: 20px;
+          padding: 15px;
+          background: #f9f9f9;
+          border-radius: 5px;
+          text-align: center;
+        }
+        .summary-cards {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 30px;
+          gap: 15px;
+        }
+        .summary-card {
+          flex: 1;
+          padding: 15px;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          text-align: center;
+          background: #fff;
+        }
+        .summary-card h3 {
+          margin: 0 0 10px 0;
+          font-size: 14px;
+          color: #666;
+        }
+        .summary-card .amount {
+          font-size: 18px;
+          font-weight: bold;
+          color: #333;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th, td {
+          border: 1px solid #ddd;
+          padding: 8px 12px;
+          text-align: left;
+          font-size: 12px;
+        }
+        th {
+          background-color: #f5f5f5;
+          font-weight: bold;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .no-data {
+          text-align: center;
+          padding: 20px;
+          color: #666;
+          font-style: italic;
+        }
+        @media print {
+          body { margin: 0; }
+          .summary-cards { break-inside: avoid; }
+          table { break-inside: auto; }
+          .logo { max-width: 120px; }
+        }
+        @page {
+          margin: 0.5in;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header-container">
+        <div class="logo-section">
+          <img src="${RSALogo}" alt="Company Logo" class="logo" />
+        </div>
+        <div class="title-section">
+          <div class="print-header">
+            <h1>Showroom Cash Collection Report</h1>
+            <h2>${selectedMonth} ${selectedYear}</h2>
+          </div>
+        </div>
+        <div class="logo-section" style="visibility: hidden;">
+          <img src="${RSALogo}" alt="" class="logo" />
+        </div>
+      </div>
+
+      ${showroom ? `
+        <div class="showroom-info">
+          <strong>Showroom:</strong> ${showroom.name} | 
+          <strong>ID:</strong> ${showroom.showroomId} | 
+          <strong>Phone:</strong> ${showroom.phone} | 
+          <strong>Location:</strong> ${showroom.location}
+        </div>
+      ` : ''}
+
+      <div class="summary-cards">
+        <div class="summary-card">
+          <h3>Total Collected Amount</h3>
+          <div class="amount">₹${calculateFinacials()[0]}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Balance Amount To Collect</h3>
+          <div class="amount">₹${calculateFinacials()[1]}</div>
+        </div>
+        <div class="summary-card">
+          <h3>Overall Amount</h3>
+          <div class="amount">₹${calculateFinacials()[2]}</div>
+        </div>
+      </div>
+
+      ${filteredBookings.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>File Number</th>
+              <th>Customer Vehicle Number</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredBookings.map((booking, index) => `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${new Date(booking.createdAt || '').toLocaleDateString()}</td>
+                <td>${booking.fileNumber || 'N/A'}</td>
+                <td>${booking.customerVehicleNumber || 'N/A'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : `
+        <div class="no-data">
+          No bookings found for ${selectedMonth} ${selectedYear}
+        </div>
+      `}
+
+      <div style="margin-top: 30px; text-align: center; color: #666; font-size: 12px;">
+        Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+      </div>
+    </body>
+    </html>
+  `;
+
+  printWindow.document.write(printHtml);
+  printWindow.document.close();
+  
+  // Wait for content to load before printing
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+    printWindow.onafterprint = () => printWindow.close();
+  };
+};
   // Set token for API requests
   const gettingToken = () => {
     const token = localStorage.getItem('token');
@@ -574,6 +782,13 @@ const calculateBalance = (amount: string | number | undefined, receivedAmountSho
                 </div>
               </div>
             </div>
+             {/* Print Button */}
+                <button 
+                  className="btn btn-primary ml-2"
+                  onClick={handlePrint}
+                >
+                  Print Report
+                </button>
             <div className="space-y-4" ref={printRef}>
               <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
                 <div className="flex items-center justify-between p-4 py-4">
@@ -644,7 +859,7 @@ const calculateBalance = (amount: string | number | undefined, receivedAmountSho
               recordsPerPage={10}
               page={page}
               onPageChange={setPage}
-              recordsPerPageOptions={[10, 20, 50]}
+              recordsPerPageOptions={[10, 20, 50,100,200,500]}
               onRecordsPerPageChange={setPageSize}
               minHeight={400}
             />

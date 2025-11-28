@@ -33,6 +33,7 @@ router.get('/showroom/bookings', jwt, controller.getBookingsForShowroom)
 
 // Route for getting booking for showroom staff base on stats
 router.get('/showroom-staff/bookings', jwt, controller.getBookingsForShowroomStaff)
+router.get('/pending-payments', jwt, controller.pendingPaymentBooking);
 
 // Rotute for upload image
 router.post('/upload', jwt, upload.single('image'), controller.uploadImage);
@@ -96,5 +97,8 @@ router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
 
 //Route to approve booking
 router.patch('/settle-cash-pending/:id', jwt, controller.settleCashPendingBooking);
+
+// Upload payment qr code
+router.patch('/upload-payment-qr/:bookingId', jwt, upload.single('image'), controller.uploadPaymentQrCode);
 
 module.exports = router;

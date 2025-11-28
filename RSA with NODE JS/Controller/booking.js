@@ -528,7 +528,7 @@ exports.getOrderCompletedBookings = async (req, res) => {
     }
 };
 
-// Controller to get Booking Completed by search query
+
 // Controller to get Booking Completed by search query
 exports.getAllBookings = async (req, res) => {
     const routeLogger = LoggerFactory.createChildLogger({
@@ -1075,7 +1075,150 @@ exports.getAllBookings = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching bookings' });
     }
 };
+exports.pendingPaymentBooking = async (req, res) => {
+  try {
+    const { 
+      companyId, 
+      search, 
+      page = 1, 
+      limit = 10
+    } = req.query;
+    
+    console.log('✅ Pending payments route called with:', { 
+      companyId, 
+      search, 
+      page, 
+      limit
+    });
 
+    // Validate companyId
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company ID is required'
+      });
+    }
+
+    // STRICT QUERY with $nor - More efficient
+    const query = { 
+      company: new mongoose.Types.ObjectId(companyId),
+      workType: 'RSAWork',
+      status: 'Order Completed', // Hardcoded
+      $nor: [
+        { invoiceNumber: { $exists: true, $ne: null, $ne: "" } }
+      ]
+    };
+
+    console.log('STRICT Base query with $nor:', JSON.stringify(query));
+
+    // Add search if provided - but don't modify the core conditions
+    if (search && search.trim() !== '') {
+      const searchQuery = search.trim();
+      const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+
+      // Handle date search separately
+      if (dateRegex.test(searchQuery)) {
+        const [day, month, year] = searchQuery.split('/');
+        const startOfDay = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+        const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
+        query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+      } else {
+        const regex = new RegExp(searchQuery, 'i');
+        
+        const searchConditions = [
+          { fileNumber: regex },
+          { mob1: regex },
+          { customerVehicleNumber: regex },
+          { customerName: regex }
+        ];
+
+        // Search in related collections
+        const [matchingDrivers, matchingProviders, matchingCompanies, matchingShowrooms] = await Promise.all([
+          Driver.find({ name: regex }).select('_id').lean(),
+          Provider.find({ name: regex }).select('_id').lean(),
+          Company.find({ name: regex }).select('_id').lean(),
+          Showroom.find({ name: regex }).select('_id').lean()
+        ]);
+
+        if (matchingDrivers.length > 0) {
+          searchConditions.push({ driver: { $in: matchingDrivers.map(d => d._id) } });
+        }
+        if (matchingProviders.length > 0) {
+          searchConditions.push({ provider: { $in: matchingProviders.map(p => p._id) } });
+        }
+        if (matchingCompanies.length > 0) {
+          searchConditions.push({ company: { $in: matchingCompanies.map(c => c._id) } });
+        }
+        if (matchingShowrooms.length > 0) {
+          searchConditions.push({ showroom: { $in: matchingShowrooms.map(c => c._id) } });
+        }
+
+        // Add search conditions without affecting core query
+        query.$and = query.$and || [];
+        query.$and.push({ $or: searchConditions });
+      }
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    console.log('Final query to execute:', JSON.stringify(query, null, 2));
+    
+    // Fetch bookings with pagination
+    const [bookings, total] = await Promise.all([
+      Booking.find(query)
+        .populate('baselocation')
+        .populate('showroom')
+        .populate('serviceType')
+        .populate('company')
+        .populate('driver')
+        .populate('provider')
+        .populate('receivedUserId')
+        .populate('previousReceivedUserId')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Booking.countDocuments(query)
+    ]);
+
+    // Calculate financial data
+    const totalOverall = bookings.reduce((sum, booking) => sum + (booking.totalAmount || 0), 0);
+    const totalCollected = bookings.reduce((sum, booking) => sum + (booking.receivedAmountByCompany || 0), 0);
+    const balanceAmountToCollect = totalOverall - totalCollected;
+
+    console.log(`✅ Found ${bookings.length} pending RSAWork out of ${total} total`);
+    console.log('Strict filters applied:');
+    console.log('- Company:', companyId);
+    console.log('- Work Type: RSAWork');
+    console.log('- Status: Order Completed');
+    console.log('- Invoice Number: Must NOT exist or be empty');
+
+    res.json({
+      success: true,
+      bookings,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+      financials: {
+        totalCollectedAmount: totalCollected,
+        overallAmount: totalOverall,
+        balanceAmountToCollect: balanceAmountToCollect
+      },
+      filters: {
+        status: 'Order Completed',
+        workType: 'RSAWork',
+        invoiceStatus: 'pending'
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in pendingPaymentBooking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending payments: ' + error.message
+    });
+  }
+};
 // Helper function to update scheduled bookings when pickupDate is reached
 async function updateScheduledBookings() {
     try {
@@ -1301,6 +1444,7 @@ exports.getBookingStats = async (req, res) => {
     res.status(500).json({ message: 'Server error while fetching booking stats' });
   }
 };
+
 // Controller to get a booking by ID
 exports.getBookingById = async (req, res) => {
     const { id } = req.params;
@@ -3460,5 +3604,45 @@ exports.settleCashPendingBooking = asyncErrorHandler(async (req, res) => {
         success: true,
         data: booking,
         message: "Booking discount created successfully"
+    });
+})
+
+exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res)=>{
+    const { bookingId } = req.params;
+
+    if (!bookingId?.trim()) {
+        throw new BadRequestError('BookingId is required.');
+    }
+
+    if (!req.file) {
+        throw new BadRequestError("QR image file is missing.");
+    }
+
+    const allowedMime = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!allowedMime.includes(req.file.mimetype)) {
+        throw new BadRequestError("Only image files (png, jpeg, webp) are allowed.");
+    }
+
+    const qrImage = req.file.filename;
+    if (!qrImage) {
+        throw new BadRequestError("Uploaded file is missing a file name property.");
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+        throw new NotFoundError('Booking not found');
+    };
+
+    booking.qrImage = qrImage;
+    await booking.save();
+
+    return res.status(200).json({
+        success: true,
+        message: "QR code uploaded successfully.",
+        data: {
+            bookingId: booking._id,
+            qrImage,
+        },
     });
 })

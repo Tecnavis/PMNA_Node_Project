@@ -34,7 +34,7 @@ interface FilterData {
     balanceAmountToCollect: number
 }
 
-const CompanyReport = () => {
+const PendingPayment = () => {
 
     const [company, setCompany] = useState<Company | null>(null);
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -165,44 +165,41 @@ const CompanyReport = () => {
             console.error("API Error: ", error);
         }
     };
-    //Fetch booking related companyID
-    const fetchBookings = async () => {
-        if (!id) return;
-        setIsLoading(true);
-        const forCompanyReport = true
-        try {
-            const response = await axiosInstance.get(`${backendUrl}/booking`, {
-                params: {
-                    companyId: id,
-                    startDate,
-                    endingDate,
-                    search,
-                    page,
-                    limit: pageSize,
-                    forCompanyReport,
-                    status: NON_COMPLETED_STATUS
-                }
-            });
-            const data = response.data;
-            const totalBalanceCalculated = (data.bookings || []).reduce(
-                (total, booking) => total + (booking.totalAmount - booking.receivedAmountByCompany),
-                0
-            );
+//Fetch booking related companyID
+const fetchBookings = async () => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+        const response = await axiosInstance.get(`${backendUrl}/booking/pending-payments`, {
+            params: {
+                companyId: id,
+                search,
+                page,
+                limit: pageSize
+                // NO other parameters - keep it simple
+            }
+        });
+        const data = response.data;
+        
+        // Calculate balance based on your business logic
+        const totalBalanceCalculated = (data.bookings || []).reduce(
+            (total, booking) => total + (booking.totalAmount - (booking.receivedAmountByCompany || 0)),
+            0
+        );
 
-            setTotalBalance(totalBalanceCalculated);
-            setBookings(data.bookings);
-            setTotalRecords(data.total);
-            setFilterData({
-                balanceAmountToCollect: data.financials.balanceAmountToCollect,
-                overallAmount: data.financials.overallAmount,
-                totalCollectedAmount: data.financials.totalCollectedAmount
-            });
-        } catch (error) {
-            console.error("Error fetching bookings:", error);
-        } finally {
-            setIsLoading(false);
-        }
+        setTotalBalance(totalBalanceCalculated);
+        setBookings(data.bookings);
+        setTotalRecords(data.total);
+        
+        // Use financials from backend
+        setFilterData(data.financials);
+        
+    } catch (error) {
+        console.error("Error fetching bookings:", error);
+    } finally {
+        setIsLoading(false);
     }
+}
 
     const updateInputValues = (bookingId: string, value: number) => {
         setInputValues((prev) => ({
@@ -887,19 +884,7 @@ const CompanyReport = () => {
                             </div>
                         </div>
                         <div className="space-y-4" ref={printRef}>
-                            <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                <div className="flex items-center justify-between p-4 py-4">
-                                    <div className="grid place-content-center w-9 h-9 rounded-md bg-secondary-light dark:bg-secondary text-secondary dark:text-secondary-light">
-                                        <IconShoppingBag />
-                                    </div>
-                                    <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                        <h6 className="text-white-dark text-base  dark:text-white-dark">
-                                            Total Collected Amount in {selectedMonth}
-                                            <span className="block text-base text-[#515365] dark:text-white-light">₹{filterData.totalCollectedAmount}</span>
-                                        </h6>
-                                    </div>
-                                </div>
-                            </div>
+                           
                             <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
                                 <div className="flex items-center justify-between p-4 py-4">
                                     <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
@@ -913,21 +898,7 @@ const CompanyReport = () => {
                                     </div>
                                 </div>
                             </div>
-                            {
-                                (selectedMonth && selectedMonth !== 'All Months') && <div className="border border-[#ebedf2] rounded dark:bg-[#1b2e4b] dark:border-0">
-                                    <div className="flex items-center justify-between p-4 py-4">
-                                        <div className="grid place-content-center w-9 h-9 rounded-md bg-info-light dark:bg-info text-info dark:text-info-light">
-                                            <IconCreditCard />
-                                        </div>
-                                        <div className="ltr:ml-4 rtl:mr-4 flex items-start justify-between flex-auto font-semibold">
-                                            <h6 className="text-white-dark text-base dark:text-white-dark">
-                                                Total Profit :
-                                                <span className="block text-base text-[#515365] dark:text-white-light">₹{totalProfit()}</span>
-                                            </h6>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
+                           
                         </div>
                     </div>
                 </div>
@@ -1128,4 +1099,5 @@ const CompanyReport = () => {
     );
 };
 
-export default CompanyReport;
+export default PendingPayment;
+
