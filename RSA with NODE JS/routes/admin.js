@@ -12,7 +12,7 @@ router.post('/register', controller.registerAdmin);
 router.post('/login', controller.loginAdmin);
 
 // Add/Update Admin QR
-router.get('/qr', jwt, controller.getAdminQR);
+router.get('/qr', jwt, roleAuth('Admin', "Driver", "Provider", 'Staff'), controller.getAdminQR);
 
 router.patch('/qr', jwt, roleAuth('Admin'), upload.single('qr'), controller.updateAdminQR);
 
