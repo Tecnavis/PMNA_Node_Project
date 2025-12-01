@@ -2738,7 +2738,6 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
     }
 };
 
-// Controller to settle booking amount 
 exports.settleAmount = async (req, res) => {
    try {
         const routeLogger = LoggerFactory.createChildLogger({
@@ -2749,13 +2748,15 @@ exports.settleAmount = async (req, res) => {
         const { id } = req.params;
         const { partialAmount, receivedUser, role, receivedAmount, receivedUserId } = req.body;
         const currentUserId = req.user.id || req.user._id; // The user making the request
- // VALIDATION: Check if amount is not zero
+        
+        // VALIDATION: Check if amount is not zero
         const amount = Number(partialAmount || receivedAmount || 0);
         if (amount === 0) {
             return res.status(400).json({ 
                 message: 'Amount cannot be zero. Please provide a valid amount.' 
             });
         }
+        
         const booking = await Booking.findById(id);
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
@@ -2775,68 +2776,89 @@ exports.settleAmount = async (req, res) => {
         };
 
         booking.receivedHistory.push(receivedHistory);
-   if (receivedUser) {
-    // Check if current receivedUser is different from new receivedUser AND roles are different
-    if (booking.receivedUser && booking.receivedUser !== receivedUser) {
-        booking.multipleReceivedUser = true; // Set flag if different users
-        // Only update previousReceivedUser when the roles are different
-        booking.previousReceivedUser = booking.receivedUser;
-        booking.previousReceivedUserId = booking.receivedUserId;
-    }
-            
-            // Use receivedUserId if provided (for Drivers), otherwise use current user ID
-            const targetUserId = receivedUser === 'Driver' ? receivedUserId : currentUserId;
-            
-            booking.receivedUserId = targetUserId;
-            booking.receivedUser = receivedUser;
-            
-            if (receivedUser === 'Driver') {
-                booking.receivedAmountDriver = (booking.receivedAmountDriver || 0) + Number(partialAmount || receivedAmount || 0);
-            } else if (receivedUser === 'Staff') {
-                booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + Number(partialAmount || receivedAmount || 0);
+        
+        // UPI Payment Logic
+        if (booking.upiPayment === true) {
+            // When upiPayment is true, update receivedAmount based on partialAmount or keep it same
+            if (partialAmount) {
+                // If partialAmount is provided, update receivedAmount with partialAmount
+                booking.receivedAmount = Number(partialAmount);
+                booking.partialAmount = Number(partialAmount);
+                booking.partialPayment = booking.receivedAmount < booking.totalAmount;
+                booking.cashPending = booking.receivedAmount < booking.totalAmount;
+            } else if (receivedAmount) {
+                // If receivedAmount is provided, update receivedAmount with receivedAmount
+                booking.receivedAmount = Number(receivedAmount);
+                booking.partialAmount = Number(receivedAmount);
+                booking.partialPayment = booking.receivedAmount < booking.totalAmount;
+                booking.cashPending = booking.receivedAmount < booking.totalAmount;
             }
-
-            const ReceivedUserModel = mongoose.model(receivedUser || "Driver");
-
-            // Update the target user's cash in hand
-            await ReceivedUserModel.findByIdAndUpdate(targetUserId, {
-                $inc: {
-                    cashInHand: Number(partialAmount || 0)
-                }
-            });
-        }
-        // Rest of your existing code remains the same...
-        // Update partial or amount to booking
-        if (booking.company) {
-            const currentAmount = Number(booking.receivedAmountByCompany) || 0;
-            const amountToAdd = Number(partialAmount || receivedAmount) || 0;
-
-            booking.receivedAmountByCompany = currentAmount + amountToAdd;
-            booking.receivedAmount = amountToAdd;
-            if (booking.totalAmount <= booking.receivedAmountByCompany) {
-                booking.cashPending = false;
-            }
+            // If neither partialAmount nor receivedAmount is provided, receivedAmount remains the same
         } else {
-            if (receivedAmount && !role) {
-                booking.receivedAmount = receivedAmount;
-            } else {
-                booking.partialAmount = booking.partialAmount || 0;
-                booking.partialAmount += Number(partialAmount || 0);
-                if (booking.partialAmount < booking.totalAmount) {
-                    booking.partialPayment = true;
-                    booking.cashPending = true;
-                } else if (booking.partialAmount === booking.totalAmount) {
-                    booking.partialPayment = false;
+            // Existing logic for non-UPI payments
+            if (receivedUser) {
+                // Check if current receivedUser is different from new receivedUser AND roles are different
+                if (booking.receivedUser && booking.receivedUser !== receivedUser) {
+                    booking.multipleReceivedUser = true; // Set flag if different users
+                    // Only update previousReceivedUser when the roles are different
+                    booking.previousReceivedUser = booking.receivedUser;
+                    booking.previousReceivedUserId = booking.receivedUserId;
+                }
+                
+                // Use receivedUserId if provided (for Drivers), otherwise use current user ID
+                const targetUserId = receivedUser === 'Driver' ? receivedUserId : currentUserId;
+                
+                booking.receivedUserId = targetUserId;
+                booking.receivedUser = receivedUser;
+                
+                if (receivedUser === 'Driver') {
+                    booking.receivedAmountDriver = (booking.receivedAmountDriver || 0) + Number(partialAmount || receivedAmount || 0);
+                } else if (receivedUser === 'Staff') {
+                    booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + Number(partialAmount || receivedAmount || 0);
+                }
+
+                const ReceivedUserModel = mongoose.model(receivedUser || "Driver");
+
+                // Update the target user's cash in hand
+                await ReceivedUserModel.findByIdAndUpdate(targetUserId, {
+                    $inc: {
+                        cashInHand: Number(partialAmount || 0)
+                    }
+                });
+            }
+            
+            // Update partial or amount to booking
+            if (booking.company) {
+                const currentAmount = Number(booking.receivedAmountByCompany) || 0;
+                const amountToAdd = Number(partialAmount || receivedAmount) || 0;
+
+                booking.receivedAmountByCompany = currentAmount + amountToAdd;
+                booking.receivedAmount = amountToAdd;
+                if (booking.totalAmount <= booking.receivedAmountByCompany) {
                     booking.cashPending = false;
                 }
+            } else {
+                if (receivedAmount && !role) {
+                    booking.receivedAmount = receivedAmount;
+                } else {
+                    booking.partialAmount = booking.partialAmount || 0;
+                    booking.partialAmount += Number(partialAmount || 0);
+                    if (booking.partialAmount < booking.totalAmount) {
+                        booking.partialPayment = true;
+                        booking.cashPending = true;
+                    } else if (booking.partialAmount === booking.totalAmount) {
+                        booking.partialPayment = false;
+                        booking.cashPending = false;
+                    }
+                }
             }
-        }
 
-        // Condition for valid amount if the amount more than total amount this will handled
-        if (!booking.company && booking.totalAmount <= booking.partialAmount) {
-            booking.partialAmount = booking.receivedAmount;
-            booking.partialPayment = false;
-            booking.cashPending = false;
+            // Condition for valid amount if the amount more than total amount this will handled
+            if (!booking.company && booking.totalAmount <= booking.partialAmount) {
+                booking.partialAmount = booking.receivedAmount;
+                booking.partialPayment = false;
+                booking.cashPending = false;
+            }
         }
         
         await booking.save();

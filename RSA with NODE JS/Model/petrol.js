@@ -5,7 +5,7 @@ const petrolPumpSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Petrol pump name is required'],
     trim: true,
-    unique: true,
+    unique: true,  // This automatically creates an index
     maxlength: [100, 'Petrol pump name cannot exceed 100 characters']
   },
   location: {
@@ -51,8 +51,10 @@ const petrolPumpSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for better search performance
-petrolPumpSchema.index({ pumpName: 1 });
+// Remove the pumpName index since unique: true already creates it
+// petrolPumpSchema.index({ pumpName: 1 }); // REMOVE THIS LINE
+
+// Keep these indexes for other fields
 petrolPumpSchema.index({ location: 1 });
 petrolPumpSchema.index({ fuelTypes: 1 });
 

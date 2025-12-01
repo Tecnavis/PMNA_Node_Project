@@ -75,7 +75,6 @@ export default function PaymentMethod() {
 
   // Just an example of how you might get itemId
   const itemId = params.get("itemId");
-  console.log("itemId",itemId)
 useEffect(() => {
     if (itemId) {
       axiosInstance
