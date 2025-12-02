@@ -2772,28 +2772,34 @@ exports.settleAmount = async (req, res) => {
         const receivedHistory = {
             role: receivedUser || 'Admin',
             receivedUser: currentUserId, // The user who processed the payment
-            amount: receivedAmount || partialAmount
+            amount: partialAmount || receivedAmount
         };
 
         booking.receivedHistory.push(receivedHistory);
         
         // UPI Payment Logic
         if (booking.upiPayment === true) {
-            // When upiPayment is true, update receivedAmount based on partialAmount or keep it same
+            // When upiPayment is true, update receivedAmount based on partialAmount or receivedAmount
             if (partialAmount) {
                 // If partialAmount is provided, update receivedAmount with partialAmount
-                booking.receivedAmount = Number(partialAmount);
-                booking.partialAmount = Number(partialAmount);
-                booking.partialPayment = booking.receivedAmount < booking.totalAmount;
-                booking.cashPending = booking.receivedAmount < booking.totalAmount;
+                booking.receivedAmount = (booking.receivedAmount || 0) + Number(partialAmount);
+                booking.partialAmount = booking.partialAmount || 0;
+                booking.partialAmount += Number(partialAmount);
+                
+                if (booking.receivedAmount < booking.totalAmount) {
+                    booking.partialPayment = true;
+                    booking.cashPending = true;
+                } else if (booking.receivedAmount === booking.totalAmount) {
+                    booking.partialPayment = false;
+                    booking.cashPending = false;
+                }
             } else if (receivedAmount) {
-                // If receivedAmount is provided, update receivedAmount with receivedAmount
+                // If receivedAmount is provided, update receivedAmount directly
                 booking.receivedAmount = Number(receivedAmount);
                 booking.partialAmount = Number(receivedAmount);
                 booking.partialPayment = booking.receivedAmount < booking.totalAmount;
                 booking.cashPending = booking.receivedAmount < booking.totalAmount;
             }
-            // If neither partialAmount nor receivedAmount is provided, receivedAmount remains the same
         } else {
             // Existing logic for non-UPI payments
             if (receivedUser) {
