@@ -3633,7 +3633,7 @@ exports.settleCashPendingBooking = asyncErrorHandler(async (req, res) => {
     });
 })
 
-exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res)=>{
+exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res) => {
     const { bookingId } = req.params;
 
     if (!bookingId?.trim()) {
@@ -3660,15 +3660,19 @@ exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res)=>{
         throw new NotFoundError('Booking not found');
     };
 
+    // Update both qrImage and set upiPayment to true
     booking.qrImage = qrImage;
+    booking.upiPayment = true; // Automatically set UPI payment flag
+    
     await booking.save();
 
     return res.status(200).json({
         success: true,
-        message: "QR code uploaded successfully.",
+        message: "QR code uploaded successfully and UPI payment enabled.",
         data: {
             bookingId: booking._id,
             qrImage,
+            upiPayment: true, // Include in response for clarity
         },
     });
-})
+});
