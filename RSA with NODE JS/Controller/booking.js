@@ -2786,13 +2786,14 @@ exports.settleAmount = async (req, res) => {
                 booking.partialAmount = booking.partialAmount || 0;
                 booking.partialAmount += Number(partialAmount);
                 
-                if (booking.receivedAmount < booking.totalAmount) {
-                    booking.partialPayment = true;
-                    booking.cashPending = true;
-                } else if (booking.receivedAmount === booking.totalAmount) {
-                    booking.partialPayment = false;
-                    booking.cashPending = false;
-                }
+                if (booking.partialAmount < booking.totalAmount) {
+                        booking.partialPayment = true;
+                        booking.cashPending = true;
+                    } else if (booking.partialAmount === booking.totalAmount) {
+                        booking.partialPayment = false;
+                        booking.cashPending = false;
+                    }
+                
             } else if (receivedAmount) {
                 // If receivedAmount is provided, update receivedAmount directly
                 booking.receivedAmount = Number(receivedAmount);
