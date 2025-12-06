@@ -2740,7 +2740,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 
 // Controller to settle booking amount 
 exports.settleAmount = async (req, res) => {
-   try {
+    try {
         const routeLogger = LoggerFactory.createChildLogger({
             route: '/settle-amount',
             handler: 'settleAmount',
@@ -2749,13 +2749,15 @@ exports.settleAmount = async (req, res) => {
         const { id } = req.params;
         const { partialAmount, receivedUser, role, receivedAmount, receivedUserId } = req.body;
         const currentUserId = req.user.id || req.user._id; // The user making the request
- // VALIDATION: Check if amount is not zero
+        
+        // VALIDATION: Check if amount is not zero
         const amount = Number(partialAmount || receivedAmount || 0);
         if (amount === 0) {
             return res.status(400).json({ 
                 message: 'Amount cannot be zero. Please provide a valid amount.' 
             });
         }
+        
         const booking = await Booking.findById(id);
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found' });
@@ -2775,14 +2777,15 @@ exports.settleAmount = async (req, res) => {
         };
 
         booking.receivedHistory.push(receivedHistory);
-   if (receivedUser) {
-    // Check if current receivedUser is different from new receivedUser AND roles are different
-    if (booking.receivedUser && booking.receivedUser !== receivedUser) {
-        booking.multipleReceivedUser = true; // Set flag if different users
-        // Only update previousReceivedUser when the roles are different
-        booking.previousReceivedUser = booking.receivedUser;
-        booking.previousReceivedUserId = booking.receivedUserId;
-    }
+        
+        if (receivedUser) {
+            // Check if current receivedUser is different from new receivedUser AND roles are different
+            if (booking.receivedUser && booking.receivedUser !== receivedUser) {
+                booking.multipleReceivedUser = true; // Set flag if different users
+                // Only update previousReceivedUser when the roles are different
+                booking.previousReceivedUser = booking.receivedUser;
+                booking.previousReceivedUserId = booking.receivedUserId;
+            }
             
             // Use receivedUserId if provided (for Drivers), otherwise use current user ID
             const targetUserId = receivedUser === 'Driver' ? receivedUserId : currentUserId;
@@ -2805,7 +2808,7 @@ exports.settleAmount = async (req, res) => {
                 }
             });
         }
-        // Rest of your existing code remains the same...
+        
         // Update partial or amount to booking
         if (booking.company) {
             const currentAmount = Number(booking.receivedAmountByCompany) || 0;
@@ -2820,14 +2823,37 @@ exports.settleAmount = async (req, res) => {
             if (receivedAmount && !role) {
                 booking.receivedAmount = receivedAmount;
             } else {
-                booking.partialAmount = booking.partialAmount || 0;
-                booking.partialAmount += Number(partialAmount || 0);
-                if (booking.partialAmount < booking.totalAmount) {
-                    booking.partialPayment = true;
-                    booking.cashPending = true;
-                } else if (booking.partialAmount === booking.totalAmount) {
-                    booking.partialPayment = false;
-                    booking.cashPending = false;
+                // Handle UPI Payment logic
+                if (booking.upiPayment === true) {
+                    // For UPI payments: Update both receivedAmount and partialAmount
+                    const amountToAdd = Number(partialAmount || 0);
+                    
+                    // Update receivedAmount
+                    booking.receivedAmount = (booking.receivedAmount || 0) + amountToAdd;
+                    
+                    // Also update partialAmount to keep track of total payments
+                    booking.partialAmount = (booking.partialAmount || 0) + amountToAdd;
+                    
+                    // Check payment status
+                    if (booking.partialAmount < booking.totalAmount) {
+                        booking.partialPayment = true;
+                        booking.cashPending = true;
+                    } else if (booking.partialAmount >= booking.totalAmount) {
+                        booking.partialPayment = false;
+                        booking.cashPending = false;
+                    }
+                } else {
+                    // Original logic for non-UPI payments
+                    booking.partialAmount = booking.partialAmount || 0;
+                    booking.partialAmount += Number(partialAmount || 0);
+                    
+                    if (booking.partialAmount < booking.totalAmount) {
+                        booking.partialPayment = true;
+                        booking.cashPending = true;
+                    } else if (booking.partialAmount === booking.totalAmount) {
+                        booking.partialPayment = false;
+                        booking.cashPending = false;
+                    }
                 }
             }
         }
@@ -3607,7 +3633,7 @@ exports.settleCashPendingBooking = asyncErrorHandler(async (req, res) => {
     });
 })
 
-exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res)=>{
+exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res) => {
     const { bookingId } = req.params;
 
     if (!bookingId?.trim()) {
@@ -3634,15 +3660,19 @@ exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res)=>{
         throw new NotFoundError('Booking not found');
     };
 
+    // Update both qrImage and set upiPayment to true
     booking.qrImage = qrImage;
+    booking.upiPayment = true; // Automatically set UPI payment flag
+    
     await booking.save();
 
     return res.status(200).json({
         success: true,
-        message: "QR code uploaded successfully.",
+        message: "QR code uploaded successfully and UPI payment enabled.",
         data: {
             bookingId: booking._id,
             qrImage,
+            upiPayment: true, // Include in response for clarity
         },
     });
-})
+});

@@ -117,6 +117,7 @@ partialAmountStaff: { type: Number },
     serviceDue: { type: Boolean },
     receivedHistory: [ReceivedHistorySchema],
     qrImage: { type: String },
+    upiPayment: { type: Boolean },
 }, { timestamps: true });
 
 bookingSchema.plugin(visibleFilter);

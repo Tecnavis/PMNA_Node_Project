@@ -825,7 +825,20 @@ const validateCreditLimit = (): boolean => {
     const handleSubmit = async (e: React.FormEvent) => {
         setLoading(true);
         e.preventDefault();
-
+// Check if adjustmentValue exists but wasn't applied
+    if (adjustmentValue !== null && showBtn) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Please apply adjustment value first',
+            toast: true,
+            position: 'top',
+            showConfirmButton: false,
+            timer: 3000,
+            padding: '10px 20px',
+        });
+        setLoading(false);
+        return;
+    }
          // Strict credit limit validation
     if (!validateCreditLimit()) {
         setLoading(false);

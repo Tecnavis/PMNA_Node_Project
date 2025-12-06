@@ -233,7 +233,6 @@ specialCaseBookings.forEach(booking => {
     receivedAmountDriver: booking.receivedAmountDriver
   });
 });
-console.log("bookings------------------------------------",bookings)
       // Process each booking in transaction
       for (const booking of bookings) {
         if (remainingAmount <= 0) break;
