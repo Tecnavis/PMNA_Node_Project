@@ -117,7 +117,12 @@ partialAmountStaff: { type: Number },
     serviceDue: { type: Boolean },
     receivedHistory: [ReceivedHistorySchema],
     qrImage: { type: String },
-    upiPayment: { type: Boolean },
+    upiPayment: { type: Boolean, default: false },
+    upiTransactionId: { type: String },
+    upiVerified: { type: Boolean, default: false },
+    upiVerifiedAt: { type: Date },
+    upiVerifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+    
 }, { timestamps: true });
 
 bookingSchema.plugin(visibleFilter);
