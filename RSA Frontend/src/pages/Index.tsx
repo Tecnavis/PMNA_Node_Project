@@ -318,10 +318,12 @@ const fetchServiceKmExceededVehicle = async () => {
     const res = await axios.get(`${BASE_URL}/vehicle/exceeded-service`, {
       timeout: 15000 // 15 second timeout
     });
-    setExceededRecords(res.data.vehicles);
-  } catch (error) {
+    setExceededRecords(res.data.vehicles || []);
+  } catch (error: any) {
     console.error('Fetch service km exceeded vehicle failed:', error);
-    // Handle error appropriately
+    if(error?.response.status === 404){
+        setExceededRecords([])
+    }
   }
 };
     
@@ -384,27 +386,8 @@ const fetchServiceKmExceededVehicle = async () => {
             cancelButtonColor: "#e5e7eb",
             confirmButtonText: "Yes, Dismiss it and update record"
         });
-
+            
         if (!result.isConfirmed) return;
-
-        const response = await axios.put(`${backendUrl}/vehicle/${vehicle._id}/update-status`, {
-            role,
-        });
-
-        if (response.data) {
-            Swal.fire({
-                icon: 'success',
-                title: `Service status updated successfully`,
-                text: `Vehicle and ${response.data.bookingsUpdated} bookings were updated`,
-                toast: true,
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
-        } else {
-            throw new Error(response.data.message || 'Something went wrong');
-        }
 
         setRecordId(vehicle?.recordId || '');
         setDismissRecordType("Service KM Exceeded");
@@ -530,14 +513,14 @@ const fetchServiceKmExceededVehicle = async () => {
                                             )
                                         }
                                         <div className='flex flex-row gap-1'>
-                                            {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER,ROLES.Manager].includes(role) && (
+                                            {/* {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER,ROLES.Manager].includes(role) && (
                                                 <button
                                                     className="btn btn-danger text-white rounded-md py-2 px-3"
                                                     onClick={() => handleDismissRecord(record)}
                                                 >
                                                     Dismiss
                                                 </button>
-                                            )}
+                                            )} */}
                                             {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER,ROLES.Manager].includes(role) && (
                                                 <button
                                                     className="btn btn-primary text-white rounded-md py-2 px-3"

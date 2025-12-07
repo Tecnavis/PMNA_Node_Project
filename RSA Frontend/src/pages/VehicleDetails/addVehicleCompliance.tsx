@@ -141,6 +141,26 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
     const handleUpdateServiceKm = async () => {
         try {
             await updateVehicleServiceKm(vehicleNumber || '', { serviceKM });
+            
+            const response = await axios.put(`${backendUrl}/vehicle/${vehicleId}/update-status`, {
+                role,
+            });
+            
+            if (response.data) {
+                Swal.fire({
+                icon: 'success',
+                title: `Service status updated successfully`,
+                text: `Vehicle and ${response.data.bookingsUpdated} bookings were updated`,
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+                });
+            } else {
+                throw new Error(response.data.message || 'Something went wrong');
+            }
+            
         } catch (error) {
             console.log('Server Km not updated please try again!', error);
             Swal.fire({

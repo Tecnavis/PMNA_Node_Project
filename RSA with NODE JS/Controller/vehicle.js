@@ -103,7 +103,7 @@ exports.updateServiceKm = async (req, res) => {
     const { serviceKM } = req.body;
     try {
 
-        if (serviceKM === undefined || serviceKM === null || serviceKM !== 0) {
+        if (serviceKM === undefined || serviceKM === null || serviceKM === 0) {
             return res.status(400).json({
                 success: false,
                 message: "serviceKM is required",
