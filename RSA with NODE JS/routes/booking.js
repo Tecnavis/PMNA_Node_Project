@@ -100,5 +100,7 @@ router.patch('/settle-cash-pending/:id', jwt, controller.settleCashPendingBookin
 
 // Upload payment qr code
 router.patch('/upload-payment-qr/:bookingId', jwt, upload.single('image'), controller.uploadPaymentQrCode);
+router.post('/initiate-upi/:bookingId', jwt, controller.initiateUpiPayment);
+router.post('/verify-upi/:bookingId', jwt, controller.verifyUpiPayment);
 
 module.exports = router;

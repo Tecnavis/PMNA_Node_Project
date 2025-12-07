@@ -2747,9 +2747,19 @@ exports.settleAmount = async (req, res) => {
         });
         
         const { id } = req.params;
-        const { partialAmount, receivedUser, role, receivedAmount, receivedUserId } = req.body;
-        const currentUserId = req.user.id || req.user._id; // The user making the request
-        
+        const { 
+            partialAmount, 
+            receivedUser, 
+            role, 
+            receivedAmount, 
+            receivedUserId, 
+            upiPayment, 
+            qrImage,
+            status,
+            paymentSettlement
+        } = req.body;
+    
+        const currentUserId = req.user?.id || req.user?._id || 'unknown';
         // VALIDATION: Check if amount is not zero
         const amount = Number(partialAmount || receivedAmount || 0);
         if (amount === 0) {
@@ -2763,17 +2773,92 @@ exports.settleAmount = async (req, res) => {
             return res.status(404).json({ message: 'Booking not found' });
         }
 
+        // =================== UPI PAYMENT HANDLING ===================
+        if (upiPayment === true) {
+            
+            // Validate QR image for UPI payments
+            if (!qrImage) {
+                return res.status(400).json({ 
+                    message: 'QR image is required for UPI payments' 
+                });
+            }
+            
+            booking.upiPayment = true;
+            booking.qrImage = qrImage;
+            
+            // For UPI payments ONLY: Store receivedAmount
+            const amountToAdd = Number(receivedAmount || partialAmount || 0);
+            
+            // ONLY FOR UPI: Update receivedAmount
+            booking.receivedAmount = amountToAdd;
+            
+            // Also update partialAmount for tracking
+            booking.partialAmount = amountToAdd;
+            
+            // Check payment status
+            if (amountToAdd < booking.totalAmount) {
+                booking.partialPayment = true;
+                booking.cashPending = true;
+                console.log('Partial UPI payment');
+            } else if (amountToAdd >= booking.totalAmount) {
+                booking.partialPayment = false;
+                booking.cashPending = false;
+                console.log('Full UPI payment');
+            }
+            
+            // Update status
+            if (status) {
+                booking.status = status;
+            }
+            
+            // Update payment settlement flag
+            if (paymentSettlement !== undefined) {
+                booking.paymentSettlement = paymentSettlement;
+            }
+            
+            // FIXED: For UPI payments, don't push to receivedHistory
+            // OR use valid enum values and ObjectId
+            // Option 1: Don't push to receivedHistory for UPI payments
+            // Option 2: Use Admin as role and current user ID as receivedUser
+            const receivedHistory = {
+                role: 'Admin', // Use valid enum value
+                receivedUser: currentUserId, // Use current user's ObjectId
+                amount: amountToAdd,
+            };
+            
+            booking.receivedHistory.push(receivedHistory);
+            
+            await booking.save();
+
+            routeLogger.info({
+                fileNumber: booking.fileNumber || 'unknown',
+                paymentMethod: 'UPI',
+                amount: amountToAdd,
+                statusUpdated: status || 'No status update'
+            }, 'UPI payment settled successfully');
+
+            return res.status(200).json({
+                message: "UPI payment settled successfully",
+                booking
+            });
+        }
+        // =================== END UPI PAYMENT HANDLING ===================
+
+        // =================== CASH PAYMENT HANDLING ===================
         if (booking.workType === 'RSAWork') {
             return res.status(400).json({
                 message: 'For RSAWork bookings, please use the settleAmountCompany endpoint'
             });
         }
 
+        // For cash payments, DO NOT store receivedAmount
+        const amountToAdd = Number(partialAmount || 0);
+        
         // Creating the receivedHistory object
         const receivedHistory = {
             role: receivedUser || 'Admin',
-            receivedUser: currentUserId, // The user who processed the payment
-            amount: receivedAmount || partialAmount
+            receivedUser: currentUserId,
+            amount: amountToAdd
         };
 
         booking.receivedHistory.push(receivedHistory);
@@ -2781,8 +2866,7 @@ exports.settleAmount = async (req, res) => {
         if (receivedUser) {
             // Check if current receivedUser is different from new receivedUser AND roles are different
             if (booking.receivedUser && booking.receivedUser !== receivedUser) {
-                booking.multipleReceivedUser = true; // Set flag if different users
-                // Only update previousReceivedUser when the roles are different
+                booking.multipleReceivedUser = true;
                 booking.previousReceivedUser = booking.receivedUser;
                 booking.previousReceivedUserId = booking.receivedUserId;
             }
@@ -2794,9 +2878,9 @@ exports.settleAmount = async (req, res) => {
             booking.receivedUser = receivedUser;
             
             if (receivedUser === 'Driver') {
-                booking.receivedAmountDriver = (booking.receivedAmountDriver || 0) + Number(partialAmount || receivedAmount || 0);
+                booking.receivedAmountDriver = (booking.receivedAmountDriver || 0) + amountToAdd;
             } else if (receivedUser === 'Staff') {
-                booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + Number(partialAmount || receivedAmount || 0);
+                booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + amountToAdd;
             }
 
             const ReceivedUserModel = mongoose.model(receivedUser || "Driver");
@@ -2804,82 +2888,71 @@ exports.settleAmount = async (req, res) => {
             // Update the target user's cash in hand
             await ReceivedUserModel.findByIdAndUpdate(targetUserId, {
                 $inc: {
-                    cashInHand: Number(partialAmount || 0)
+                    cashInHand: amountToAdd
                 }
             });
         }
         
-        // Update partial or amount to booking
+        // Update partialAmount for cash payments
         if (booking.company) {
             const currentAmount = Number(booking.receivedAmountByCompany) || 0;
-            const amountToAdd = Number(partialAmount || receivedAmount) || 0;
-
             booking.receivedAmountByCompany = currentAmount + amountToAdd;
-            booking.receivedAmount = amountToAdd;
+            
             if (booking.totalAmount <= booking.receivedAmountByCompany) {
                 booking.cashPending = false;
             }
         } else {
-            if (receivedAmount && !role) {
-                booking.receivedAmount = receivedAmount;
-            } else {
-                // Handle UPI Payment logic
-                if (booking.upiPayment === true) {
-                    // For UPI payments: Update both receivedAmount and partialAmount
-                    const amountToAdd = Number(partialAmount || 0);
-                    
-                    // Update receivedAmount
-                    booking.receivedAmount = (booking.receivedAmount || 0) + amountToAdd;
-                    
-                    // Also update partialAmount to keep track of total payments
-                    booking.partialAmount = (booking.partialAmount || 0) + amountToAdd;
-                    
-                    // Check payment status
-                    if (booking.partialAmount < booking.totalAmount) {
-                        booking.partialPayment = true;
-                        booking.cashPending = true;
-                    } else if (booking.partialAmount >= booking.totalAmount) {
-                        booking.partialPayment = false;
-                        booking.cashPending = false;
-                    }
-                } else {
-                    // Original logic for non-UPI payments
-                    booking.partialAmount = booking.partialAmount || 0;
-                    booking.partialAmount += Number(partialAmount || 0);
-                    
-                    if (booking.partialAmount < booking.totalAmount) {
-                        booking.partialPayment = true;
-                        booking.cashPending = true;
-                    } else if (booking.partialAmount === booking.totalAmount) {
-                        booking.partialPayment = false;
-                        booking.cashPending = false;
-                    }
-                }
+            console.log('Processing non-company booking');
+            booking.partialAmount = (booking.partialAmount || 0) + amountToAdd;
+            console.log('Updated partialAmount:', booking.partialAmount);
+            
+            if (booking.partialAmount < booking.totalAmount) {
+                booking.partialPayment = true;
+                booking.cashPending = true;
+            } else if (booking.partialAmount >= booking.totalAmount) {
+                booking.partialPayment = false;
+                booking.cashPending = false;
             }
         }
 
-        // Condition for valid amount if the amount more than total amount this will handled
+        // Condition for handling overpayment
         if (!booking.company && booking.totalAmount <= booking.partialAmount) {
-            booking.partialAmount = booking.receivedAmount;
             booking.partialPayment = false;
             booking.cashPending = false;
+        }
+        
+        // Update status and payment settlement flag for cash payments
+        if (status) {
+            booking.status = status;
+        }
+        
+        if (paymentSettlement !== undefined) {
+            booking.paymentSettlement = paymentSettlement;
         }
         
         await booking.save();
 
         routeLogger.info({
             fileNumber: booking.fileNumber || 'unknown',
-            doneBy: req.user || 'unknown'
-        }, 'Settle amount updated successfully....');
+            doneBy: req.user || 'unknown',
+            statusUpdated: status || 'No status update',
+            paymentSettled: paymentSettlement || false,
+            paymentType: 'Cash',
+            amount: amountToAdd
+        }, 'Cash payment settled successfully');
 
         return res.status(200).json({
-            message: "Settle amount updated",
+            message: "Cash payment settled successfully",
             booking
         });
 
     } catch (error) {
         console.error('Error settling booking amount:', error.message);
-        res.status(500).json({ message: 'Server error while settling booking amount.' });
+        console.error('Error details:', error);
+        res.status(500).json({ 
+            message: 'Server error while settling booking amount.',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 exports.settleAmountCompany = async (req, res) => {
@@ -3632,8 +3705,80 @@ exports.settleCashPendingBooking = asyncErrorHandler(async (req, res) => {
         message: "Booking discount created successfully"
     });
 })
+// In your controller file (booking.js), add these functions:
 
-exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res) => {
+exports.initiateUpiPayment = asyncErrorHandler(async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { amount, customerVpa } = req.body;
+        
+        // TODO: Integrate with actual UPI payment gateway
+        // For now, create a mock response
+        const paymentResponse = {
+            transactionId: `UPI_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            status: 'pending',
+            vpa: customerVpa,
+            amount: amount
+        };
+        
+        // Store payment intent in booking
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            throw new NotFoundError('Booking not found');
+        }
+        
+        booking.upiTransactionId = paymentResponse.transactionId;
+        booking.upiPayment = true;
+        await booking.save();
+        
+        return res.status(200).json({
+            success: true,
+            message: "UPI payment initiated",
+            data: paymentResponse
+        });
+    } catch (error) {
+        throw new Error(`Failed to initiate UPI payment: ${error.message}`);
+    }
+});
+
+exports.verifyUpiPayment = asyncErrorHandler(async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { transactionId, status } = req.body;
+        
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            throw new NotFoundError('Booking not found');
+        }
+        
+        // Verify transaction
+        if (booking.upiTransactionId === transactionId) {
+            booking.upiVerified = status === 'success';
+            booking.upiVerifiedAt = new Date();
+            booking.upiVerifiedBy = req.user.id;
+            
+            // If verified successfully, mark as paid
+            if (status === 'success') {
+                booking.status = 'Order Completed';
+                booking.paymentSettlement = true;
+                booking.cashPending = false;
+            }
+            
+            await booking.save();
+            
+            return res.status(200).json({
+                success: true,
+                message: `UPI payment ${status}`,
+                data: booking
+            });
+        } else {
+            throw new BadRequestError('Invalid transaction ID');
+        }
+    } catch (error) {
+        throw new Error(`Failed to verify UPI payment: ${error.message}`);
+    }
+});
+exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res)=>{
     const { bookingId } = req.params;
 
     if (!bookingId?.trim()) {
@@ -3660,19 +3805,15 @@ exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res) => {
         throw new NotFoundError('Booking not found');
     };
 
-    // Update both qrImage and set upiPayment to true
     booking.qrImage = qrImage;
-    booking.upiPayment = true; // Automatically set UPI payment flag
-    
     await booking.save();
 
     return res.status(200).json({
         success: true,
-        message: "QR code uploaded successfully and UPI payment enabled.",
+        message: "QR code uploaded successfully.",
         data: {
             bookingId: booking._id,
             qrImage,
-            upiPayment: true, // Include in response for clarity
         },
     });
-});
+})
