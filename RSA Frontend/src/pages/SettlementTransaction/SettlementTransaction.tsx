@@ -4,6 +4,12 @@ import { DataTable } from 'mantine-datatable';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
+interface UnverifiedBooking {
+  fileNumber: string;
+  createdAt: string;
+  verified: boolean;
+}
+
 interface SettlementTransaction {
   _id: string;
   driver: {
@@ -21,6 +27,7 @@ interface SettlementTransaction {
   pendingExpenses: number;
   settlementAmount: number;
   createdAt: Date;
+  unverifiedBookings?: UnverifiedBooking[]; // Add this field
 }
 
 const SettlementTransaction = () => {
@@ -30,6 +37,7 @@ const SettlementTransaction = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [unverifiedBookingsMap, setUnverifiedBookingsMap] = useState<Record<string, UnverifiedBooking[]>>({});
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const navigate = useNavigate();
@@ -48,13 +56,43 @@ const SettlementTransaction = () => {
     }
   };
 
+  // Fetch unverified bookings for all drivers
+  const fetchUnverifiedBookings = async (driverIds: string[]) => {
+    try {
+      if (!setAuthToken()) return;
+
+      const response = await axios.get(`${backendUrl}/booking/unverified-by-drivers`, {
+        params: {
+          driverIds: driverIds.join(',')
+        }
+      });
+
+      if (response.data.success && response.data.data) {
+        // Transform the data structure
+        const transformedMap: Record<string, UnverifiedBooking[]> = {};
+        
+        Object.keys(response.data.data).forEach((driverId) => {
+          const driverData = response.data.data[driverId];
+          if (driverData && driverData.bookings) {
+            transformedMap[driverId] = driverData.bookings;
+          } else {
+            transformedMap[driverId] = [];
+          }
+        });
+        
+        setUnverifiedBookingsMap(transformedMap);
+      }
+    } catch (error) {
+      console.error('Error fetching unverified bookings:', error);
+    }
+  };
+
   const fetchSettlementTransactions = async () => {
     try {
       setLoading(true);
       
-      // Set token before making the request
       if (!setAuthToken()) {
-        return; // Stop if no token
+        return;
       }
 
       const response = await axios.get(`${backendUrl}/settlementTransaction/transaction`, {
@@ -65,33 +103,32 @@ const SettlementTransaction = () => {
         }
       });
       
-      setSettlementTransactions(response.data.transactions);
+      const transactions = response.data.transactions || [];
+      setSettlementTransactions(transactions);
       setTotalRecords(response.data.total);
+
+      // Extract driver IDs and fetch their unverified bookings
+      const driverIds = transactions
+        .filter((t: SettlementTransaction) => t.driver && t.driver._id)
+        .map((t: SettlementTransaction) => t.driver._id);
+      
+      if (driverIds.length > 0) {
+        await fetchUnverifiedBookings(driverIds);
+      }
     } catch (error: unknown) {
       console.error('Error fetching settlement transactions:', error);
       
-      // Type-safe error handling
       if (axios.isAxiosError(error)) {
-        // This is an Axios error
-        console.error('Error response:', error.response?.data);
-        console.error('Error status:', error.response?.status);
-        
-        // Handle 401 specifically - redirect to login
         if (error.response?.status === 401) {
           toast.error('Session expired. Please login again.');
           localStorage.removeItem('token');
           navigate('/auth/boxed-signin');
           return;
         }
-        
         toast.error(error.response?.data?.message || 'Failed to fetch settlement transactions');
       } else if (error instanceof Error) {
-        // This is a generic Error
-        console.error('Error message:', error.message);
         toast.error(error.message || 'Failed to fetch settlement transactions');
       } else {
-        // Unknown error type
-        console.error('Unknown error:', error);
         toast.error('Failed to fetch settlement transactions');
       }
     } finally {
@@ -100,15 +137,18 @@ const SettlementTransaction = () => {
   };
 
   useEffect(() => {
-    // Set auth token on component mount
     setAuthToken();
     fetchSettlementTransactions();
   }, [page, pageSize, searchTerm]);
 
-  // Add useEffect to reset to page 1 when searching
+  // Reset page when searching
   useEffect(() => {
     setPage(1);
   }, [searchTerm]);
+
+  const getUnverifiedBookingsForDriver = (driverId: string): UnverifiedBooking[] => {
+    return unverifiedBookingsMap[driverId] || [];
+  };
 
   const columns = [
     {
@@ -118,15 +158,15 @@ const SettlementTransaction = () => {
         <div className="flex items-center w-max">
           <img 
             className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" 
-            src={`${import.meta.env.VITE_CLOUD_IMAGE}${record.driver.image}`} 
-            alt={record.driver.name}
+            src={`${import.meta.env.VITE_CLOUD_IMAGE}${record.driver?.image || ''}`} 
+            alt={record.driver?.name || 'Driver'}
             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
               e.currentTarget.src = '/default-avatar.png';
             }}
           />
           <div>
-            <div className="font-semibold">{record.driver.name}</div>
-            <div className="text-xs text-gray-500">ID: {record.driver.idNumber}</div>
+            <div className="font-semibold">{record.driver?.name || 'No Driver'}</div>
+            <div className="text-xs text-gray-500">ID: {record.driver?.idNumber || 'N/A'}</div>
           </div>
         </div>
       ),
@@ -136,9 +176,9 @@ const SettlementTransaction = () => {
       title: 'Settlement Date',
       render: (record: SettlementTransaction) => (
         <div>
-          {new Date(record.settlementDate).toLocaleDateString()}
+          {record.settlementDate ? new Date(record.settlementDate).toLocaleDateString() : 'N/A'}
           <div className="text-xs text-gray-500">
-            {new Date(record.settlementDate).toLocaleTimeString()}
+            {record.settlementDate ? new Date(record.settlementDate).toLocaleTimeString() : ''}
           </div>
         </div>
       ),
@@ -161,17 +201,6 @@ const SettlementTransaction = () => {
         </div>
       ),
     },
-    // {
-    //   accessor: 'balanceAmount',
-    //   title: 'Balance Amount',
-    //   render: (record: SettlementTransaction) => (
-    //     <div className={`text-right font-semibold ${
-    //       record.balanceAmount >= 0 ? 'text-green-600' : 'text-red-600'
-    //     }`}>
-         
-    //     </div>
-    //   ),
-    // },
     {
       accessor: 'advance',
       title: 'Advance',
@@ -204,10 +233,9 @@ const SettlementTransaction = () => {
       title: 'Settlement Amount',
       render: (record: SettlementTransaction) => (
         <div className={`text-right font-bold text-lg ${
-          record.settlementAmount >= 0 ? 'text-green-600' : 'text-red-600'
+          (record.settlementAmount || 0) >= 0 ? 'text-green-600' : 'text-red-600'
         }`}>
-          {/* ₹{record.settlementAmount?.toLocaleString() || 0} */}
-           ₹{record.balanceAmount?.toLocaleString() || 0}
+          ₹{(record.balanceAmount || 0)?.toLocaleString()}
         </div>
       ),
     },
@@ -216,9 +244,47 @@ const SettlementTransaction = () => {
       title: 'Recorded On',
       render: (record: SettlementTransaction) => (
         <div className="text-xs text-gray-500">
-          {new Date(record.createdAt).toLocaleDateString()}
+          {record.createdAt ? new Date(record.createdAt).toLocaleDateString() : 'N/A'}
         </div>
       ),
+    },
+    {
+            accessor: 'createdAt',
+
+      title: 'Not Verified❌',
+      render: (record: SettlementTransaction) => {
+        if (!record.driver || !record.driver._id) return null;
+        
+        const unverifiedBookings = getUnverifiedBookingsForDriver(record.driver._id);
+        
+        if (unverifiedBookings.length === 0) {
+          return (
+            <div className="text-center text-green-500">
+              <span className="font-semibold">All Verified ✓</span>
+            </div>
+          );
+        }
+        
+        return (
+          <div className="min-w-[200px]">
+            <div className="text-red-500 font-semibold mb-1">
+              {unverifiedBookings.length} Unverified Booking(s)
+            </div>
+            <div className="max-h-24 overflow-y-auto border rounded p-1 bg-red-50">
+              {unverifiedBookings.map((booking, index) => (
+                <div key={index} className="text-xs mb-1 p-1 bg-white rounded shadow-sm">
+                  <div className="flex justify-between">
+                    <span className="font-medium">{booking.fileNumber}</span>
+                    <span className="text-gray-500 text-[10px]">
+                      {new Date(booking.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      },
     },
   ];
 
@@ -228,7 +294,13 @@ const SettlementTransaction = () => {
         <h5 className="font-semibold text-lg dark:text-white-light">
           Settlement Transactions
         </h5>
-        <div className="ltr:ml-auto rtl:mr-auto">
+        <div className="ltr:ml-auto rtl:mr-auto flex items-center gap-2">
+          <div className="flex items-center text-sm text-gray-500">
+            <div className="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
+            Unverified
+            <div className="w-3 h-3 rounded-full bg-green-500 ml-4 mr-1"></div>
+            Verified
+          </div>
           <input 
             type="text" 
             className="form-input w-auto" 

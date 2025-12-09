@@ -78,6 +78,7 @@ export default function PaymentMethod() {
   const navigate = useNavigate();
   const [bookingData, setBookingData] = useState<Booking | null>(null);
   const itemId = params.get("itemId");
+  console.log("itemId",itemId)
 
   // Handle file selection for QR image
   const handleQrImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -270,16 +271,13 @@ const handleCashPayment = async () => {
 
     try {
         const paymentData = {
-            partialAmount: payableAmount,  // Use partialAmount for cash
             status: "Order Completed",
             paymentSettlement: true,
             // DO NOT send receivedAmount for cash payments
         };
 
-        await axiosInstance.patch(
-            `${backendUrl}/booking/sattle-amount/${itemId}`,
-            paymentData
-        );
+       // Update the booking by sending a PUT request to the backend
+      await axiosInstance.put(`${backendUrl}/booking/${itemId}`, paymentData);
 
         Swal.fire({
             icon: "success",

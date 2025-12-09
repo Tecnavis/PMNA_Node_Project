@@ -565,7 +565,6 @@ exports.getAllBookings = async (req, res) => {
         
         const query = {};
         query._includeHidden = true;
-
         // CRITICAL: Check and update bookings where pickupDate has been reached
         await updateScheduledBookings();
 
@@ -576,13 +575,24 @@ exports.getAllBookings = async (req, res) => {
             if (!status) {
                 query.status = 'Scheduled';
             }
+            // Enable hidden for scheduled bookings if needed
+            query._includeHidden = true;
         } else if (hasPickupDate === 'false') {
             query.pickupDate = { $exists: false };
+            query._includeHidden = false; // Explicitly disable for non-scheduled
+        }
+
+        // Only include hidden if specifically needed for scheduled bookings
+        if (!query._includeHidden) {
+            // For financial calculations, we typically don't want hidden/deleted documents
+            query.isDeleted = { $ne: true }; // Assuming soft delete field
+            query.isHidden = { $ne: true };  // Assuming hidden field
         }
 
        // In your getAllBookings function, modify the status handling:
         if (req.query.onlyScheduled === 'true') {
             query.status = 'Scheduled';
+            query._includeHidden = true; // Include hidden for scheduled
         } else if (status) {
             if (Array.isArray(status)) {
                 query.status = { $nin: status }
@@ -708,6 +718,12 @@ exports.getAllBookings = async (req, res) => {
                 $lte: endOfDay
             };
         }
+  const financialQuery = { ...query };
+        
+        // For financial calculations, always exclude hidden/deleted documents
+        delete financialQuery._includeHidden;
+        financialQuery.isDeleted = { $ne: true };
+        financialQuery.isHidden = { $ne: true };
 
         // Pagination and sorting by createdAt in descending order
         const total = await Booking.countDocuments(query);
@@ -746,13 +762,12 @@ exports.getAllBookings = async (req, res) => {
         // Add enable field to scheduled bookings
         chekcAndUpdatebookingIsEnable(bookings)
 
-        query.workType = { $ne: 'RSAWork' };
+        financialQuery.workType = { $ne: 'RSAWork' };
 
-        // Add this temporary aggregation to see what documents are being processed
         const debugAggregation = await Booking.aggregate([
             {
                 $match: {
-                    ...query,
+                    ...financialQuery, // Use financialQuery here
                     ...(forDriverReport && { cashPending: false }),
                     $or: [
                         { receivedUser: "Driver" },
@@ -806,7 +821,7 @@ exports.getAllBookings = async (req, res) => {
         const aggregationResult = await Booking.aggregate([
             {
                 $match: {
-                    ...query,
+                    ...financialQuery, // Use financialQuery here
                     ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) && { cashPending: false }),
                     ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
                     ...(forDriverReport && {
@@ -1017,13 +1032,10 @@ exports.getAllBookings = async (req, res) => {
             }
         ]);
 
-        console.log('============ AGGREGATION RESULTS ============');
-        console.log('Full aggregation result:', JSON.stringify(aggregationResult, null, 2));
-
         const aggregationResult2 = await Booking.aggregate([
             {
                 $match: {
-                    ...query,
+                    ...financialQuery, // Use financialQuery here
                     ...((forDriverReport !== undefined || forStaffReport !== undefined || forCompanyReport !== undefined || forShowroomReport !== undefined) && { partialPayment: true }),
                     ...((forCompanyReport !== undefined) && { workType: 'RSAWork' }),
                     ...(forDriverReport && { receivedUser: { $ne: 'Staff' } })
@@ -2390,7 +2402,70 @@ exports.verifyBooking = async (req, res) => {
         res.status(500).json({ message: 'Internal server error.', error: error.message });
     }
 };
+// controllers/booking.controller.js - Add this function
+exports.getUnverifiedBookingsByDrivers = async (req, res) => {
+    try {
+        const { driverIds, startDate, endDate } = req.query;
+        
+        let query = {
+            status: 'Order Completed',
+            verified: { $ne: true }, // Not verified (either false or undefined)
+            driver: { $exists: true, $ne: null }
+        };
 
+        // If driverIds provided, filter by specific drivers
+        if (driverIds) {
+            const driverIdArray = driverIds.split(',').map(id => new mongoose.Types.ObjectId(id));
+            query.driver = { $in: driverIdArray };
+        }
+
+        // Date range filter
+        if (startDate && endDate) {
+            const start = new Date(`${startDate}T00:00:00.000Z`);
+            const end = new Date(`${endDate}T23:59:59.999Z`);
+            query.createdAt = { $gte: start, $lte: end };
+        }
+
+        const unverifiedBookings = await Booking.find(query)
+            .populate('driver', 'name _id')
+            .select('fileNumber driver createdAt verified')
+            .sort({ createdAt: -1 })
+            .lean();
+console.log("unverifiedBookings",unverifiedBookings)
+        // Group by driver
+        const groupedByDriver = unverifiedBookings.reduce((acc, booking) => {
+            if (!booking.driver) return acc;
+            
+            const driverId = booking.driver._id.toString();
+            if (!acc[driverId]) {
+                acc[driverId] = {
+                    driver: booking.driver,
+                    bookings: []
+                };
+            }
+            
+            acc[driverId].bookings.push({
+                fileNumber: booking.fileNumber,
+                createdAt: booking.createdAt,
+                verified: booking.verified
+            });
+            
+            return acc;
+        }, {});
+
+        res.status(200).json({
+            success: true,
+            data: groupedByDriver
+        });
+
+    } catch (error) {
+        console.error('Error fetching unverified bookings:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching unverified bookings' 
+        });
+    }
+};
 // posting feedback 
 exports.postFeedback = async (req, res) => {
     try {

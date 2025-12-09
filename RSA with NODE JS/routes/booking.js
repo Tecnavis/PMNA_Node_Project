@@ -16,6 +16,7 @@ router.get('/approvedbookings', jwt, controller.getApprovedBookings);
 
 //Route to get all bookings base on status
 router.get('/status-based', controller.getAllBookingsBasedOnStatus);
+router.get('/unverified-by-drivers', jwt, controller.getUnverifiedBookingsByDrivers); // <-- ADD THIS LINE
 
 // Route to get booking
 router.get('/', jwt, controller.getAllBookings);
