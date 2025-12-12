@@ -8,6 +8,17 @@ interface UnverifiedBooking {
   fileNumber: string;
   createdAt: string;
   verified: boolean;
+  driverSalary: number;
+}
+
+interface DriverUnverifiedData {
+  driver: {
+    _id: string;
+    name: string;
+  };
+  bookings: UnverifiedBooking[];
+  totalDriverSalary: number;
+  unverifiedCount: number;
 }
 
 interface SettlementTransaction {
@@ -27,7 +38,7 @@ interface SettlementTransaction {
   pendingExpenses: number;
   settlementAmount: number;
   createdAt: Date;
-  unverifiedBookings?: UnverifiedBooking[]; // Add this field
+  unverifiedBookings?: UnverifiedBooking[];
 }
 
 const SettlementTransaction = () => {
@@ -37,7 +48,7 @@ const SettlementTransaction = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [unverifiedBookingsMap, setUnverifiedBookingsMap] = useState<Record<string, UnverifiedBooking[]>>({});
+  const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, DriverUnverifiedData>>({});
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const navigate = useNavigate();
@@ -68,19 +79,7 @@ const SettlementTransaction = () => {
       });
 
       if (response.data.success && response.data.data) {
-        // Transform the data structure
-        const transformedMap: Record<string, UnverifiedBooking[]> = {};
-        
-        Object.keys(response.data.data).forEach((driverId) => {
-          const driverData = response.data.data[driverId];
-          if (driverData && driverData.bookings) {
-            transformedMap[driverId] = driverData.bookings;
-          } else {
-            transformedMap[driverId] = [];
-          }
-        });
-        
-        setUnverifiedBookingsMap(transformedMap);
+        setUnverifiedDataMap(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching unverified bookings:', error);
@@ -146,8 +145,8 @@ const SettlementTransaction = () => {
     setPage(1);
   }, [searchTerm]);
 
-  const getUnverifiedBookingsForDriver = (driverId: string): UnverifiedBooking[] => {
-    return unverifiedBookingsMap[driverId] || [];
+  const getUnverifiedDataForDriver = (driverId: string): DriverUnverifiedData | null => {
+    return unverifiedDataMap[driverId] || null;
   };
 
   const columns = [
@@ -249,15 +248,14 @@ const SettlementTransaction = () => {
       ),
     },
     {
-            accessor: 'createdAt',
-
-      title: 'Not Verified❌',
+        accessor: 'createdAt',
+      title: 'Unverified Salary❌',
       render: (record: SettlementTransaction) => {
         if (!record.driver || !record.driver._id) return null;
         
-        const unverifiedBookings = getUnverifiedBookingsForDriver(record.driver._id);
+        const unverifiedData = getUnverifiedDataForDriver(record.driver._id);
         
-        if (unverifiedBookings.length === 0) {
+        if (!unverifiedData || unverifiedData.unverifiedCount === 0) {
           return (
             <div className="text-center text-green-500">
               <span className="font-semibold">All Verified ✓</span>
@@ -266,18 +264,28 @@ const SettlementTransaction = () => {
         }
         
         return (
-          <div className="min-w-[200px]">
-            <div className="text-red-500 font-semibold mb-1">
-              {unverifiedBookings.length} Unverified Booking(s)
+          <div className="min-w-[220px]">
+            <div className="flex justify-between items-center mb-1">
+              <div className="text-red-500 font-semibold">
+                {unverifiedData.unverifiedCount} Unverified
+              </div>
+              <div className="font-bold text-red-600">
+                ₹{unverifiedData.totalDriverSalary?.toLocaleString() || 0}
+              </div>
             </div>
             <div className="max-h-24 overflow-y-auto border rounded p-1 bg-red-50">
-              {unverifiedBookings.map((booking, index) => (
+              {unverifiedData.bookings.map((booking, index) => (
                 <div key={index} className="text-xs mb-1 p-1 bg-white rounded shadow-sm">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium">{booking.fileNumber}</span>
-                    <span className="text-gray-500 text-[10px]">
-                      {new Date(booking.createdAt).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-600 font-medium">
+                        ₹{booking.driverSalary?.toLocaleString() || 0}
+                      </span>
+                      <span className="text-gray-500 text-[10px]">
+                        {new Date(booking.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -288,18 +296,46 @@ const SettlementTransaction = () => {
     },
   ];
 
+  // Calculate total unverified salary across all drivers
+  const calculateTotalUnverifiedSalary = (): number => {
+    let total = 0;
+    Object.values(unverifiedDataMap).forEach(data => {
+      total += data.totalDriverSalary || 0;
+    });
+    return total;
+  };
+
+  const calculateTotalUnverifiedCount = (): number => {
+    let total = 0;
+    Object.values(unverifiedDataMap).forEach(data => {
+      total += data.unverifiedCount || 0;
+    });
+    return total;
+  };
+
   return (
     <div className="panel mt-6">
       <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
         <h5 className="font-semibold text-lg dark:text-white-light">
           Settlement Transactions
         </h5>
-        <div className="ltr:ml-auto rtl:mr-auto flex items-center gap-2">
-          <div className="flex items-center text-sm text-gray-500">
-            <div className="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
-            Unverified
-            <div className="w-3 h-3 rounded-full bg-green-500 ml-4 mr-1"></div>
-            Verified
+        <div className="ltr:ml-auto rtl:mr-auto flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-red-50 px-3 py-1 rounded border border-red-200">
+              <div className="text-xs text-gray-500">Unverified Total</div>
+              <div className="font-bold text-red-600">
+                ₹{calculateTotalUnverifiedSalary().toLocaleString()}
+              </div>
+              <div className="text-xs text-gray-400">
+                {calculateTotalUnverifiedCount()} bookings
+              </div>
+            </div>
+            <div className="flex items-center text-sm text-gray-500">
+              <div className="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
+              Unverified
+              <div className="w-3 h-3 rounded-full bg-green-500 ml-4 mr-1"></div>
+              Verified
+            </div>
           </div>
           <input 
             type="text" 

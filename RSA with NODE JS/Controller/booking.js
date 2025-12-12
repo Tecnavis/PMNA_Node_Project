@@ -2402,7 +2402,7 @@ exports.verifyBooking = async (req, res) => {
         res.status(500).json({ message: 'Internal server error.', error: error.message });
     }
 };
-// controllers/booking.controller.js - Add this function
+// controllers/booking.controller.js
 exports.getUnverifiedBookingsByDrivers = async (req, res) => {
     try {
         const { driverIds, startDate, endDate } = req.query;
@@ -2426,13 +2426,16 @@ exports.getUnverifiedBookingsByDrivers = async (req, res) => {
             query.createdAt = { $gte: start, $lte: end };
         }
 
+        // Fetch unverified bookings with driverSalary field
         const unverifiedBookings = await Booking.find(query)
             .populate('driver', 'name _id')
-            .select('fileNumber driver createdAt verified')
+            .select('fileNumber driver createdAt verified driverSalary driverTotalSalary')
             .sort({ createdAt: -1 })
             .lean();
-console.log("unverifiedBookings",unverifiedBookings)
-        // Group by driver
+
+        console.log("unverifiedBookings", unverifiedBookings);
+
+        // Group by driver and calculate total salary
         const groupedByDriver = unverifiedBookings.reduce((acc, booking) => {
             if (!booking.driver) return acc;
             
@@ -2440,15 +2443,24 @@ console.log("unverifiedBookings",unverifiedBookings)
             if (!acc[driverId]) {
                 acc[driverId] = {
                     driver: booking.driver,
-                    bookings: []
+                    bookings: [],
+                    totalDriverSalary: 0,
+                    unverifiedCount: 0
                 };
             }
             
+            // Add booking details
             acc[driverId].bookings.push({
                 fileNumber: booking.fileNumber,
                 createdAt: booking.createdAt,
-                verified: booking.verified
+                verified: booking.verified,
+                driverSalary: booking.driverSalary || booking.driverTotalSalary || 0
             });
+            
+            // Calculate total salary for unverified bookings
+            const bookingSalary = booking.driverSalary || booking.driverTotalSalary || 0;
+            acc[driverId].totalDriverSalary += bookingSalary;
+            acc[driverId].unverifiedCount += 1;
             
             return acc;
         }, {});
