@@ -2870,24 +2870,15 @@ exports.settleAmount = async (req, res) => {
                 });
             }
             
-             // Calculate payment amount (prefer receivedAmount, fallback to partialAmount)
-    const amountToAdd  = Number(receivedAmount || partialAmount || 0);
-    
-    if (amountToAdd <= 0) {
-        return res.status(400).json({ 
-            message: 'Valid payment amount is required for UPI payments' 
-        });
-    }
-    
-    // Update booking with UPI payment details
-    booking.upiPayment = true;
-    booking.qrImage = qrImage;
-    
-    // Track payment accumulation
-    const previousPartialAmount = booking.partialAmount || 0;
-    booking.partialAmount = previousPartialAmount + amountToAdd ;
-    booking.receivedAmount = booking.partialAmount;
-    
+            booking.upiPayment = true;
+            booking.qrImage = qrImage;
+            
+            // For UPI payments ONLY: Store receivedAmount
+            const amountToAdd = Number(receivedAmount || partialAmount || 0);
+            booking.partialAmount = (booking.partialAmount || 0) + amountToAdd;
+
+booking.receivedAmount = booking.partialAmount; // ← CORRECT
+            
             
             // Check payment status
             if (amountToAdd < booking.totalAmount) {
