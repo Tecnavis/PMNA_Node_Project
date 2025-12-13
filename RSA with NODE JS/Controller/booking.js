@@ -2861,75 +2861,68 @@ exports.settleAmount = async (req, res) => {
         }
 
         // =================== UPI PAYMENT HANDLING ===================
-        if (upiPayment === true) {
-            
-            // Validate QR image for UPI payments
-            if (!qrImage) {
-                return res.status(400).json({ 
-                    message: 'QR image is required for UPI payments' 
-                });
-            }
-            
-            booking.upiPayment = true;
-            booking.qrImage = qrImage;
-            
-            // For UPI payments ONLY: Store receivedAmount
-            const amountToAdd = Number(receivedAmount || partialAmount || 0);
-            booking.partialAmount = (booking.partialAmount || 0) + amountToAdd;
+       if (upiPayment === true) {
+    // Validate QR image for UPI payments
+    if (!qrImage) {
+        return res.status(400).json({ 
+            message: 'QR image is required for UPI payments' 
+        });
+    }
+    
+    booking.upiPayment = true;
+    booking.qrImage = qrImage;
+    
+    const amountToAdd = Number(receivedAmount || partialAmount || 0);
+    booking.partialAmount = (booking.partialAmount || 0) + amountToAdd;
+    
+    // Set receivedAmount to the updated partialAmount
+    booking.receivedAmount = booking.partialAmount;
+    
+    // CORRECT: Check based on CUMULATIVE total, not just current payment
+    if (booking.partialAmount < booking.totalAmount) {
+        booking.partialPayment = true;
+        booking.cashPending = true;
+        console.log('Partial UPI payment - Amount pending:', booking.totalAmount - booking.partialAmount);
+    } else {
+        booking.partialPayment = false;
+        booking.cashPending = false;
+        console.log('Full UPI payment - Total settled');
+    }
+    
+    // Update status
+    if (status) {
+        booking.status = status;
+    }
+    
+    // Update payment settlement flag
+    if (paymentSettlement !== undefined) {
+        booking.paymentSettlement = paymentSettlement;
+    }
+    
+    const receivedHistory = {
+        role: 'Admin',
+        receivedUser: currentUserId,
+        amount: amountToAdd,
+    };
+    
+    booking.receivedHistory.push(receivedHistory);
+    
+    await booking.save();
 
-            
-            
-            // Check payment status
-            if (amountToAdd < booking.totalAmount) {
-                booking.partialPayment = true;
-                booking.cashPending = true;
-                booking.receivedAmount = booking.partialAmount; // ← CORRECT
-
-                console.log('Partial UPI payment');
-            } else if (amountToAdd >= booking.totalAmount) {
-                booking.partialPayment = false;
-                booking.cashPending = false;
-                booking.receivedAmount = booking.partialAmount; // ← CORRECT
-
-                console.log('Full UPI payment');
-            }
-            
-            // Update status
-            if (status) {
-                booking.status = status;
-            }
-            
-            // Update payment settlement flag
-            if (paymentSettlement !== undefined) {
-                booking.paymentSettlement = paymentSettlement;
-            }
-            
-            // FIXED: For UPI payments, don't push to receivedHistory
-            // OR use valid enum values and ObjectId
-            // Option 1: Don't push to receivedHistory for UPI payments
-            // Option 2: Use Admin as role and current user ID as receivedUser
-            const receivedHistory = {
-                role: 'Admin', // Use valid enum value
-                receivedUser: currentUserId, // Use current user's ObjectId
-                amount: amountToAdd,
-            };
-            
-            booking.receivedHistory.push(receivedHistory);
-            
-            await booking.save();
-
-            routeLogger.info({
+   routeLogger.info({
                 fileNumber: booking.fileNumber || 'unknown',
                 paymentMethod: 'UPI',
                 amount: amountToAdd,
                 statusUpdated: status || 'No status update'
             }, 'UPI payment settled successfully');
 
-            return res.status(200).json({
-                message: "UPI payment settled successfully",
-                booking
-            });
-        }
+    return res.status(200).json({
+        message: booking.partialAmount < booking.totalAmount ? 
+            "Partial UPI payment received" : 
+            "Full UPI payment received. Payment complete!",
+        booking
+    });
+}
         // =================== END UPI PAYMENT HANDLING ===================
 
         // =================== CASH PAYMENT HANDLING ===================
