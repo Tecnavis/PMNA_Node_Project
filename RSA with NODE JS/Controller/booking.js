@@ -2875,12 +2875,10 @@ exports.settleAmount = async (req, res) => {
             
             // For UPI payments ONLY: Store receivedAmount
             const amountToAdd = Number(receivedAmount || partialAmount || 0);
+            booking.partialAmount = (booking.partialAmount || 0) + amountToAdd;
+
+booking.receivedAmount = booking.partialAmount; // ← CORRECT
             
-            // ONLY FOR UPI: Update receivedAmount
-            booking.receivedAmount = amountToAdd;
-            
-            // Also update partialAmount for tracking
-            booking.partialAmount = amountToAdd;
             
             // Check payment status
             if (amountToAdd < booking.totalAmount) {
