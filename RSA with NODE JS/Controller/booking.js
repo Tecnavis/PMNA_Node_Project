@@ -2877,17 +2877,20 @@ exports.settleAmount = async (req, res) => {
             const amountToAdd = Number(receivedAmount || partialAmount || 0);
             booking.partialAmount = (booking.partialAmount || 0) + amountToAdd;
 
-booking.receivedAmount = booking.partialAmount; // ← CORRECT
             
             
             // Check payment status
             if (amountToAdd < booking.totalAmount) {
                 booking.partialPayment = true;
                 booking.cashPending = true;
+                booking.receivedAmount = booking.partialAmount; // ← CORRECT
+
                 console.log('Partial UPI payment');
             } else if (amountToAdd >= booking.totalAmount) {
                 booking.partialPayment = false;
                 booking.cashPending = false;
+                booking.receivedAmount = booking.partialAmount; // ← CORRECT
+
                 console.log('Full UPI payment');
             }
             
