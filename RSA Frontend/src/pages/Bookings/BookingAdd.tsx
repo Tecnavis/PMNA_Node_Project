@@ -1054,6 +1054,19 @@ const formatDateForInput = (dateString: string): string => {
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+         if (adjustmentValue !== null && showBtn) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Please apply adjustment value first',
+            toast: true,
+            position: 'top',
+            showConfirmButton: false,
+            timer: 3000,
+            padding: '10px 20px',
+        });
+        setLoading(false);
+        return;
+    }
           // Strict credit limit validation
     if (!validateCreditLimit()) {
         setLoading(false);

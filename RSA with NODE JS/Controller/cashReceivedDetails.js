@@ -84,10 +84,22 @@ exports.createReceivedDetails = async (req, res) => {
       { receivedUser: { $exists: false } }
     ]
   },
-  { // Condition C
-    $and: [
-      { cashPending: false },
-      { receivedUser: 'Staff' }
+   { // Condition C - Modified to exclude your specific case
+      $and: [
+        { cashPending: false },
+        { receivedUser: 'Staff' },
+        // EXCLUDE when it's your specific case
+        { 
+          $nor: [
+            { 
+              $and: [
+                { multipleReceivedUser: true },
+                { previousReceivedUser: 'Driver' },
+                { $expr: { $gt: ["$receivedAmountDriver", "$receivedAmount"] } }
+              ]
+            }
+          ]
+        }
     ]
   }
 ],
@@ -205,6 +217,20 @@ exports.createReceivedDetails = async (req, res) => {
         ]
       }
     },
+      // ADD THIS NEW CONDITION - Your specific case
+    { 
+      status: 'Order Completed',
+      workType: 'PaymentWork',
+      cashPending: false,
+      receivedUser: 'Staff',
+      multipleReceivedUser: true,
+      previousReceivedUser: 'Driver',
+      $expr: { 
+        $and: [
+          { $gt: ["$receivedAmountDriver", "$receivedAmount"] }
+        ]
+      }
+    }
   ],
   [entityField]: entityId
 };
@@ -316,18 +342,48 @@ specialCaseBookings.forEach(booking => {
 };
 
 function calculateBookingBalance(booking, userRole) {
-  // First handle the special condition where:
+  // Consolidated logic for all cases where receivedAmountDriver is the limit
+  const driverAmountLimitedCases = [
+    // Your specific case
+    () => booking.receivedUser === 'Staff' && 
+          booking.cashPending === false &&
+          booking.previousReceivedUser === 'Driver' &&
+          booking.multipleReceivedUser === true && 
+          userRole === 'Staff',
+    
+    // Other cases from your code
+    () => booking.receivedUser === 'Driver' && 
+          booking.cashPending === true && 
+          booking.partialPayment === true &&
+          userRole === 'Staff',
+    
+    () => booking.receivedUser === 'Driver' && 
+          booking.partialPayment === true && 
+          booking.cashPending === true,
+    
+    () => booking.multipleReceivedUser === true && 
+          booking.receivedUser === 'Staff' && 
+          booking.previousReceivedUser === 'Driver',
+    
+    () => booking.receivedUser === 'Driver' && 
+          booking.cashPending === false &&
+          booking.previousReceivedUser === 'Staff',
+    
+    () => booking.receivedUser === 'Staff' && 
+          booking.cashPending === false &&
+          booking.previousReceivedUser === 'Driver' &&
+          booking.givenAmountByStaff === 0
+  ];
   
-  // Then handle the specific case where:
-  // - receivedUser is "Staff"
-  // - multipleReceivedUser is true
-  // - previousReceivedUser is "Driver"
-  if (booking.receivedUser === 'Staff' && 
-      booking.multipleReceivedUser === true && 
-      booking.previousReceivedUser === 'Driver') {
-    return (booking.receivedAmountDriver || 0) - (booking.receivedAmount || 0);
+  // Check if any case matches
+  const isDriverAmountLimited = driverAmountLimitedCases.some(checkCase => checkCase());
+  
+  if (isDriverAmountLimited) {
+    const maxReceivable = booking.receivedAmountDriver || 0;
+    const currentReceived = booking.receivedAmount || 0;
+    return Math.max(0, maxReceivable - currentReceived);
   }
-
+  
   // Existing logic for Staff with partial received amount
   if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff) {
     return booking.totalAmount - (booking.receivedAmountStaff || 0);
@@ -338,32 +394,93 @@ function calculateBookingBalance(booking, userRole) {
 }
 
 function updateBookingPayment(booking, amount, userRole, receivedUserId) {
-  // --------------------------------------------------------------------
-  // Special case: When receivedUser is Staff, multipleReceivedUser is true, 
-  // and previousReceivedUser is Driver - set receivedAmount to receivedAmountDriver
-  if (booking.receivedUser === 'Staff' && 
-      booking.multipleReceivedUser === true && 
-      booking.previousReceivedUser === 'Driver') {
+  // Consolidated logic for cases limited by receivedAmountDriver
+  const driverAmountLimitedCases = [
+    () => booking.receivedUser === 'Staff' && 
+          booking.cashPending === false &&
+          booking.previousReceivedUser === 'Driver' &&
+          booking.multipleReceivedUser === true && 
+          userRole === 'Staff',
     
-    console.log('Special case: Setting receivedAmount to match receivedAmountDriver');
-    console.log('Before - receivedAmount:', booking.receivedAmount, 'receivedAmountDriver:', booking.receivedAmountDriver);
+    () => booking.receivedUser === 'Driver' && 
+          booking.cashPending === true && 
+          booking.partialPayment === true &&
+          userRole === 'Staff',
     
-    // Set receivedAmount equal to receivedAmountDriver
-    booking.receivedAmount = booking.receivedAmountDriver || 0;
+    () => booking.receivedUser === 'Driver' && 
+          booking.partialPayment === true && 
+          booking.cashPending === true,
     
-  // NEW: Check if receivedAmountStaff equals givenAmountByStaff and add to receivedAmount
-    if (booking.receivedAmountStaff === booking.givenAmountByStaff) {
-      console.log('Adding receivedAmountStaff to receivedAmount since they are equal');
-      console.log('Before addition - receivedAmount:', booking.receivedAmount, 'receivedAmountStaff:', booking.receivedAmountStaff);
+    () => booking.multipleReceivedUser === true && 
+          booking.receivedUser === 'Staff' && 
+          booking.previousReceivedUser === 'Driver',
+    
+    () => booking.receivedUser === 'Driver' && 
+          booking.cashPending === false &&
+          booking.previousReceivedUser === 'Staff',
+    
+    () => booking.receivedUser === 'Staff' && 
+          booking.cashPending === false &&
+          booking.previousReceivedUser === 'Driver' &&
+          booking.givenAmountByStaff === 0
+  ];
+  
+  const isDriverAmountLimited = driverAmountLimitedCases.some(checkCase => checkCase());
+  
+  if (isDriverAmountLimited) {
+    const maxReceivable = booking.receivedAmountDriver || 0;
+    const currentReceived = booking.receivedAmount || 0;
+    const availableAmount = Math.max(0, maxReceivable - currentReceived);
+    const actualAmount = Math.min(amount, availableAmount);
+    
+    console.log(`Driver-amount-limited case: max=${maxReceivable}, current=${currentReceived}, available=${availableAmount}, applying=${actualAmount}`);
+    
+    // Update the main received amount
+    booking.receivedAmount = currentReceived + actualAmount;
+    
+    // Special handling for your specific case
+    if (booking.receivedUser === 'Staff' && 
+        booking.cashPending === false &&
+        booking.previousReceivedUser === 'Driver' &&
+        booking.multipleReceivedUser === true && 
+        userRole === 'Staff') {
       
-      booking.receivedAmount += (booking.receivedAmountStaff || 0);
+      console.log('Your specific case: Staff updating from multiple user scenario');
       
-      console.log('After addition - receivedAmount:', booking.receivedAmount);
+      // Update receivedAmountStaff
+      if (booking.receivedAmountStaff === undefined) {
+        booking.receivedAmountStaff = actualAmount;
+      } else {
+        booking.receivedAmountStaff += actualAmount;
+      }
+      
+      // If receivedAmount reaches receivedAmountDriver, update status
+      if (booking.receivedAmount >= (booking.receivedAmountDriver || 0)) {
+        console.log('Payment complete - reached receivedAmountDriver');
+      }
     }
     
-    return; // Exit early since we're setting specific values
+    // Only update receivedUser if not Admin
+    if (userRole !== 'Admin') {
+      booking.receivedUser = userRole;
+      booking.receivedUserId = receivedUserId;
+    }
+    
+    // For Staff role, also update receivedAmountStaff if not already done
+    if (userRole === 'Staff' && booking.receivedAmountStaff === undefined) {
+      booking.receivedAmountStaff = actualAmount;
+    }
+    
+    // Update partial payment flag
+    booking.partialReceivedAmountStaff = 
+      Math.abs((booking.receivedAmount || 0) - booking.totalAmount) >= 0.01;
+    
+    return;
   }
-
+  
+  // Existing logic for other cases...
+  // (Keep the rest of your updateBookingPayment function as is)
+  
   // Case 1: Staff with partial payment
   if (booking.receivedUser === 'Staff' && booking.partialReceivedAmountStaff) {
     if (userRole === 'Staff') {
@@ -377,6 +494,7 @@ function updateBookingPayment(booking, amount, userRole, receivedUserId) {
     // Only update the amount, don't change receivedUser or previousReceivedUser
     booking.receivedAmount = (booking.receivedAmount || 0) + amount;
   }
+  
   // Case 3: Special case where receivedUser is Staff with multipleReceivedUser
   else if (booking.multipleReceivedUser === true && booking.receivedUser === 'Staff' ) {
     // Keep original receivedUser as is
@@ -399,7 +517,7 @@ function updateBookingPayment(booking, amount, userRole, receivedUserId) {
     
     // For Staff role, also update receivedAmountStaff
     if (userRole === 'Staff') {
-      booking.receivedAmountStaff = amount;
+      booking.receivedAmountStaff = (booking.receivedAmountStaff || 0) + amount;
     }
   }
 
@@ -417,7 +535,6 @@ function updateBookingPayment(booking, amount, userRole, receivedUserId) {
       booking.receivedAmountStaff === booking.givenAmountByStaff) {
     booking.receivedAmount = booking.totalAmount;
   }
-
 }
 
 async function processAdvanceDeduction(entity, isDriver, amount, meta, session) {
