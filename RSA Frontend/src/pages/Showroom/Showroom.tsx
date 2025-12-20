@@ -376,12 +376,14 @@ const Showroom: React.FC = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{ display: 'flex', gap: '10px' }}>
                                                     {/* View QR Button (Opens Modal) */}
-                                                    {/* to check */}
                                                     <button
-                                                        onClick={() => {
-                                                            setModalOpen(true)
-                                                            setUrl(`https://rsa-staff-ilqh.onrender.com/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
-                                                        }}
+    onClick={() => {
+        setModalOpen(true);
+        // Use environment variable instead of hardcoded URL
+        const baseUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://rsa-staff-ilqh.onrender.com';
+        const qrUrl = `${baseUrl}/auth/cover-register?id=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${encodeURIComponent(items.image)}&helpline=${items.helpline}&phone=${items.phone}&state=${encodeURIComponent(items.state)}&district=${encodeURIComponent(items.district)}`;
+        setUrl(qrUrl);
+    }}
                                                         style={{
                                                             backgroundColor: '#007bff',
                                                             color: '#fff',
