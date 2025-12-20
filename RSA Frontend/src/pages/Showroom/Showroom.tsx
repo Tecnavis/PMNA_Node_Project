@@ -376,6 +376,7 @@ const Showroom: React.FC = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                 <div style={{ display: 'flex', gap: '10px' }}>
                                                     {/* View QR Button (Opens Modal) */}
+                                                    {/* to check */}
                                                     <button
                                                         onClick={() => {
                                                             setModalOpen(true)
