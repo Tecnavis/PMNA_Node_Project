@@ -63,7 +63,9 @@ interface Provider {
     name: string;
     companyName: string;
     cashInHand: number;
-    driverSalary: number;
+     balanceAmount?: number;
+    advance: number;
+    driverSalary?: number; // This might be provider's earnings, rename if confusing
     baseLocation: {
         _id: string;
         baseLocation: string;
@@ -91,6 +93,14 @@ interface Provider {
         }
     ];
     image: string;
+ settlement?: boolean;
+    isFullSettlement?: boolean;
+    settlementCompletedDate?: Date | string;
+    previousSettlementCompletedDate?: Date | string;
+    lastSettlementAmount?: number;
+    pendingExpensesCount?: number;
+    totalPendingAmount?: number;
+    totalTransferedAmount?: number; // Add this for tracking transfers
 }
 
 export interface Driver {
@@ -152,12 +162,14 @@ const MultipleTables = () => {
     // Add these state variables
     const [showSettlementModal, setShowSettlementModal] = useState(false);
     const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+    const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null); // Add this line
+
     const [pendingExpenses, setPendingExpenses] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [showAdvanceModal, setShowAdvanceModal] = useState(false);
     const [advanceAmount, setAdvanceAmount] = useState(0);
     const [requiredAmount, setRequiredAmount] = useState(0);
-    // ------------------------------------------------------------
+const [showProviderSettlementModal, setShowProviderSettlementModal] = useState(false);
     const [showNoExpensesModal, setShowNoExpensesModal] = useState(false);
 const [processingSettlement, setProcessingSettlement] = useState(false);
     const role = localStorage.getItem('role') || ''
@@ -302,7 +314,55 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
         setLoading(false);
     }
 };
-  
+ const handleProviderSettleClick = async (provider: Provider) => {
+    const password = await Swal.fire({
+        title: 'Authorization Required',
+        input: 'password',
+        inputLabel: 'Enter settlement password',
+        inputPlaceholder: 'Super secret password',
+        showCancelButton: true,
+        confirmButtonText: 'Authenticate',
+        showLoaderOnConfirm: true,
+        preConfirm: (inputPassword) => {
+            return inputPassword === 'RSA@123';
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    });
+
+    if (!password.isConfirmed || !password.value) {
+        toast.error('Authentication failed');
+        return;
+    }
+
+    try {
+        setSelectedProvider(provider);
+        setLoading(true);
+
+        // Check settlement conditions
+        const hasNegativeBalance = (provider.balanceAmount ?? 0) < 0;
+        const hasCashInHand = (provider.cashInHand ?? 0) > 0;
+        const hasAdvance = (provider.advance ?? 0) > 0;
+        
+        // Only show "nothing to settle" modal if nothing needs to be settled
+        if (!hasNegativeBalance && !hasCashInHand && !hasAdvance) {
+            Swal.fire({
+                title: 'Nothing to Settle',
+                text: 'Provider has no pending settlements',
+                icon: 'info'
+            });
+            return;
+        }
+
+        // Show provider settlement modal
+        setShowProviderSettlementModal(true);
+        
+    } catch (error: any) {
+        console.error('Error in provider settlement:', error);
+        toast.error('Failed to fetch settlement data');
+    } finally {
+        setLoading(false);
+    }
+};
     return (
         <div>
             {![ROLES.VERIFIER].includes(role) && (
@@ -404,9 +464,17 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                                             <button type="button" className="btn btn-primary px-2 py-1 text-xs" onClick={() => navigate(`/provider-report/salaryreport/${provider._id}`)}>
                                                 Salary
                                             </button>
-                                            {/* <button type="button" className="btn btn-danger px-2 py-1 text-xs">
-                                                Expense
-                                            </button> */}
+                     {[ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.Manager].includes(role) && (
+    <button 
+        type="button" 
+        className="btn btn-danger px-2 py-1 text-xs" 
+        onClick={() => handleProviderSettleClick(provider)}
+        title={`Cash: ₹${provider.cashInHand || 0} | Advance: ₹${provider.advance || 0} | Balance: ₹${provider.balanceAmount || 0}`}
+        disabled={loading}
+    >
+        Settle
+    </button>
+)}
                                         </div>
                                     ),
                                 },
@@ -634,6 +702,220 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
     </div>
   </div>
 </div>
+        </div>
+    </div>
+)}
+{showProviderSettlementModal && selectedProvider && (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col border border-gray-100">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-purple-500 px-4 py-3 text-white sticky top-0">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="text-lg font-bold">Provider Settlement: {selectedProvider?.name}</h3>
+                        <p className="text-sm text-purple-100">{selectedProvider?.companyName || 'Independent Provider'}</p>
+                    </div>
+                    <button 
+                        onClick={() => setShowProviderSettlementModal(false)} 
+                        className="p-1 rounded-full hover:bg-white/20"
+                    >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+           
+            {/* -------------------------------------------------------- */}
+    {/* Content */}
+           <div className="flex-1 overflow-y-auto p-4">
+  {/* Current Financial Summary */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div className="bg-blue-50 p-4 rounded-lg">
+      <h4 className="font-bold text-blue-800 mb-2">Current Status</h4>
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <span>Total Salary:</span>
+          <span className="font-medium">₹{selectedProvider?.driverSalary?.toFixed(2) ?? '0.00'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Cash In Hand:</span>
+          <span className="font-medium">₹{selectedProvider?.cashInHand?.toFixed(2) ?? '0.00'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Balance Amount:</span>
+          <span className={`font-medium ${(selectedProvider?.balanceAmount ?? 0) < 0 ? 'text-red-600' : 'text-green-600'}`}>
+            ₹{Math.abs(selectedProvider?.balanceAmount ?? 0).toFixed(2)} 
+            {(selectedProvider?.balanceAmount ?? 0) < 0 ? ' (To Driver)' : ' (To Company)'}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span>Advance:</span>
+          <span className="font-medium">₹{selectedProvider?.advance?.toFixed(2) ?? '0.00'}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Cash Collection:</span>
+          <span className="font-medium">
+            ₹{((selectedProvider?.cashInHand ?? 0) - (selectedProvider?.advance ?? 0)).toFixed(2)}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {/* Settlement Calculation */}
+    <div className="bg-green-50 p-4 rounded-lg">
+      <h4 className="font-bold text-green-800 mb-2">Settlement Calculation</h4>
+      <div className="space-y-2">
+      
+       
+       <div className="flex justify-between">
+        <span>Total Salary:</span>
+        <span className="font-medium">₹{selectedProvider?.driverSalary?.toFixed(2) ?? '0.00'}</span>
+      </div>
+      
+      <div className="border-t border-green-200 my-2"></div>
+      
+      {/* Settlement Amount Calculation */}
+      {(() => {
+        const cashInHand = selectedProvider?.cashInHand ?? 0;
+        const totalSalary = selectedProvider?.driverSalary ?? 0;
+        const settlementAmount = cashInHand - (totalSalary );
+        
+        return (
+          <div className="flex justify-between font-bold">
+            <span>
+              {settlementAmount >= 0 
+                ? 'Settlement Amount (to RSA)' 
+                : 'Settlement Amount (to Driver)'}
+            </span>
+            <span className={settlementAmount >= 0 ? 'text-green-600' : 'text-red-600'}>
+              ₹{Math.abs(settlementAmount).toFixed(2)}
+            </span>
+          </div>
+        );
+      })()}
+    </div>
+  </div>
+</div>
+
+ 
+ {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+               
+              
+
+                {/* Full Settlement Warning */}
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0 pt-0.5">
+                            <svg className="h-5 w-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <h4 className="font-bold text-yellow-800">Full Settlement Notice</h4>
+                            <p className="text-sm text-yellow-700 mt-1">
+                                Approving this settlement will:
+                            </p>
+                            <ul className="text-sm text-yellow-700 mt-1 list-disc pl-4">
+                                <li>Reset Cash In Hand to ₹0.00</li>
+                                <li>Reset Balance Amount to ₹0.00</li>
+                                <li>Deduct advance amount (if any) from settlement</li>
+                                <li>Mark all pending financial transactions as settled</li>
+                                <li>Record settlement date for future reference</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+</div>
+{/* ---------------------------------------------------------------- */}
+            {/* Footer with action buttons */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 p-3">
+                <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                        {(() => {
+                            const cashInHand = selectedProvider?.cashInHand ?? 0;
+                            const advance = selectedProvider?.advance ?? 0;
+                            
+                            if (cashInHand < advance) {
+                                return (
+                                    <span className="text-red-600 font-medium">
+                                        Shortage: ₹{(advance - cashInHand).toFixed(2)}
+                                    </span>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </div>
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={() => setShowProviderSettlementModal(false)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    setLoading(true);
+                                    const response = await axios.post(
+                                        `${backendUrl}/provider/complete-settlement/${selectedProvider?._id}`,
+                                        { 
+                                            isFullSettlement: true 
+                                        }
+                                    );
+                                    
+                                    if (response.data.success) {
+                                        toast.success("Provider settlement completed successfully!");
+                                        
+                                        // Refresh providers list
+                                        fetchProviders();
+                                        
+                                        // Close modal
+                                        setShowProviderSettlementModal(false);
+                                        
+                                        // Show success summary
+                                        Swal.fire({
+                                            title: 'Settlement Completed',
+                                            html: `
+                                                <div style="text-align: left; padding: 10px;">
+                                                    <p><strong>Provider:</strong> ${selectedProvider?.name}</p>
+                                                    <p><strong>Total Transferred:</strong> ₹${response.data.data.totalTransferredAmount || 0}</p>
+                                                    <p><strong>Advance Deduction:</strong> ₹${response.data.data.advanceDeduction || 0}</p>
+                                                    <p><strong>New Advance Balance:</strong> ₹${response.data.data.newAdvanceBalance || 0}</p>
+                                                    <p><strong>Settlement Date:</strong> ${new Date(response.data.data.currentSettlementDate).toLocaleDateString()}</p>
+                                                    <hr style="margin: 10px 0;" />
+                                                    <p><strong>Final Status:</strong></p>
+                                                    <ul style="margin-left: 20px;">
+                                                        <li>Cash In Hand: ₹0.00</li>
+                                                        <li>Balance Amount: ₹0.00</li>
+                                                        <li>Advance: ₹${response.data.data.newAdvanceBalance || 0}</li>
+                                                    </ul>
+                                                </div>
+                                            `,
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else {
+                                        toast.error(response.data.message || "Failed to complete settlement");
+                                    }
+                                } catch (error: any) {
+                                    console.error('Provider settlement error:', error);
+                                    toast.error(error.response?.data?.message || 'Error completing settlement');
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                            disabled={loading}
+                        >
+                            {loading ? 'Processing...' : 'Approve Full Settlement'}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 )}

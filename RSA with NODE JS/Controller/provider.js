@@ -1,9 +1,11 @@
 const Provider = require('../Model/provider');
+const mongoose = require('mongoose');
 const Booking = require('../Model/booking');
 const { sendOtp, verifyOtp } = require('../services/otpService');
 const jwt = require('jsonwebtoken');
 const { updateProviderFinancials } = require('../services/providerService');
-
+const ReceivedDetails = require('../Model/ReceivedDetails'); // Make sure you have this model
+const SettlementTransaction = require('../Model/settlementTransaction'); // Create this if needed
 // Create a new provider
 exports.createProvider = async (req, res) => {
   try {
@@ -284,4 +286,220 @@ exports.getProvidersForDropdown = async (req, res) => {
       message: 'Failed to fetch Provider dropdown data'
     });
   }
+};
+
+exports.completeProviderSettlement = async (req, res) => {
+    try {
+        const { providerId } = req.params;
+        const { isFullSettlement = true } = req.body;
+
+        // 1. Validate inputs
+        if (!mongoose.Types.ObjectId.isValid(providerId)) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Invalid provider ID"
+            });
+        }
+
+        // 2. Verify provider exists
+        const provider = await Provider.findById(providerId);
+        if (!provider) {
+            return res.status(404).json({ 
+                success: false,
+                message: "Provider not found"
+            });
+        }
+
+        // Store current date for settlement
+        const currentSettlementDate = new Date();
+        const settlementDatesUpdate = {
+            previousSettlementCompletedDate: provider.settlementCompletedDate || null,
+            settlementCompletedDate: currentSettlementDate
+        };
+
+        // 3. Update bookings with pending payments related to this provider
+        // Assuming providers can have bookings
+        const bookingsToUpdate = await Booking.find({
+            provider: providerId,
+            status: "Order Completed",
+            cashPending: false,
+            $or: [
+                { receivedUser: { $ne: 'Staff' } },
+                { 
+                    receivedUser: 'Staff',
+                    partialReceivedAmountStaff: true
+                }
+            ],
+            $expr: { $lt: ["$receivedAmount", "$totalAmount"] }
+        });
+
+        if (bookingsToUpdate.length > 0) {
+            const bulkOps = bookingsToUpdate.map(booking => ({
+                updateOne: {
+                    filter: { _id: booking._id },
+                    update: {
+                        $set: {
+                            receivedAmount: booking.totalAmount,
+                            ...(booking.receivedUser === 'Staff' && {
+                                receivedAmountStaff: booking.totalAmount,
+                                partialReceivedAmountStaff: false
+                            })
+                        }
+                    }
+                }
+            }));
+            await Booking.bulkWrite(bulkOps);
+        }
+
+        // For providers, we should calculate their share/commission
+        const verifiedBookings = await Booking.find({
+            provider: providerId,
+            verified: true,
+            status: "Order Completed",
+            $or: [
+                { driverSalary: { $exists: true, $gt: 0 } }
+            ]
+        });
+
+        let totalTransferableSalary = 0;
+        const bookingUpdates = [];
+
+       verifiedBookings.forEach(booking => {
+                   const currentTransferred = booking.transferedSalary || 0;
+                   const balanceSalary = booking.driverSalary - currentTransferred;
+                   
+                   if (balanceSalary > 0) {
+                       totalTransferableSalary += balanceSalary;
+                       bookingUpdates.push({
+                           updateOne: {
+                               filter: { _id: booking._id },
+                               update: {
+                                   $set: {
+                                       transferedSalary: booking.driverSalary
+                                   }
+                               }
+                           }
+                       });
+                   }
+               });
+       
+                 if (bookingUpdates.length > 0) {
+                   await Booking.bulkWrite(bookingUpdates);
+               }
+
+        
+
+        // 5. Calculate remaining cash and handle advance
+        const remainingAmount = Math.max(0, provider.cashInHand - totalTransferableSalary);
+        let advanceDeduction = 0;
+        let newAdvanceBalance = provider.advance || 0;
+
+        if (remainingAmount > 0 && provider.advance > 0) {
+            advanceDeduction = Math.min(remainingAmount, provider.advance);
+            newAdvanceBalance = provider.advance - advanceDeduction;
+        }
+
+        // 6. Create received details record (optional)
+        if (advanceDeduction > 0) {
+            await ReceivedDetails.create({
+                remark: 'Provider settlement - Advance deduction',
+                balance: 0,
+                fileNumber: 'Provider Settlement',
+                currentNetAmount: 0,
+                amount: `Advance: ${provider.advance || 0}`,
+                provider: providerId,
+                receivedAmount: advanceDeduction,
+                totalAmount: remainingAmount,
+                receivedUser: req.user?.role || 'Admin',
+                receivedUserId: req.user?._id,
+            });
+        }
+
+        // 7. Update provider document
+        const updateData = {
+            $inc: {
+                transferedSalary: totalTransferableSalary // Add this to provider schema
+            },
+            $set: {
+                cashInHand: 0,
+                balanceAmount: 0,
+                advance: newAdvanceBalance,
+                settlement: true,
+                isFullSettlement: isFullSettlement,
+                ...settlementDatesUpdate
+            }
+        };
+
+
+        const updatedProvider = await Provider.findByIdAndUpdate(
+            providerId,
+            updateData,
+            { new: true }
+        ).lean();
+
+        // 8. Create settlement transaction record
+        // In your provider controller - update the settlement function
+
+// 8. Create settlement transaction record
+const settlementTransactionData = {
+  provider: providerId,
+  userType: 'provider',
+  settlementDate: currentSettlementDate,
+  totalSalary: totalTransferableSalary,
+  cashInHand: provider.cashInHand,
+  balanceAmount: provider.balanceAmount,
+  advance: provider.advance,
+  cashCollection: provider.cashInHand,
+  settlementAmount: totalTransferableSalary - advanceDeduction,
+  createdBy: req.user?._id
+};
+
+try {
+  const settlementTransaction = await SettlementTransaction.create(settlementTransactionData);
+  console.log('Provider settlement transaction created:', settlementTransaction._id);
+} catch (error) {
+  console.error('Error creating provider settlement transaction:', error);
+}
+
+    
+        res.status(200).json({
+            success: true,
+            message: 'Provider settlement completed successfully',
+            // data: {
+            //     providerName: provider.name,
+            //     totalTransferredAmount: totalTransferableAmount,
+            //     remainingCash: remainingCash,
+            //     advanceDeduction: advanceDeduction,
+            //     newAdvanceBalance: newAdvanceBalance,
+            //     currentSettlementDate: currentSettlementDate,
+            //     previousSettlementDate: settlementDatesUpdate.previousSettlementCompletedDate,
+            //     provider: {
+            //         _id: updatedProvider._id,
+            //         name: updatedProvider.name,
+            //         cashInHand: updatedProvider.cashInHand,
+            //         advance: updatedProvider.advance,
+            //         balanceAmount: updatedProvider.balanceAmount,
+            //         settlement: updatedProvider.settlement,
+            //         settlementCompletedDate: updatedProvider.settlementCompletedDate
+            //     }
+            // }
+             data: {
+                totalTransferredSalary: totalTransferableSalary,
+                remainingAmount: remainingAmount,
+                advanceDeduction: advanceDeduction,
+                newAdvanceBalance: newAdvanceBalance,
+                currentSettlementDate: currentSettlementDate,
+                previousSettlementDate: settlementDatesUpdate.previousSettlementCompletedDate,
+                driver: updatedProvider
+            }
+        });
+
+    } catch (error) {     
+        console.error('Provider settlement error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error completing provider settlement',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
 };

@@ -141,6 +141,8 @@ const Staff = lazy(() => import('../pages/Staff/Staff'));
 const StaffAdd = lazy(() => import('../pages/Staff/StaffAdd'));
 const ServiceType = lazy(() => import('../pages/ServiceType/ServiceType'));
 const Baselocation = lazy(() => import('../pages/Baselocation/Baselocaion'));
+const ToDo = lazy(() => import('../pages/ToDo/ToDo'));
+
 const Petrol = lazy(() => import('../pages/PetrolPumb/Petrol'));
 
 const Provider = lazy(() => import('../pages/Provider/Provider'));
@@ -385,6 +387,10 @@ const routes = [
     {
         path: '/baselocation',
         element: <Baselocation />,
+    },
+     {
+        path: '/todo',
+        element: <ToDo />,
     },
      {
         path: '/petrol',

@@ -1,8 +1,6 @@
-import React, { useEffect, useState, Fragment } from 'react';
-import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
+import React, { useEffect, useState } from 'react';
+import { DataTable } from 'mantine-datatable';
 import { Link, useNavigate } from 'react-router-dom';
-import IconTrashLines from '../../components/Icon/IconTrashLines';
-import IconPencil from '../../components/Icon/IconPencil';
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import { RiVerifiedBadgeFill } from 'react-icons/ri';
@@ -14,9 +12,6 @@ import { IoIosCloseCircleOutline } from 'react-icons/io';
 import { MdOutlineBookmarkAdd } from 'react-icons/md';
 import IconEye from '../../components/Icon/IconEye';
 import IconMapPin from '../../components/Icon/IconMapPin';
-import { GrPrevious } from 'react-icons/gr';
-import { GrNext } from 'react-icons/gr';
-
 
 interface Booking {
     _id: string;
@@ -32,8 +27,8 @@ interface Booking {
         _id: string;
         baseLocation: string;
         latitudeAndLongitude: string;
-    }; // Reference to BaseLocation
-    showroom: string; // Reference to Showroom
+    };
+    showroom: string;
     totalDistence: number;
     dropoffLocation: string;
     dropoffLatitudeAndLongitude: string;
@@ -48,11 +43,11 @@ interface Booking {
     };
     customerName: string;
     mob1: string;
-    mob2?: string; // Optional field
+    mob2?: string;
     vehicleType: string;
-    brandName?: string; // Optional field
-    comments?: string; // Optional field
-    status?: string; // Optional field
+    brandName?: string;
+    comments?: string;
+    status?: string;
     driver?: {
         idNumber: string;
         image: string;
@@ -60,23 +55,20 @@ interface Booking {
         personalPhoneNumber: string;
         phone: string;
         _id: string;
-        vehicle: [
-            {
-                basicAmount: number;
-                kmForBasicAmount: number;
-                overRideCharge: number;
-                serviceType: string;
-                vehicleNumber: string;
-                _id: string;
-            }
-        ];
+        vehicle: Array<{
+            basicAmount: number;
+            kmForBasicAmount: number;
+            overRideCharge: number;
+            serviceType: string;
+            vehicleNumber: string;
+            _id: string;
+        }>;
     };
-        company?: {
+    company?: {
         _id: string;
         name: string;
         phone: string;
     };
-
     provider?: {
         idNumber: string;
         image: string;
@@ -84,24 +76,22 @@ interface Booking {
         personalPhoneNumber: string;
         phone: string;
         _id: string;
-        serviceDetails: [
-            {
-                basicAmount: number;
-                kmForBasicAmount: number;
-                overRideCharge: number;
-                serviceType: string;
-                vehicleNumber: string;
-                _id: string;
-            }
-        ];
+        serviceDetails: Array<{
+            basicAmount: number;
+            kmForBasicAmount: number;
+            overRideCharge: number;
+            serviceType: string;
+            vehicleNumber: string;
+            _id: string;
+        }>;
     };
-    totalAmount?: number; // Optional field
-    totalDriverDistence?: number; // Optional field
-    driverSalary?: number; // Optional field
-    accidentOption?: string; // Optional field
-    insuranceAmount?: number; // Optional field
-    adjustmentValue?: number; // Optional field
-    amountWithoutInsurance?: number; // Optional field
+    totalAmount?: number;
+    totalDriverDistence?: number;
+    driverSalary?: number;
+    accidentOption?: string;
+    insuranceAmount?: number;
+    adjustmentValue?: number;
+    amountWithoutInsurance?: number;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -109,75 +99,196 @@ interface Booking {
 const ApprovedBookings: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [bookings, setBookings] = useState<Booking[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(0);
-   const [totalRecords, setTotalRecords] = useState(0);
-    const [showAll, setShowAll] = useState(false);
-    const [limit, setLimit] = useState(10);
-     const handlePageChange = (page: number, useShowAll = showAll) => {
-        setCurrentPage(page);
-        fetchBookings('', page, useShowAll ? 'all' : limit);
-    };
-  const toggleShowAll = () => {
-        const newShowAll = !showAll;
-        setShowAll(newShowAll);
-        handlePageChange(1, newShowAll); // Reset to page 1 when toggling
-    };
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
-    // checking the token
-
+    // Check token
     const gettingToken = () => {
         const token = localStorage.getItem('token');
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            console.log('Token  found in localStorage');
         } else {
             navigate('/auth/boxed-signin');
-            console.log('Token not found in localStorage');
         }
     };
 
-    // getting all bookings
-
-       const fetchBookings = async (searchTerm = '', page = 1, limitParam: number | 'all' = limit) => {
+    // Fetch bookings
+    const fetchBookings = async (search = '', pageNum = page, limit = pageSize) => {
+        setIsLoading(true);
         try {
             const params: any = { 
-                search: searchTerm, 
-                page,
-                limit: limitParam === 'all' ? undefined : limitParam,
-                showAll: limitParam === 'all' ? true : undefined
+                search, 
+                page: pageNum,
+                limit,
             };
             
             const response = await axios.get(`${backendUrl}/booking/approvedbookings`, { params });
             
-            setBookings(response.data.bookings);
-            setTotalPages(response.data.showAll ? 1 : response.data.totalPages);
-            setTotalRecords(response.data.total);
-            setCurrentPage(response.data.page);
-            setShowAll(response.data.showAll || false);
+            // Ensure serviceType exists to prevent undefined errors
+            const safeBookings = response.data.bookings.map((booking: Booking) => ({
+                ...booking,
+                serviceType: booking.serviceType || {
+                    serviceName: 'N/A',
+                    additionalAmount: 0,
+                    expensePerKm: 0,
+                    firstKilometer: 0,
+                    firstKilometerAmount: 0,
+                    _id: 'default'
+                }
+            }));
             
-            if (typeof limitParam === 'number') {
-                setLimit(limitParam);
+            setBookings(safeBookings);
+            setTotalRecords(response.data.total);
+            setPage(response.data.page);
+            
+            // Reset to page 1 if search changed
+            if (search !== searchTerm) {
+                setPage(1);
             }
+            setSearchTerm(search);
+            
         } catch (error) {
             console.error('Error fetching bookings:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to load bookings. Please try again.',
+            });
+        } finally {
+            setIsLoading(false);
         }
     };
-
 
     useEffect(() => {
         gettingToken();
         fetchBookings();
-    }, []);
+    }, [page, pageSize]);
 
-   
+    // Handle search with debounce
+    const handleSearch = (value: string) => {
+        const timer = setTimeout(() => {
+            fetchBookings(value, 1, pageSize);
+        }, 500);
+        return () => clearTimeout(timer);
+    };
+
+    // Define columns for DataTable
+    const columns = [
+        {
+            accessor: 'index',
+            title: '#',
+            render: (record: any, index: number) => (
+                <span>{(page - 1) * pageSize + index + 1}</span>
+            ),
+            width: 80,
+        },
+        {
+            accessor: 'createdAt',
+            title: 'Created At',
+            render: (record: Booking) => (
+                <span>
+                    {record.createdAt ? new Date(record.createdAt).toLocaleDateString('en-GB') : 'N/A'}
+                </span>
+            ),
+        },
+        {
+            accessor: 'fileNumber',
+            title: 'File Number',
+            render: (record: Booking) => {
+                let fileNumberColor = '';
+                if (record.verified && record.feedbackCheck) {
+                    fileNumberColor = '#22c35e';
+                } else if (record.verified) {
+                    fileNumberColor = '#3b82f6';
+                }
+                
+                return (
+                    <div style={{ color: fileNumberColor }}>
+                        {record.fileNumber}
+                    </div>
+                );
+            },
+        },
+        {
+            accessor: 'customerName',
+            title: 'Customer Name',
+        },
+        {
+            accessor: 'mob1',
+            title: 'Mobile',
+        },
+        {
+            accessor: 'company.name',
+            title: 'Company',
+            render: (record: Booking) => (
+                <div>
+                    {record.company?.name || 'Payment Work'}
+                    {record.company?.phone && (
+                        <div className="text-xs text-gray-500">
+                            {record.company.phone}
+                        </div>
+                    )}
+                </div>
+            ),
+        },
+        {
+            accessor: 'serviceType.serviceName',
+            title: 'Service Type',
+            render: (record: Booking) => (
+                <span>{record.serviceType?.serviceName?.toUpperCase() || 'N/A'}</span>
+            ),
+        },
+        {
+            accessor: 'customerVehicleNumber',
+            title: 'Vehicle Number',
+            render: (record: Booking) => (
+                <span>
+                    {record.customerVehicleNumber ? 
+                        record.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') 
+                        : ''
+                    }
+                </span>
+            ),
+        },
+        {
+            accessor: 'comments',
+            title: 'Comments',
+            render: (record: Booking) => (
+                <span className="max-w-xs truncate" title={record.comments}>
+                    {record.comments}
+                </span>
+            ),
+        },
+        {
+            accessor: 'actions',
+            title: 'Actions',
+            render: (record: Booking) => (
+                <Tippy content="View More">
+                    <button 
+                        type="button" 
+                        onClick={() => navigate(`/openbooking/${record._id}`)}
+                        className="text-secondary hover:text-primary transition-colors"
+                    >
+                        <IconEye className="w-5 h-5" />
+                    </button>
+                </Tippy>
+            ),
+            width: 100,
+        },
+    ];
+
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
             <div className="panel">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                     {/* Heading */}
-                    <h5 className="font-semibold text-lg dark:text-white-light sm:w-auto w-full text-center sm:text-left">Approved Bookings Details</h5>
+                    <h5 className="font-semibold text-lg dark:text-white-light sm:w-auto w-full text-center sm:text-left">
+                        Approved Bookings Details
+                    </h5>
 
                     {/* Search Bar */}
                     <div className="flex-grow sm:w-auto w-full">
@@ -185,147 +296,57 @@ const ApprovedBookings: React.FC = () => {
                             type="text"
                             placeholder="Search bookings..."
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
-                            onChange={(e) => fetchBookings(e.target.value)} // Trigger search on input change
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                handleSearch(e.target.value);
+                            }}
+                            value={searchTerm}
                         />
                     </div>
                 </div>
-                <div className="table-responsive mb-5">
-                    <table style={{ overflowX: 'auto' }}>
-                        <thead>
-                            <tr>
-                                <th>#</th> {/* Index column */}
-                                <th>Created At</th>
-                                 <th>File Number</th>
-                                <th>Customer Name</th>
-                                <th>Mobile</th>
-                                                                <th>Company</th>
-
-                                <th>Service Type</th>
-                                <th>Vehicle Number</th>
-                                <th>comments</th>
-                                                                <th>Actions</th>
-
-                             
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {bookings.map((items, index) => {
-                                // Determine the color for fileNumber based on the conditions
-                                let fileNumberColor = '';
-
-                                if (items.verified && items.feedbackCheck) {
-                                    fileNumberColor = '#22c35e'; // SHM today = blue, past = orange
-                                } else if (items.verified) {
-                                    fileNumberColor = '#3b82f6'; // RSA today = green, past = yellow
-                                }
-
-                                return (
-                                    <tr key={index}>
-                                        <td>{index + 1}</td> {/* Index column */}
-                                        <td>{items.createdAt ? new Date(items.createdAt).toLocaleDateString('en-GB') : 'N/A'}</td>
-                                       <td>  {items.fileNumber}
-                                        </td>
-                                        <td>
-                                            {items.customerName}
-                                        </td>
-                                        
-                                       
-                                        <td>
-                                            {items.mob1}
-                                        </td>
-                                           <td>
-                {items.company?.name || 'Payment Work'}
-                {items.company?.phone && (
-                    <div className="text-xs text-gray-500">
-                        {items.company.phone}
-                    </div>
-                )}
-            </td>
-                                        <td>{items.serviceType.serviceName.toUpperCase()}</td>
-                                        <td>{items.customerVehicleNumber ? items.customerVehicleNumber.toUpperCase().replace(/([a-zA-Z]+)(\d+)([a-zA-Z]+)(\d+)/, '$1 $2 $3 $4') : ''}</td>
-                                        <td>{items.comments}</td>
-                                          <td>
-                                                                                            <Tippy content="View More">
-                                                                                                <button type="button" onClick={() => navigate(`/openbooking/${items._id}`)}>
-                                                                                                    <IconEye className="text-secondary" />
-                                                                                                </button>
-                                                                                            </Tippy>
-                                                                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                
+                {/* Mantine DataTable */}
+                <div className="datatables">
+                    <DataTable
+                        fetching={isLoading}
+                        totalRecords={totalRecords}
+                        recordsPerPage={pageSize}
+                        page={page}
+                        onPageChange={setPage}
+                        recordsPerPageOptions={[10, 20, 50, 100, 200, 500]}
+                        onRecordsPerPageChange={(newPageSize) => {
+                            setPageSize(newPageSize);
+                            setPage(1);
+                        }}
+                        withColumnBorders
+                        highlightOnHover
+                        striped
+                        minHeight={300}
+                        columns={columns}
+                        // Optional: Add row styling based on conditions
+                        rowClassName={(record) => {
+                            if (record.verified && record.feedbackCheck) {
+                                return 'bg-green-50';
+                            } else if (record.verified) {
+                                return 'bg-blue-50';
+                            }
+                            return '';
+                        }}
+                        records={bookings.map(item => ({ ...item, id: item._id }))}
+                        // Add pagination text customization
+                        paginationText={({ from, to, totalRecords }) => 
+                            `Showing ${from} to ${to} of ${totalRecords} entries`
+                        }
+                        // Add empty state
+                        emptyState={
+                            <div className="text-center py-10">
+                                <div className="text-gray-500 text-lg mb-2">No bookings found</div>
+                                <div className="text-gray-400">Try adjusting your search or filters</div>
+                            </div>
+                        }
+                    />
                 </div>
             </div>
-            <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-                <li>
-                   <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1 || showAll}
-                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                currentPage === 1 || showAll ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            }`}
-                        >
-                            <GrPrevious />
-                        </button>
-                </li>
-               {!showAll && Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-                        // Show only a subset of pages (e.g., 5) for better UX
-                        let pageNum;
-                        if (totalPages <= 5) {
-                            pageNum = index + 1;
-                        } else if (currentPage <= 3) {
-                            pageNum = index + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + index;
-                        } else {
-                            pageNum = currentPage - 2 + index;
-                        }
-                        
-                        return (
-                            <li key={index}>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePageChange(pageNum)}
-                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                        currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                                    }`}
-                                >
-                                    {pageNum}
-                                </button>
-                            </li>
-                        );
-                    })}
-                    
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                            disabled={currentPage === totalPages || showAll}
-                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                currentPage === totalPages || showAll ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            }`}
-                        >
-                            <GrNext />
-                        </button>
-                    </li>
-                    
-                    <li>
-                        <button
-                            type="button"
-                            onClick={toggleShowAll}
-                            className={`flex justify-center font-semibold px-4 py-2 rounded-full transition ${
-                                showAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            }`}
-                        >
-                            {showAll ? 'Pages' : 'All'}
-                        </button>
-                    </li>
-            </ul>
-
-         
         </div>
     );
 };

@@ -832,7 +832,7 @@ const calculateTotalSelectedBalance = () => {
                             recordsPerPage={pageSize}
                             page={page}
                             onPageChange={(p) => setPage(p)}
-                            recordsPerPageOptions={[10, 20, 50]}
+                            recordsPerPageOptions={[10, 20, 50,100,200,500]}
                             onRecordsPerPageChange={(newPageSize) => {
                                 setPageSize(newPageSize);
                                 setPage(1);
@@ -842,16 +842,16 @@ const calculateTotalSelectedBalance = () => {
                             striped
                             minHeight={300}
                             columns={cols}
-                            rowClassName={(record) =>
-                                record.approve ? classes.disabledRow : ''
-                            }
-                            records={[
-                                ...(bookings || [])?.map(item => ({ ...item, id: item._id })),
-                                ...(Array.isArray(bookings) && bookings.length > 0
-                                    ? [{ _id: 'total', id: 'total', isTotalRow: true } as Booking]
-                                    : [])
-                            ]}
-                        />
+                           rowClassName={(record) =>
+                    record.approve ? 'bg-gray-100 opacity-60 cursor-not-allowed' : ''
+                }
+                records={[
+                    ...(bookings || [])?.map(item => ({ ...item, id: item._id })),
+                    ...(Array.isArray(bookings) && bookings.length > 0
+                        ? [{ _id: 'total', id: 'total', isTotalRow: true } as any]
+                        : [])
+                ]}
+            />
                     </div>
                 </div>
             </div>

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { NavLink, useLocation } from 'react-router-dom';
 import { toggleSidebar } from '../../store/themeConfigSlice';
-import { VscFeedback } from "react-icons/vsc";
+import { VscChecklist, VscFeedback } from "react-icons/vsc";
 import AnimateHeight from 'react-animate-height';
 import { IRootState } from '../../store';
 import { useState, useEffect } from 'react';
@@ -272,6 +272,15 @@ const Sidebar = () => {
                                     </NavLink>
                                 </li>
                             )}
+                                <li className="nav-item">
+                                    <NavLink to="/todo" className="group">
+                                        <div className="flex items-center">
+                                            <VscChecklist  className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Todo List')}</span>
+                                        </div>
+                                    </NavLink>
+                                </li>
+                      
                             {/* // Showroom */}
                             {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
                                 < li className="nav-item">
