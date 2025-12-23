@@ -119,6 +119,10 @@ partialAmountStaff: { type: Number },
     qrImage: { type: String },
     upiPayment: { type: Boolean, default: false },
     upiTransactionId: { type: String },
+     driverTotalSalary: {
+        type: Number,
+        default: 0
+    },
     upiVerified: { type: Boolean, default: false },
     upiVerifiedAt: { type: Date },
     upiVerifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },

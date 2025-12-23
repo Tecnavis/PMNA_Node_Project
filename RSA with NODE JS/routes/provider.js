@@ -28,5 +28,6 @@ router.delete('/:id', jwt, controller.deleteProvider);
 router.post('/send-otp', controller.loginProvider);
 // OTP verify and login
 router.post('/verify-login',controller.verifyOTP);
+router.post('/complete-settlement/:providerId',  controller.completeProviderSettlement);
 
 module.exports = router;

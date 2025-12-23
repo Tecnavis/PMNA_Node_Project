@@ -1,9 +1,19 @@
+// models/SettlementTransaction.js
+
 const mongoose = require('mongoose');
 
 const settlementTransactionSchema = new mongoose.Schema({
   driver: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Driver',
+    ref: 'Driver'
+  },
+  provider: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Provider'
+  },
+  userType: {
+    type: String,
+    enum: ['driver', 'provider'],
     required: true
   },
   settlementDate: {
@@ -38,6 +48,9 @@ const settlementTransactionSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  remarks: {
+    type: String
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -46,8 +59,11 @@ const settlementTransactionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for better performance
+// Compound indexes for better performance
 settlementTransactionSchema.index({ driver: 1, settlementDate: -1 });
+settlementTransactionSchema.index({ provider: 1, settlementDate: -1 });
+settlementTransactionSchema.index({ userType: 1, settlementDate: -1 });
 settlementTransactionSchema.index({ settlementDate: -1 });
+settlementTransactionSchema.index({ createdBy: 1 });
 
 module.exports = mongoose.model('SettlementTransaction', settlementTransactionSchema);

@@ -2403,20 +2403,32 @@ exports.verifyBooking = async (req, res) => {
     }
 };
 // controllers/booking.controller.js
-exports.getUnverifiedBookingsByDrivers = async (req, res) => {
+exports.getUnverifiedBookingsByUsers = async (req, res) => {
     try {
-        const { driverIds, startDate, endDate } = req.query;
+        const { driverIds, providerIds, startDate, endDate, userType = 'driver' } = req.query;
         
         let query = {
             status: 'Order Completed',
-            verified: { $ne: true }, // Not verified (either false or undefined)
-            driver: { $exists: true, $ne: null }
+            verified: { $ne: true } // Not verified (either false or undefined)
         };
 
-        // If driverIds provided, filter by specific drivers
-        if (driverIds) {
-            const driverIdArray = driverIds.split(',').map(id => new mongoose.Types.ObjectId(id));
-            query.driver = { $in: driverIdArray };
+        // Determine which user type to query
+        if (userType === 'driver') {
+            query.driver = { $exists: true, $ne: null };
+            
+            // If driverIds provided, filter by specific drivers
+            if (driverIds) {
+                const driverIdArray = driverIds.split(',').map(id => new mongoose.Types.ObjectId(id));
+                query.driver = { $in: driverIdArray };
+            }
+        } else if (userType === 'provider') {
+            query.provider = { $exists: true, $ne: null };
+            
+            // If providerIds provided, filter by specific providers
+            if (providerIds) {
+                const providerIdArray = providerIds.split(',').map(id => new mongoose.Types.ObjectId(id));
+                query.provider = { $in: providerIdArray };
+            }
         }
 
         // Date range filter
@@ -2426,57 +2438,103 @@ exports.getUnverifiedBookingsByDrivers = async (req, res) => {
             query.createdAt = { $gte: start, $lte: end };
         }
 
-        // Fetch unverified bookings with driverSalary field
+        // Fetch unverified bookings
         const unverifiedBookings = await Booking.find(query)
             .populate('driver', 'name _id')
-            .select('fileNumber driver createdAt verified driverSalary driverTotalSalary')
+            .populate('provider', 'name companyName _id')
+            .select('fileNumber driver provider createdAt verified driverSalary driverTotalSalary')
             .sort({ createdAt: -1 })
             .lean();
 
-        console.log("unverifiedBookings", unverifiedBookings);
+        console.log(`Found ${unverifiedBookings.length} unverified bookings for ${userType}s`);
 
-        // Group by driver and calculate total salary
-        const groupedByDriver = unverifiedBookings.reduce((acc, booking) => {
-            if (!booking.driver) return acc;
+        // Group by user (driver or provider)
+         const groupedByUser = unverifiedBookings.reduce((acc, booking) => {
+            let userId, user, salaryField;
             
-            const driverId = booking.driver._id.toString();
-            if (!acc[driverId]) {
-                acc[driverId] = {
-                    driver: booking.driver,
+            if (userType === 'driver' && booking.driver) {
+                userId = booking.driver._id.toString();
+                user = {
+                    _id: booking.driver._id,
+                    name: booking.driver.name
+                };
+                // For drivers, use driverSalary or driverTotalSalary
+                salaryField = booking.driverSalary || booking.driverTotalSalary || 0;
+            } else if (userType === 'provider' && booking.provider) {
+                userId = booking.provider._id.toString();
+                user = {
+                    _id: booking.provider._id,
+                    name: booking.provider.name,
+                    companyName: booking.provider.companyName
+                };
+                // For providers, use driverSalary or driverTotalSalary (or add provider-specific fields)
+                salaryField = booking.driverSalary || booking.driverTotalSalary || 0;
+            } else {
+                return acc; // Skip if no user found
+            }
+            
+            if (!acc[userId]) {
+                acc[userId] = {
+                    user: user,
                     bookings: [],
-                    totalDriverSalary: 0,
-                    unverifiedCount: 0
+                    totalSalary: 0, // Make sure this is initialized to 0
+                    unverifiedCount: 0,
+                    userType: userType
                 };
             }
             
             // Add booking details
-            acc[driverId].bookings.push({
+            acc[userId].bookings.push({
                 fileNumber: booking.fileNumber,
                 createdAt: booking.createdAt,
                 verified: booking.verified,
-                driverSalary: booking.driverSalary || booking.driverTotalSalary || 0
+                salary: salaryField,
+                userType: userType
             });
             
-            // Calculate total salary for unverified bookings
-            const bookingSalary = booking.driverSalary || booking.driverTotalSalary || 0;
-            acc[driverId].totalDriverSalary += bookingSalary;
-            acc[driverId].unverifiedCount += 1;
+            // Calculate total salary - ensure salaryField is a number
+            acc[userId].totalSalary += Number(salaryField) || 0;
+            acc[userId].unverifiedCount += 1;
             
             return acc;
         }, {});
 
+        // Debug: Log the grouped data structure
+        console.log(`Grouped data for ${userType}s:`, Object.keys(groupedByUser));
+        if (Object.keys(groupedByUser).length > 0) {
+            const firstUserId = Object.keys(groupedByUser)[0];
+            console.log(`Sample grouped data for ${firstUserId}:`, groupedByUser[firstUserId]);
+            console.log(`Total salary for ${firstUserId}:`, groupedByUser[firstUserId].totalSalary);
+        }
+
         res.status(200).json({
             success: true,
-            data: groupedByDriver
+            data: groupedByUser,
+            userType: userType,
+            totalUnverifiedBookings: unverifiedBookings.length,
+            totalUsers: Object.keys(groupedByUser).length
         });
 
     } catch (error) {
         console.error('Error fetching unverified bookings:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'Error fetching unverified bookings' 
+            message: 'Error fetching unverified bookings',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
+};
+
+// For backward compatibility
+exports.getUnverifiedBookingsByDrivers = async (req, res) => {
+    req.query.userType = 'driver';
+    return exports.getUnverifiedBookingsByUsers(req, res);
+};
+
+// New endpoint for providers
+exports.getUnverifiedBookingsByProviders = async (req, res) => {
+    req.query.userType = 'provider';
+    return exports.getUnverifiedBookingsByUsers(req, res);
 };
 // posting feedback 
 exports.postFeedback = async (req, res) => {
@@ -2617,7 +2675,6 @@ exports.accountVerifying = async (req, res) => {
     }
 }
 
-//Fetch approved bookings
 exports.getApprovedBookings = async (req, res) => {
     try {
         let { search, startDate, endDate, page = 1, limit = 10, showAll = false } = req.query;
@@ -2625,14 +2682,16 @@ exports.getApprovedBookings = async (req, res) => {
         // Convert page and limit to integers
         page = parseInt(page, 10);
         limit = parseInt(limit, 10);
-        // If showAll is true, set limit to a very high number
+        
+        // **FIX 1: Set reasonable limits for showAll**
         if (showAll === 'true') {
-            limit = 1000000; // Or use Number.MAX_SAFE_INTEGER for all records
+            limit = 1000; // Reduced from 1000000 to prevent memory issues
         }
+        
         // Base query for approved bookings
         const query = {
-            status: "Order Completed", // Filter only bookings with this status
-            accountantVerified: true,  // Ensure accountantVerified is true
+            status: "Order Completed",
+            accountantVerified: true,
         };
 
         // Handle search
@@ -2689,28 +2748,51 @@ exports.getApprovedBookings = async (req, res) => {
 
         // Pagination and sorting by createdAt in descending order
         const total = await Booking.countDocuments(query);
-        const bookings = await Booking.find(query)
+       const bookings = await Booking.find(query)
             .populate('baselocation')
             .populate('showroom')
-            .populate('serviceType')
+            .populate({
+                path: 'serviceType',
+                select: 'serviceName additionalAmount expensePerKm firstKilometer firstKilometerAmount',
+                match: { _id: { $exists: true } } // Only populate if serviceType exists
+            })
             .populate('company')
             .populate('driver')
             .populate('provider')
-          .skip(showAll === 'true' ? 0 : (page - 1) * limit)
-            .limit(showAll === 'true' ? Number.MAX_SAFE_INTEGER : limit)
-            .sort({ createdAt: -1 });
+            .skip(showAll === 'true' ? 0 : (page - 1) * limit)
+            .limit(limit) // Use the limited value
+            .sort({ createdAt: -1 })
+            .lean(); // **FIX 3: Use lean() for better performance**
+
+        // **FIX 4: Transform data to ensure serviceType structure**
+        const transformedBookings = bookings.map(booking => {
+            if (!booking.serviceType) {
+                booking.serviceType = {
+                    serviceName: 'N/A',
+                    additionalAmount: 0,
+                    expensePerKm: 0,
+                    firstKilometer: 0,
+                    firstKilometerAmount: 0,
+                    _id: null
+                };
+            }
+            return booking;
+        });
 
         res.status(200).json({
             total,
             page,
-            limit: showAll === 'true' ? total : limit, // Return actual limit used
+            limit: showAll === 'true' ? total : limit,
             totalPages: showAll === 'true' ? 1 : Math.ceil(total / limit),
-            bookings,
+            bookings: transformedBookings, // Use transformed data
             showAll: showAll === 'true'
         });
     } catch (error) {
         console.error('Error fetching approved bookings:', error);
-        res.status(500).json({ message: 'Server error while fetching approved bookings' });
+        res.status(500).json({ 
+            message: 'Server error while fetching approved bookings',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 // -------------------

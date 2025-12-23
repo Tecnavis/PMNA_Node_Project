@@ -581,18 +581,21 @@ if (approvedExpenses.length > 0) {
                 driver: updatedDriver
             }
         });
- // After settlement is completed, create transaction record
+ // In your driver controller - update the settlement function
+
+// After settlement is completed, create transaction record
 const settlementTransactionData = {
-  driver: driverId, // Change from driverId to driver
+  driver: driverId,
+  userType: 'driver',
   settlementDate: currentSettlementDate,
   totalSalary: totalTransferableSalary,
   cashInHand: driver.cashInHand,
   balanceAmount: driver.balanceAmount,
   advance: driver.advance,
   cashCollection: driver.cashInHand,
-  pendingExpenses: pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0), // Added safety check
+  pendingExpenses: pendingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0),
   settlementAmount: totalTransferableSalary - advanceDeduction,
-  createdBy: req.user?._id // Add createdBy field
+  createdBy: req.user?._id
 };
 
 console.log('Creating settlement transaction with data:', settlementTransactionData);

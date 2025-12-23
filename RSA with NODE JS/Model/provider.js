@@ -36,8 +36,15 @@ const providerSchema = new mongoose.Schema({
   },
   cashInHand: {
     type: Number,
+    default: 0
   },
   driverSalary: {
+    type: Number,
+  },
+   totalAdvance: {
+    type: Number,
+  },
+   totalSalary: {
     type: Number,
   },
   serviceDetails: [
@@ -102,10 +109,18 @@ const providerSchema = new mongoose.Schema({
   lastSettlementAmount: {
     type: Number
   },
+   lastVehicleNumber: String,
+  lastServiceType: String,
+  lastBookingStatus: String,
   pendingExpensesCount: {
     type: Number,
     default: 0
   },
+   totalTransferedAmount: {
+    type: Number,
+    default: 0
+  },
+  
   totalPendingAmount: {
     type: Number,
     default: 0
