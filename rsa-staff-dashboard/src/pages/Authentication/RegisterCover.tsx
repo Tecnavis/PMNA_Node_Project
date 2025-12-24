@@ -128,11 +128,14 @@ const RegisterCover = () => {
 
         if (!validateForm()) return;
 
-        try {
-            const res = await axiosInstance.post(`${BASE_URL}showroom/staff-signup`, {
-                ...formData,
-                showroomId: showRoomDetails.id
-            });
+       try {
+    const url = `${BASE_URL}showroom/staff-signup`;
+    console.log('Attempting to POST to:', url); // Debug line
+    
+    const res = await axiosInstance.post(url, {
+      ...formData,
+      showroomId: showRoomDetails.id
+    });
 
             Swal.fire({
                 icon: 'success',
