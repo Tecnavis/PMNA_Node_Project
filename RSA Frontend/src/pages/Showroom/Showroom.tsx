@@ -380,7 +380,8 @@ const showroomUrl = import.meta.env.VITE_SHOWROOM_URL || 'https://showroom.rsake
                                                     <button
                                                         onClick={() => {
                                                             setModalOpen(true)
-setUrl(`${showroomUrl}/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)                                                        }}
+                                                            setUrl(`https://api.rsakerala.com/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
+                                                        }}
                                                         style={{
                                                             backgroundColor: '#007bff',
                                                             color: '#fff',
