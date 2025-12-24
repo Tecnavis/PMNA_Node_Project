@@ -123,51 +123,60 @@ const RegisterCover = () => {
         });
     };
 
-    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
-        if (!validateForm()) return;
+    try {
+        const url = `${BASE_URL}/showroom/staff-signup`; // Add leading slash
+        console.log('Attempting to POST to:', url);
+        
+        const res = await axiosInstance.post(url, {
+            ...formData,
+            showroomId: showRoomDetails.id
+        });
 
-       try {
-    const url = `${BASE_URL}showroom/staff-signup`;
-    console.log('Attempting to POST to:', url); // Debug line
-    
-    const res = await axiosInstance.post(url, {
-      ...formData,
-      showroomId: showRoomDetails.id
-    });
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Registration successful. Please login.',
-                toast: true,
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
-            setIsSignIn(!isSignIn)
-        } catch (error: any) {
-            if (error?.response?.data?.message) {
-                setSignupErrors((prevErrors) => ({
-                    ...prevErrors,
-                    phone: error.response.data.message.includes("User with this phone number already exists.")
-                        ? "User with this phone number already exists."
-                        : prevErrors.phone,
-                }));
-            }
-
-            Swal.fire({
-                icon: 'error',
-                title: 'An error occurred during sign-up.',
-                toast: true,
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
+        Swal.fire({
+            icon: 'success',
+            title: 'Registration successful. Please login.',
+            toast: true,
+            position: 'top',
+            showConfirmButton: false,
+            timer: 3000,
+            padding: '10px 20px',
+        });
+        setIsSignIn(!isSignIn);
+    } catch (error: any) {
+        console.error('Signup error:', error);
+        
+        // Handle specific error cases
+        if (error.response?.status === 401) {
+            // Redirect to login page
+            navigate('/auth/cover-register');
+            return;
         }
+        
+        if (error?.response?.data?.message) {
+            setSignupErrors((prevErrors) => ({
+                ...prevErrors,
+                phone: error.response.data.message.includes("User with this phone number already exists.")
+                    ? "User with this phone number already exists."
+                    : prevErrors.phone,
+            }));
+        }
+
+        Swal.fire({
+            icon: 'error',
+            title: 'An error occurred during sign-up.',
+            text: error.message || 'Please try again later.',
+            toast: true,
+            position: 'top',
+            showConfirmButton: false,
+            timer: 3000,
+            padding: '10px 20px',
+        });
     }
+}
 
     const handleSignInSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
