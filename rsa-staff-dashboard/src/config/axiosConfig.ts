@@ -1,5 +1,5 @@
+// Fixed axiosConfig.js
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 export const BASE_URL: string = import.meta.env.VITE_BACKEND_URL;
 export const IMAGE_URL: string = import.meta.env.VITE_CLOUD_IMAGE;
@@ -7,6 +7,7 @@ export const IMAGE_URL: string = import.meta.env.VITE_CLOUD_IMAGE;
 // Create an Axios instance
 export const axiosInstance: AxiosInstance = axios.create({
     baseURL: BASE_URL,
+    timeout: 10000, // Add timeout for better error handling
 });
 
 // Axios Request Interceptor for Adding Authorization Token
@@ -28,8 +29,15 @@ axiosInstance.interceptors.response.use(
     (response: AxiosResponse) => response,
     (error: AxiosError) => {
         if (error.response?.status === 401) {
-            const navigate = useNavigate();
-            navigate('/auth/cover-register'); // Redirect to login if unauthorized
+            // Clear local storage on 401
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            localStorage.removeItem('showroomIcon');
+            localStorage.removeItem('showroomId');
+            localStorage.removeItem('name');
+            
+            // Don't redirect here - let the component handle it
+            console.error('Unauthorized access - please login again');
         }
         return Promise.reject(error);
     }
