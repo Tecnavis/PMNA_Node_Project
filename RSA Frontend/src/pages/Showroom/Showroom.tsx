@@ -78,6 +78,7 @@ const Showroom: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showAllMode, setShowAllMode] = useState(false);
     const navigate = useNavigate();
+const showroomUrl = import.meta.env.VITE_SHOWROOM_URL || 'https://showroom.rsakerala.com';
 
     // checking the token
     const gettingToken = () => {
@@ -379,8 +380,7 @@ const Showroom: React.FC = () => {
                                                     <button
                                                         onClick={() => {
                                                             setModalOpen(true)
-                                                            setUrl(`https://rsa-staff-ilqh.onrender.com/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
-                                                        }}
+setUrl(`${showroomUrl}/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)                                                        }}
                                                         style={{
                                                             backgroundColor: '#007bff',
                                                             color: '#fff',
