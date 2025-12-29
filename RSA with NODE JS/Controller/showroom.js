@@ -604,28 +604,55 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
 // verify otp and login 
 exports.staffLogin = async (req, res) => {
   try {
-    const { phoneNumber, showroom } = req.body;
+    // Accept both 'phone' and 'phoneNumber' for flexibility
+    const { phoneNumber, phone, showroom } = req.body;
+    
+    // Use phone if phoneNumber is not provided
+    const staffPhoneNumber = phoneNumber || phone;
+
+    if (!staffPhoneNumber) {
+      return res.status(400).json({ 
+        message: "Phone number is required", 
+        success: false 
+      });
+    }
 
     const showroomId = new mongoose.Types.ObjectId(showroom)
 
-    // Check if staff exists
-    const showroomStaff = await ShowroomStaff.findOne({ phoneNumber });
+    // Check if staff exists using the phone number
+    const showroomStaff = await ShowroomStaff.findOne({ 
+      phoneNumber: staffPhoneNumber 
+    });
+    
     if (!showroomStaff) {
-      return res.status(400).json({ message: "Invalid credentials", success: false });
+      return res.status(400).json({ 
+        message: "Invalid credentials", 
+        success: false 
+      });
     }
 
     if (!showroom) {
-      return res.status(400).json({ message: "Showroom details is required", success: false });
+      return res.status(400).json({ 
+        message: "Showroom details is required", 
+        success: false 
+      });
     }
 
     const IsShowroomExist = await Showroom.findById(showroomId);
 
     if (!IsShowroomExist) {
-      return res.status(404).json({ message: "Showroom not found", success: false });
+      return res.status(404).json({ 
+        message: "Showroom not found", 
+        success: false 
+      });
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: showroomStaff._id, role: "ShowroomStaff", name: `${showroomStaff.name}` }, process.env.JWT_SECRET);
+    const token = jwt.sign({ 
+      id: showroomStaff._id, 
+      role: "ShowroomStaff", 
+      name: `${showroomStaff.name}` 
+    }, process.env.JWT_SECRET);
 
     // Include role and name in the response
     res.status(200).json({
@@ -637,7 +664,10 @@ exports.staffLogin = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ message: "Server error", success: false });
+    res.status(500).json({ 
+      message: "Server error", 
+      success: false 
+    });
   }
 };
 
