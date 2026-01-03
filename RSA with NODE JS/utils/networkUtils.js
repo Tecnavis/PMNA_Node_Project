@@ -85,7 +85,7 @@ exports.checkDbConnection = async () => {
   try {
     const conn = mongoose.connection;
     if (conn.readyState !== 1) {
-      await mongoose.connect(process.env.MONGODB_URI, {
+      await mongoose.connect(process.env.MONGO_URI, {
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000
       });

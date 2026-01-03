@@ -48,7 +48,7 @@ function Rewards() {
   const navigate = useNavigate()
 
   const fetchDrivers = async () => {
-    const response = await axiosInstance.get(`${BASE_URL}/driver`)
+    const response = await axiosInstance.get(`${BASE_URL}/driver/driverBooking`)
     setDriverRewards(response.data.map((driver: Driver) => {
       return {
         _id: driver._id,

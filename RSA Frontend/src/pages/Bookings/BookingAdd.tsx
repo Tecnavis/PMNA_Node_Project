@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect, ChangeEvent, Fragment, useRef } from 'react';
+import React, { useState, useEffect, ChangeEvent, Fragment, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
@@ -160,6 +160,21 @@ type ShowroomOptions = {
     insurenceAmount: number,
     name: string
 }
+const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 const BookingAdd: React.FC = () => {
 
@@ -235,6 +250,8 @@ const BookingAdd: React.FC = () => {
     const [pickupLat, pickupLng] = latitudeAndLongitude.split(',');
     const [baseLat, baseLng] = selectedBaseLocation?.latitudeAndLongitude ? selectedBaseLocation?.latitudeAndLongitude.split(',') : [null, null];
     const [showroomLat, showroomLng] = selectedShowroom?.latitudeAndLongitude ? selectedShowroom?.latitudeAndLongitude.split(',') : [null, null];
+      const debouncedServiceType = useDebounce(selectedServiceType, 300);
+
     const uid = id.id;
     const [showMap, setShowMap] = useState<boolean>(false);
     const workTypeRef = useRef<HTMLInputElement>(null);
@@ -256,7 +273,16 @@ const BookingAdd: React.FC = () => {
     const locationRef = useRef<HTMLInputElement>(null);
     const latitudeAndLongitudeRef = useRef<HTMLInputElement>(null);
     const baselocationRef = useRef<any>(null);
-    const selectedShowroomRef = useRef<any>(null);// Your existing parseLatLng function (keep this)
+    const selectedShowroomRef = useRef<any>(null);
+//    ------------------------------------------------------------- // 
+// Add provider optimization states
+const [allProviders, setAllProviders] = useState<Provider[]>([]);
+const [providerCache, setProviderCache] = useState<Record<string, Provider[]>>({});
+
+  // Add this at the top of your component
+const [allDrivers, setAllDrivers] = useState<Driver[]>([]);
+const [driverCache, setDriverCache] = useState<Record<string, Driver[]>>({});
+
 // Your existing parseLatLng function
 const parseLatLng = (latLngString: string): { lat: number; lng: number } | null => {
   if (!latLngString) return null;
@@ -288,7 +314,80 @@ const parseLatLng = (latLngString: string): { lat: number; lng: number } | null 
             console.error('Token not found in localStorage');
         }
     }, []);
+ // Fetch all drivers once
+    useEffect(() => {
+        const fetchAllDrivers = async () => {
+            try {
+                const response = await axios.get(`${backendUrl}/driver/driverBooking`);
+                setAllDrivers(response.data);
+            } catch (error) {
+                console.error('Error fetching drivers:', error);
+            }
+        };
+        fetchAllDrivers();
+    }, []);
 
+     // Trigger driver fetching on debounced service type
+   // Add abort controller for distance calculations
+useEffect(() => {
+  const abortController = new AbortController();
+  
+  if (debouncedServiceType?._id && totalDistance && pickupLat && pickupLng) {
+    fetchDriversByServiceType(debouncedServiceType._id);
+  }
+  
+  return () => abortController.abort();
+}, [debouncedServiceType, totalDistance, pickupLat, pickupLng]);
+
+  // Fetch all providers once on component mount
+useEffect(() => {
+  const fetchAllProviders = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/provider/providerBooking`);
+      setAllProviders(response.data);
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+    }
+  };
+  fetchAllProviders();
+}, []);
+
+// Optimized fetch with server-side filtering
+const fetchProvidersByServiceType = useCallback(async (serviceTypeId: string) => {
+  if (!serviceTypeId) return;
+
+  // Check cache first
+  if (providerCache[serviceTypeId]) {
+    setProviders(providerCache[serviceTypeId]);
+    return;
+  }
+
+  try {
+    // Use server-side filtering
+    const response = await axios.get(`${backendUrl}/provider/providerBooking`, {
+      params: { serviceTypeId }
+    });
+    
+    // Cache the result
+    setProviderCache(prev => ({ ...prev, [serviceTypeId]: response.data }));
+    setProviders(response.data);
+  } catch (error) {
+    console.error('Error fetching providers by service type:', error);
+    // Fallback to client-side filtering
+    fallbackFilterProviders(serviceTypeId);
+  }
+}, [providerCache]);
+
+// Fallback client-side filtering
+const fallbackFilterProviders = useCallback((serviceTypeId: string) => {
+  if (!allProviders.length) return;
+
+  const filteredProviders = allProviders.filter((provider: any) => 
+    provider.serviceDetails.some((center: any) => center.serviceType?._id === serviceTypeId)
+  );
+  
+  setProviders(filteredProviders);
+}, [allProviders]);
     // Fetching companies
     const fetchCompanies = async () => {
         try {
@@ -458,7 +557,7 @@ const parseLatLng = (latLngString: string): { lat: number; lng: number } | null 
         }
     };
 
-    // handling the servicetype
+    // Handle service type change
     const handleServiceTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const serviceTypeId = e.target.value;
         const selectedService = serviceTypes.find((item) => item?._id === serviceTypeId);
@@ -467,65 +566,111 @@ const parseLatLng = (latLngString: string): { lat: number; lng: number } | null 
         if (selectedService) {
             setSelectedServiceType(selectedService);
             // fetchAndFilterDrivers(serviceTypeId);
-            fetchAndFilterProviders(serviceTypeId);
+    fetchProvidersByServiceType(serviceTypeId);
         }
     };
 
     useEffect(() => {
-        fetchServiceTypes()
-    }, [totalDistance])
+        fetchServiceTypes();
+    }, [totalDistance]);
 
-    // Fetch drivers and apply filter
-    const fetchAndFilterDrivers = async (serviceTypeId: any) => {
-        if (!totalDistance) {
-            return
+    // Optimized fetch with server-side filtering
+    const fetchDriversByServiceType = useCallback(async (serviceTypeId: string) => {
+        if (!totalDistance || !serviceTypeId || !pickupLat || !pickupLng) {
+            return;
         }
-        setDriverLoader(true)
+
+        // Check cache first
+        if (driverCache[serviceTypeId]) {
+            setDrivers(driverCache[serviceTypeId]);
+            return;
+        }
+
+        setDriverLoader(true);
         try {
-            const response = await axios.get(`${backendUrl}/driver`);
-            const allDrivers = response.data;
-
-            const filteredDrivers = allDrivers.filter((driver: any) => driver.vehicle.some((vehicle: any) => vehicle.serviceType?._id === serviceTypeId?._id));
-
-            // calculate distance for each filtered driver
+            // IMPORTANT: You need to update your backend endpoint to accept serviceTypeId parameter
+            const response = await axios.get(`${backendUrl}/driver/driverBooking`, {
+                params: { serviceTypeId }
+            });
+            
+            // Only calculate distances for returned drivers
             const driversWithDistance = await Promise.all(
-                filteredDrivers.map(async (driver: any) => {
+                response.data.map(async (driver: any) => {
                     if (driver?.currentLocation) {
-                        const latLng = driver.currentLocation.split(",");
-                        const distance = await getDistance(
-                            latLng[0],
-                            latLng[1],
-                            { lat: pickupLat, lng: pickupLng }
-                        );
-                        return { ...driver, distance }; // add distance field to driver
+                        try {
+                            const latLng = driver.currentLocation.split(",");
+                            const distance = await getDistance(latLng[0], latLng[1], { lat: pickupLat, lng: pickupLng });
+                            return { ...driver, distance };
+                        } catch (error) {
+                            console.error('Error calculating distance:', error);
+                            return { ...driver, distance: "Distance not available" };
+                        }
                     }
                     return { ...driver, distance: "Distance not available" };
                 })
             );
 
-            // Sort based on distance (lowest first)
             const sortedDrivers = driversWithDistance.sort((a: any, b: any) => {
                 const distanceA = parseFloat(a.distance);
                 const distanceB = parseFloat(b.distance);
-                if (isNaN(distanceA)) return 1; // if distance not available, send to bottom
+                if (isNaN(distanceA)) return 1;
                 if (isNaN(distanceB)) return -1;
-                return distanceA - distanceB; // ascending order
+                return distanceA - distanceB;
             });
 
+            // Cache the result
+            setDriverCache(prev => ({ ...prev, [serviceTypeId]: sortedDrivers }));
             setDrivers(sortedDrivers);
         } catch (error) {
-            console.error('Error fetching drivers:', error);
+            console.error('Error fetching drivers by service type:', error);
+            // Fallback to client-side filtering if server-side fails
+            fallbackFilterDrivers(serviceTypeId);
         } finally {
-            setDriverLoader(false)
+            setDriverLoader(false);
         }
-    };
+    }, [totalDistance, pickupLat, pickupLng, driverCache]);
 
+    // Fallback function if server-side filtering fails
+    const fallbackFilterDrivers = useCallback(async (serviceTypeId: string) => {
+        if (!allDrivers.length || !pickupLat || !pickupLng) return;
+
+        const filteredDrivers = allDrivers.filter((driver: any) => 
+            driver.vehicle.some((vehicle: any) => vehicle.serviceType?._id === serviceTypeId)
+        );
+
+        const driversWithDistance = await Promise.all(
+            filteredDrivers.map(async (driver: any) => {
+                if (driver?.currentLocation) {
+                    try {
+                        const latLng = driver.currentLocation.split(",");
+                        const distance = await getDistance(latLng[0], latLng[1], { lat: pickupLat, lng: pickupLng });
+                        return { ...driver, distance };
+                    } catch (error) {
+                        return { ...driver, distance: "Distance not available" };
+                    }
+                }
+                return { ...driver, distance: "Distance not available" };
+            })
+        );
+
+        const sortedDrivers = driversWithDistance.sort((a: any, b: any) => {
+            const distanceA = parseFloat(a.distance);
+            const distanceB = parseFloat(b.distance);
+            if (isNaN(distanceA)) return 1;
+            if (isNaN(distanceB)) return -1;
+            return distanceA - distanceB;
+        });
+
+        setDrivers(sortedDrivers);
+    }, [allDrivers, pickupLat, pickupLng]);
     // Fetch providers and apply filter
-    const fetchAndFilterProviders = async (serviceTypeId: any) => {
+    const fetchAndFilterProviders = async (serviceTypeId: string) => {
         try {
-            const response = await axios.get(`${backendUrl}/provider`);
+            const response = await axios.get(`${backendUrl}/provider/providerBooking`);
             const allProviders = response.data;
-            const filteredProviders = allProviders.filter((provider: any) => provider.serviceDetails.some((center: any) => center.serviceType?._id === serviceTypeId?._id));
+            const filteredProviders = allProviders.filter((provider: any) => 
+                provider.serviceDetails.some((center: any) => center.serviceType?._id === serviceTypeId)
+            );
             setProviders(filteredProviders);
         } catch (error) {
             console.error('Error fetching providers:', error);
@@ -535,6 +680,14 @@ const parseLatLng = (latLngString: string): { lat: number; lng: number } | null 
     // opening modal for selecting driver and provider
     const openDriverModal = async () => {
         setModal6(true);
+         // Fetch providers if service type is selected and not already cached
+    if (selectedServiceType?._id && !providerCache[selectedServiceType._id]) {
+        try {
+            await fetchProvidersByServiceType(selectedServiceType._id);
+        } catch (error) {
+            console.error('Error fetching providers for modal:', error);
+        }
+    }
         // calulating the payable and expence amount (payment work)
         if (!selectedCompany) {
 
@@ -1005,7 +1158,13 @@ const formatDateForInput = (dateString: string): string => {
                 setTrappedLocation(data.trapedLocation || '');
                 setUpdatedAmout(data.updatedAmount || '');
                 setSelectedServiceType(data.serviceType || '');
-
+// If service type exists, fetch providers for it
+            if (data.serviceType?._id) {
+                // Use setTimeout to ensure state is set before fetching
+                setTimeout(() => {
+                    fetchProvidersByServiceType(data.serviceType._id);
+                }, 100);
+            }
                 if (data.driver) {
                     setSelectedEntity({ id: data.driver?._id, payableAmount: data.payableAmountForDriver, name: data.driver?.name });
                 } else if (data.provider) {
@@ -1319,28 +1478,21 @@ const formatTimeAMPM = (dateString: string): string => {
         setRewardAmount(usablePoints);
     };
 
-    // ref to scrolling 
     useEffect(() => {
-        fetchCompanies();
-        fetchBaselocation();
-        fetchShowroom();
-        fetchServiceTypes();
+    fetchCompanies();
+    fetchBaselocation();
+    fetchShowroom();
+    fetchServiceTypes();
+}, []); // Empty dependency array - run once on mount
 
-        if (selectedServiceType) {
-            fetchAndFilterDrivers(selectedServiceType);
-            fetchAndFilterProviders(selectedServiceType);
-        }
-    }, [selectedServiceType]); // Add selectedServiceType to dependencies
-
-    useEffect(() => {
-        if (adjustmentValue) {
-            setShowBtn(true)
-        }
-    }, [adjustmentValue])
-
-    useEffect(() => {
-        fetchAndFilterDrivers(selectedServiceType);
-    }, [latitudeAndLongitude])
+// Handle adjustment value changes
+useEffect(() => {
+    if (adjustmentValue !== null && adjustmentValue !== undefined && adjustmentValue !== totalAmount) {
+        setShowBtn(true);
+    } else {
+        setShowBtn(false);
+    }
+}, [adjustmentValue, totalAmount]);
 
     return (
         <div>
@@ -2242,7 +2394,14 @@ const formatTimeAMPM = (dateString: string): string => {
                                                                 {/* <td>Location</td> */}
                                                                 <td style={{ color: 'green' }}>{PayableAmount}</td>
                                                                 <td style={{ color: 'blue' }}>{afterExpence}</td>
-                                                                <td style={{ color: 'blue' }}>{data?.isLeave ? "Leave" : "Available"}</td> {/*Leave Status*/}
+<td
+  style={{
+    color: data?.isLeave ? "red" : "green",
+    fontWeight: "600",
+  }}
+>
+  {data?.isLeave ? "Leave" : "Available"}
+</td>
                                                                 <td style={{ color: 'blue' }}>{data?.status}</td> {/*Current Status*/}
                                                                 <td className="text-center">
                                                                     <button className="btn btn-success" onClick={() => handleSelect(data)}>
