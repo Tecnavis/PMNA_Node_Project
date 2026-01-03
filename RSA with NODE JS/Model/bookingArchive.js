@@ -1,10 +1,20 @@
 const mongoose = require('mongoose');
-const visibleFilter = require('../plugins/visibleFilter');
-const ReceivedHistorySchema = require('./receivedHistory');
+// Option 2: Define it inline (simpler for archive)
+const ReceivedHistorySchema = new mongoose.Schema({
 
-const bookingSchema = new mongoose.Schema({
+    receivedUser: { type: String },
+    receivedAmount: { type: Number },
+    receivedAt: { type: Date, default: Date.now },
+    receivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
+    paymentMethod: { type: String },
+    transactionId: { type: String },
+    remarks: { type: String }
+}, { _id: false }); // No _id for subdocuments
+
+const bookingArchiveSchema = new mongoose.Schema({
+    // Same as your bookingSchema but without indexes
     workType: { type: String },
-    fileNumber: { type: String, unique: true },
+    fileNumber: { type: String },
     location: { type: String },
     latitudeAndLongitude: { type: String },
     baselocation: { type: mongoose.Schema.Types.ObjectId, ref: 'BaseLocation' },
@@ -33,10 +43,10 @@ const bookingSchema = new mongoose.Schema({
     totalAmount: { type: Number },
     receivedAmount: { type: Number, default: 0 },
     receivedAmountStaff: { type: Number, default: 0 },
-        receivedAmountDriver: { type: Number, default: 0 },
-        receivedAmountShowroom: { type: Number, default: 0 },
-        totalAmountShowroom: { type: Number, default: 0 },
-multipleReceivedUser:{ type: Boolean },
+    receivedAmountDriver: { type: Number, default: 0 },
+    receivedAmountShowroom: { type: Number, default: 0 },
+    totalAmountShowroom: { type: Number, default: 0 },
+    multipleReceivedUser: { type: Boolean },
     givenAmountByStaff: { type: Number, default: 0 },
     receivedAmountByCompany: { type: Number, default: 0 },
     showroomAmount: { type: Number, default: 0 },
@@ -52,7 +62,7 @@ multipleReceivedUser:{ type: Boolean },
         type: String,
         enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff']
     },
-     showroomApprove:{type:Boolean},
+    showroomApprove: { type: Boolean },
     bookedBy: { type: String },
     pickupDate: { type: Date },
     pickupTime: { type: Date },
@@ -76,17 +86,15 @@ multipleReceivedUser:{ type: Boolean },
     ],
     verified: { type: Boolean },
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
-verifiedAt: Date,
+    verifiedAt: Date,
     feedbackCheck: { type: Boolean },
     accountantVerified: { type: Boolean },
     cashPending: { type: Boolean },
     approve: { type: Boolean, default: false },
     receivedUser: { type: String },
-        previousReceivedUser: { type: String },
-
+    previousReceivedUser: { type: String },
     receivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
-        previousReceivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
-
+    previousReceivedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
     dummyDriverName: { type: String },
     dummyProviderName: { type: String },
     bookingStatus: { type: String },
@@ -98,52 +106,36 @@ verifiedAt: Date,
     partialPayment: { type: Boolean },
     partialAmount: { type: Number },
     partialReceivedAmountStaff: { type: Boolean },
-partialAmountStaff: { type: Number },
+    partialAmountStaff: { type: Number },
     partialPaymentRemark: { type: String },
     cancelKm: { type: Number },
     invoiceNumber: { type: String },
     pickupDistence: { type: String },
     invoiceStatus: { type: Boolean },
-    cancelImage: {
-        type: String,
-    },
-    inventoryImage: {
-        type: String,
-    },
+    cancelImage: { type: String },
+    inventoryImage: { type: String },
     inventoryImagePending: { type: Boolean },
     notes: { type: mongoose.Schema.Types.ObjectId, ref: 'Notes' },
     rewardAmount: { type: Number },
     discountAmount: { type: Number },
     serviceDue: { type: Boolean },
-    receivedHistory: [ReceivedHistorySchema],
+    receivedHistory: [ReceivedHistorySchema], // Use the defined schema
     qrImage: { type: String },
     upiPayment: { type: Boolean, default: false },
     upiTransactionId: { type: String },
-     driverTotalSalary: {
-        type: Number,
-        
-        default: 0
-    },
-    archived: { 
-        type: Boolean, 
-        default: false,
-        index: true // Add index for faster queries
-    },
-    archivedAt: { 
-        type: Date 
-    },
-    
+    driverTotalSalary: { type: Number, default: 0 },
     upiVerified: { type: Boolean, default: false },
     upiVerifiedAt: { type: Date },
     upiVerifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
-    
-}, { timestamps: true });
-// ADD THESE INDEXES FOR BETTER PERFORMANCE
-bookingSchema.index({ createdAt: -1 });
-bookingSchema.index({ status: 1, createdAt: -1 });
-bookingSchema.index({ archived: 1, createdAt: -1 }); // For archiving
-bookingSchema.index({ archived: 1, status: 1 }); // For filtering
+    originalId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    archiveDate: { type: Date, default: Date.now },
+    createdAt: { type: Date },
+    updatedAt: { type: Date }
+}, { 
+    timestamps: false, // We already have createdAt/updatedAt
+    collection: 'booking_archive' // Separate collection
+});
 
-bookingSchema.plugin(visibleFilter);
-
-module.exports = mongoose.model('Booking', bookingSchema);
+// No indexes for better performance in archive
+const BookingArchive = mongoose.model('BookingArchive', bookingArchiveSchema);
+module.exports = BookingArchive;

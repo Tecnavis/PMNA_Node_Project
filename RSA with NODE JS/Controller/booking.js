@@ -426,7 +426,7 @@ const checkVehicleServiceStatus = async (booking) => {
 // Controller to get Order completed booking  by search query
 exports.getOrderCompletedBookings = async (req, res) => {
     try {
-        let { search, startDate, endDate, page = 1, limit = 10, all = false, tab } = req.query;
+        let { search, startDate, endDate, page = 1, limit = 10, all = false, tab, includeArchived = false} = req.query;
 
         // Convert page and limit based on 'all' flag
         page = all ? 1 : parseInt(page, 10);
@@ -436,6 +436,10 @@ exports.getOrderCompletedBookings = async (req, res) => {
             status: "Order Completed", // Filter only bookings with this status
             accountantVerified: { $ne: true } // Exclude bookings where accountantVerified is true
         };
+         // ADD THIS: Exclude archived by default
+        if (!includeArchived || includeArchived === 'false') {
+            query.archived = { $ne: true };
+        }
         // Add tab-specific filters
         if (tab === 'feedback') {
             query.verified = true;
@@ -556,7 +560,9 @@ exports.getAllBookings = async (req, res) => {
             staffId,
             all = false,
             hasPickupDate, // Add this parameter to filter by pickupDate
-            scheduledToday
+            scheduledToday,
+                        includeArchived = false // ADD THIS PARAMETER
+
         } = req.query;
 
         // Convert page and limit to integers
@@ -564,6 +570,10 @@ exports.getAllBookings = async (req, res) => {
         limit = all ? Number.MAX_SAFE_INTEGER : parseInt(limit, 10);
         
         const query = {};
+         // ADD THIS: Exclude archived bookings by default
+        if (!includeArchived || includeArchived === 'false') {
+            query.archived = { $ne: true };
+        }
         query._includeHidden = true;
         // CRITICAL: Check and update bookings where pickupDate has been reached
         await updateScheduledBookings();

@@ -69,7 +69,7 @@ const Driver: React.FC = () => {
 
     const fetchDrivers = async () => {
         try {
-            const response = await axios.get(`${backendUrl}/driver`);
+            const response = await axios.get(`${backendUrl}/driver/driverBooking`);
             setDrivers(response.data);
         } catch (error) {
             console.error('Error fetching driver:', error);

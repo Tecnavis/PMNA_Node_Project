@@ -57,7 +57,16 @@ exports.createDriver = async (req, res) => {
 
 exports.getDrivers = async (req, res) => {
   try {
-    const drivers = await Driver.find().populate('vehicle.serviceType').lean();
+    const { serviceTypeId } = req.query;
+    
+    let query = {};
+    if (serviceTypeId) {
+      query = {
+        'vehicle.serviceType': serviceTypeId
+      };
+    }
+
+    const drivers = await Driver.find(query).populate('vehicle.serviceType').lean();
     const driverIds = drivers.map(driver => driver._id);
 
     await Promise.all(
@@ -173,7 +182,131 @@ exports.getDrivers = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+exports.getDriversBooking = async (req, res) => {
+  try {
+    const { serviceTypeId } = req.query;
+    
+    let query = {};
+    if (serviceTypeId) {
+      query = {
+        'vehicle.serviceType': serviceTypeId
+      };
+    }
 
+    const drivers = await Driver.find(query).populate('vehicle.serviceType').lean();
+    const driverIds = drivers.map(driver => driver._id);
+
+    await Promise.all(
+      driverIds.map(driverId => updateScheduledBookingsForDriver(driverId))
+    );
+
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+    // Fetch leaves for today
+    const leaves = await Leaves.find({
+      driver: { $in: driverIds },
+      leaveDate: { $gte: startOfDay, $lt: endOfDay }
+    }).lean();
+
+    // Fetch the last booking data with service name only
+    const lastBookings = await Booking.aggregate([
+      { $match: { driver: { $in: driverIds } } },
+      { $sort: { updatedAt: -1 } },
+      {
+        $group: {
+          _id: "$driver",
+          status: { $first: "$status" },
+          vehicleNumber: { $first: "$vehicleNumber" },
+          serviceType: { $first: "$serviceType" }
+        }
+      },
+      {
+        $lookup: {
+          from: "servicetypes",
+          localField: "serviceType",
+          foreignField: "_id",
+          as: "serviceTypeDetails",
+          pipeline: [
+            {
+              $project: {
+                serviceName: 1 // Only fetch serviceName field
+              }
+            }
+          ]
+        }
+      },
+      {
+        $unwind: {
+          path: "$serviceTypeDetails",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          serviceTypeName: "$serviceTypeDetails.serviceName"
+        }
+      }
+    ]);
+
+    // Convert to lookup maps for fast access
+    const leaveSet = new Set(leaves.map(leave => leave.driver.toString()));
+    const bookingMap = new Map();
+    
+    lastBookings.forEach(booking => {
+      bookingMap.set(booking._id.toString(), {
+        status: booking.status,
+        vehicleNumber: booking.vehicleNumber,
+        serviceTypeName: booking.serviceTypeName || null
+      });
+    });
+
+   // ✅ Better approach: Bulk update
+const bulkOps = drivers
+  .filter(driver => {
+    const bookingInfo = bookingMap.get(driver._id.toString());
+    return bookingInfo;
+  })
+  .map(driver => {
+    const bookingInfo = bookingMap.get(driver._id.toString());
+    return {
+      updateOne: {
+        filter: { _id: driver._id },
+        update: {
+          $set: {
+            lastBookingStatus: bookingInfo.status,
+            lastVehicleNumber: bookingInfo.vehicleNumber,
+            lastServiceType: bookingInfo.serviceTypeName
+          }
+        }
+      }
+    };
+  });
+
+if (bulkOps.length > 0) {
+  await Driver.bulkWrite(bulkOps);
+}
+    // Merge data into driver objects for response
+    const updatedDrivers = drivers.map(driver => {
+      const bookingInfo = bookingMap.get(driver._id.toString());
+      return {
+        ...driver,
+        isLeave: leaveSet.has(driver._id.toString()),
+        status: bookingInfo?.status || "Unknown",
+        lastVehicleNumber: bookingInfo?.vehicleNumber || null,
+        lastServiceType: bookingInfo?.serviceTypeName || null,
+                lastBookingStatus: bookingInfo?.status || null
+
+      };
+    });
+
+    res.json(updatedDrivers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
 exports.filtergetDrivers = async (req, res) => {
   try {

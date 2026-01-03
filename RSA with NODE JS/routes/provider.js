@@ -9,6 +9,7 @@ router.post('/', jwt, upload.single('image'), controller.createProvider);
 
 // Get all providers
 router.get('/', controller.getAllProviders);
+router.get('/providerBooking', controller.getAllProvidersBooking);
 
 // Get providre by filter 
 router.get('/filtered', jwt, controller.filtergetProviders);

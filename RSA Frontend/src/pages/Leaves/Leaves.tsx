@@ -75,7 +75,7 @@ const Leaves: React.FC = () => {
 
     const fetchDrivers = async () => {
         try {
-            const response = await axios.get(`${backendUrl}/driver`);
+            const response = await axios.get(`${backendUrl}/driver/driverBooking`);
             setDrivers(response.data); // Ensure your backend returns an array of drivers
         } catch (error) {
             console.error('Error fetching drivers:', error);

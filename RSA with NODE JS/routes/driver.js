@@ -7,6 +7,8 @@ const jwt = require('../Middileware/jwt')
 
 router.post('/', jwt, upload.single('image'), driverController.createDriver); // 'image' is the name of the file field
 router.get('/', driverController.getDrivers);
+router.get('/driverBooking', driverController.getDriversBooking);
+
 router.get('/filtered', jwt, driverController.filtergetDrivers);
 router.get('/dropdown', jwt, driverController.getDriversForDropdown);
 router.get('/:id', jwt, driverController.getDriverById);

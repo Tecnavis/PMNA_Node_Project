@@ -50,7 +50,16 @@ exports.createProvider = async (req, res) => {
 // Get all providers
 exports.getAllProviders = async (req, res) => {
   try {
-    const providers = await Provider.find().populate('baseLocation serviceDetails.serviceType').lean();
+    const { serviceTypeId } = req.query; // Add this
+    
+    let query = {};
+    if (serviceTypeId) {
+      query = {
+        'serviceDetails.serviceType': serviceTypeId
+      };
+    }
+
+    const providers = await Provider.find(query).populate('baseLocation serviceDetails.serviceType').lean();
 
     const providerIds = providers.map(provider => provider._id);
 
@@ -89,7 +98,48 @@ exports.getAllProviders = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+exports.getAllProvidersBooking = async (req, res) => {
+  try {
+    const { serviceTypeId } = req.query; // Add this
+    
+    let query = {};
+    if (serviceTypeId) {
+      query = {
+        'serviceDetails.serviceType': serviceTypeId
+      };
+    }
 
+    const providers = await Provider.find(query).populate('baseLocation serviceDetails.serviceType').lean();
+
+    const providerIds = providers.map(provider => provider._id);
+
+
+    // Fetch the last booking status for each driver
+    const lastBookings = await Booking.aggregate([
+      { $match: { provider: { $in: providerIds } } },
+      { $sort: { updatedAt: -1 } }, // Sort by latest updatedAt
+      {
+        $group: {
+          _id: "$provider",
+          status: { $first: "$status" }, // Get the latest status
+        }
+      }
+    ]);
+
+    // Convert to lookup maps for fast access
+    const statusMap = new Map(lastBookings.map(booking => [booking._id.toString(), booking.status]));
+
+    // Merge data into driver objects
+    const updatedProvider = providers.map(provider => ({
+      ...provider,
+      status: statusMap.get(provider._id.toString()) || "Unknown"
+    }));
+
+    res.status(200).json(updatedProvider);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 // Get a provider by ID
 exports.getProviderById = async (req, res) => {
   try {
