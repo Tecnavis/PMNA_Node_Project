@@ -190,7 +190,7 @@ exports.createBooking = async (req, res) => {
     }
 };
 
-// Controller to create a booking for showroom and showroom staff dashboard
+// Controller/booking.js - Updated version
 exports.addBookingForShowroom = async (req, res) => {
     let bookingData = req.body;
     try {
@@ -213,21 +213,36 @@ exports.addBookingForShowroom = async (req, res) => {
             })
         }
 
+        // Check if the user is a showroom staff
+        let showroomStaff = null;
+        let bookedByModel = 'Showroom';
+        
+        if (req.user && req.user.role === 'ShowroomStaff') {
+            showroomStaff = await ShowroomStaff.findById(req.user.id);
+            if (showroomStaff) {
+                bookedByModel = 'ShowroomStaff';
+            }
+        }
+
         const enrichedBookingData = {
             ...bookingData,
             dropoffLocation: showroomData.location,
             dropoffLatitudeAndLongitude: showroomData.latitudeAndLongitude,
-            bookedBy: "Showroom",
+            bookedBy: bookedByModel === 'ShowroomStaff' ? `Staff: ${showroomStaff?.name}` : "Showroom",
+            bookedByModel: bookedByModel,
             createdBy: req.user._id || req.user.id,
-            bookedByModel: capitalizeFirstLetter(bookingData.bookingStatus) || 'Showroom'
+            // Add showroom staff reference if it's a staff member
+            ...(showroomStaff && { showroomStaff: showroomStaff._id })
         };
 
         const newBooking = await Booking.create(enrichedBookingData);
 
         routeLogger.info({
             fileNumber: bookingData.fileNumber,
-            doneBy: req.user || 'unknown'
-        }, 'New Showroom Booking created successfull.');
+            doneBy: req.user || 'unknown',
+            bookedBy: bookedByModel,
+            showroomStaff: showroomStaff?._id
+        }, 'New Showroom Booking created successfully.');
 
         res.status(201).json({
             message: 'Booking created successfully',
@@ -238,7 +253,7 @@ exports.addBookingForShowroom = async (req, res) => {
         process.nextTick(async () => {
             try {
                 const populatedBooking = await Booking.findById(newBooking._id)
-                    .populate('baselocation company driver provider')
+                    .populate('baselocation company driver provider showroom showroomStaff')
                     .lean();
 
                 if (populatedBooking) {
@@ -274,7 +289,110 @@ exports.addBookingForShowroom = async (req, res) => {
         });
     }
 }
+// Controller/booking.js - Add this new controller
+exports.addBookingForShowroomStaff = async (req, res) => {
+    let bookingData = req.body;
+    try {
 
+        const routeLogger = LoggerFactory.createChildLogger({
+            route: '/booking/showroom-staff/add-booking',
+            handler: 'addBookingForShowroomStaff',
+        });
+
+        // Verify the user is a showroom staff
+        if (req.user.role !== 'ShowroomStaff') {
+            return res.status(403).json({
+                message: 'Access denied. Only showroom staff can create bookings.',
+                success: false,
+            });
+        }
+
+        const showroomStaff = await ShowroomStaff.findById(req.user.id);
+        if (!showroomStaff) {
+            return res.status(404).json({
+                message: 'Showroom staff not found.',
+                success: false,
+            });
+        }
+
+        // Get showroom data from staff's showroomId
+        const showroomData = await Showroom.findById(showroomStaff.showroomId).lean();
+        if (!showroomData) {
+            routeLogger.FATAL({
+                fileNumber: bookingData.fileNumber,
+                staffId: req.user.id
+            }, 'Showroom not found for staff.');
+            return res.status(404).json({
+                message: 'Showroom not found for this staff member.',
+                success: false,
+            });
+        }
+
+        const enrichedBookingData = {
+            ...bookingData,
+            showroom: showroomStaff.showroomId, // Auto-assign staff's showroom
+            showroomStaff: showroomStaff._id,
+            dropoffLocation: showroomData.location,
+            dropoffLatitudeAndLongitude: showroomData.latitudeAndLongitude,
+            bookedBy: `Staff: ${showroomStaff.name}`,
+            bookedByModel: 'ShowroomStaff',
+            createdBy: req.user._id || req.user.id
+        };
+
+        const newBooking = await Booking.create(enrichedBookingData);
+
+        routeLogger.info({
+            fileNumber: bookingData.fileNumber,
+            staffName: showroomStaff.name,
+            staffId: showroomStaff._id,
+            showroom: showroomData.name
+        }, 'New Showroom Staff Booking created successfully.');
+
+        res.status(201).json({
+            message: 'Booking created successfully by showroom staff',
+            booking: newBooking,
+            staffInfo: {
+                name: showroomStaff.name,
+                designation: showroomStaff.designation
+            }
+        });
+
+        // Emit socket event
+        process.nextTick(async () => {
+            try {
+                const populatedBooking = await Booking.findById(newBooking._id)
+                    .populate('showroom showroomStaff')
+                    .lean();
+
+                if (populatedBooking) {
+                    io.emit("newChanges", {
+                        type: 'newStaffBooking',
+                        bookingId: newBooking._id,
+                        newBooking: populatedBooking,
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to populate and emit:", err.message);
+            }
+        });
+    } catch (error) {
+        console.error("Error creating booking:", error);
+
+        if (error.name === "ValidationError") {
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                errors: error.errors,
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "An internal server error occurred",
+            error: error.message,
+        });
+    }
+}
 // Controller to create a booking
 exports.createBookingNoAuth = async (req, res) => {
     try {

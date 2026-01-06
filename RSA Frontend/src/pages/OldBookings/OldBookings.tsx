@@ -25,6 +25,7 @@ import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import ImageGallery from './ImageGallery';
 
 // Define interfaces
 interface Filters {
@@ -72,8 +73,10 @@ interface Booking {
     insuranceAmount?: number;
     driverSalary?: number;
     pickupDate?: string;
-      // Add these fields for archived bookings
-    dummyDriverName?: string;
+ // Add image fields
+    pickupImages?: string[];
+    dropoffImages?: string[];
+        dummyDriverName?: string;
     dummyDriverPhone?: string;
     dummyProviderName?: string;
     dummyProviderCompany?: string;
@@ -143,12 +146,10 @@ const OldBookings: React.FC = () => {
                 params
             });
 
-            if (response.data.success) {
-                 console.log('Bookings data:', response.data.data.bookings); // Add this line
-            console.log('First booking driver:', response.data.data.bookings[0]?.driver); // Check driver data
-                setBookings(response.data.data.bookings);
-                setPagination(response.data.data.pagination);
-            }
+           if (response.data.success) {
+            setBookings(response.data.data.bookings);
+            setPagination(response.data.data.pagination);
+        }
         } catch (error) {
             console.error('Error fetching archived bookings:', error);
             toast.error('Failed to load archived bookings');
@@ -503,6 +504,12 @@ const getDriverPhone = (booking: Booking): string => {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Work Type
                                         </th>
+                                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Pickup Images
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Dropoff Images
+            </th>
                                         <th 
                                             className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                                             onClick={() => handleSort('createdAt')}
@@ -571,6 +578,21 @@ const getDriverPhone = (booking: Booking): string => {
                                                     {booking.workType}
                                                 </span>
                                             </td>
+                                            {/* Add image columns */}
+
+<td className="px-6 py-4">
+    <ImageGallery
+        images={booking.pickupImages || []}
+        title="Pickup"
+    />
+</td>
+
+<td className="px-6 py-4">
+    <ImageGallery 
+        images={booking.dropoffImages || []}
+        title="Dropoff"
+    />
+</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center text-gray-600">
                                                     <CalendarIcon className="h-4 w-4 mr-2" />

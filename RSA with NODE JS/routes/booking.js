@@ -46,6 +46,8 @@ router.patch('/settle-driver-balance-salary', jwt, controller.updateBalanceSalar
 
 // Route for add booking for showroom dashboard
 router.post('/showroom/add-booking', jwt, controller.addBookingForShowroom)
+// Route for add booking for showroom staff
+router.post('/showroom-staff/add-booking', jwt, controller.addBookingForShowroomStaff)
 
 // Route to get booking by id
 router.get('/:id', controller.getBookingById);
