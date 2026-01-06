@@ -134,21 +134,7 @@ exports.getArchivedBookings = asyncErrorHandler(async (req, res) => {
             .limit(5)
             .lean();
             
-        console.log('=== DEBUG: Raw booking data (first 5) ===');
-        rawBookings.forEach((booking, index) => {
-            console.log(`Booking ${index + 1}:`, {
-                fileNumber: booking.fileNumber,
-                driver: booking.driver,
-                provider: booking.provider,
-                dummyDriverName: booking.dummyDriverName,
-                dummyProviderName: booking.dummyProviderName,
-                driverType: typeof booking.driver,
-                driverIsObjectId: booking.driver instanceof mongoose.Types.ObjectId
-            });
-        });
-        console.log('=== END DEBUG ===');
-
-        // Now fetch with population
+       // Now fetch with population
         const bookings = await BookingArchive.find(query)
             .populate({
                 path: 'serviceType',
@@ -176,6 +162,8 @@ exports.getArchivedBookings = asyncErrorHandler(async (req, res) => {
                 path: 'showroom',
                 select: 'name'
                  })
+                     .select('+pickupImages +dropoffImages') // Make sure to select images
+
             .sort(sort)
             .skip(skip)
             .limit(limitNum)

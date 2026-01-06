@@ -38,7 +38,7 @@ const ShowroomModal: React.FC<ShowroomModalProps> = ({ isOpen, onClose }) => {
                 mobile: '',
                 state: '',
                 district: '',
-                services: {}, // or provide the proper service structure
+                services: {}, 
               };
               
 
