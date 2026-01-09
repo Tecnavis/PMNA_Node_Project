@@ -1205,7 +1205,6 @@ const formatDateForInput = (dateString: string): string => {
                 console.error('Error fetching booking data:', error);
             }
         };
-
         fetchBookingById();
     }, [uid]);
 

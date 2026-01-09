@@ -113,11 +113,11 @@ export interface Booking {
     amountWithoutInsurance?: number; // Optional field
     createdAt?: Date;
     updatedAt?: Date;
-    pickupDate?: Date;
     pickupTime?: Date;
     verified: boolean;
     feedback: boolean;
     dropoffTime?: Date;
+    pickupDate?: Date;
     driverSalaryCheck: boolean;
     compnayAmountCheck: boolean;
     remark: string;
@@ -1346,7 +1346,8 @@ const handleRemoveDropoffImage = async (index: number) => {
     <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
         Edit
     </button>
-) : null}
+) : null
+}
                             </div>
                         ) : (
                             <button type="button" className="btn btn-info w-full" onClick={() => setModal5(true)}>

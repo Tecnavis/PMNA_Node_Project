@@ -1,7 +1,7 @@
 import { RefObject } from "react";
 import { Driver } from "../DCPReport";
 import { Booking } from "../../Bookings/Bookings";
-import { formattedTime } from "../../../utils/dateUtils";
+import { formattedDateTime } from "../../../utils/dateUtils";
 import logo from '../../../assets/images/RSALogo.png'
 
 export const handlePrint = (
@@ -274,7 +274,7 @@ export const handlePrint = (
                     <tr>
                     <td>${index + 1}</td>
                     <td>${booking.fileNumber}</td>
-                    <td>${formattedTime(booking.createdAt + '')}</td>
+                    <td>${formattedDateTime(booking.createdAt + '')}</td>
                     <td>${booking.serviceType.serviceName}</td>
                     <td>${booking.customerVehicleNumber}</td>
                     <td>${booking.totalDistence}</td>

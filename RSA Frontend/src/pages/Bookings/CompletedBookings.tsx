@@ -224,7 +224,6 @@ const CompletedBookings: React.FC = () => {
         gettingToken();
         fetchBookings();
     }, []);
-
     console.log('bookings', bookings);
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
