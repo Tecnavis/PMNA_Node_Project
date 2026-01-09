@@ -1608,7 +1608,6 @@ exports.getBookingById = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching the booking' });
     }
 };
-
 // Controller to update a booking by ID
 exports.updateBooking = async (req, res) => {
     const { id } = req.params;

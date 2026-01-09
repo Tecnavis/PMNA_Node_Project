@@ -117,7 +117,7 @@ const Sidebar = () => {
                                         <li>
                                             <NavLink to="/add-booking">{t('Add Bookings')}</NavLink>
                                         </li>
-                                        {![ROLES.CASHIER, ROLES.CALL_EXECUTIVE].includes(role) && (
+                                        {![ROLES.CASHIER].includes(role) && (
                                             <li>
                                                 <NavLink to="/completedbookings">{t('Driver Completed Bookings')}</NavLink>
                                             </li>
@@ -273,14 +273,40 @@ const Sidebar = () => {
                                     </NavLink>
                                 </li>
                             )}
-                                <li className="nav-item">
+                                {/* <li className="nav-item">
                                     <NavLink to="/todo" className="group">
                                         <div className="flex items-center">
                                             <VscChecklist  className="group-hover:!text-primary shrink-0" />
                                             <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Todo List')}</span>
                                         </div>
                                     </NavLink>
+                                </li> */}
+                              
+                                <li className="menu nav-item">
+                                    <button type="button" className={`${currentMenu === 'Todo List' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('Todo List')}>
+                                        <div className="flex items-center">
+                                            <VscChecklist className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Todo List')}</span>
+                                        </div>
+
+                                        <div className={currentMenu !== 'Todo List' ? 'rtl:rotate-90 -rotate-90' : ''}>
+                                            <IconCaretDown />
+                                        </div>
+                                    </button>
+
+                                    <AnimateHeight duration={300} height={currentMenu === 'Todo List' ? 'auto' : 0}>
+                                        <ul className="sub-menu text-gray-500">
+                                            <li>
+                                                <NavLink to="/addTodo">{t('Add Staff Todo')}</NavLink>
+                                            </li>
+                                            <li>
+                                                <NavLink to="/todo">{t('Todo List')}</NavLink>
+                                            </li>
+                                             
+                                        </ul>
+                                    </AnimateHeight>
                                 </li>
+                          
                       
                             {/* // Showroom */}
                             {[ROLES.VERIFIER, ROLES.ADMIN, ROLES.SECONDARY_ADMIN,ROLES.Manager].includes(role) && (
