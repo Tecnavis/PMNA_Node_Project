@@ -1,19 +1,28 @@
-
+// routes/workRoutes.js
 const express = require('express');
 const router = express.Router();
-const controller = require('../Controller/workController');
+const workController = require('../Controller/workController');
 const jwt = require('../Middileware/jwt');
 
-router.post('/',jwt, controller.createWork);
-router.get('/',jwt, controller.getAllWork);
-router.get('/statistics',jwt, controller.getWorkStatistics);
-router.get('/staff/:staffId',jwt, controller.getWorkByStaff);
-router.get('/:id',jwt, controller.getWorkById);
-router.put('/:id',jwt, controller.updateWork);
-router.delete('/:id',jwt, controller.deleteWork);
+// Assign template works to staff (Admin only)
+router.post('/assign-template', jwt, workController.assignTemplateWorks);
 
-// Task specific routes
-router.put('/:workId/tasks/:taskId',jwt, controller.updateTask);
-router.delete('/:workId/tasks/:taskId',jwt, controller.deleteTask);
+// Get staff's template works
+router.get('/template/:staffId', jwt, workController.getStaffTemplateWorks);
+
+// Generate daily work from template
+router.post('/generate-daily', jwt, workController.generateDailyWork);
+
+// Update work status (Staff)
+router.put('/update-status/:dailyWorkId', jwt, workController.updateWorkStatus);
+
+// Get staff's daily work
+router.get('/daily/:staffId/:date?', jwt, workController.getStaffDailyWork);
+
+// Get all staffs daily work (Admin)
+router.get('/all-daily', jwt, workController.getAllStaffsDailyWork);
+
+// Get staff work history
+router.get('/history/:staffId', jwt, workController.getStaffWorkHistory);
 
 module.exports = router;
