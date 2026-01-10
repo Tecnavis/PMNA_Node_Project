@@ -647,20 +647,23 @@ exports.staffLogin = async (req, res) => {
       });
     }
 
-    // Generate JWT token
+    // Generate JWT token with staff ID included
     const token = jwt.sign({ 
       id: showroomStaff._id, 
+      staffId: showroomStaff._id,  // Explicitly include staffId
       role: "ShowroomStaff", 
-      name: `${showroomStaff.name}` 
-    }, process.env.JWT_SECRET);
+      name: `${showroomStaff.name}`,
+      showroomId: showroomId
+    }, process.env.JWT_SECRET, { expiresIn: '24h' });
 
-    // Include role and name in the response
+    // Include staffId in the response
     res.status(200).json({
       token,
+      staffId: showroomStaff._id,  // Send staffId in response
       role: "Staff",
       name: showroomStaff.name,
       success: true,
-      message: "Successfully logged"
+      message: "Successfully logged in"
     });
   } catch (err) {
     console.error(err.message);

@@ -1325,7 +1325,7 @@ const handleRemoveDropoffImage = async (index: number) => {
                         {(
     role === ROLES.VERIFIER || 
     role.startsWith(ROLES.ADMIN) || 
-    role.startsWith(ROLES.SECONDARY_ADMIN)
+    role.startsWith(ROLES.SECONDARY_ADMIN) || role.startsWith(ROLES.Manager)
 ) && (
     <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
         Verify

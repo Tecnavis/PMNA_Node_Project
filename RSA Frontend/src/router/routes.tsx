@@ -141,9 +141,7 @@ const Staff = lazy(() => import('../pages/Staff/Staff'));
 const StaffAdd = lazy(() => import('../pages/Staff/StaffAdd'));
 const ServiceType = lazy(() => import('../pages/ServiceType/ServiceType'));
 const Baselocation = lazy(() => import('../pages/Baselocation/Baselocaion'));
-const ToDo = lazy(() => import('../pages/ToDo/ToDo'));
-const AddToDo = lazy(() => import('../pages/ToDo/AddToDo'));
-const EditTaskPage  = lazy(() => import('../pages/ToDo/EditTaskPage'));
+const StaffWorkManager = lazy(() => import('../pages/Work/StaffWorkManager'));
 
 const Petrol = lazy(() => import('../pages/PetrolPumb/Petrol'));
 
@@ -393,17 +391,10 @@ const routes = [
         element: <Baselocation />,
     },
      {
-        path: '/todo',
-        element: <ToDo />,
+        path: '/workAssign',
+        element: <StaffWorkManager />,
     },
-     {
-        path: '/addTodo',
-        element: <AddToDo />,
-    },
-     {
-        path: '/edit-task/:id',
-        element: <EditTaskPage  />,
-    },
+    
      {
         path: '/petrol',
         element: <Petrol />,

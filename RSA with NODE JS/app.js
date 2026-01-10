@@ -27,7 +27,6 @@ var companyRouter = require('./routes/company');
 var showroomRouter = require('./routes/showroom');
 var settlementTransactionRouter = require('./routes/settlementTransaction');
 const archiveRouter = require('./routes/archive');
-const workRoutes   = require('./routes/workRoutes.js');
 
 var rewardRouter = require('./routes/reward');
 var bookingRouter = require('./routes/booking');
@@ -52,6 +51,7 @@ var transactionsRouter = require('./routes/transaction.js')
 var showroomPaymentRoutes = require('./routes/showroomPaymentRoutes.js');
 const companyExpenseRoutes = require('./routes/companyExpenses.js');
 const petrolPumpRoutes = require('./routes/petrol.js');
+const workRoutes = require('./routes/workRoutes.js');
 
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { default: axios } = require('axios');
@@ -222,7 +222,6 @@ app.use('/company', companyRouter);
 app.use('/showroom', showroomRouter);
 app.use('/settlementTransaction', settlementTransactionRouter);
 app.use('/archive', archiveRouter);
-app.use('/work', workRoutes  );
 
 app.use('/reward', rewardRouter);
 app.use('/leaves', leavesRouter);
@@ -242,6 +241,7 @@ app.use('/marketing-executives', executivesRouter);
 app.use('/transactions', transactionsRouter);
 app.use('/company-expenses', companyExpenseRoutes);
 app.use('/petrol-pumps', petrolPumpRoutes);
+app.use('/work', workRoutes);
 
 // ============ MEMORY MONITORING MIDDLEWARE ============
 app.use((req, res, next) => {
