@@ -6,15 +6,15 @@ import { Dialog, DialogPanel, Transition, TransitionChild, Tab } from '@headless
 import { IoIosCloseCircleOutline } from 'react-icons/io';
 import Swal from 'sweetalert2';
 import Button from '@mui/material/Button';
-import { FaCloudUploadAlt } from 'react-icons/fa';
+import { FaCloudUploadAlt, FaQrcode } from 'react-icons/fa';
 import { styled } from '@mui/material/styles';
 import BookingNotes from './BookingNotes';
 import { dateFormate, formattedTime } from '../../utils/dateUtils';
 import FeedbackModal from './FeedbackModal';
 import { CLOUD_IMAGE } from '../../constants/status';
-import { FiAlertTriangle, FiCheck, FiZoomIn } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheck, FiDollarSign, FiDownload, FiShare2, FiZoomIn } from 'react-icons/fi';
 import { FiUpload, FiEdit2, FiTrash2 } from 'react-icons/fi';
-import { ROLES } from '../../constants/roles'
+import { ROLES } from '../../constants/roles';
 
 export interface Booking {
     _id: string;
@@ -35,6 +35,7 @@ export interface Booking {
     pickupImagePending?: boolean;
     accountantVerified?: boolean;
     inventoryImagePending?: boolean;
+    qrImage: string;
     company: {
         name: string;
     };
@@ -112,6 +113,8 @@ export interface Booking {
     adjustmentValue?: number; // Optional field
     amountWithoutInsurance?: number; // Optional field
     createdAt?: Date;
+    upiPayment?: boolean;
+    upiVerified?: boolean;
     updatedAt?: Date;
     pickupTime?: Date;
     verified: boolean;
@@ -173,30 +176,32 @@ const Preview = () => {
     const [role, setRole] = useState<string>('');
     const dropoffAndPickup = useRef<any>(null);
     const [inventoryImageUrl, setInventoryImageUrl] = useState<string | null>(null);
+    const [qrImageUrl, setQrImageUrl] = useState<string | null>(null); // Add QR image state
     const [isUploadingInventory, setIsUploadingInventory] = useState(false);
+    const [isUploadingQr, setIsUploadingQr] = useState(false); // Add QR upload state
     const [uploading, setUplading] = useState<Record<number, boolean>>({});
 
     // checking the token
 
-  const gettingToken = () => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('role'); // Rename to avoid conflict
-    const name = localStorage.getItem('name');
-    
-    if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
-        if (userRole) {
-            setRole(userRole); // Just set the role string
-            // If you need the name for display, store it separately
+    const gettingToken = () => {
+        const token = localStorage.getItem('token');
+        const userRole = localStorage.getItem('role'); // Rename to avoid conflict
+        const name = localStorage.getItem('name');
+
+        if (token) {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+            if (userRole) {
+                setRole(userRole); // Just set the role string
+                // If you need the name for display, store it separately
+            } else {
+                console.error('Role not found in localStorage');
+            }
         } else {
-            console.error('Role not found in localStorage');
+            navigate('/auth/boxed-signin');
+            console.error('Token not found in localStorage');
         }
-    } else {
-        navigate('/auth/boxed-signin');
-        console.error('Token not found in localStorage');
-    }
-};
+    };
 
     // fetching booking by id
     const fetchBookingById = async () => {
@@ -232,6 +237,9 @@ const Preview = () => {
             // Add inventory image URL if exists
             if (response.data.inventoryImage) {
                 setInventoryImageUrl(`${CLOUD_IMAGE}${response.data.inventoryImage}`);
+            }
+            if (response.data.qrImage) {
+                setQrImageUrl(`${CLOUD_IMAGE}${response.data.qrImage}`);
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
@@ -496,173 +504,214 @@ const Preview = () => {
 
     // Verifying booking
 
-   const verifyBooking = async () => {
-    try {
-        if (booking?.cashPending) {
+    const verifyBooking = async () => {
+        try {
+            if (booking?.cashPending) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Cash is Pending',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+                return; // Stop here, don't verify
+            }
+
+            // Check image counts
+            const pickupImageCount = booking?.pickupImages ? booking.pickupImages.length : 0;
+            const dropoffImageCount = booking?.dropoffImages ? booking.dropoffImages.length : 0;
+
+            if (pickupImageCount < 3) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Pickup Images Pending',
+                    text: `Minimum 3 pickup images required. You have ${pickupImageCount}.`,
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+                return;
+            }
+
+            if (dropoffImageCount < 3) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Dropoff Images Pending',
+                    text: `Minimum 3 dropoff images required. You have ${dropoffImageCount}.`,
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+                return;
+            }
+
+            if (booking?.inventoryImagePending && !booking.inventoryImage) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Inventory Image is Pending',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+                return;
+            }
+  // Show confirmation dialog before proceeding
+        const confirmation = await Swal.fire({
+            title: 'Confirm Verification',
+            html: `
+                <div class="text-left">
+                    <p class="mb-3">Are you sure you want to verify this booking?</p>
+                    <div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                        <p class="font-medium">Booking Details:</p>
+                        <ul class="mt-2 space-y-1 text-sm">
+                            <li>File Number: <span class="font-semibold">${booking?.fileNumber || 'N/A'}</span></li>
+                            <li>Customer: <span class="font-semibold">${booking?.customerName || 'N/A'}</span></li>
+                            <li>Vehicle: <span class="font-semibold">${booking?.customerVehicleNumber || 'N/A'}</span></li>
+                            <li>Amount: <span class="font-bold text-green-600 dark:text-green-400">₹${booking?.totalAmount || '0'}</span></li>                        </ul>
+                    </div>
+                    <p class="mt-3 text-warning">Once verified, this action cannot be undone.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Verify Booking',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true,
+            customClass: {
+                confirmButton: 'mr-2',
+                cancelButton: 'ml-2'
+            }
+        });
+
+        // If user cancels, stop here
+        if (!confirmation.isConfirmed) {
             Swal.fire({
-                icon: 'warning',
-                title: 'Cash is Pending',
+                icon: 'info',
+                title: 'Verification Cancelled',
                 toast: true,
                 position: 'top',
                 showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
-            return; // Stop here, don't verify
-        }
-
-        // Check image counts
-        const pickupImageCount = booking?.pickupImages ? booking.pickupImages.length : 0;
-        const dropoffImageCount = booking?.dropoffImages ? booking.dropoffImages.length : 0;
-
-        if (pickupImageCount < 3) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Pickup Images Pending',
-                text: `Minimum 3 pickup images required. You have ${pickupImageCount}.`,
-                toast: true,
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
+                timer: 2000,
             });
             return;
         }
-
-        if (dropoffImageCount < 3) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Dropoff Images Pending',
-                text: `Minimum 3 dropoff images required. You have ${dropoffImageCount}.`,
-                toast: true,
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
-            return;
-        }
-
-        if (booking?.inventoryImagePending && !booking.inventoryImage) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Inventory Image is Pending',
-                toast: true,
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
-            return;
-        }
-
-        // Check if driver salary exceeds 1000 and require password
-        // Add null/undefined check for driverSalary
-        if (booking?.driverSalary && booking.driverSalary > 1000) {
-            const { value: password } = await Swal.fire({
-                title: 'Authorization Required',
-                html: `
+            // Check if driver salary exceeds 1000 and require password
+            // Add null/undefined check for driverSalary
+            if (booking?.driverSalary && booking.driverSalary > 1000) {
+                const { value: password } = await Swal.fire({
+                    title: 'Authorization Required',
+                    html: `
                     <div class="text-left">
                         <p class="mb-2">Driver salary exceeds the limit:</p>
                         <p class="font-bold text-warning">Driver Salary: ₹${booking.driverSalary}</p>
                         <p class="text-sm mt-3">Please enter authorization password to verify this booking.</p>
                     </div>
                 `,
-                input: 'password',
-                inputPlaceholder: 'Enter authorization password',
-                inputAttributes: {
-                    autocapitalize: 'off',
-                    autocorrect: 'off',
-                    maxlength: '20'
-                },
-                showCancelButton: true,
-                confirmButtonText: 'Verify Booking',
-                cancelButtonText: 'Cancel',
-                confirmButtonColor: '#198754',
-                cancelButtonColor: '#6c757d',
-                showLoaderOnConfirm: true,
-                preConfirm: (inputPassword) => {
-                    if (!inputPassword) {
-                        Swal.showValidationMessage('Authorization password is required');
-                    } else if (inputPassword.length < 3) {
-                        Swal.showValidationMessage('Password is too short');
-                    }
-                },
-                allowOutsideClick: () => !Swal.isLoading()
-            });
+                    input: 'password',
+                    inputPlaceholder: 'Enter authorization password',
+                    inputAttributes: {
+                        autocapitalize: 'off',
+                        autocorrect: 'off',
+                        maxlength: '20',
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'Verify Booking',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#6c757d',
+                    showLoaderOnConfirm: true,
+                    preConfirm: (inputPassword) => {
+                        if (!inputPassword) {
+                            Swal.showValidationMessage('Authorization password is required');
+                        } else if (inputPassword.length < 3) {
+                            Swal.showValidationMessage('Password is too short');
+                        }
+                    },
+                    allowOutsideClick: () => !Swal.isLoading(),
+                });
 
-            if (!password) {
-                return; // User cancelled
+                if (!password) {
+                    return; // User cancelled
+                }
+
+                // Proceed with verification with password
+                await axios.patch(`${backendUrl}/booking/verifybooking/${id}`, {
+                    password: password,
+                });
+
+                navigate('/completedbookings');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Booking Verified Successfully',
+                    text: 'High salary booking has been verified with authorization.',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
+            } else {
+                // Normal verification without password (or if driverSalary is undefined/≤1000)
+                await axios.patch(`${backendUrl}/booking/verifybooking/${id}`);
+                navigate('/completedbookings');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Booking Verified',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    padding: '10px 20px',
+                });
             }
+        } catch (error) {
+            console.error('Verification error:', error);
 
-            // Proceed with verification with password
-            await axios.patch(`${backendUrl}/booking/verifybooking/${id}`, {
-                password: password
-            });
-            
-            navigate('/completedbookings');
-            Swal.fire({
-                icon: 'success',
-                title: 'Booking Verified Successfully',
-                text: 'High salary booking has been verified with authorization.',
-                toast: true,
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
-        } else {
-            // Normal verification without password (or if driverSalary is undefined/≤1000)
-            await axios.patch(`${backendUrl}/booking/verifybooking/${id}`);
-            navigate('/completedbookings');
-            Swal.fire({
-                icon: 'success',
-                title: 'Booking Verified',
-                toast: true,
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
+            // Enhanced error handling with proper type checking
+            const axiosError = error as AxiosError<{ message?: string }>;
+
+            if (axiosError.response?.status === 401) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: 'The authorization password you entered is incorrect. Please contact administrator if you need access.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#dc3545',
+                });
+            } else if (axiosError.response?.status === 400) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Authorization Required',
+                    text: axiosError.response?.data?.message || 'Password authorization is required for this booking.',
+                    confirmButtonText: 'OK',
+                });
+            } else if (axiosError.response?.status === 500) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Server Error',
+                    text: 'Internal server error. Please try again later.',
+                    confirmButtonText: 'OK',
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Verification Failed',
+                    text: axiosError.response?.data?.message || 'An unexpected error occurred.',
+                    confirmButtonText: 'OK',
+                });
+            }
         }
-   } catch (error) {
-    console.error('Verification error:', error);
-    
-    // Enhanced error handling with proper type checking
-    const axiosError = error as AxiosError<{ message?: string }>;
-    
-    if (axiosError.response?.status === 401) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Access Denied',
-            text: 'The authorization password you entered is incorrect. Please contact administrator if you need access.',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#dc3545'
-        });
-    } else if (axiosError.response?.status === 400) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Authorization Required',
-            text: axiosError.response?.data?.message || 'Password authorization is required for this booking.',
-            confirmButtonText: 'OK'
-        });
-    } else if (axiosError.response?.status === 500) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Server Error',
-            text: 'Internal server error. Please try again later.',
-            confirmButtonText: 'OK'
-        });
-    } else {
-        Swal.fire({
-            icon: 'error',
-            title: 'Verification Failed',
-            text: axiosError.response?.data?.message || 'An unexpected error occurred.',
-            confirmButtonText: 'OK'
-        });
-    }
-}
-};
+    };
     // Handling navigation to update
     const handleNavigateToBookingUpdate = (id: any, isMessageTrue: boolean) => {
         // Navigate to Page 2 with the boolean value in the URL
@@ -727,71 +776,55 @@ const Preview = () => {
 
     //Removing pickup images
 
-const handleRemovePickupImage = async (index: number) => {
-    const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
-    });
+    const handleRemovePickupImage = async (index: number) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!',
+        });
 
-    if (result.isConfirmed) {
-        try {
-            // Change from PATCH to DELETE and use the new endpoint
-            await axios.delete(`${backendUrl}/booking/removePickupImage/${id}/${index}`);
-            setPickuptImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
-            
-            Swal.fire(
-                'Deleted!',
-                'Your image has been deleted.',
-                'success'
-            );
-        } catch (error: unknown) {
-            console.error('Error deleting image:', error);
-            Swal.fire(
-                'Error!',
-                'Failed to delete the image.',
-                'error'
-            );
+        if (result.isConfirmed) {
+            try {
+                // Change from PATCH to DELETE and use the new endpoint
+                await axios.delete(`${backendUrl}/booking/removePickupImage/${id}/${index}`);
+                setPickuptImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+
+                Swal.fire('Deleted!', 'Your image has been deleted.', 'success');
+            } catch (error: unknown) {
+                console.error('Error deleting image:', error);
+                Swal.fire('Error!', 'Failed to delete the image.', 'error');
+            }
         }
-    }
-};
+    };
 
-const handleRemoveDropoffImage = async (index: number) => {
-    const result = await Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
-    });
+    const handleRemoveDropoffImage = async (index: number) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!',
+        });
 
-    if (result.isConfirmed) {
-        try {
-            // Change from PATCH to DELETE and use the new endpoint
-            await axios.delete(`${backendUrl}/booking/removeDropoffImage/${id}/${index}`);
-            setDropoffImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
-            
-            Swal.fire(
-                'Deleted!',
-                'Your image has been deleted.',
-                'success'
-            );
-        } catch (error: unknown) {
-            console.error('Error deleting image:', error);
-            Swal.fire(
-                'Error!',
-                'Failed to delete the image.',
-                'error'
-            );
+        if (result.isConfirmed) {
+            try {
+                // Change from PATCH to DELETE and use the new endpoint
+                await axios.delete(`${backendUrl}/booking/removeDropoffImage/${id}/${index}`);
+                setDropoffImageUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+
+                Swal.fire('Deleted!', 'Your image has been deleted.', 'success');
+            } catch (error: unknown) {
+                console.error('Error deleting image:', error);
+                Swal.fire('Error!', 'Failed to delete the image.', 'error');
+            }
         }
-    }
-};
+    };
     const handleDownloadImage = () => {
         if (!enlargedImage) return;
 
@@ -808,6 +841,54 @@ const handleRemoveDropoffImage = async (index: number) => {
                 URL.revokeObjectURL(url);
             })
             .catch((error) => console.error('Error downloading the image:', error));
+    };
+
+    // Add this handler for QR image upload
+    const handleQrImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsUploadingQr(true);
+
+            const formData = new FormData();
+            formData.append('qrImage', file); // Match the field name in your backend
+
+            const response = await axios.patch(`${backendUrl}/booking/upload-qr/${id}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            // Update local state with new image
+            setQrImageUrl(`${CLOUD_IMAGE}${response.data.data.qrImage}`);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'QR Code Uploaded!',
+                text: 'Payment QR code has been successfully uploaded',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+            });
+
+            // Refresh booking data
+            fetchBookingById();
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Upload Failed',
+                text: 'Failed to upload QR code',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+            });
+            console.error('Error uploading QR image:', error);
+        } finally {
+            setIsUploadingQr(false);
+        }
     };
 
     useEffect(() => {
@@ -918,10 +999,7 @@ const handleRemoveDropoffImage = async (index: number) => {
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '25px' }}>
                                             {pickupImageUrls?.map((url, index) => (
                                                 <div>
-<IoIosCloseCircleOutline 
-    onClick={() => handleRemovePickupImage(index)} 
-    style={{ cursor: 'pointer', color: 'red', fontSize: '24px' }}
-/>
+                                                    <IoIosCloseCircleOutline onClick={() => handleRemovePickupImage(index)} style={{ cursor: 'pointer', color: 'red', fontSize: '24px' }} />
                                                     <img
                                                         src={url}
                                                         alt={`pickup-${index}`}
@@ -962,10 +1040,7 @@ const handleRemoveDropoffImage = async (index: number) => {
                                             {dropoffImageUrls.map((url, index) => (
                                                 <div key={index} className="flex flex-col justify-center items-center p-1">
                                                     <div>
-<IoIosCloseCircleOutline 
-    onClick={() => handleRemoveDropoffImage(index)} 
-    style={{ cursor: 'pointer', color: 'red', fontSize: '24px' }}
-/>
+                                                        <IoIosCloseCircleOutline onClick={() => handleRemoveDropoffImage(index)} style={{ cursor: 'pointer', color: 'red', fontSize: '24px' }} />
                                                         <img
                                                             src={url}
                                                             alt={`pickup-${index}`}
@@ -1020,9 +1095,66 @@ const handleRemoveDropoffImage = async (index: number) => {
                             )}
                         </Tab.Panels>
                     </Tab.Group>
+                    {booking?.upiPayment && (
+                        <div className="mt-8">
+                            <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                                <FaQrcode className="mr-2 text-blue-500" />
+                                Payment QR Code ScreenShot
+                                {qrImageUrl && (
+                                    <span className="ml-2 text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-full flex items-center">
+                                        <FiCheck className="mr-1" /> UPI Payment
+                                    </span>
+                                )}
+                            </h3>
+
+                            {qrImageUrl ? (
+                                <div className="relative group max-w-md mx-auto">
+                                    <div className="relative overflow-hidden rounded-lg shadow-md border-2 border-blue-100 dark:border-blue-800 transition-all duration-300 hover:shadow-lg">
+                                        <img src={qrImageUrl} alt="Payment QR Code" className="w-full h-64 object-contain bg-gray-50 dark:bg-gray-800" onClick={() => setEnlargedImage(qrImageUrl)} />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                                            <div className="flex justify-between w-full items-center">
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => setEnlargedImage(qrImageUrl)} className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors">
+                                                        <FiZoomIn size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-center">
+                                    <FaQrcode className="mx-auto text-blue-500 dark:text-blue-400 text-2xl mb-2" />
+                                    <p className="text-blue-700 dark:text-blue-300 font-medium">No QR Code Uploaded</p>
+                                    <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">This is a UPI payment. Please upload the payment QR code.</p>
+
+                                    <label className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition-colors cursor-pointer">
+                                        {isUploadingQr ? (
+                                            <span className="flex items-center">
+                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path
+                                                        className="opacity-75"
+                                                        fill="currentColor"
+                                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                    ></path>
+                                                </svg>
+                                                Uploading...
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center">
+                                                <FiUpload className="mr-2" />
+                                                Upload QR Code
+                                            </span>
+                                        )}
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleQrImageUpload} disabled={isUploadingQr} />
+                                    </label>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className="mt-8">
                         <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Inventory Sheet</h3>
-
                         {inventoryImageUrl ? (
                             <div className="relative group max-w-md mx-auto">
                                 <div className="relative overflow-hidden rounded-lg shadow-md border-2 border-green-100 dark:border-green-800 transition-all duration-300 hover:shadow-lg">
@@ -1037,9 +1169,8 @@ const handleRemoveDropoffImage = async (index: number) => {
                                             <span className="text-white text-sm bg-green-500 px-2 py-1 rounded-full flex items-center">
                                                 <FiCheck className="mr-1" /> Verified Inventory
                                             </span>
-
                                             <div className="flex gap-2">
-                                                {!booking?.accountantVerified == true && (
+                                                {!booking?.accountantVerified && (
                                                     <label className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors cursor-pointer">
                                                         <FiEdit2 size={18} />
                                                         <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleInventoryImageUpload} disabled={isUploadingInventory} />
@@ -1058,7 +1189,6 @@ const handleRemoveDropoffImage = async (index: number) => {
                                 <FiAlertTriangle className="mx-auto text-yellow-500 dark:text-yellow-400 text-2xl mb-2" />
                                 <p className="text-yellow-700 dark:text-yellow-300 font-medium">No inventory sheet uploaded</p>
                                 <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">Please upload the signed inventory sheet</p>
-
                                 <label className="mt-4 inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg shadow hover:bg-primary-dark transition-colors cursor-pointer">
                                     {isUploadingInventory ? (
                                         <span className="flex items-center">
@@ -1307,30 +1437,26 @@ const handleRemoveDropoffImage = async (index: number) => {
                     {/* Notes section goes here */}
                     <BookingNotes role={role} id={id || ''} />
                     <div className="w-full border mt-8"></div>
-                   <div className="ltr:text-right rtl:text-left space-y-2 my-1 md:my-6">
-  <div className="flex items-center justify-center font-semibold text-lg">
-    <div className="flex-1">
-      Payable Amount by Customer/Company:
-      <span className="text-red-500 ml-2">₹ {booking?.totalAmount}</span>
-    </div>
-  </div>
+                    <div className="ltr:text-right rtl:text-left space-y-2 my-1 md:my-6">
+                        <div className="flex items-center justify-center font-semibold text-lg">
+                            <div className="flex-1">
+                                Payable Amount by Customer/Company:
+                                <span className="text-red-500 ml-2">₹ {booking?.totalAmount}</span>
+                            </div>
+                        </div>
 
-   {booking?.status === 'Order Completed' ? (
+                        {booking?.status === 'Order Completed' ? (
                             <div>
                                 {!booking.verified && !booking.feedbackCheck ? (
                                     <>
                                         <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
                                             Edit
                                         </button>
-                        {(
-    role === ROLES.VERIFIER || 
-    role.startsWith(ROLES.ADMIN) || 
-    role.startsWith(ROLES.SECONDARY_ADMIN) || role.startsWith(ROLES.Manager)
-) && (
-    <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
-        Verify
-    </button>
-)}
+                                        {(role === ROLES.VERIFIER || role.startsWith(ROLES.ADMIN) || role.startsWith(ROLES.SECONDARY_ADMIN) || role.startsWith(ROLES.Manager)) && (
+                                            <button type="button" className="btn btn-success w-full" onClick={verifyBooking}>
+                                                Verify
+                                            </button>
+                                        )}
                                     </>
                                 ) : (
                                     booking.verified &&
@@ -1343,11 +1469,10 @@ const handleRemoveDropoffImage = async (index: number) => {
                                 )}
                                 <br />
                                 {(role.startsWith(ROLES.ADMIN) || role.startsWith(ROLES.SECONDARY_ADMIN)) && (booking.verified || booking.feedbackCheck) ? (
-    <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
-        Edit
-    </button>
-) : null
-}
+                                    <button type="button" className="btn btn-info w-full mb-3" onClick={() => handleNavigateToBookingUpdate(id, true)}>
+                                        Edit
+                                    </button>
+                                ) : null}
                             </div>
                         ) : (
                             <button type="button" className="btn btn-info w-full" onClick={() => setModal5(true)}>
@@ -1357,7 +1482,6 @@ const handleRemoveDropoffImage = async (index: number) => {
                     </div>
                 </div>
             </div>
-
 
             {/* modal for the order Complete  */}
 

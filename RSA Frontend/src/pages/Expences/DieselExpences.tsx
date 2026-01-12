@@ -16,6 +16,7 @@ import { getVehiclesList } from '../../services';
 import { VehicleNames } from '../../interface/Vehicle';
 import ReusableModal from '../../components/modal';
 import DieselExpenseFormFormik from './AddDieselExpense';
+import { getPetrolPumps } from './expensesService';
 
 const DieselExpenses = () => {
   const [expenses, setExpenses] = useState<IDieselExpense[]>([]);
@@ -42,6 +43,8 @@ const DieselExpenses = () => {
   const [showAll, setShowAll] = useState<boolean>(false);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
+const [petrolPump, setPetrolPump] = useState<string>('');
+const [petrolPumpsList, setPetrolPumpsList] = useState<any[]>([]);
 
   const months = [
     { value: '01', label: 'January' },
@@ -69,7 +72,15 @@ const DieselExpenses = () => {
   ];
 
   const role = localStorage.getItem('role') || ''
-
+// Fetch petrol pumps list
+const fetchPetrolPumpsList = async () => {
+  try {
+    const response = await getPetrolPumps(); // Assuming this function exists in your services
+    setPetrolPumpsList(response.data || []);
+  } catch (error) {
+    console.error('Error fetching petrol pumps:', error);
+  }
+};
   const fetchDieselExpences = async () => {
     try {
       setLoading(true);
@@ -79,6 +90,7 @@ const DieselExpenses = () => {
         month, 
         year, 
         vehicleNumber,
+        petrolPump,
         currentPage,
         itemsPerPage,
         showAll
@@ -131,6 +143,7 @@ const DieselExpenses = () => {
     setMonth('');
     setYear('');
     setVehicleNumber('');
+      setPetrolPump('');
     fetchDieselExpences();
   };
 
@@ -216,6 +229,7 @@ const DieselExpenses = () => {
   useEffect(() => {
     fetchDieselExpences();
     fetchVehiclesNamesList();
+     fetchPetrolPumpsList();
   }, [currentPage, itemsPerPage, showAll]);
 
   const handleStatusUpdate = async (expenseId: string, status: string) => {
@@ -419,7 +433,22 @@ const DieselExpenses = () => {
                       ))}
                     </Select>
                   </FormControl>
-
+ {/* Add Petrol Pump Filter */}
+  <FormControl fullWidth size="small">
+    <InputLabel>Petrol Pump</InputLabel>
+    <Select
+      value={petrolPump}
+      label="Petrol Pump"
+      onChange={(e) => setPetrolPump(e.target.value)}
+    >
+      <MenuItem value="">All Petrol Pumps</MenuItem>
+      {petrolPumpsList?.map((pump) => (
+        <MenuItem key={pump._id} value={pump._id}>
+          {pump.pumpName} - {pump.location}
+        </MenuItem>
+      ))}
+    </Select>
+  </FormControl>
                   <div className="flex items-end gap-2 h-10">
                     <Button
                       type="submit"

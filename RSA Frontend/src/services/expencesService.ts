@@ -10,6 +10,7 @@ export const getExpences = async (
     month?: string,
     year?: string,
     vehicleNumber?: string,
+      petrolPump?: string,
     page: number = 1,
     limit: number = 10,
     all: boolean = false
@@ -19,6 +20,7 @@ export const getExpences = async (
         if (month) params.append('month', month);
         if (year) params.append('year', year);
         if (vehicleNumber) params.append('vehicleNumber', vehicleNumber);
+          if (petrolPump) params.append('petrolPump', petrolPump); 
         params.append('page', page.toString());
         params.append('limit', limit.toString());
         params.append('all', all.toString());
