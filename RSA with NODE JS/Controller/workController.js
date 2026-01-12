@@ -1,7 +1,7 @@
 // controllers/workController.js
 const StaffWorkAssignment = require('../Model/staffWorkAssignment');
 const Staff = require('../Model/staff');
-const StaffDailyWork = require('../Model/StaffDailyWork');
+const StaffDailyWork = require('../Model/staffDailyWork');
 
 // Assign daily template works to staff
 exports.assignTemplateWorks = async (req, res) => {
