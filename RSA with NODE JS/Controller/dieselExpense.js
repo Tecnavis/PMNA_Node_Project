@@ -142,7 +142,7 @@ exports.toggleApproval = async (req, res) => {
 // Update getAllExpenses to populate petrolPump
 exports.getAllExpenses = async (req, res) => {
     try {
-        const { month, year, vehicleNumber, page = 1, limit = 10, all = false } = req.query;
+        const { month, year, vehicleNumber,petrolPump, page = 1, limit = 10, all = false } = req.query;
 
         const query = {};
 
@@ -156,7 +156,10 @@ exports.getAllExpenses = async (req, res) => {
         if (vehicleNumber) {
             query.vehicleNumber = vehicleNumber;
         }
-
+ // Filter by petrol pump ID - Add this section
+        if (petrolPump) {
+            query.petrolPump = petrolPump;
+        }
         let expenses;
         let totalCount;
         
