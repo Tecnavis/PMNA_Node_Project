@@ -656,15 +656,15 @@ exports.staffLogin = async (req, res) => {
       showroomId: showroomId
     }, process.env.JWT_SECRET, { expiresIn: '24h' });
 
-    // Include staffId in the response
-    res.status(200).json({
-      token,
-      staffId: showroomStaff._id,  // Send staffId in response
-      role: "Staff",
-      name: showroomStaff.name,
-      success: true,
-      message: "Successfully logged in"
-    });
+   // Include staffId in the response - Convert to string explicitly
+res.status(200).json({
+  token,
+  staffId: showroomStaff._id.toString(),  // Convert ObjectId to string
+  role: "Staff",
+  name: showroomStaff.name,
+  success: true,
+  message: "Successfully logged in"
+});
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ 
