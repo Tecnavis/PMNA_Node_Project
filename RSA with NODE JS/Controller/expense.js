@@ -409,3 +409,213 @@ exports.completeSettlement = async (req, res) => {
         });
     }
 }
+// Add these methods to your expense controller
+
+// Rename the first createExpense function to createExpenseForDriver
+exports.createExpenseForDriver = async (req, res) => {
+    try {
+        const { amount, type, description } = req.body;
+        const { id } = req.params;
+
+        if (!amount || !type || !description || !id) {
+            return res.status(400).json({
+                message: "All fields are required!",
+                success: false
+            })
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                message: "Image is required!",
+                success: false
+            });
+        }
+
+        const expense = new Expense({
+            amount,
+            type,
+            description,
+            driver: id,
+            image: req.file.filename
+        });
+
+        await expense.save();
+
+        return res.status(201).json({
+            message: "Expense created successfully",
+            success: true,
+            expenseData: expense
+        })
+    } catch (error) {
+        console.error(error.message)
+        return res.status(500).json({ message: 'Error creating expense', error: error.message });
+    }
+}
+
+// Keep the second createExpense function for general use
+exports.createExpense = async (req, res) => {
+    try {
+        const { amount, type, description, driver } = req.body;
+
+        if (!amount || !type || !description || !driver) {
+            return res.status(400).json({
+                message: "All fields are required!",
+                success: false
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                message: "Image is required!",
+                success: false
+            });
+        }
+
+        const expense = new Expense({
+            amount,
+            type,
+            description,
+            driver,
+            image: req.file.filename,
+            status: 'pending'
+        });
+
+        await expense.save();
+
+        return res.status(201).json({
+            message: "Expense created successfully",
+            success: true,
+            expenseData: expense
+        });
+    } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({ 
+            message: 'Error creating expense', 
+            error: error.message 
+        });
+    }
+};
+
+// Rename this function in your controller
+exports.updateExpense = async (req, res) => {  // Changed from udpateExpense to updateExpense
+    try {
+        const { id } = req.params;
+        const { amount, type, description, driver } = req.body;
+
+        if (!id) {
+            return res.status(400).json({
+                message: "Expense ID is required!",
+                success: false
+            });
+        }
+
+        const updateData = {};
+        if (amount) updateData.amount = amount;
+        if (type) updateData.type = type;
+        if (description) updateData.description = description;
+        if (driver) updateData.driver = driver;
+        if (req.file) updateData.image = req.file.filename;
+
+        const updatedExpense = await Expense.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        ).populate('driver');
+
+        if (!updatedExpense) {
+            return res.status(404).json({
+                message: "Expense not found",
+                success: false
+            });
+        }
+
+        return res.status(200).json({
+            message: "Expense updated successfully",
+            success: true,
+            expenseData: updatedExpense
+        });
+    } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({ 
+            message: 'Error updating expense', 
+            error: error.message 
+        });
+    }
+};
+
+
+exports.deleteExpense = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({
+                message: "Expense ID is required!",
+                success: false
+            });
+        }
+
+        const expense = await Expense.findById(id);
+        if (!expense) {
+            return res.status(404).json({
+                message: "Expense not found",
+                success: false
+            });
+        }
+
+        // Check if expense is already approved
+        if (expense.approve) {
+            return res.status(400).json({
+                message: "Cannot delete approved expenses",
+                success: false
+            });
+        }
+
+        await Expense.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            message: "Expense deleted successfully",
+            success: true
+        });
+    } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({ 
+            message: 'Error deleting expense', 
+            error: error.message 
+        });
+    }
+};
+
+exports.getExpenseById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({
+                message: "Expense ID is required!",
+                success: false
+            });
+        }
+
+        const expense = await Expense.findById(id).populate('driver');
+
+        if (!expense) {
+            return res.status(404).json({
+                message: "Expense not found",
+                success: false
+            });
+        }
+
+        return res.status(200).json({
+            message: "Expense fetched successfully",
+            success: true,
+            expenseData: expense
+        });
+    } catch (error) {
+        console.error(error.message);
+        return res.status(500).json({ 
+            message: 'Error fetching expense', 
+            error: error.message 
+        });
+    }
+};

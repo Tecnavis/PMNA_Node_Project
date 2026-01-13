@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Expense } from '../../interface/Expences';
 
 // Use the correct backend URL
 // const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:9000';
@@ -299,4 +300,116 @@ export const deleteCompanyExpense = async (
     console.error('API Error:', error.response?.data || error.message);
     throw error;
   }
+};
+// Add these functions to your existing expencesService.ts file
+// AFTER all the existing exports
+
+// Get expense by ID
+export const getExpenseById = async (expenseId: string): Promise<any> => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+
+        const response = await axios.get(`${API_BASE_URL}/expense/${expenseId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.data.expenseData;
+    } catch (error) {
+        console.error('Error fetching expense:', error);
+        throw error;
+    }
+};
+
+// Create new expense
+export const createExpense = async (expenseData: FormData): Promise<any> => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+
+        console.log('Creating expense with data:', {
+            amount: expenseData.get('amount'),
+            type: expenseData.get('type'),
+            description: expenseData.get('description'),
+            driver: expenseData.get('driver'),
+            hasImage: !!expenseData.get('image')
+        });
+
+        const response = await axios.post(`${API_BASE_URL}/expense`, expenseData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        
+        console.log('Create expense response:', response.data);
+        return response.data.expenseData;
+    } catch (error: any) {
+        console.error('Error creating expense:', error);
+        if (error.response) {
+            console.error('Error response data:', error.response.data);
+            console.error('Error status:', error.response.status);
+        }
+        throw error;
+    }
+};
+
+// In your expensesService.ts, update the updateExpense function:
+export const updateExpense = async (expenseId: string, expenseData: FormData): Promise<any> => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+
+        console.log('Updating expense:', expenseId);
+        console.log('Update data:', {
+            amount: expenseData.get('amount'),
+            type: expenseData.get('type'),
+            description: expenseData.get('description'),
+            driver: expenseData.get('driver'),
+            hasImage: !!expenseData.get('image')
+        });
+
+        const response = await axios.patch(`${API_BASE_URL}/expense/${expenseId}`, expenseData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        
+        console.log('Update expense response:', response.data);
+        return response.data.expenseData;
+    } catch (error:any) {
+        console.error('Error updating expense:', error);
+        if (error.response) {
+            console.error('Error response data:', error.response.data);
+            console.error('Error status:', error.response.status);
+        }
+        throw error;
+    }
+};
+
+// Delete expense
+export const deleteExpense = async (expenseId: string): Promise<void> => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+
+        await axios.delete(`${API_BASE_URL}/expense/${expenseId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        console.error('Error deleting expense:', error);
+        throw error;
+    }
 };
