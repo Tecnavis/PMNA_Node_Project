@@ -12,7 +12,6 @@ const LoggerFactory = require('../utils/logger/LoggerFactory');
 const { setVerifiedShowroomsThisMonth } = require('../services/showroomService');
 const { updateShowroomFinancials } = require('../services/serviceCenterService');
 
-// Create a showroom
 exports.createShowroom = async (req, res) => {
   const routeLogger = LoggerFactory.createChildLogger({
     route: '/showroom',
@@ -32,11 +31,26 @@ exports.createShowroom = async (req, res) => {
       mobile,
       state,
       district,
-      services, // May be undefined or missing
+      services,
       addedBy
     } = req.body;
 
-    // Parse services if it's a string; otherwise, default to an empty object
+    // Validate showroomId - generate one if not provided
+    let finalShowroomId = showroomId;
+    if (!showroomId || showroomId.trim() === '') {
+      // Generate a unique showroom ID
+      finalShowroomId = generateUniqueShowroomId(name, district);
+    }
+
+    // Check if showroomId already exists
+    const existingShowroom = await Showroom.findOne({ showroomId: finalShowroomId });
+    if (existingShowroom) {
+      return res.status(400).json({ 
+        message: `Showroom ID "${finalShowroomId}" already exists. Please use a different ID.` 
+      });
+    }
+
+    // Parse services...
     let parsedServices = {};
     if (services) {
       if (typeof services === 'string') {
@@ -53,7 +67,7 @@ exports.createShowroom = async (req, res) => {
     const imagePath = req.file ? req.file.filename : null;
 
     const showroomLink = generateShowRoomLink({
-      id: showroomId,
+      id: finalShowroomId,
       name,
       location,
       image: imagePath,
@@ -65,7 +79,7 @@ exports.createShowroom = async (req, res) => {
 
     const showroom = new Showroom({
       name,
-      showroomId,
+      showroomId: finalShowroomId, // Use the validated/generated ID
       description,
       location,
       latitudeAndLongitude,
@@ -100,15 +114,37 @@ exports.createShowroom = async (req, res) => {
 
     routeLogger.info({
       showroomName: savedShowroom.name,
+      showroomId: savedShowroom.showroomId,
       doneBy: req.user || 'unknown'
     }, 'New Showroom added in database successfully.');
 
     res.status(201).json(savedShowroom);
   } catch (error) {
     console.error('Error creating showroom:', error);
+    
+    // Handle specific MongoDB errors
+    if (error.code === 11000) {
+      // Extract the field that caused the duplicate key error
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ 
+        message: `Duplicate value error. A showroom with this ${field} already exists.`,
+        field: field 
+      });
+    }
+    
     res.status(500).json({ message: error.message });
   }
 };
+
+// Helper function to generate unique showroom ID
+function generateUniqueShowroomId(name, district) {
+  const timestamp = Date.now();
+  const randomNum = Math.floor(Math.random() * 1000);
+  const nameCode = name.substring(0, 3).toUpperCase();
+  const districtCode = district ? district.substring(0, 3).toUpperCase() : 'GEN';
+  
+  return `SR-${districtCode}-${nameCode}-${timestamp}-${randomNum}`;
+}
 
 // Get all showrooms
 exports.getShowrooms = async (req, res) => {

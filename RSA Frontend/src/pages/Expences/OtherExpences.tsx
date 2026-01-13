@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { Button } from '@headlessui/react';
-import { Card, CardContent, Badge, IconButton, Avatar, Chip, Tooltip, Modal, Backdrop, Fade } from '@mui/material';
+import { Button,  Select } from '@headlessui/react';
+import { Card, CardContent, Badge, IconButton, Avatar, Chip, Tooltip, Modal, Backdrop, Fade, TextField, FormControl, InputLabel } from '@mui/material';
 import React, { useEffect, useState } from 'react';
-import { Check, X, AlertCircle, Bell, RefreshCw, Download, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { Check, X, AlertCircle, Bell, RefreshCw, Download, ChevronLeft, ChevronRight, Maximize2, Plus, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSnackbar } from 'notistack';
 import { connectSocket, getSocket, disconnectSocket } from '../../utils/socket';
@@ -11,10 +11,24 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import ReusableModal from '../../components/modal';
 import { dateFormate, formattedTime } from '../../utils/dateUtils';
 import { Expense } from '../../interface/Expences';
-import { fetchExpenses, fetchPendingExpenses, updateStatus } from '../../services/expencesService';
+// Fix your imports at the top of the file
+import { 
+    fetchPendingExpenses,
+    fetchExpenses,
+    updateStatus
+} from '../../services/expencesService';
+
+import { 
+    createExpense,
+    updateExpense,
+    deleteExpense,
+    getExpenseById
+} from './expensesService'; // This is correct
 import ExpenseTable from './ExpenseTable';
 import { GrNext, GrPrevious } from 'react-icons/gr';
 import Swal from 'sweetalert2';
+import axios from 'axios';
+import { MenuItem } from '@mui/material'; // Add this import
 
 const ExpenseApproveUI = () => {
     const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -33,39 +47,123 @@ const ExpenseApproveUI = () => {
     const [totalItems, setTotalItems] = useState(0);
     const [showingAll, setShowingAll] = useState(false);
     const [currentSearchTerm, setCurrentSearchTerm] = useState('');
+ // CRUD States
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+    const [formData, setFormData] = useState({
+        amount: '',
+        type: '',
+        description: '',
+        driver: '',
+        image: null as File | null
+    });
+    const [drivers, setDrivers] = useState<any[]>([]);
+const [driversLoading, setDriversLoading] = useState(false);
 
-    const fetchPendingExpense = async () => {
-        try {
-            setLoading(true);
-
-            const response: Expense[] = (await fetchPendingExpenses()) as unknown as Expense[];
-            setExpenses(response);
-            setNewRequestsCount(0);
-        } catch (error) {
-            enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
-            console.error('Error fetching expenses:', error);
-        } finally {
-            setLoading(false);
+ // Update your fetchDrivers function:
+const fetchDrivers = async () => {
+    try {
+        setDriversLoading(true); // Add this
+        const token = localStorage.getItem('token');
+        console.log('Token:', token ? 'Exists' : 'Missing');
+        
+        if (!token) {
+            throw new Error('No authentication token found');
         }
-    };
 
-    // Update your fetchExpense function to handle pagination properly
-    const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: number | 'all' = 10) => {
-        try {
-            const response = await fetchExpenses(searchTerm, page, limit);
-            setAllExpenses(response.data);
+        console.log('BASE_URL:', BASE_URL);
+        const url = `${BASE_URL}/driver`;
+        console.log('Fetching drivers from:', url);
 
-            // Update pagination state
-            if (response.pagination) {
-                setTotalPages(response.pagination.totalPages);
-                setTotalItems(response.pagination.totalItems);
-                setCurrentPage(page); // Update current page
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
-        } catch (error) {
-            enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
-            console.error('Error fetching expenses:', error);
+        });
+        
+        console.log('Full API Response:', response);
+        console.log('Response data:', response.data);
+        console.log('Response status:', response.status);
+        
+        // Check the response structure based on your backend
+        let driversList = [];
+        
+        if (Array.isArray(response.data)) {
+            // If response.data is directly an array
+            driversList = response.data;
+            console.log('Drivers list (direct array):', driversList.length);
+        } else if (response.data && Array.isArray(response.data.data)) {
+            // If response.data has a data property that's an array
+            driversList = response.data.data;
+            console.log('Drivers list (data property):', driversList.length);
+        } else if (response.data && Array.isArray(response.data.drivers)) {
+            // If response.data has a drivers property
+            driversList = response.data.drivers;
+            console.log('Drivers list (drivers property):', driversList.length);
+        } else if (response.data && response.data.success && Array.isArray(response.data.expenseData)) {
+            // If it's from expense endpoint
+            driversList = response.data.expenseData;
+            console.log('Drivers list (expenseData):', driversList.length);
+        } else {
+            console.error('Unexpected response structure:', response.data);
+            enqueueSnackbar('Failed to parse drivers list', { variant: 'error' });
+            return;
         }
-    };
+        
+        console.log('Parsed drivers:', driversList);
+        setDrivers(driversList);
+        
+    } catch (error) {
+        console.error('Error fetching drivers:', error);
+        console.error('Error response:', error.response);
+        console.error('Error message:', error.message);
+        
+        if (error.response) {
+            enqueueSnackbar(`Failed to fetch drivers: ${error.response.status} - ${error.response.data?.message || 'Server error'}`, { variant: 'error' });
+        } else if (error.request) {
+            enqueueSnackbar('No response from server. Check network connection.', { variant: 'error' });
+        } else {
+            enqueueSnackbar(`Error: ${error.message}`, { variant: 'error' });
+        }
+    } finally {
+        setDriversLoading(false); // Add this
+    }
+};
+   const fetchPendingExpense = async () => {
+    try {
+        setLoading(true);
+
+        // FIXED: Call the imported function directly, not via expenseService
+        const response: Expense[] = (await fetchPendingExpenses()) as unknown as Expense[];
+        setExpenses(response);
+        setNewRequestsCount(0);
+    } catch (error) {
+        enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
+        console.error('Error fetching expenses:', error);
+    } finally {
+        setLoading(false);
+    }
+};
+
+// Update your fetchExpense function to handle pagination properly
+const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: number | 'all' = 10) => {
+    try {
+        // FIXED: Call the imported function directly
+        const response = await fetchExpenses(searchTerm, page, limit);
+        setAllExpenses(response.data);
+
+        // Update pagination state
+        if (response.pagination) {
+            setTotalPages(response.pagination.totalPages);
+            setTotalItems(response.pagination.totalItems);
+            setCurrentPage(page); // Update current page
+        }
+    } catch (error) {
+        enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
+        console.error('Error fetching expenses:', error);
+    }
+};
     // Update your search handler
     const handleSearch = (searchTerm: string) => {
         setCurrentSearchTerm(searchTerm);
@@ -82,9 +180,174 @@ const ExpenseApproveUI = () => {
         setShowingAll(newShowingAll);
         fetchExpense(currentSearchTerm, 1, newShowingAll ? 'all' : 10);
     };
-    useEffect(() => {
-        fetchExpense();
-    }, []);
+  
+// CRUD Functions
+    const handleCreateExpense = async () => {
+        try {
+            setActionLoading(true);
+            
+            if (!formData.amount || !formData.type || !formData.description || !formData.driver) {
+                enqueueSnackbar('Please fill all required fields', { variant: 'error' });
+                return;
+            }
+
+            const data = new FormData();
+            data.append('amount', formData.amount);
+            data.append('type', formData.type);
+            data.append('description', formData.description);
+            data.append('driver', formData.driver);
+            if (formData.image) {
+                data.append('image', formData.image);
+            }
+
+            await createExpense(data);
+            enqueueSnackbar('Expense created successfully', { variant: 'success' });
+            setIsCreateModalOpen(false);
+            resetForm();
+            fetchExpense();
+            fetchPendingExpense();
+        } catch (error) {
+            enqueueSnackbar('Failed to create expense', { variant: 'error' });
+            console.error('Error creating expense:', error);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+   const handleEditExpense = async () => {
+    try {
+        setActionLoading(true);
+        
+        if (!editingExpense) {
+            console.error('No expense selected for editing');
+            return;
+        }
+
+        console.log('Editing expense ID:', editingExpense._id);
+        console.log('Form data before submission:', formData);
+
+        const data = new FormData();
+        if (formData.amount) data.append('amount', formData.amount);
+        if (formData.type) data.append('type', formData.type);
+        if (formData.description) data.append('description', formData.description);
+        if (formData.driver) data.append('driver', formData.driver);
+        if (formData.image) {
+            data.append('image', formData.image);
+            console.log('New image selected for upload');
+        }
+
+        console.log('Sending update request...');
+        const result = await updateExpense(editingExpense._id, data);
+        
+        console.log('Update successful:', result);
+        enqueueSnackbar('Expense updated successfully', { variant: 'success' });
+        
+        setIsEditModalOpen(false);
+        resetForm();
+        setEditingExpense(null);
+        
+        // Refresh data
+        fetchExpenseData();
+        fetchPendingExpenseData();
+        
+    } catch (error: any) {
+        console.error('Error updating expense:', error);
+        console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+        });
+        enqueueSnackbar(`Failed to update expense: ${error.message || 'Unknown error'}`, { variant: 'error' });
+    } finally {
+        setActionLoading(false);
+    }
+};
+
+    const handleDeleteExpense = async (expenseId: string) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: 'You are about to delete this expense!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#4b5563',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'No, cancel',
+        });
+
+        if (result.isConfirmed) {
+            try {
+                setActionLoading(true);
+                await deleteExpense(expenseId);
+                enqueueSnackbar('Expense deleted successfully', { variant: 'success' });
+                fetchExpense();
+                fetchPendingExpense();
+            } catch (error) {
+                enqueueSnackbar('Failed to delete expense', { variant: 'error' });
+                console.error('Error deleting expense:', error);
+            } finally {
+                setActionLoading(false);
+            }
+        }
+    };
+
+   const openEditModal = async (expenseId: string) => {
+    try {
+        setActionLoading(true);
+        console.log('Opening edit modal for expense ID:', expenseId);
+        
+        const expense = await getExpenseById(expenseId);
+        console.log('Fetched expense for editing:', expense);
+        
+        setEditingExpense(expense);
+        setFormData({
+            amount: expense.amount.toString(),
+            type: expense.type,
+            description: expense.description,
+            driver: expense.driver?._id || '',
+            image: null
+        });
+        setIsEditModalOpen(true);
+        console.log('Edit modal opened with form data:', {
+            amount: expense.amount.toString(),
+            type: expense.type,
+            description: expense.description,
+            driver: expense.driver?._id
+        });
+    } catch (error) {
+        console.error('Error loading expense for editing:', error);
+        enqueueSnackbar('Failed to load expense for editing', { variant: 'error' });
+    } finally {
+        setActionLoading(false);
+    }
+};
+
+    const resetForm = () => {
+        setFormData({
+            amount: '',
+            type: '',
+            description: '',
+            driver: '',
+            image: null
+        });
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setFormData(prev => ({
+                ...prev,
+                image: e.target.files![0]
+            }));
+        }
+    };
 
     const toggleDescription = (expenseId: string) => {
         setExpandedDescriptions((prev) => ({
@@ -189,7 +452,11 @@ const ExpenseApproveUI = () => {
             }
         }
     };
+ 
 
+    useEffect(() => {
+        fetchExpense();
+    }, [searchQuery]);
     const getDownloadableUrl = (url: string) => {
         return url.replace('/upload/', '/upload/fl_attachment/');
     };
@@ -240,9 +507,11 @@ const ExpenseApproveUI = () => {
         };
     }, [enqueueSnackbar]);
 
+    // Initialize
     useEffect(() => {
         fetchPendingExpense();
         fetchExpense();
+        fetchDrivers();
     }, []);
 
     useEffect(() => {
@@ -277,7 +546,182 @@ const ExpenseApproveUI = () => {
                     </div>
                 </div>
             )}
+  {/* Create Expense Modal */}
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="bg-white rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Create New Expense</h2>
+                        <div className="space-y-4">
+                            <TextField
+                                fullWidth
+                                label="Amount"
+                                name="amount"
+                                type="number"
+                                value={formData.amount}
+                                onChange={handleInputChange}
+                                required
+                            />
+                            <TextField
+                                fullWidth
+                                label="Expense Type"
+                                name="type"
+                                value={formData.type}
+                                onChange={handleInputChange}
+                                required
+                            />
+                            <TextField
+                                fullWidth
+                                label="Description"
+                                name="description"
+                                multiline
+                                rows={3}
+                                value={formData.description}
+                                onChange={handleInputChange}
+                                required
+                            />
+                            <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Driver *
+                    </label>
+                    <select
+                        name="driver"
+                        value={formData.driver}
+                        onChange={(e) => setFormData(prev => ({ ...prev, driver: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                        required
+                    >
+                        <option value="">Select a driver</option>
+                        {drivers.map(driver => (
+                            <option key={driver._id} value={driver._id}>
+                                {driver.name} - {driver.phone}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Receipt Image
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 mt-6">
+                                <Button
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleCreateExpense}
+                                    disabled={actionLoading}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2"
+                                >
+                                    {actionLoading ? (
+                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                    ) : (
+                                        <Save size={16} />
+                                    )}
+                                    Create Expense
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
+            {/* Edit Expense Modal */}
+            {isEditModalOpen && editingExpense && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="bg-white rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Edit Expense</h2>
+                        <div className="space-y-4">
+                            <TextField
+                                fullWidth
+                                label="Amount"
+                                name="amount"
+                                type="number"
+                                value={formData.amount}
+                                onChange={handleInputChange}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Expense Type"
+                                name="type"
+                                value={formData.type}
+                                onChange={handleInputChange}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Description"
+                                name="description"
+                                multiline
+                                rows={3}
+                                value={formData.description}
+                                onChange={handleInputChange}
+                            />
+                            <FormControl fullWidth>
+                                <InputLabel>Driver</InputLabel>
+                                <Select
+                                    name="driver"
+                                    value={formData.driver}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, driver: e.target.value }))}
+                                >
+                                    {drivers.map(driver => (
+                                        <MenuItem key={driver._id} value={driver._id}>
+                                            {driver.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    New Receipt Image (optional)
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                                />
+                                {editingExpense.image && (
+                                    <p className="text-sm text-gray-500 mt-2">
+                                        Current image: {editingExpense.image}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex justify-end gap-3 mt-6">
+                                <Button
+                                    onClick={() => {
+                                        setIsEditModalOpen(false);
+                                        setEditingExpense(null);
+                                        resetForm();
+                                    }}
+                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleEditExpense}
+                                    disabled={actionLoading}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2"
+                                >
+                                    {actionLoading ? (
+                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                    ) : (
+                                        <Save size={16} />
+                                    )}
+                                    Update Expense
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Floating notification badge */}
             {newRequestsCount > 0 && (
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="fixed top-4 right-4 z-50">
@@ -288,7 +732,17 @@ const ExpenseApproveUI = () => {
                     </Badge>
                 </motion.div>
             )}
-
+  {/* Header with Create Button */}
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold text-gray-800">Expense Management</h1>
+                <Button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2"
+                >
+                    <Plus size={20} />
+                    Create Expense
+                </Button>
+            </div>
             {loading ? (
                 <div className="flex justify-center items-center h-64">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
@@ -319,8 +773,16 @@ const ExpenseApproveUI = () => {
                         </div>
                     </div>
 
-                    <ExpenseTable expenses={allExpenses} expandedDescriptions={expandedDescriptions} toggleDescription={toggleDescription} openImageModal={openImageModal} CLOUD_IMAGE={CLOUD_IMAGE} />
-                </>
+// In your main component's return statement, update the ExpenseTable usage:
+<ExpenseTable
+    expenses={allExpenses}
+    expandedDescriptions={expandedDescriptions}
+    toggleDescription={toggleDescription}
+    openImageModal={openImageModal}
+    CLOUD_IMAGE={CLOUD_IMAGE}
+    onEdit={openEditModal}  // This should be your edit handler function
+    onDelete={handleDeleteExpense}  // This should be your delete handler function
+/>                </>
             ) : (
                 <>
                     <Card className="w-full max-w-lg mx-auto mt-12 p-6 shadow-2xl rounded-3xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-100">
@@ -451,12 +913,14 @@ const ExpenseApproveUI = () => {
                             </div>
                         </div>
                         <ExpenseTable
-                            expenses={allExpenses} // Changed from expenses to allExpenses
-                            expandedDescriptions={expandedDescriptions}
-                            toggleDescription={toggleDescription}
-                            openImageModal={openImageModal}
-                            CLOUD_IMAGE={CLOUD_IMAGE}
-                        />
+                            expenses={allExpenses}
+                        expandedDescriptions={expandedDescriptions}
+                        toggleDescription={toggleDescription}
+                        openImageModal={openImageModal}
+                        CLOUD_IMAGE={CLOUD_IMAGE}
+                        onEdit={openEditModal}
+                        onDelete={handleDeleteExpense}
+                    />
                     </div>
                 </>
             )}
