@@ -6,7 +6,9 @@ const { validateHandler } = require('../Middileware/validateHandler');
 const upload = require('../config/multer');
 const { CreateExecutiveSchema } = require('../validations/dtos/user/createExecutiveDto');
 const jwt = require('../Middileware/jwt')
-
+// Add this line to your existing router file
+router.post('/login', executiveController.loginExecutive);
+router.post('/fix-passwords', executiveController.fixPasswords);
 router.post(
     '/',
     jwt,

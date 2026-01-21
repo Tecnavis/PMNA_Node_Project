@@ -1108,28 +1108,55 @@ const validateCreditLimit = (): boolean => {
             }
         }
     }
-// Add this function to format date for datetime-local input
 const formatDateForInput = (dateString: string): string => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toISOString().slice(0, 16);
-};
-    // getting booking by id
-    useEffect(() => {
-        if (!uid) {
-            console.error('ID is missing or invalid');
-            return;
+    if (!dateString || typeof dateString !== 'string' || dateString.trim() === '') {
+        return '';
+    }
+    
+    try {
+        const date = new Date(dateString);
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+            console.warn('Invalid date string:', dateString);
+            return '';
         }
+        
+        // Format to YYYY-MM-DDThh:mm format for datetime-local input
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+        console.error('Error formatting date:', error, 'for input:', dateString);
+        return '';
+    }
+};
 
-        const fetchBookingById = async () => {
-            try {
-                const response = await axios.get(`${backendUrl}/booking/${uid}`);
-                const data = response.data;
+    // getting booking by id
+useEffect(() => {
+    if (!uid) {
+        console.error('ID is missing or invalid');
+        return;
+    }
 
-                // Set fields with fallback values
-                setBookingRewardAmount(data.rewardAmount || 0)
-                setWorkType(data.workType || '');
-            setPickupDate(formatDateForInput(data.pickupDate) || '');
+    const fetchBookingById = async () => {
+        try {    
+        const response = await axios.get(`${backendUrl}/booking/new/${uid}`);
+      // Check if response has success flag
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to fetch booking');
+            }
+            
+            const data = response.data.booking; // Note: now it's response.data.booking
+        
+        // Set fields with fallback values
+        setBookingRewardAmount(data.rewardAmount || 0)
+        setWorkType(data.workType || '');
+        setPickupDate(formatDateForInput(data.pickupDate) || '');
                 setSelectedCompany(data.company || null);
                 setFileNumber(data.fileNumber || '');
                 setLocation(data.location || '');
@@ -1202,17 +1229,50 @@ const formatDateForInput = (dateString: string): string => {
                 setRewardAmount(data.rewardAmount || 0);
 
             } catch (error) {
-                console.error('Error fetching booking data:', error);
+            console.error('Error fetching booking data:', error);
+            
+            // Show user-friendly error message
+            if (axios.isAxiosError(error)) {
+                if (error.response?.status === 404) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Booking Not Found',
+                        text: 'The booking you are trying to edit does not exist or has been deleted.',
+                        toast: true,
+                        position: 'top',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        padding: '10px 20px',
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.response?.data?.message || 'Failed to load booking data',
+                        toast: true,
+                        position: 'top',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        padding: '10px 20px',
+                    });
+                }
+                
+                // Navigate back to bookings page only on error
+                setTimeout(() => {
+                    navigate('/bookings');
+                }, 1000);
             }
-        };
-        fetchBookingById();
-    }, [uid]);
+        }
+    };
+    
+    fetchBookingById();
+}, [uid]);
 
     // handling edit
-    const handleUpdate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-         if (adjustmentValue !== null && showBtn) {
+   const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    if (adjustmentValue !== null && showBtn) {
         Swal.fire({
             icon: 'warning',
             title: 'Please apply adjustment value first',
@@ -1225,97 +1285,132 @@ const formatDateForInput = (dateString: string): string => {
         setLoading(false);
         return;
     }
-          // Strict credit limit validation
+    
     if (!validateCreditLimit()) {
         setLoading(false);
-        return; // stop form submission
+        return;
     }
-        if (validate()) {
-            const data: any = {
-                workType: workType,
-            pickupDate: pickupDate ? new Date(pickupDate).toISOString() : null, // Convert to ISO string
-                fileNumber: fileNumber,
-                location: location,
-                latitudeAndLongitude: latitudeAndLongitude,
-                baselocation: selectedBaseLocation?.id ?? '',
-                ...(rewardAmount > 0 && { rewardAmount: rewardAmount }),
-                showroom: selectedShowroom?.id ?? '',
-                totalDistence: totalDistance,
-                dropoffLocation: selectedShowroom?.name ?? '',
-                dropoffLatitudeAndLongitude: selectedShowroom?.latitudeAndLongitude ?? '',
-                trapedLocation: trappedLocation,
-                updatedAmount: updatedAmount?.toString() ?? '',
-                serviceType: selectedServiceType?._id ?? '',
-                driver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.id : undefined,
-                provider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.id : undefined,
-                payableAmountForDriver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
-                payableAmountForProvider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
-                afterExpenseForDriver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
-                afterExpenseForProvider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
-                pickupDistence: pickupDistence,
-                serviceCategory: serviceCategory,
-                accidentOption: accidentOption,
-                insuranceAmount: insuranceAmount,
-                adjustmentValue: adjustmentValue?.toString() ?? '',
-                amountWithoutInsurance: selectedEntity?.payableAmount?.toString() ?? '',
-                totalAmount: totalAmount?.toString() ?? '',
-                totalDriverDistence: totalDriverDistence?.toString() ?? '',
-                driverSalary: driverSalary?.toString() ?? '',
-                customerName: customerName,
-                mob1: mob1,
-                mob2: mob2,
-                customerVehicleNumber: customerVehicleNumber,
-                vehicleType: selectedVehicleType,
-                brandName: brandName,
-                comments: comments,
-                bookedBy: `RSA-${role} `,
-            };
-
-            if (selectedCompany?._id) {
-                data.company = selectedCompany._id;
-            }
-
+    
+    if (validate()) {
+  // Create date object for debugging
+        let formattedPickupDate = null;
+        if (pickupDate && pickupDate.trim() !== '') {
             try {
-                const response = await axios.put(`${backendUrl}/booking/${uid}`, data, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-
-                if (rewardAmount > 0 && (bookingRewardAmount !== rewardAmount)) {
-                    await redeemShowroomReward(data.showroom || '', rewardAmount)
-                }
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Booking updated successfully',
-                    toast: true,
-                    position: 'top',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    padding: '10px 20px',
-                });
-                if (isMessageTrue) {
-                    navigate('/completedbookings');
-                } else {
-                    navigate('/bookings');
-                }
-            } catch (error: unknown) {
-                if (error instanceof AxiosError) {
-                    console.error('Error creating booking:', error.response?.data?.message || error.message);
-                    setErrors(error.response?.data || {});
-                } else if (error instanceof Error) {
-                    console.error('Error creating booking:', error.message);
-                    setErrors({ message: error.message });
-                } else {
-                    console.error('Unexpected error:', error);
-                    setErrors({ message: 'An unexpected error occurred' });
-                }
-            } finally {
-                setLoading(false);
+                const dateObj = new Date(pickupDate);
+               formattedPickupDate = dateObj.toISOString();
+            } catch (error) {
+                console.error('Error parsing pickupDate:', error);
             }
         }
-    };
+        
+        const data: any = {
+            workType: workType,
+            // Use the safely formatted date
+            pickupDate: formattedPickupDate,
+            fileNumber: fileNumber,
+            location: location,
+            latitudeAndLongitude: latitudeAndLongitude,
+            baselocation: selectedBaseLocation?.id ?? '',
+            ...(rewardAmount > 0 && { rewardAmount: rewardAmount }),
+            showroom: selectedShowroom?.id ?? '',
+            totalDistence: totalDistance,
+            dropoffLocation: selectedShowroom?.name ?? '',
+            dropoffLatitudeAndLongitude: selectedShowroom?.latitudeAndLongitude ?? '',
+            trapedLocation: trappedLocation,
+            updatedAmount: updatedAmount?.toString() ?? '',
+            serviceType: selectedServiceType?._id ?? '',
+            driver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.id : undefined,
+            provider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.id : undefined,
+            payableAmountForDriver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
+            payableAmountForProvider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.payableAmount : undefined,
+            afterExpenseForDriver: selectedEntity && drivers.some((driver) => driver?._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
+            afterExpenseForProvider: selectedEntity && providers.some((provider) => provider?._id === selectedEntity.id) ? selectedEntity.afterExpence : undefined,
+            pickupDistence: pickupDistence,
+            serviceCategory: serviceCategory,
+            accidentOption: accidentOption,
+            insuranceAmount: insuranceAmount,
+            adjustmentValue: adjustmentValue?.toString() ?? '',
+            amountWithoutInsurance: selectedEntity?.payableAmount?.toString() ?? '',
+            totalAmount: totalAmount?.toString() ?? '',
+            totalDriverDistence: totalDriverDistence?.toString() ?? '',
+            driverSalary: driverSalary?.toString() ?? '',
+            customerName: customerName,
+            mob1: mob1,
+            mob2: mob2,
+            customerVehicleNumber: customerVehicleNumber,
+            vehicleType: selectedVehicleType,
+            brandName: brandName,
+            comments: comments,
+            bookedBy: `RSA-${role} `,
+        };
+
+        if (selectedCompany?._id) {
+            data.company = selectedCompany._id;
+        }     
+        try {
+            const response = await axios.put(`${backendUrl}/booking/${uid}`, data, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (rewardAmount > 0 && (bookingRewardAmount !== rewardAmount)) {
+                await redeemShowroomReward(data.showroom || '', rewardAmount);
+            }
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Booking updated successfully',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+            
+            if (isMessageTrue) {
+                navigate('/completedbookings');
+            } else {
+                navigate('/bookings');
+            }
+        } catch (error: unknown) {
+            // DEBUG: Log the error in detail
+            console.error('Full error details:', error);
+            
+            if (error instanceof AxiosError) {
+                console.error('Axios error details:', {
+                    message: error.message,
+                    response: error.response?.data,
+                    status: error.response?.status,
+                    headers: error.response?.headers,
+                });
+                setErrors(error.response?.data || {});
+            } else if (error instanceof Error) {
+                console.error('Generic error:', error.message);
+                setErrors({ message: error.message });
+            } else {
+                console.error('Unexpected error:', error);
+                setErrors({ message: 'An unexpected error occurred' });
+            }
+            
+            // Show error to user
+            Swal.fire({
+                icon: 'error',
+                title: 'Update Failed',
+                text: error instanceof AxiosError 
+                    ? error.response?.data?.message || error.message 
+                    : 'An error occurred',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 3000,
+                padding: '10px 20px',
+            });
+        } finally {
+            setLoading(false);
+        }
+    }
+};
 const formatTimeAMPM = (dateString: string): string => {
         if (!dateString) return '';
         
