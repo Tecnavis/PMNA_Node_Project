@@ -679,8 +679,7 @@ exports.getAllBookings = async (req, res) => {
             all = false,
             hasPickupDate, // Add this parameter to filter by pickupDate
             scheduledToday,
-                        includeArchived = false // ADD THIS PARAMETER
-
+                        includeArchived = false
         } = req.query;
 
         // Convert page and limit to integers
@@ -1584,7 +1583,6 @@ exports.getBookingStats = async (req, res) => {
     res.status(500).json({ message: 'Server error while fetching booking stats' });
   }
 };
-
 // Controller to get a booking by ID
 exports.getBookingById = async (req, res) => {
     const { id } = req.params;
@@ -1608,6 +1606,52 @@ exports.getBookingById = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching the booking' });
     }
 };
+
+// Controller to get a booking by ID
+exports.getBookingByIdNew = async (req, res) => {
+    const { id } = req.params;
+try {
+        // Bypass the visibleFilter plugin by using findOne with _includeHidden
+        const booking = await Booking.findOne({ 
+            _id: id,
+            _includeHidden: true  // This will bypass the filter
+        })
+        .populate('baselocation')
+        .populate('showroom')
+        .populate('serviceType')
+        .populate('company')
+        .populate('driver')
+        .populate('provider');
+  
+        if (!booking) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Booking not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            booking
+        });
+    } catch (error) {
+        console.error('Error fetching booking by ID:', error);
+        
+        if (error.name === 'CastError') {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Invalid booking ID format' 
+            });
+        }
+
+        res.status(500).json({ 
+            success: false,
+            message: 'Server error while fetching the booking',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 // Controller to update a booking by ID
 exports.updateBooking = async (req, res) => {
     const { id } = req.params;
@@ -1618,21 +1662,21 @@ exports.updateBooking = async (req, res) => {
         handler: 'updateBooking',
     });
 
-    routeLogger.info({
-        doneBy: req.user || 'unknown'
-    }, 'Update Booking  process started...');
-
     try {
-        // Fetch the existing booking
-        const booking = await Booking.findById(id);
+        // Bypass the visibleFilter plugin when finding by ID
+        const booking = await Booking.findOne({ 
+            _id: id,
+            _includeHidden: true  // This will bypass the filter
+        });
+        
         if (!booking) {
-
-            routeLogger.info({
-                fileNumber: booking.fileNumber,
-                doneBy: req.user || 'unknown'
-            }, 'Update Booking  process started...');
-
-            return res.status(404).json({ message: 'Booking not found' });
+            routeLogger.error({
+                bookingId: id
+            }, 'Booking not found for update');
+            return res.status(404).json({ 
+                success: false,
+                message: 'Booking not found'
+            });
         }
         // Handle payment settlement updates
         if (updatedData.paymentSettlement) {
@@ -1737,7 +1781,14 @@ exports.updateBooking = async (req, res) => {
             updatedData.rewardAmount = Number(updatedData.rewardAmount) || 0;
         }
 
-        const updatedBooking = await Booking.findByIdAndUpdate(id, updatedData, { new: true })
+  const updatedBooking = await Booking.findOneAndUpdate(
+            { _id: id, _includeHidden: true },
+            updatedData,
+            { 
+                new: true,
+                runValidators: true
+            }
+        )
             .populate('baselocation') // Populate related documents
             .populate('showroom')
             .populate('serviceType')

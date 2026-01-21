@@ -69,7 +69,19 @@ marketingExecutiveSchema.index({
     'email': 1,
     'userName': 1 
 });
-
+// Add this pre-save hook to your executiveModel.js
+marketingExecutiveSchema.pre('save', async function(next) {
+    // Only hash the password if it's modified (or new)
+    if (!this.isModified('password')) return next();
+    
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
 // Password comparison method
 marketingExecutiveSchema.methods.comparePassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password); // Fixed: was using accountInfo.password
