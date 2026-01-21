@@ -136,7 +136,10 @@ partialAmountStaff: { type: Number },
     archivedAt: { 
         type: Date 
     },
-    
+      whatsappId: { 
+        type: String, 
+        unique: true 
+    },
     upiVerified: { type: Boolean, default: false },
     upiVerifiedAt: { type: Date },
     upiVerifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
