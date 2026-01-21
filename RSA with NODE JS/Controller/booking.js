@@ -416,6 +416,7 @@ exports.createBookingNoAuth = async (req, res) => {
             // Generate a unique fileNumber or use a default value
             bookingData.fileNumber = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         }
+        bookingData.whatsappId = bookingData.fileNumber;
 
         // Validate ObjectIds
         if (!mongoose.Types.ObjectId.isValid(bookingData.baselocation)) bookingData.baselocation = null;
@@ -429,6 +430,7 @@ exports.createBookingNoAuth = async (req, res) => {
 
         routeLogger.info({
             fileNumber: newBooking.fileNumber,
+              whatsappId: newBooking.whatsappId,
             doneBy: req.user || 'unknown'
         }, 'New Booking(Whatsapp API) created successfully.');
 
