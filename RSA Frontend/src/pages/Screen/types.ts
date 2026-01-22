@@ -13,6 +13,7 @@ export interface Booking {
     dropoffTime?: string;
     totalDistence?: string;
     pickupTime?: string;
+    whatsappId?:string;
     // Add all other properties that exist in both types
     inventoryImage?: string;
     bookingStatus?: string;

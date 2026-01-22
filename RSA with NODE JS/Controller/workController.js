@@ -3,275 +3,351 @@ const StaffWorkAssignment = require('../Model/staffWorkAssignment');
 const Staff = require('../Model/staff');
 const StaffDailyWork = require('../Model/staffDailyWork');
 
-// Assign daily template works to staff
-exports.assignTemplateWorks = async (req, res) => {
-  try {
-    const { staffId, dailyTasks } = req.body;
+// controllers/workController.js
 
-    // Check if staff exists
-    const staff = await Staff.findById(staffId);
-    if (!staff) {
-      return res.status(404).json({ message: 'Staff not found' });
-    }
-
-    // Find existing assignment or create new
-    let assignment = await StaffWorkAssignment.findOne({ staff: staffId });
-    
-    if (assignment) {
-      // Update existing assignment
-      assignment.dailyTasks = dailyTasks;
-      assignment.lastUpdated = new Date();
-    } else {
-      // Create new assignment
-      assignment = new StaffWorkAssignment({
-        staff: staffId,
-        dailyTasks,
-      });
-    }
-
-    await assignment.save();
-    
-    res.status(200).json({
-      message: 'Work template assigned successfully',
-      data: assignment,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Get staff's template works
-exports.getStaffTemplateWorks = async (req, res) => {
-  try {
-    const { staffId } = req.params;
-    
-    const assignment = await StaffWorkAssignment.findOne({ 
-      staff: staffId,
-      isActive: true 
-    }).populate('staff', 'name role');
-    
-    if (!assignment) {
-      return res.status(404).json({ message: 'No template works found for this staff' });
-    }
-    
-    res.status(200).json(assignment);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Generate daily work entry from template
 exports.generateDailyWork = async (req, res) => {
   try {
     const { staffId } = req.body;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Check if daily work already exists for today
-    const existingDailyWork = await StaffDailyWork.findOne({
+    // 1. Get staff details to know their type
+    const staff = await Staff.findById(staffId).select('name role staffType');
+    if (!staff) {
+      return res.status(404).json({ message: 'Staff not found' });
+    }
+
+    // 2. Check if daily work already exists for today
+    const existingWork = await StaffDailyWork.findOne({
       staff: staffId,
-      date: {
-        $gte: today,
-        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-      }
+      date: { $gte: today }
     });
 
-    if (existingDailyWork) {
-      return res.status(400).json({ 
-        message: 'Daily work already generated for today' 
+    if (existingWork) {
+      return res.status(200).json({
+        message: 'Daily work already exists',
+        data: existingWork
       });
     }
 
-    // Get template works
+    // 3. Fetch template based on staff type
     const template = await StaffWorkAssignment.findOne({ 
-      staff: staffId,
+      staff: staffId, 
       isActive: true 
     });
 
+    let dailyTasks = [];
+
+    // 4. If no template found, use default tasks based on staff type
     if (!template) {
-      return res.status(404).json({ 
-        message: 'No template works found for this staff' 
-      });
+      dailyTasks = getDefaultTasksByStaffType(staff.staffType || 'operations');
+    } else {
+      dailyTasks = template.dailyTasks;
     }
 
-    // Create daily work entry from template
+    // 5. Create Daily Work Entry with tasks in proper order
     const dailyWork = new StaffDailyWork({
       staff: staffId,
-      date: new Date(),
-      works: template.dailyTasks.map(task => ({
+      staffType: staff.staffType || 'operations',
+      date: today,
+      works: dailyTasks.map((task, index) => ({
         taskName: task.taskName,
         status: 'pending',
+        count: task.requiresCount ? 0 : null,
+        time: task.estimatedTime || '',
+        priority: task.priority || index + 1,
         remarks: ''
       })),
-      overallStatus: 'pending',
-      completedPercentage: 0
+      totalTasks: dailyTasks.length,
+      pendingTasks: dailyTasks.length
     });
 
     await dailyWork.save();
-    
+
     res.status(201).json({
       message: 'Daily work generated successfully',
-      data: dailyWork,
+      data: dailyWork
     });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error generating daily work:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to generate daily work'
+    });
   }
 };
 
-// Update work status
-exports.updateWorkStatus = async (req, res) => {
-  try {
-    const { dailyWorkId } = req.params;
-    const { workIndex, status, remarks } = req.body;
+// Helper function for default tasks based on staff type
+function getDefaultTasksByStaffType(staffType) {
+  const defaultTasks = {
+    accountant: [
+      { taskName: 'COMPANY BILLING', estimatedTime: '10:00 AM', requiresCount: true, priority: 1 },
+      { taskName: 'NEW CASE UPDATION IN EXCEL', estimatedTime: '11:00 AM', requiresCount: true, priority: 2 },
+      { taskName: 'DRIVERS CASE UPDATION IN EXCEL', estimatedTime: '12:00 PM', requiresCount: true, priority: 3 },
+      { taskName: 'INVOICE NUMBER ADD', estimatedTime: '2:00 PM', requiresCount: true, priority: 4 },
+      { taskName: 'FUEL BILL CHECKING & TRACKING IN PORTAL', estimatedTime: '3:00 PM', requiresCount: false, priority: 5 },
+      { taskName: 'COMPANY CASES ADDED IN EXCEL', estimatedTime: '4:00 PM', requiresCount: true, priority: 6 }
+    ],
+    operations: [
+      { taskName: 'NIGHT/TOMORROW CASES BOOKING', estimatedTime: '9:00 AM', requiresCount: true, priority: 1 },
+      { taskName: 'NIGHT/TOMORROW CASES CLOSING', estimatedTime: '10:00 AM', requiresCount: true, priority: 2 },
+      { taskName: 'NEW ADDED CASES TRANSLATING & CALL TO BOOKING', estimatedTime: '11:00 AM', requiresCount: true, priority: 3 },
+      { taskName: 'FEDERAL CALLING', estimatedTime: '12:00 PM', requiresCount: true, priority: 4 },
+      { taskName: 'CALL TO CUSTOMER FOR CASH PENDING', estimatedTime: '2:00 PM', requiresCount: true, priority: 5 },
+      { taskName: 'SUD CHECKING', estimatedTime: '3:00 PM', requiresCount: false, priority: 6 },
+      { taskName: 'REMARKS CHECKING', estimatedTime: '4:00 PM', requiresCount: false, priority: 7 },
+      { taskName: 'LEAST TRAVELING', estimatedTime: '5:00 PM', requiresCount: true, priority: 8 },
+      { taskName: 'LOUISIANA', estimatedTime: '6:00 PM', requiresCount: true, priority: 9 }
+    ],
+    coordinator: [
+      { taskName: 'CASES CROSS CHECKING FOR', estimatedTime: '9:00 AM', requiresCount: true, priority: 1 },
+      { taskName: 'COMPANY BILLING (Group & App)', estimatedTime: '10:00 AM', requiresCount: false, priority: 2 },
+      { taskName: 'PAYMENT MANAGEMENT', estimatedTime: '11:00 AM', requiresCount: false, priority: 3 },
+      { taskName: 'EXPENSE CHECKING & TRACKING', estimatedTime: '12:00 PM', requiresCount: false, priority: 4 },
+      { taskName: 'ACCOUNT TRANSACTION', estimatedTime: '2:00 PM', requiresCount: false, priority: 5 },
+      { taskName: 'DRIVER COMPLETED CASES TRACKING', estimatedTime: '3:00 PM', requiresCount: true, priority: 6 },
+      { taskName: 'PHOTOS CROSS CHECKING', estimatedTime: '4:00 PM', requiresCount: false, priority: 7 },
+      { taskName: 'ACCOUNT STATE VERIFY', estimatedTime: '5:00 PM', requiresCount: false, priority: 8 },
+      { taskName: 'CASE UPDATION IN GROUP PORTAL', estimatedTime: '6:00 PM', requiresCount: true, priority: 9 }
+    ],
+    showroom: [
+      { taskName: 'NEW ADDED CASES SERVICE', estimatedTime: '9:00 AM', requiresCount: true, priority: 1 },
+      { taskName: 'NIGHT/TOMORROW CASES BOOKING ADJ', estimatedTime: '10:00 AM', requiresCount: true, priority: 2 },
+      { taskName: 'PENDING CASES CLOSING', estimatedTime: '11:00 AM', requiresCount: true, priority: 3 },
+      { taskName: 'NEW ADDED CASES START', estimatedTime: '12:00 PM', requiresCount: true, priority: 4 },
+      { taskName: 'DRIVER COMPLETE CASES SERVICE', estimatedTime: '2:00 PM', requiresCount: true, priority: 5 },
+      { taskName: 'DUE DATE TRACKING & PROCEDURE', estimatedTime: '3:00 PM', requiresCount: false, priority: 6 },
+      { taskName: 'SPECIAL TAX & INSURANCE', estimatedTime: '4:00 PM', requiresCount: false, priority: 7 },
+      { taskName: 'SHOWROOM ADJ', estimatedTime: '5:00 PM', requiresCount: false, priority: 8 },
+      { taskName: 'INVOICE AMOUNT ADJ', estimatedTime: '6:00 PM', requiresCount: false, priority: 9 },
+      { taskName: 'CASH PENDING CLOSING', estimatedTime: '7:00 PM', requiresCount: true, priority: 10 }
+    ]
+  };
 
-    const dailyWork = await StaffDailyWork.findById(dailyWorkId);
+  return defaultTasks[staffType] || defaultTasks.operations;
+}
+// Update task status
+exports.updateTaskStatus = async (req, res) => {
+  try {
+    const { dailyWorkId, taskIndex, status, count, remarks } = req.body;
     
+    const dailyWork = await StaffDailyWork.findById(dailyWorkId);
     if (!dailyWork) {
       return res.status(404).json({ message: 'Daily work not found' });
     }
 
-    // Update specific work
-    dailyWork.works[workIndex].status = status;
-    dailyWork.works[workIndex].remarks = remarks || '';
-    
-    if (status === 'completed') {
-      dailyWork.works[workIndex].completedAt = new Date();
+    // Update specific task
+    if (dailyWork.works[taskIndex]) {
+      const task = dailyWork.works[taskIndex];
+      task.status = status;
+      if (count !== undefined) task.count = count;
+      if (remarks) task.remarks = remarks;
+      
+      if (status === 'in-progress' && !task.startTime) {
+        task.startTime = new Date();
+      } else if (status === 'completed' && !task.endTime) {
+        task.endTime = new Date();
+      }
     }
 
-    // Calculate overall status
-    const totalWorks = dailyWork.works.length;
-    const completedWorks = dailyWork.works.filter(w => w.status === 'completed').length;
-    
-    dailyWork.completedPercentage = Math.round((completedWorks / totalWorks) * 100);
-    
-    if (completedWorks === totalWorks) {
-      dailyWork.overallStatus = 'completed';
-    } else if (completedWorks > 0) {
-      dailyWork.overallStatus = 'partially-completed';
-    } else {
-      dailyWork.overallStatus = 'pending';
-    }
+    // Update counters
+    dailyWork.completedTasks = dailyWork.works.filter(t => t.status === 'completed').length;
+    dailyWork.pendingTasks = dailyWork.works.filter(t => t.status === 'pending').length;
+    dailyWork.updatedAt = new Date();
 
     await dailyWork.save();
-    
+
     res.status(200).json({
-      message: 'Work status updated successfully',
-      data: dailyWork,
+      message: 'Task updated successfully',
+      data: dailyWork
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// Get daily work for staff
-exports.getStaffDailyWork = async (req, res) => {
+// Get daily work report
+exports.getDailyReport = async (req, res) => {
   try {
-    const { staffId, date } = req.params;
-    
+    const { date, staffType } = req.query;
     const queryDate = date ? new Date(date) : new Date();
     queryDate.setHours(0, 0, 0, 0);
-    
-    const nextDay = new Date(queryDate);
-    nextDay.setDate(nextDay.getDate() + 1);
-    
-    const dailyWork = await StaffDailyWork.findOne({
-      staff: staffId,
-      date: {
-        $gte: queryDate,
-        $lt: nextDay
-      }
-    }).populate('staff', 'name role image');
-    
-    if (!dailyWork) {
-      return res.status(404).json({ 
-        message: 'No daily work found for this date',
-        data: null 
-      });
-    }
-    
-    res.status(200).json(dailyWork);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
-// Get all staffs work status for a date (Admin view)
-exports.getAllStaffsDailyWork = async (req, res) => {
-  try {
-    const { date } = req.query;
-    
-    const queryDate = date ? new Date(date) : new Date();
-    queryDate.setHours(0, 0, 0, 0);
-    
-    const nextDay = new Date(queryDate);
-    nextDay.setDate(nextDay.getDate() + 1);
-    
-    const dailyWorks = await StaffDailyWork.find({
-      date: {
-        $gte: queryDate,
-        $lt: nextDay
-      }
-    })
-    .populate('staff', 'name role phone email image')
-    .sort({ createdAt: -1 });
-    
-    // Get staff without daily work
-    const allStaff = await Staff.find();
-    const staffWithWorkIds = dailyWorks.map(dw => dw.staff._id.toString());
-    const staffWithoutWork = allStaff.filter(staff => 
-      !staffWithWorkIds.includes(staff._id.toString())
-    );
-    
-    res.status(200).json({
-      date: queryDate,
-      staffsWithWork: dailyWorks,
-      staffsWithoutWork: staffWithoutWork.map(staff => ({
-        staff,
-        message: 'No work assigned for today'
-      }))
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+    const filter = { date: { $gte: queryDate } };
+    if (staffType) filter.staffType = staffType;
 
-// Get work history for staff
-exports.getStaffWorkHistory = async (req, res) => {
-  try {
-    const { staffId } = req.params;
-    const { startDate, endDate, limit = 30 } = req.query;
-    
-    let dateFilter = {};
-    
-    if (startDate && endDate) {
-      dateFilter.date = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      };
-    }
-    
-    const history = await StaffDailyWork.find({
-      staff: staffId,
-      ...dateFilter
-    })
-    .sort({ date: -1 })
-    .limit(parseInt(limit))
-    .populate('staff', 'name role');
-    
+    const reports = await StaffDailyWork.find(filter)
+      .populate('staff', 'name email phone')
+      .sort({ createdAt: -1 });
+
     // Calculate statistics
     const stats = {
-      totalDays: history.length,
-      completedDays: history.filter(d => d.overallStatus === 'completed').length,
-      partiallyCompletedDays: history.filter(d => d.overallStatus === 'partially-completed').length,
-      pendingDays: history.filter(d => d.overallStatus === 'pending').length,
-      averageCompletion: history.length > 0 
-        ? Math.round(history.reduce((sum, d) => sum + d.completedPercentage, 0) / history.length)
-        : 0
+      totalStaff: reports.length,
+      totalTasks: reports.reduce((sum, report) => sum + report.totalTasks, 0),
+      completedTasks: reports.reduce((sum, report) => sum + report.completedTasks, 0),
+      pendingTasks: reports.reduce((sum, report) => sum + report.pendingTasks, 0),
+      completionRate: reports.length > 0 ? 
+        (reports.reduce((sum, report) => sum + report.completedTasks, 0) / 
+         reports.reduce((sum, report) => sum + report.totalTasks, 0) * 100).toFixed(2) : 0
     };
-    
+
     res.status(200).json({
-      history,
-      statistics: stats
+      message: 'Daily report fetched successfully',
+      data: reports,
+      statistics: stats,
+      date: queryDate.toISOString().split('T')[0]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+// controllers/workController.js - Additional endpoints
+
+// Get staff list
+exports.getStaffList = async (req, res) => {
+  try {
+    const staff = await Staff.find({ 
+      isActive: true 
+    }).select('name email phone staffType');
+    
+    res.status(200).json(staff);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get daily report by date
+exports.getDailyReportByDate = async (req, res) => {
+  try {
+    const { date, staffId } = req.query;
+    const queryDate = date ? new Date(date) : new Date();
+    queryDate.setHours(0, 0, 0, 0);
+
+    const filter = { 
+      date: { $gte: queryDate },
+      ...(staffId && { staff: staffId })
+    };
+
+    const dailyWorks = await StaffDailyWork.find(filter)
+      .populate('staff', 'name email phone staffType')
+      .sort({ 'staff.name': 1 });
+
+    res.status(200).json(dailyWorks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Add custom task to staff
+exports.addCustomTask = async (req, res) => {
+  try {
+    const { staffId, taskName, time, priority, isCustom } = req.body;
+    
+    const dailyWork = await StaffDailyWork.findOne({ 
+      staff: staffId,
+      date: { $gte: new Date().setHours(0, 0, 0, 0) }
+    });
+
+    if (!dailyWork) {
+      return res.status(404).json({ message: 'Daily work not found for today' });
+    }
+
+    const newTask = {
+      taskName,
+      status: 'pending',
+      time: time || '',
+      priority: priority || dailyWork.works.length + 1,
+      isCustom: isCustom || false
+    };
+
+    dailyWork.works.push(newTask);
+    dailyWork.totalTasks = dailyWork.works.length;
+    dailyWork.pendingTasks = dailyWork.works.filter(t => t.status === 'pending').length;
+    
+    await dailyWork.save();
+
+    res.status(200).json({ 
+      message: 'Task added successfully', 
+      task: newTask 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update task details
+exports.updateTaskDetails = async (req, res) => {
+  try {
+    const { staffId, taskIndex, taskName, time, status } = req.body;
+    
+    const dailyWork = await StaffDailyWork.findOne({ 
+      staff: staffId,
+      date: { $gte: new Date().setHours(0, 0, 0, 0) }
+    });
+
+    if (!dailyWork || !dailyWork.works[taskIndex]) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const task = dailyWork.works[taskIndex];
+    
+    if (taskName !== undefined) task.taskName = taskName;
+    if (time !== undefined) task.time = time;
+    if (status !== undefined) {
+      task.status = status;
+      if (status === 'completed' && !task.endTime) {
+        task.endTime = new Date();
+      }
+    }
+
+    // Recalculate stats
+    dailyWork.completedTasks = dailyWork.works.filter(t => t.status === 'completed').length;
+    dailyWork.pendingTasks = dailyWork.works.filter(t => t.status === 'pending').length;
+    
+    await dailyWork.save();
+
+    res.status(200).json({ 
+      message: 'Task updated successfully', 
+      task 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete custom task
+exports.deleteTask = async (req, res) => {
+  try {
+    const { staffId, taskIndex } = req.body;
+    
+    const dailyWork = await StaffDailyWork.findOne({ 
+      staff: staffId,
+      date: { $gte: new Date().setHours(0, 0, 0, 0) }
+    });
+
+    if (!dailyWork || !dailyWork.works[taskIndex]) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    const task = dailyWork.works[taskIndex];
+    
+    // Only allow deletion of custom tasks
+    if (!task.isCustom) {
+      return res.status(400).json({ 
+        message: 'Cannot delete permanent template tasks' 
+      });
+    }
+
+    dailyWork.works.splice(taskIndex, 1);
+    dailyWork.totalTasks = dailyWork.works.length;
+    dailyWork.completedTasks = dailyWork.works.filter(t => t.status === 'completed').length;
+    dailyWork.pendingTasks = dailyWork.works.filter(t => t.status === 'pending').length;
+    
+    await dailyWork.save();
+
+    res.status(200).json({ 
+      message: 'Task deleted successfully' 
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
