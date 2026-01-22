@@ -65,6 +65,8 @@ export interface Booking {
   receivedAmountShowroom?: number;
   totalAmountShowroom?: number;
     bookedByModel?:string;
+        whatsappId?:string;
+
     partialReceivedAmountStaff?:Boolean;
     partialAmountStaff?:number;
     previousReceivedUser?:string;

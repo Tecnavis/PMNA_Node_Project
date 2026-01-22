@@ -297,7 +297,7 @@ const Sidebar = () => {
                                     <AnimateHeight duration={300} height={currentMenu === 'Todo List' ? 'auto' : 0}>
                                         <ul className="sub-menu text-gray-500">
                                             <li>
-                                                <NavLink to="/workAssign">{t('Add Staff Todo')}</NavLink>
+                                                <NavLink to="/dashboardtodo">{t(' Todo')}</NavLink>
                                             </li>
                                      
                                         </ul>

@@ -141,7 +141,7 @@ const Staff = lazy(() => import('../pages/Staff/Staff'));
 const StaffAdd = lazy(() => import('../pages/Staff/StaffAdd'));
 const ServiceType = lazy(() => import('../pages/ServiceType/ServiceType'));
 const Baselocation = lazy(() => import('../pages/Baselocation/Baselocaion'));
-const StaffWorkManager = lazy(() => import('../pages/Work/StaffWorkManager'));
+const Dashboard = lazy(() => import('../pages/Work/Dashboard'));
 
 const Petrol = lazy(() => import('../pages/PetrolPumb/Petrol'));
 
@@ -391,8 +391,8 @@ const routes = [
         element: <Baselocation />,
     },
      {
-        path: '/workAssign',
-        element: <StaffWorkManager />,
+        path: '/dashboardtodo',
+        element: <Dashboard />,
     },
     
      {

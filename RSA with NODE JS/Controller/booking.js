@@ -3042,6 +3042,8 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
                     { customerName: searchRegex },
                     { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
+                                        { whatsappId: searchRegex },
+
                 ]
             };
 
@@ -3062,7 +3064,7 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
 
         // PROJECTION: Only select necessary fields to reduce memory usage
       const bookings = await Booking.find(query)
-    .select('fileNumber mob1 customerVehicleNumber customerName bookedByModel status totalAmount receivedAmount partialAmount receivedAmountDriver receivedAmountStaff receivedAmountShowroom cashPending partialPayment createdAt driver baselocation showroom serviceType company location dropoffLocation dropoffTime pickupTime')
+    .select('fileNumber whatsappId  mob1 customerVehicleNumber customerName bookedByModel status totalAmount receivedAmount partialAmount receivedAmountDriver receivedAmountStaff receivedAmountShowroom cashPending partialPayment createdAt driver baselocation showroom serviceType company location dropoffLocation dropoffTime pickupTime')
     .populate('baselocation', 'name')
     .populate('showroom', 'name')
     .populate('serviceType', 'name')
