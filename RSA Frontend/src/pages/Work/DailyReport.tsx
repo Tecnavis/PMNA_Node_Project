@@ -244,7 +244,7 @@ const DailyReport: React.FC<DailyReportProps> = ({ open, onClose }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get<ReportData>('/api/work/daily-report', {
+      const response = await axios.get<ReportData>(`/work/daily-report`, {
         params: {
           date: date.toISOString().split('T')[0],
           staffName: selectedStaff
