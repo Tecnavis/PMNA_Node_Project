@@ -17,8 +17,28 @@ const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
 const { StatusCodes } = require('http-status-codes');
 const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
 const { chekcAndUpdatebookingIsEnable } = require('../services/bookingService');
+const externalApiService = require('../services/externalApiService');
 
-
+async function updateExternalApiStatusIfNeeded(booking, newStatus, user) {
+    try {
+        // Only update if it's a WhatsApp booking
+        if (booking.isWhatsappBooking && booking.fileNumber) {
+            const result = await externalApiService.updateBookingStatus(booking._id, newStatus);
+            
+            if (!result.success && !result.skipped) {
+                // Log the error but don't block the main operation
+                console.warn(`Failed to update external API for booking ${booking.fileNumber}:`, result.error);
+            }
+            
+            return result;
+        }
+        return { success: true, skipped: true, message: 'Not a WhatsApp booking' };
+    } catch (error) {
+        // Log error but don't throw - don't break the main operation
+        console.error('Error in external API update:', error);
+        return { success: false, error: error.message };
+    }
+}
 // Controller to create a booking
 exports.createBooking = async (req, res) => {
     let bookingData = req.body;
@@ -117,7 +137,9 @@ exports.createBooking = async (req, res) => {
 
         const newBooking = new Booking(bookingData);
         await newBooking.save();
-
+if (newBooking.isWhatsappBooking) {
+    updateExternalApiStatusIfNeeded(newBooking, newBooking.status, req.user).catch(console.error);
+}
         routeLogger.info({
             fileNumber: bookingData.fileNumber,
             doneBy: req.user || 'unknown'
