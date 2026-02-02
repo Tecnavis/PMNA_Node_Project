@@ -68,11 +68,13 @@ const Showroom: React.FC = () => {
     const [modal, setModal] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [search, setSearch] = useState('');
-    const [a4ModalOpen, setA4ModalOpen] = useState<boolean>(false); // New state for A4 modal
+        const [a4ModalOpen, setA4ModalOpen] = useState<boolean>(false); // New state for A4 modal
  const [selectedShowroomForA4, setSelectedShowroomForA4] = useState<Showroom | null>(null);
     const [isModalVisible, setModalVisible] = useState<boolean>(false);
+     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-    const [showroomId, setShowroomId] = useState<string>('');
+      const [showroomId, setShowroomId] = useState<string>('');
+    const [selectedShowroom, setSelectedShowroom] = useState<Showroom | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
@@ -312,7 +314,17 @@ const Showroom: React.FC = () => {
     const openStaffModal = (id: string) => {
         setModal(true);
         setShowroomId(id)
-    }
+    }  
+    // const generateUniversalLink = (items: Showroom) => {
+    //     // Universal link that redirects based on device
+    //     return `${backendUrl}/staff/showroom/${items._id}`;
+    // };
+
+    // Function to generate mobile deep link
+    // const generateMobileDeepLink = (items: Showroom) => {
+    //     return `rsastaff://signIn?showroomId=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${items.image || ''}&helpline=${items.helpline || ''}&phone=${items.phone || ''}&state=${items.state || ''}&district=${items.district || ''}`;
+    // };
+
     // Function to handle QR button click - opens A4 modal
     const handleQRClick = (items: Showroom) => {
         setSelectedShowroomForA4(items);
