@@ -242,7 +242,25 @@ app.use('/transactions', transactionsRouter);
 app.use('/company-expenses', companyExpenseRoutes);
 app.use('/petrol-pumps', petrolPumpRoutes);
 app.use('/work', workRoutes);
-
+// Add universal link redirect route - FIXED VERSION
+app.get('/staff/showroom/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userAgent = req.headers['user-agent'] || '';
+        const isMobile = /mobile|android|ios/i.test(userAgent);
+        
+        if (isMobile) {
+            // Redirect to Flutter app
+            res.redirect(`rsastaff://signIn?showroomId=${id}`);
+        } else {
+            // Redirect to web dashboard
+            res.redirect(`https://showroomstaff.rsakerala.com/auth/cover-register?showroomId=${id}`);
+        }
+    } catch (error) {
+        console.error('Universal link error:', error);
+        res.status(404).send('Showroom not found');
+    }
+});
 // ============ MEMORY MONITORING MIDDLEWARE ============
 app.use((req, res, next) => {
   // Log memory usage for large responses

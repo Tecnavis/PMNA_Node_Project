@@ -3,39 +3,37 @@ import { QRCodeSVG as QRCode } from 'qrcode.react'
 import rsaIcon from '../../public/assets/rsaqr.jpg'
 import domtoimage from 'dom-to-image';
 import { jsPDF } from 'jspdf';
+import { Showroom } from "../pages/Showroom/Showroom";
 
 // Main Modal Component
 interface A4ModalProps {
     modalOpen: boolean;
     setModalOpen: (open: boolean) => void;
-    url: string;
+    showroom: Showroom | null;
+    backendUrl: string;
 }
 
-const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, url }) => {
-
+const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, showroom, backendUrl }) => {
+    const generateUniversalLink = (): string => {
+        if (!showroom) return '';
+        return `${backendUrl}/staff/showroom/${showroom._id}`;
+    };
+    
     const handlePrintA4 = () => {
         const modalContent = document.getElementById("modal-content");
 
         if (!modalContent) return;
 
-        // Capture the element as an image
         domtoimage.toPng(modalContent, {
-            width: modalContent.scrollWidth, // Capture full width
-            height: modalContent.scrollHeight, // Capture full height
-            style: {
-                overflow: 'visible', // Ensure all content is visible
-            },
+            width: modalContent.scrollWidth,
+            height: modalContent.scrollHeight,
+            style: { overflow: 'visible' },
         }).then((dataUrl: string) => {
             const pdf = new jsPDF("p", "mm", "a4");
-
-            // Calculate dimensions to fit A4
-            const imgWidth = 185; // Width of A4 (210mm) minus margins (10mm on each side)
+            const imgWidth = 185;
             const imgHeight = (modalContent.scrollHeight * imgWidth) / modalContent.scrollWidth;
-
-            // Add image to PDF
             pdf.addImage(dataUrl, "PNG", 10, 10, imgWidth, imgHeight);
-
-            pdf.save("showroom-details.pdf");
+            pdf.save(`showroom-${showroom?.showroomId || showroom?._id}-qr.pdf`);
         }).catch((error: any) => {
             console.error("Error generating PDF:", error);
         });
@@ -43,8 +41,11 @@ const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, url }) => {
 
     const modalContentRef = useRef<HTMLDivElement>(null);
 
-    if (!modalOpen) return;
+    if (!modalOpen || !showroom) return null;
 
+    const universalLink = generateUniversalLink();
+    const showroomId = showroom.showroomId || showroom._id;
+    
     return (
         <div
             style={{
@@ -82,10 +83,27 @@ const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, url }) => {
                         padding: "35px",
                         overflowY: "auto",
                         width: "774px",
-                        position: "relative", // Ensure QR codes are positioned properly
+                        position: "relative",
+                        backgroundColor: "white",
                     }}
-                    className=" bg-white"
                 >
+                    {/* Simple Showroom ID Header */}
+                    <div style={{
+                        textAlign: "center",
+                        marginBottom: "11px",
+                    }}>
+                        <h2 style={{
+                            fontSize: "20px",
+                            fontWeight: "bold",
+                            color: "#333",
+                                                    borderBottom: "2px solid #e0e0e0"
+
+                        }}>
+                            Showroom ID: <span style={{ color: "#007bff" }}>{showroomId} :                             {showroom.name} - {showroom.location}
+</span>
+                        </h2>
+                    </div>
+
                     {/* Image */}
                     <img src={rsaIcon} alt="RSA Icon" style={{ width: "100%" }} />
 
@@ -93,33 +111,50 @@ const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, url }) => {
                     <div
                         style={{
                             position: "absolute",
-                            top: "40%", // Adjust based on image size
+                            top: "45%", // Adjusted for header
                             left: "50%",
                             transform: "translate(-50%, -50%)",
                         }}
                     >
-                        <QRCode value={url} size={160} />
+                        <QRCode value={universalLink} size={160} />
                     </div>
 
                     {/* Second QR Code */}
                     <div
                         style={{
                             position: "absolute",
-                            top: "109%", // Adjust based on image size
+                            top: "114%", // Adjusted for header
                             left: "50%",
                             transform: "translate(-50%, -50%)",
                         }}
                     >
-                        <QRCode value={url} size={160} />
+                        <QRCode value={universalLink} size={160} />
                     </div>
                 </div>
+                
+                {/* Action Buttons */}
                 <div className='w-[700px] bg-white p-3 border-t border-black'>
-                    <button
-                        onClick={() => setModalOpen(false)}
-                        className=' bg-blue-500 text-white py-2 px-3 rounded-md'>Close</button>
-                    <button
-                        onClick={handlePrintA4}
-                        className='ml-3 bg-blue-500 text-white py-2 px-3 rounded-md'>Print</button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                            <span style={{ fontWeight: 'bold', marginRight: '10px' }}>
+                                ID: {showroomId}
+                            </span>
+                        </div>
+                        <div>
+                            <button
+                                onClick={() => setModalOpen(false)}
+                                className='bg-red-500 text-white py-2 px-3 rounded-md hover:bg-red-600 mr-3'
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={handlePrintA4}
+                                className='bg-blue-500 text-white py-2 px-3 rounded-md hover:bg-blue-600'
+                            >
+                                Print PDF
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
