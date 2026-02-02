@@ -21,6 +21,7 @@ import ShowroomStaffModal from './ShowroomStaffModal';
 import IconUsersGroup from '../../components/Icon/IconUsersGroup';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { GrNext, GrPrevious } from 'react-icons/gr';
+import { QRCodeSVG } from 'qrcode.react'; // Fixed import
 
 
 
@@ -67,10 +68,10 @@ const Showroom: React.FC = () => {
     const [modal, setModal] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [search, setSearch] = useState('');
+    const [a4ModalOpen, setA4ModalOpen] = useState<boolean>(false); // New state for A4 modal
+ const [selectedShowroomForA4, setSelectedShowroomForA4] = useState<Showroom | null>(null);
     const [isModalVisible, setModalVisible] = useState<boolean>(false);
-    const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-    const [url, setUrl] = useState<string>('');
     const [showroomId, setShowroomId] = useState<string>('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
@@ -78,7 +79,21 @@ const Showroom: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showAllMode, setShowAllMode] = useState(false);
     const navigate = useNavigate();
-const showroomUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://rsa-staff-ilqh.onrender.com';
+ const showroomStaffUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
+
+    // Function to generate both links
+    const generateShowroomLinks = (items: Showroom) => {
+        // For Flutter app (deep link)
+        const flutterDeepLink = `rsastaff://signIn?showroomId=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${items.image || ''}&helpline=${items.helpline || ''}&phone=${items.phone || ''}&state=${items.state || ''}&district=${items.district || ''}`;
+        
+        // For web fallback (using your existing URL structure)
+        const webLink = `${showroomStaffUrl}/auth/cover-register?id=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${items.image || ''}&helpline=${items.helpline || ''}&phone=${items.phone || ''}&state=${items.state || ''}&district=${items.district || ''}`;
+        
+        return {
+            flutterDeepLink,
+            webLink,
+        };
+    };
     // checking the token
     const gettingToken = () => {
         const token = localStorage.getItem('token');
@@ -298,7 +313,11 @@ const showroomUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://rsa-sta
         setModal(true);
         setShowroomId(id)
     }
-
+    // Function to handle QR button click - opens A4 modal
+    const handleQRClick = (items: Showroom) => {
+        setSelectedShowroomForA4(items);
+        setA4ModalOpen(true);
+    };
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
             <div className="panel">
@@ -371,42 +390,14 @@ const showroomUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://rsa-sta
                                     </td>
                                     <td>{items.helpline}</td>
                                     <td>{items.phone}</td>
-                                    <td>
-                                        {items?.showroomLink ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ display: 'flex', gap: '10px' }}>
-                                                    {/* View QR Button (Opens Modal) */}
-                                                    <button
-                                                        onClick={() => {
-                                                            setModalOpen(true)
-                                                            setUrl(`${showroomUrl}/auth/cover-register?id=${items._id}&name=${items.name}&location=${items.location}&image=${items.image}&helpline=${items.helpline}&phone=${items.phone}&state=${items.state}&district=${items.district}`)
-                                                        }}
-                                                        style={{
-                                                            backgroundColor: '#007bff',
-                                                            color: '#fff',
-                                                            border: 'none',
-                                                            borderRadius: '8px',
-                                                            cursor: 'pointer',
-                                                            padding: '10px 14px',
-                                                            fontSize: '1rem',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '8px',
-                                                            transition: 'all 0.3s ease-in-out',
-                                                            boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)',
-                                                        }}
-                                                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
-                                                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
-                                                    >
-                                                        <FaQrcode size={18} /> View QR
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <p>No QR Available</p>
-                                        )}
-                                    </td>
+                                        <td>
+                            <button
+                                onClick={() => handleQRClick(items)}
+                                className="btn btn-primary btn-sm flex items-center gap-2"
+                            >
+                                <FaQrcode size={16} /> QR Code
+                            </button>
+                        </td>
                                     <td className="text-center">
                                         <ul className="flex items-center justify-center gap-2">
                                             <li>
@@ -741,8 +732,13 @@ const showroomUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://rsa-sta
                 }}
                 onCancel={closeModal}
             />
-            <A4Page url={url} modalOpen={modalOpen} setModalOpen={setModalOpen} />
-        </div >
+              
+  <A4Page 
+                modalOpen={a4ModalOpen}
+                setModalOpen={setA4ModalOpen}
+                showroom={selectedShowroomForA4}
+                backendUrl={backendUrl}
+            />        </div >
     );
 };
 

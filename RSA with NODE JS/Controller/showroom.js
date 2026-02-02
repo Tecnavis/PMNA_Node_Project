@@ -1,3 +1,4 @@
+// Controller/showroom.js
 const Showroom = require('../Model/showroom');
 const Booking = require('../Model/booking');
 const ShowroomStaff = require('../Model/showroomStaff');
@@ -11,6 +12,16 @@ const { StatusCodes } = require('http-status-codes');
 const LoggerFactory = require('../utils/logger/LoggerFactory');
 const { setVerifiedShowroomsThisMonth } = require('../services/showroomService');
 const { updateShowroomFinancials } = require('../services/serviceCenterService');
+
+// Add this helper function at the top
+function generateUniqueShowroomId(name, district) {
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000);
+    const nameCode = name.substring(0, 3).toUpperCase();
+    const districtCode = district ? district.substring(0, 3).toUpperCase() : 'GEN';
+    
+    return `SR-${districtCode}-${nameCode}-${timestamp}-${randomNum}`;
+}
 
 exports.createShowroom = async (req, res) => {
   const routeLogger = LoggerFactory.createChildLogger({
@@ -66,20 +77,21 @@ exports.createShowroom = async (req, res) => {
 
     const imagePath = req.file ? req.file.filename : null;
 
-    const showroomLink = generateShowRoomLink({
-      id: finalShowroomId,
-      name,
-      location,
-      image: imagePath,
-      helpline,
-      phone,
-      state,
-      district
-    })
+    // Generate links
+    const showroomLinks = generateShowRoomLink({
+        id: finalShowroomId,
+        name,
+        location,
+        image: imagePath,
+        helpline,
+        phone,
+        state,
+        district
+    });
 
     const showroom = new Showroom({
       name,
-      showroomId: finalShowroomId, // Use the validated/generated ID
+      showroomId: finalShowroomId,
       description,
       location,
       latitudeAndLongitude,
@@ -90,7 +102,10 @@ exports.createShowroom = async (req, res) => {
       mobile,
       state,
       district,
-      showroomLink,
+      showroomLink: showroomLinks.webLink,
+      mobileDeepLink: showroomLinks.mobileDeepLink,
+      qrData: showroomLinks.qrData,
+      links: showroomLinks,
       image: imagePath,
       services: {
         serviceCenter: {
@@ -136,15 +151,52 @@ exports.createShowroom = async (req, res) => {
   }
 };
 
-// Helper function to generate unique showroom ID
-function generateUniqueShowroomId(name, district) {
-  const timestamp = Date.now();
-  const randomNum = Math.floor(Math.random() * 1000);
-  const nameCode = name.substring(0, 3).toUpperCase();
-  const districtCode = district ? district.substring(0, 3).toUpperCase() : 'GEN';
-  
-  return `SR-${districtCode}-${nameCode}-${timestamp}-${randomNum}`;
-}
+
+
+// API to generate staff login link
+exports.generateStaffLink = async (req, res) => {
+    try {
+        const { staffId, showroomId } = req.body;
+        const { generateStaffLoginLink } = require('../utils/generateLink');
+        const links = await generateStaffLoginLink(staffId, showroomId);
+        
+        res.json({
+            success: true,
+            data: links
+        });
+    } catch (error) {
+        console.error('Error generating staff link:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Universal link handler
+exports.redirectToUniversalLink = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const showroom = await Showroom.findById(id);
+        
+        if (!showroom) {
+            return res.status(404).send('Showroom not found');
+        }
+        
+        // Detect user agent
+        const userAgent = req.headers['user-agent'] || '';
+        const isMobile = /mobile|android|ios/i.test(userAgent);
+        
+        if (isMobile) {
+            // Redirect to Flutter app deep link
+            res.redirect(`rsastaff://signIn?showroomId=${id}`);
+        } else {
+            // Redirect to web dashboard
+            const webBaseUrl = process.env.STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
+            res.redirect(`${webBaseUrl}/auth/cover-register?showroomId=${id}`);
+        }
+    } catch (error) {
+        console.error('Universal link error:', error);
+        res.status(500).send('Internal server error');
+    }
+};
 
 // Get all showrooms
 exports.getShowrooms = async (req, res) => {
@@ -422,16 +474,17 @@ exports.updateShowroom = async (req, res) => {
 
     const imagePath = req.file ? req.file.filename : null;
 
-    const showroomLink = generateShowRoomLink({
-      id: showroomId,
-      name,
-      location,
-      image: imagePath,
-      helpline,
-      phone,
-      state,
-      district
-    })
+    // Generate updated links
+    const showroomLinks = generateShowRoomLink({
+        id: showroomId,
+        name,
+        location,
+        image: imagePath,
+        helpline,
+        phone,
+        state,
+        district
+    });
 
     const updatedFields = {
       name,
@@ -447,7 +500,10 @@ exports.updateShowroom = async (req, res) => {
       district,
       helpline,
       password,
-      showroomLink,
+      showroomLink: showroomLinks.webLink,
+      mobileDeepLink: showroomLinks.mobileDeepLink,
+      qrData: showroomLinks.qrData,
+      links: showroomLinks,
       services: {
         serviceCenter: {
           selected: services.serviceCenter.selected,
@@ -475,6 +531,7 @@ exports.updateShowroom = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Delete a showroom
 exports.deleteShowroom = async (req, res) => {
