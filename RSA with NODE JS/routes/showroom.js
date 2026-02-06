@@ -15,7 +15,6 @@ router.get('/get-showroom-staff/:id', controller.getShowroomStaffById)
 router.get('/report',jwt, controller.showroomDashBoardReport);
 router.get('/showroom-staff-profile',jwt, controller.getStaffProfile);
 router.get('/all-showrooms',jwt, controller.getPaginatedShowrooms);
-router.get('/redirect/:id', controller.redirectToUniversalLink); // For universal links
 router.post('/generate-staff-link', jwt, controller.generateStaffLink);
 router.get('/filtered', jwt, controller.filterGetShowrooms);
 router.get('/bookings-stats', jwt, controller.getShowroomBookingStats);

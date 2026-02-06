@@ -17,7 +17,15 @@ const showroomSchema = new mongoose.Schema({
   rewardPoints: { type: Number, default: 0 },
   bookingPoints: { type: Number, default: 0 },
   bookingPointsForStaff: { type: Number, default: 0 },
-  showroomLink: { type: String },
+   showroomLink: { type: String },
+  mobileDeepLink: { type: String },
+  universalLink: { type: String },
+  qrData: { type: String },
+  links: {
+    type: Map,
+    of: String,
+    default: {}
+  },
   cashInHand: { type: Number },
   services: {
     serviceCenter: {
@@ -37,6 +45,8 @@ const showroomSchema = new mongoose.Schema({
     ref: 'MarketingExecutive',
     default: null
   },
+}, {
+  timestamps: true // This adds createdAt and updatedAt automatically
 });
 
 module.exports = mongoose.model('Showroom', showroomSchema);

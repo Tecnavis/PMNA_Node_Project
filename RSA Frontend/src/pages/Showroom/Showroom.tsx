@@ -83,19 +83,20 @@ const Showroom: React.FC = () => {
     const navigate = useNavigate();
  const showroomStaffUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
 
-    // Function to generate both links
-    const generateShowroomLinks = (items: Showroom) => {
-        // For Flutter app (deep link)
-        const flutterDeepLink = `rsastaff://signIn?showroomId=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${items.image || ''}&helpline=${items.helpline || ''}&phone=${items.phone || ''}&state=${items.state || ''}&district=${items.district || ''}`;
-        
-        // For web fallback (using your existing URL structure)
-        const webLink = `${showroomStaffUrl}/auth/cover-register?id=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${items.image || ''}&helpline=${items.helpline || ''}&phone=${items.phone || ''}&state=${items.state || ''}&district=${items.district || ''}`;
-        
-        return {
-            flutterDeepLink,
-            webLink,
-        };
+    // In Showroom component, update generateShowroomLinks:
+const generateShowroomLinks = (items: Showroom) => {
+    // Use the universal link that redirects to Flutter app
+    const universalLink = `${backendUrl}/staff/showroom/${items._id}`;
+    
+    // For direct Flutter app access
+    const flutterDeepLink = `rsastaff://signIn?showroomId=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${items.image || ''}&helpline=${items.helpline || ''}&phone=${items.phone || ''}&state=${items.state || ''}&district=${items.district || ''}`;
+    
+    return {
+        universalLink, // This is what goes in QR codes
+        flutterDeepLink,
+        webLink: `${showroomStaffUrl}/auth/cover-register?id=${items._id}`
     };
+};
     // checking the token
     const gettingToken = () => {
         const token = localStorage.getItem('token');
@@ -315,15 +316,13 @@ const Showroom: React.FC = () => {
         setModal(true);
         setShowroomId(id)
     }  
-    // const generateUniversalLink = (items: Showroom) => {
-    //     // Universal link that redirects based on device
-    //     return `${backendUrl}/staff/showroom/${items._id}`;
-    // };
+// In Showroom component
+const generateUniversalLink = (items: Showroom): string => {
+    // Use the correct route - it should match your backend route
+    return `${backendUrl}/staff/showroom/${items._id}`;
+};
 
-    // Function to generate mobile deep link
-    // const generateMobileDeepLink = (items: Showroom) => {
-    //     return `rsastaff://signIn?showroomId=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${items.image || ''}&helpline=${items.helpline || ''}&phone=${items.phone || ''}&state=${items.state || ''}&district=${items.district || ''}`;
-    // };
+
 
     // Function to handle QR button click - opens A4 modal
     const handleQRClick = (items: Showroom) => {
@@ -403,12 +402,15 @@ const Showroom: React.FC = () => {
                                     <td>{items.helpline}</td>
                                     <td>{items.phone}</td>
                                         <td>
-                            <button
-                                onClick={() => handleQRClick(items)}
-                                className="btn btn-primary btn-sm flex items-center gap-2"
-                            >
-                                <FaQrcode size={16} /> QR Code
-                            </button>
+                          <button
+    onClick={() => {
+        setSelectedShowroomForA4(items);
+        setA4ModalOpen(true);
+    }}
+    className="btn btn-primary btn-sm flex items-center gap-2"
+>
+    <FaQrcode size={16} /> QR Code
+</button>
                         </td>
                                     <td className="text-center">
                                         <ul className="flex items-center justify-center gap-2">
