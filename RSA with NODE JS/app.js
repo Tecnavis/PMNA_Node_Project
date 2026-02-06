@@ -242,24 +242,58 @@ app.use('/transactions', transactionsRouter);
 app.use('/company-expenses', companyExpenseRoutes);
 app.use('/petrol-pumps', petrolPumpRoutes);
 app.use('/work', workRoutes);
-// Add universal link redirect route - FIXED VERSION
+// In app.js - Ensure this route exists and works
 app.get('/staff/showroom/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const userAgent = req.headers['user-agent'] || '';
         const isMobile = /mobile|android|ios/i.test(userAgent);
         
+        console.log(`Universal link accessed for showroom ${id}, Mobile: ${isMobile}`);
+        
         if (isMobile) {
-            // Redirect to Flutter app
-            res.redirect(`rsastaff://signIn?showroomId=${id}`);
+            // Redirect to Flutter app with all parameters
+            // First, fetch showroom data to include in redirect
+            const Showroom = require('./Model/showroom');
+            const showroom = await Showroom.findById(id);
+            
+            if (showroom) {
+                const mobileParams = new URLSearchParams({
+                    showroomId: showroom._id.toString(),
+                    name: showroom.name || '',
+                    location: showroom.location || '',
+                    image: showroom.image || '',
+                    helpline: showroom.helpline || '',
+                    phone: showroom.phone || '',
+                    state: showroom.state || '',
+                    district: showroom.district || '',
+                }).toString();
+                
+                res.redirect(`rsastaff://signIn?${mobileParams}`);
+            } else {
+                res.redirect(`rsastaff://signIn?showroomId=${id}`);
+            }
         } else {
             // Redirect to web dashboard
-            res.redirect(`https://showroomstaff.rsakerala.com/auth/cover-register?showroomId=${id}`);
+            const webUrl = `https://showroomstaff.rsakerala.com/auth/cover-register?showroomId=${id}`;
+            res.redirect(webUrl);
         }
     } catch (error) {
         console.error('Universal link error:', error);
         res.status(404).send('Showroom not found');
     }
+});
+// Add this to app.js for testing
+app.get('/test-deeplink/:id', async (req, res) => {
+    const { id } = req.params;
+    
+    const testData = {
+        directFlutterLink: `rsastaff://signIn?showroomId=${id}&name=Test%20Showroom&location=Test%20Location`,
+        universalLink: `${req.protocol}://${req.get('host')}/staff/showroom/${id}`,
+        webLink: `https://showroomstaff.rsakerala.com/auth/cover-register?showroomId=${id}`
+    };
+    
+    res.json(testData);
 });
 // ============ MEMORY MONITORING MIDDLEWARE ============
 app.use((req, res, next) => {

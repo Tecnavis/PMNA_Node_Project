@@ -77,36 +77,40 @@ exports.createShowroom = async (req, res) => {
 
     const imagePath = req.file ? req.file.filename : null;
 
-    // Generate links
-    const showroomLinks = generateShowRoomLink({
-        id: finalShowroomId,
-        name,
-        location,
-        image: imagePath,
-        helpline,
-        phone,
-        state,
-        district
-    });
+    // In controller/showroom.js
+// Generate links - pass the full showroom object
+const showroomLinks = generateShowRoomLink({
+    _id: finalShowroomId,
+    name,
+    location,
+    image: imagePath,
+    helpline,
+    phone,
+    state,
+    district
+});
 
-    const showroom = new Showroom({
-      name,
-      showroomId: finalShowroomId,
-      description,
-      location,
-      latitudeAndLongitude,
-      username,
-      password,
-      helpline,
-      phone,
-      mobile,
-      state,
-      district,
-      showroomLink: showroomLinks.webLink,
-      mobileDeepLink: showroomLinks.mobileDeepLink,
-      qrData: showroomLinks.qrData,
-      links: showroomLinks,
-      image: imagePath,
+const showroom = new Showroom({
+  name,
+  showroomId: finalShowroomId,
+  description,
+  location,
+  latitudeAndLongitude,
+  username,
+  password,
+  helpline,
+  phone,
+  mobile,
+  state,
+  district,
+  // Store all links
+  showroomLink: showroomLinks.webLink,
+  mobileDeepLink: showroomLinks.mobileDeepLink,
+  universalLink: showroomLinks.universalLink,
+  qrData: showroomLinks.qrData,
+  links: showroomLinks,
+  image: imagePath,
+
       services: {
         serviceCenter: {
           selected: parsedServices.serviceCenter?.selected || false,
@@ -167,34 +171,6 @@ exports.generateStaffLink = async (req, res) => {
     } catch (error) {
         console.error('Error generating staff link:', error);
         res.status(500).json({ message: error.message });
-    }
-};
-
-// Universal link handler
-exports.redirectToUniversalLink = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const showroom = await Showroom.findById(id);
-        
-        if (!showroom) {
-            return res.status(404).send('Showroom not found');
-        }
-        
-        // Detect user agent
-        const userAgent = req.headers['user-agent'] || '';
-        const isMobile = /mobile|android|ios/i.test(userAgent);
-        
-        if (isMobile) {
-            // Redirect to Flutter app deep link
-            res.redirect(`rsastaff://signIn?showroomId=${id}`);
-        } else {
-            // Redirect to web dashboard
-            const webBaseUrl = process.env.STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
-            res.redirect(`${webBaseUrl}/auth/cover-register?showroomId=${id}`);
-        }
-    } catch (error) {
-        console.error('Universal link error:', error);
-        res.status(500).send('Internal server error');
     }
 };
 

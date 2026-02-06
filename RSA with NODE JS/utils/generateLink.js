@@ -1,9 +1,9 @@
-// utils/generateLink.js - Updated version without authService dependency
+// utils/generateLink.js
 exports.generateShowRoomLink = (showroom) => {
-    // For web dashboard (React) - using your existing web dashboard URL
-    const webBaseUrl = `https://showroomstaff.rsakerala.com`;
+    // For web dashboard (React)
+    const webBaseUrl = process.env.STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
     const webQueryParams = new URLSearchParams({
-        id: showroom.id,
+        id: showroom._id,
         name: showroom.name,
         location: showroom.location,
         image: showroom.image || '',
@@ -16,12 +16,16 @@ exports.generateShowRoomLink = (showroom) => {
     const webLink = `${webBaseUrl}/auth/cover-register?${webQueryParams}`;
     
     // For mobile app (Flutter) - Deep link
-    const mobileDeepLink = `rsastaff://signIn?showroomId=${showroom.id}&name=${encodeURIComponent(showroom.name)}&location=${encodeURIComponent(showroom.location)}&image=${showroom.image || ''}&helpline=${showroom.helpline || ''}&phone=${showroom.phone || ''}&state=${showroom.state || ''}&district=${showroom.district || ''}`;
+    const mobileDeepLink = `rsastaff://signIn?showroomId=${showroom._id}&name=${encodeURIComponent(showroom.name)}&location=${encodeURIComponent(showroom.location)}&image=${showroom.image || ''}&helpline=${showroom.helpline || ''}&phone=${showroom.phone || ''}&state=${showroom.state || ''}&district=${showroom.district || ''}`;
+    
+    // Universal link - use relative path since frontend already has backendUrl
+    const universalLink = `/staff/showroom/${showroom._id}`;
     
     return {
-        webLink,        // For React dashboard
-        mobileDeepLink, // For Flutter app
-        qrData: mobileDeepLink // For QR code generation
+        webLink,
+        mobileDeepLink,
+        universalLink,
+        qrData: mobileDeepLink // Use mobile deep link for QR codes
     };
 };
 
