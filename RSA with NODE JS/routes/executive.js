@@ -51,4 +51,11 @@ router.post(
     ShowroomVerification.verifyMonthlyVerification
 );
 
+// ADD THIS NEW ROUTE - Get verifications by showroom ID
+router.get(
+    '/verification/showroom/:id',
+    jwt,
+    ShowroomVerification.getVerificationsByShowroomId
+);
+
 module.exports = router;

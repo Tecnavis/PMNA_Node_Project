@@ -5,6 +5,7 @@ const showroomSchema = new mongoose.Schema({
   showroomId: { type: String, unique: true },
   description: { type: String },
   location: { type: String, required: true },
+  
   latitudeAndLongitude: { type: String, required: true },
   username: { type: String },
   password: { type: String },
@@ -21,6 +22,8 @@ const showroomSchema = new mongoose.Schema({
   mobileDeepLink: { type: String },
   universalLink: { type: String },
   qrData: { type: String },
+      downloadFlowUrl: { type: String },
+
   links: {
     type: Map,
     of: String,
@@ -45,6 +48,11 @@ const showroomSchema = new mongoose.Schema({
     ref: 'MarketingExecutive',
     default: null
   },
+   // FIXED: Change links to Mixed type or a proper schema
+  links: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  }
 }, {
   timestamps: true // This adds createdAt and updatedAt automatically
 });

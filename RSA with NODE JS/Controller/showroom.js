@@ -49,7 +49,6 @@ exports.createShowroom = async (req, res) => {
     // Validate showroomId - generate one if not provided
     let finalShowroomId = showroomId;
     if (!showroomId || showroomId.trim() === '') {
-      // Generate a unique showroom ID
       finalShowroomId = generateUniqueShowroomId(name, district);
     }
 
@@ -77,40 +76,34 @@ exports.createShowroom = async (req, res) => {
 
     const imagePath = req.file ? req.file.filename : null;
 
-    // In controller/showroom.js
-// Generate links - pass the full showroom object
-const showroomLinks = generateShowRoomLink({
-    _id: finalShowroomId,
-    name,
-    location,
-    image: imagePath,
-    helpline,
-    phone,
-    state,
-    district
-});
+    // Generate links first
+    const showroomLinks = generateShowRoomLink({
+        _id: new mongoose.Types.ObjectId().toString(),
+        showroomId: finalShowroomId,
+        name,
+        location,
+        image: imagePath,
+        helpline,
+        phone,
+        state,
+        district
+    });
 
-const showroom = new Showroom({
-  name,
-  showroomId: finalShowroomId,
-  description,
-  location,
-  latitudeAndLongitude,
-  username,
-  password,
-  helpline,
-  phone,
-  mobile,
-  state,
-  district,
-  // Store all links
-  showroomLink: showroomLinks.webLink,
-  mobileDeepLink: showroomLinks.mobileDeepLink,
-  universalLink: showroomLinks.universalLink,
-  qrData: showroomLinks.qrData,
-  links: showroomLinks,
-  image: imagePath,
-
+    // Create showroom with all links
+    const showroom = new Showroom({
+      name,
+      showroomId: finalShowroomId,
+      description,
+      location,
+      latitudeAndLongitude,
+      username,
+      password,
+      helpline,
+      phone,
+      mobile,
+      state,
+      district,
+      image: imagePath,
       services: {
         serviceCenter: {
           selected: parsedServices.serviceCenter?.selected || false,
@@ -124,16 +117,29 @@ const showroom = new Showroom({
           selected: parsedServices.showroom?.selected || false,
         },
       },
-      addedBy: addedBy || null
+      addedBy: addedBy || null,
+      // Set individual link fields
+      showroomLink: showroomLinks.webLink,
+      mobileDeepLink: showroomLinks.mobileDeepLink,
+      universalLink: showroomLinks.universalLink,
+      qrData: showroomLinks.qrData,
+      // Set links as an object
+      links: {
+        webLink: showroomLinks.webLink,
+        mobileDeepLink: showroomLinks.mobileDeepLink,
+        universalLink: showroomLinks.universalLink,
+        qrData: showroomLinks.qrData,
+        downloadFlowUrl: showroomLinks.downloadFlowUrl,
+        downloadLinks: showroomLinks.downloadLinks
+      }
     });
-
-    routeLogger.info('New Showroom Created');
 
     const savedShowroom = await showroom.save();
 
     routeLogger.info({
       showroomName: savedShowroom.name,
       showroomId: savedShowroom.showroomId,
+      mongoId: savedShowroom._id,
       doneBy: req.user || 'unknown'
     }, 'New Showroom added in database successfully.');
 
@@ -141,9 +147,7 @@ const showroom = new Showroom({
   } catch (error) {
     console.error('Error creating showroom:', error);
     
-    // Handle specific MongoDB errors
     if (error.code === 11000) {
-      // Extract the field that caused the duplicate key error
       const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({ 
         message: `Duplicate value error. A showroom with this ${field} already exists.`,
@@ -154,9 +158,6 @@ const showroom = new Showroom({
     res.status(500).json({ message: error.message });
   }
 };
-
-
-
 // API to generate staff login link
 exports.generateStaffLink = async (req, res) => {
     try {
@@ -423,7 +424,7 @@ exports.filterGetShowrooms = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-// Update a showroom
+
 exports.updateShowroom = async (req, res) => {
   try {
     const { id } = req.params;
@@ -450,18 +451,26 @@ exports.updateShowroom = async (req, res) => {
 
     const imagePath = req.file ? req.file.filename : null;
 
+    // Get existing showroom first
+    const existingShowroom = await Showroom.findById(id);
+    if (!existingShowroom) {
+      return res.status(404).json({ message: 'Showroom not found' });
+    }
+
     // Generate updated links
     const showroomLinks = generateShowRoomLink({
-        id: showroomId,
+        _id: existingShowroom._id.toString(),
+        showroomId: showroomId || existingShowroom.showroomId,
         name,
         location,
-        image: imagePath,
+        image: imagePath || existingShowroom.image,
         helpline,
         phone,
         state,
         district
     });
 
+    // Prepare update object
     const updatedFields = {
       name,
       showroomId,
@@ -476,10 +485,20 @@ exports.updateShowroom = async (req, res) => {
       district,
       helpline,
       password,
+      // Update individual link fields
       showroomLink: showroomLinks.webLink,
       mobileDeepLink: showroomLinks.mobileDeepLink,
+      universalLink: showroomLinks.universalLink,
       qrData: showroomLinks.qrData,
-      links: showroomLinks,
+      // Update links object
+      links: {
+        webLink: showroomLinks.webLink,
+        mobileDeepLink: showroomLinks.mobileDeepLink,
+        universalLink: showroomLinks.universalLink,
+        qrData: showroomLinks.qrData,
+        downloadFlowUrl: showroomLinks.downloadFlowUrl,
+        downloadLinks: showroomLinks.downloadLinks
+      },
       services: {
         serviceCenter: {
           selected: services.serviceCenter.selected,
@@ -495,7 +514,18 @@ exports.updateShowroom = async (req, res) => {
       },
     };
 
-    const updatedShowroom = await Showroom.findByIdAndUpdate(id, updatedFields, { new: true });
+    // Remove undefined fields
+    Object.keys(updatedFields).forEach(key => {
+      if (updatedFields[key] === undefined) {
+        delete updatedFields[key];
+      }
+    });
+
+    const updatedShowroom = await Showroom.findByIdAndUpdate(
+      id, 
+      updatedFields, 
+      { new: true, runValidators: true }
+    );
 
     if (!updatedShowroom) {
       return res.status(404).json({ message: 'Showroom not found' });
@@ -504,11 +534,12 @@ exports.updateShowroom = async (req, res) => {
     res.json(updatedShowroom);
   } catch (error) {
     console.error('Error updating showroom:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      message: error.message,
+      errorDetails: error.errors 
+    });
   }
 };
-
-
 // Delete a showroom
 exports.deleteShowroom = async (req, res) => {
   try {
@@ -867,7 +898,33 @@ exports.loginShowroom = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error. Please try again later." });
   }
 };
-
+// Universal link handler
+exports.redirectToUniversalLink = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const showroom = await Showroom.findById(id);
+        
+        if (!showroom) {
+            return res.status(404).send('Showroom not found');
+        }
+        
+        // Detect user agent
+        const userAgent = req.headers['user-agent'] || '';
+        const isMobile = /mobile|android|ios/i.test(userAgent);
+        
+        if (isMobile) {
+            // Redirect to Flutter app deep link
+            res.redirect(`rsastaff://signIn?showroomId=${id}`);
+        } else {
+            // Redirect to web dashboard
+            const webBaseUrl = process.env.STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
+            res.redirect(`${webBaseUrl}/auth/cover-register?showroomId=${id}`);
+        }
+    } catch (error) {
+        console.error('Universal link error:', error);
+        res.status(500).send('Internal server error');
+    }
+};
 exports.showroomDashBoardReport = async (req, res) => {
   const { month, year, serviceCategory, showroomId } = req.query;
 

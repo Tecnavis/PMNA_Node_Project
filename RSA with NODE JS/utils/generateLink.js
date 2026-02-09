@@ -1,4 +1,3 @@
-// utils/generateLink.js
 exports.generateShowRoomLink = (showroom) => {
     // For web dashboard (React)
     const webBaseUrl = process.env.STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
@@ -18,14 +17,26 @@ exports.generateShowRoomLink = (showroom) => {
     // For mobile app (Flutter) - Deep link
     const mobileDeepLink = `rsastaff://signIn?showroomId=${showroom._id}&name=${encodeURIComponent(showroom.name)}&location=${encodeURIComponent(showroom.location)}&image=${showroom.image || ''}&helpline=${showroom.helpline || ''}&phone=${showroom.phone || ''}&state=${showroom.state || ''}&district=${showroom.district || ''}`;
     
-    // Universal link - use relative path since frontend already has backendUrl
+    // Universal link
     const universalLink = `/staff/showroom/${showroom._id}`;
+    
+    // NEW: Download flow link for QR codes
+    const downloadFlowUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}/app/download-flow/${showroom._id}`;
+    
+    // Download links for different platforms
+    const downloadLinks = {
+        android: 'https://play.google.com/store/apps/details?id=com.yourcompany.rsastaff',
+        ios: 'https://apps.apple.com/app/idYOUR_APP_ID',
+        apkDirect: 'https://your-server.com/apps/rsa-staff-app.apk'
+    };
     
     return {
         webLink,
         mobileDeepLink,
         universalLink,
-        qrData: mobileDeepLink // Use mobile deep link for QR codes
+        qrData: downloadFlowUrl, // Use download flow for QR codes
+        downloadFlowUrl, // Add download flow URL
+        downloadLinks // Add download links object
     };
 };
 
