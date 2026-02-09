@@ -16,7 +16,8 @@ interface A4ModalProps {
 const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, showroom, backendUrl }) => {
     const generateUniversalLink = (): string => {
         if (!showroom) return '';
-        return `${backendUrl}/staff/showroom/${showroom._id}`;
+        // Point QR code to the download flow
+        return `${backendUrl}/app/download-flow/${showroom._id}`;
     };
     
     const handlePrintA4 = () => {

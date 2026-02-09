@@ -8,7 +8,39 @@ const LoggerFactory = require('../utils/logger/LoggerFactory');
 const { StatusCodes } = require('http-status-codes');
 const { USER_TYPES } = require('../constants/fileConstants');
 const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
+// Controller method to get verifications by showroom ID
+exports.getVerificationsByShowroomId = asyncErrorHandler(async (req, res) => {
+    const logger = LoggerFactory.createChildLogger({
+        route: '/verification/showroom/:id',
+        handler: 'getVerificationsByShowroomId',
+    });
 
+    const { id } = req.params;
+    
+    logger.info('Fetching verifications for showroom', { showroomId: id });
+
+    // Find all verifications for this showroom
+    const verifications = await Verification.find({ showroom: id })
+        .populate('executive', 'name email phone')
+        .populate('showroom', 'name location address')
+        .populate('verificationAddedBy.user', 'name email')
+        .sort({ verificationDate: -1 });
+
+    if (!verifications || verifications.length === 0) {
+        throw new NotFoundError('No verifications found for this showroom');
+    }
+
+    logger.info('Verifications fetched successfully', { 
+        showroomId: id, 
+        count: verifications.length 
+    });
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        data: verifications,
+        message: "Verifications fetched successfully"
+    });
+});
 // Controller for verify monthly showroom check by Marketing Executive or (admin, staff);
 exports.verifyMonthlyVerification = asyncErrorHandler(async (req, res) => {
 

@@ -57,6 +57,8 @@ export interface Showroom {
         };
     };
     currentMonthVerified?: boolean;
+        downloadFlowUrl?: string;
+
 }
 
 const Showroom: React.FC = () => {
@@ -83,20 +85,6 @@ const Showroom: React.FC = () => {
     const navigate = useNavigate();
  const showroomStaffUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
 
-    // In Showroom component, update generateShowroomLinks:
-const generateShowroomLinks = (items: Showroom) => {
-    // Use the universal link that redirects to Flutter app
-    const universalLink = `${backendUrl}/staff/showroom/${items._id}`;
-    
-    // For direct Flutter app access
-    const flutterDeepLink = `rsastaff://signIn?showroomId=${items._id}&name=${encodeURIComponent(items.name)}&location=${encodeURIComponent(items.location)}&image=${items.image || ''}&helpline=${items.helpline || ''}&phone=${items.phone || ''}&state=${items.state || ''}&district=${items.district || ''}`;
-    
-    return {
-        universalLink, // This is what goes in QR codes
-        flutterDeepLink,
-        webLink: `${showroomStaffUrl}/auth/cover-register?id=${items._id}`
-    };
-};
     // checking the token
     const gettingToken = () => {
         const token = localStorage.getItem('token');
@@ -316,19 +304,9 @@ const generateShowroomLinks = (items: Showroom) => {
         setModal(true);
         setShowroomId(id)
     }  
-// In Showroom component
-const generateUniversalLink = (items: Showroom): string => {
-    // Use the correct route - it should match your backend route
-    return `${backendUrl}/staff/showroom/${items._id}`;
-};
 
 
 
-    // Function to handle QR button click - opens A4 modal
-    const handleQRClick = (items: Showroom) => {
-        setSelectedShowroomForA4(items);
-        setA4ModalOpen(true);
-    };
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
             <div className="panel">
@@ -752,7 +730,8 @@ const generateUniversalLink = (items: Showroom): string => {
                 setModalOpen={setA4ModalOpen}
                 showroom={selectedShowroomForA4}
                 backendUrl={backendUrl}
-            />        </div >
+            />
+      </div >
     );
 };
 
