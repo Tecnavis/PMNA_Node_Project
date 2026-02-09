@@ -201,7 +201,17 @@ app.use(cookieParser());
 
 // Serve static files FIRST
 app.use(express.static(path.join(__dirname, 'public')));
+// ============ ADD APK FILES SERVING HERE ============
+// Serve APK files from /apps directory
+app.use('/apps', express.static(path.join(__dirname, 'public/apps')));
 
+// Create directory for APK files if it doesn't exist
+const fs = require('fs');
+const appsDir = path.join(__dirname, 'public/apps');
+if (!fs.existsSync(appsDir)) {
+    fs.mkdirSync(appsDir, { recursive: true });
+    console.log('Created apps directory for APK files');
+}
 // ============ API ROUTES WITH SPECIFIC RATE LIMITING ============
 
 // Apply stricter rate limiting to booking routes
@@ -295,7 +305,7 @@ app.get('/test-deeplink/:id', async (req, res) => {
     
     res.json(testData);
 });
-// Add this route to handle download flow
+// Updated download flow route for direct APK download
 app.get('/app/download-flow/:showroomId', async (req, res) => {
     try {
         const { showroomId } = req.params;
@@ -310,20 +320,26 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
             return res.status(404).send('Showroom not found');
         }
         
-        // HTML page with download notification and redirect
+        // Your backend URL
+        const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+        
+        // Direct APK download link
+        const apkDownloadUrl = `${backendUrl}/apps/rsa-staff-app.apk`;
+        
+        // Simple, clean HTML for app download
         const html = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Download RSA Staff App</title>
+            <title>RSA Staff App</title>
             <style>
                 * {
                     margin: 0;
                     padding: 0;
                     box-sizing: border-box;
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 }
                 
                 body {
@@ -338,67 +354,37 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
                 .container {
                     background: white;
                     border-radius: 20px;
+                    padding: 40px;
                     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                    overflow: hidden;
                     max-width: 500px;
                     width: 100%;
-                    animation: slideIn 0.5s ease-out;
-                }
-                
-                @keyframes slideIn {
-                    from { transform: translateY(30px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-                
-                .header {
-                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-                    color: white;
-                    padding: 30px;
                     text-align: center;
                 }
                 
-                .header h1 {
-                    font-size: 28px;
-                    margin-bottom: 10px;
-                    font-weight: 700;
+                .app-icon {
+                    width: 100px;
+                    height: 100px;
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                    border-radius: 20px;
+                    margin: 0 auto 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 40px;
+                    font-weight: bold;
+                    color: white;
                 }
                 
-                .header p {
-                    opacity: 0.9;
-                    font-size: 16px;
-                }
-                
-                .content {
-                    padding: 40px 30px;
-                }
-                
-                .showroom-info {
-                    background: #f8fafc;
-                    border-radius: 12px;
-                    padding: 20px;
-                    margin-bottom: 30px;
-                    border-left: 4px solid #4f46e5;
-                }
-                
-                .showroom-info h3 {
+                h1 {
                     color: #1e293b;
                     margin-bottom: 10px;
-                    font-size: 18px;
+                    font-size: 28px;
                 }
                 
-                .info-item {
-                    display: flex;
-                    margin-bottom: 8px;
+                p {
                     color: #64748b;
-                }
-                
-                .info-item strong {
-                    min-width: 100px;
-                    color: #475569;
-                }
-                
-                .download-section {
-                    text-align: center;
+                    margin-bottom: 30px;
+                    line-height: 1.6;
                 }
                 
                 .download-btn {
@@ -417,6 +403,7 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
                     align-items: center;
                     justify-content: center;
                     gap: 12px;
+                    text-decoration: none;
                 }
                 
                 .download-btn:hover {
@@ -424,222 +411,174 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
                     box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
                 }
                 
-                .download-btn:active {
-                    transform: translateY(0);
+                .open-app-btn {
+                    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
                 }
                 
-                .skip-btn {
-                    color: #64748b;
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    font-size: 16px;
-                    text-decoration: underline;
-                    padding: 10px;
-                }
-                
-                .skip-btn:hover {
-                    color: #4f46e5;
-                }
-                
-                .app-icon {
-                    width: 60px;
-                    height: 60px;
-                    margin: 0 auto 20px;
-                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-                    border-radius: 16px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-size: 28px;
-                    font-weight: bold;
-                }
-                
-                .platform-buttons {
-                    display: flex;
-                    gap: 15px;
-                    margin-top: 20px;
-                }
-                
-                .platform-btn {
-                    flex: 1;
-                    padding: 15px;
-                    border-radius: 10px;
-                    border: 2px solid #e2e8f0;
-                    background: white;
-                    color: #475569;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 10px;
-                }
-                
-                .platform-btn:hover {
-                    border-color: #4f46e5;
-                    color: #4f46e5;
-                    transform: translateY(-2px);
-                }
-                
-                .android-btn:hover {
-                    border-color: #10b981;
-                    color: #10b981;
-                }
-                
-                .ios-btn:hover {
-                    border-color: #3b82f6;
-                    color: #3b82f6;
-                }
-                
-                .footer {
-                    text-align: center;
+                .showroom-info {
+                    background: #f8fafc;
+                    border-radius: 12px;
                     padding: 20px;
-                    color: #64748b;
+                    margin: 30px 0;
+                    text-align: left;
+                }
+                
+                .showroom-info h3 {
+                    color: #1e293b;
+                    margin-bottom: 15px;
+                    font-size: 18px;
+                }
+                
+                .info-item {
+                    margin-bottom: 8px;
+                    color: #475569;
+                }
+                
+                .info-item strong {
+                    color: #1e293b;
+                }
+                
+                .instructions {
+                    background: #fef3c7;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-top: 30px;
+                    text-align: left;
+                }
+                
+                .instructions h3 {
+                    color: #92400e;
+                    margin-bottom: 10px;
+                    font-size: 16px;
+                }
+                
+                .instructions ul {
+                    padding-left: 20px;
+                    color: #92400e;
+                }
+                
+                .instructions li {
+                    margin-bottom: 8px;
                     font-size: 14px;
-                    border-top: 1px solid #e2e8f0;
+                }
+                
+                .security-notice {
+                    background: #dcfce7;
+                    border-radius: 12px;
+                    padding: 15px;
+                    margin-top: 20px;
+                    font-size: 14px;
+                    color: #166534;
                 }
                 
                 @media (max-width: 480px) {
                     .container {
-                        border-radius: 15px;
-                    }
-                    
-                    .header {
-                        padding: 25px 20px;
-                    }
-                    
-                    .content {
                         padding: 30px 20px;
+                        border-radius: 15px;
                     }
                     
                     .download-btn {
                         padding: 16px 30px;
                         font-size: 16px;
                     }
-                    
-                    .platform-buttons {
-                        flex-direction: column;
-                    }
                 }
             </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="app-icon">RSA</div>
+                <h1>RSA Staff App</h1>
+                <p>Manage showroom operations directly from your mobile device</p>
+                
+                <div class="showroom-info">
+                    <h3>Showroom Details</h3>
+                    <div class="info-item">
+                        <strong>Name:</strong> ${showroom.name}
+                    </div>
+                    <div class="info-item">
+                        <strong>Location:</strong> ${showroom.location}
+                    </div>
+                    <div class="info-item">
+                        <strong>ID:</strong> ${showroom.showroomId}
+                    </div>
+                    <div class="info-item">
+                        <strong>Contact:</strong> ${showroom.phone || showroom.helpline || 'N/A'}
+                    </div>
+                </div>
+                
+                <button class="download-btn" onclick="downloadApp()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download App (APK)
+                </button>
+                
+                <button class="download-btn open-app-btn" onclick="openApp()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                        <polyline points="10 17 15 12 10 7"></polyline>
+                        <line x1="15" y1="12" x2="3" y2="12"></line>
+                    </svg>
+                    Open Installed App
+                </button>
+                
+                <div class="instructions">
+                    <h3>Installation Instructions (Android):</h3>
+                    <ul>
+                        <li>Tap "Download App" button above</li>
+                        <li>When download completes, open the APK file</li>
+                        <li>If prompted, allow installation from unknown sources</li>
+                        <li>Follow the installation prompts</li>
+                        <li>After installation, open the app</li>
+                    </ul>
+                </div>
+                
+                <div class="security-notice">
+                    🔒 This app is safe to install. You may need to enable "Install from unknown sources" in your Android settings.
+                </div>
+            </div>
+            
             <script>
-                function downloadApp(platform) {
-                    const downloadLinks = {
-                        android: 'https://play.google.com/store/apps/details?id=com.yourcompany.rsastaff',
-                        ios: 'https://apps.apple.com/app/idYOUR_APP_ID',
-                        apk: 'https://your-server.com/apps/rsa-staff-app.apk'
-                    };
+                function downloadApp() {
+                    // Direct APK download
+                    window.location.href = '${apkDownloadUrl}';
+                }
+                
+                function openApp() {
+                    // Try to open the app if installed
+                    const deepLink = 'rsastaff://signIn?showroomId=${showroomId}';
                     
-                    let url;
-                    switch(platform) {
-                        case 'android':
-                            url = downloadLinks.android;
-                            break;
-                        case 'ios':
-                            url = downloadLinks.ios;
-                            break;
-                        case 'apk':
-                            url = downloadLinks.apk;
-                            break;
-                    }
+                    // Try to open the app
+                    window.location.href = deepLink;
                     
-                    // Try to open the app first
-                    window.location.href = 'rsastaff://showroom/${showroomId}';
-                    
-                    // If app is not installed, redirect to store after a delay
+                    // If app is not installed, redirect to download after a delay
                     setTimeout(() => {
-                        window.location.href = url;
-                    }, 1500);
+                        if (confirm('App not installed. Would you like to download it?')) {
+                            downloadApp();
+                        }
+                    }, 1000);
                 }
                 
-                function skipToWeb() {
-                    // Redirect to web version
-                    window.location.href = '${showroom.showroomLink}';
-                }
-                
-                // Auto-detect platform and suggest appropriate download
+                // Auto-detect if on iOS (show different message)
                 function detectPlatform() {
                     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
                     
-                    if (/android/i.test(userAgent)) {
-                        document.getElementById('platform-suggestion').textContent = 'Get it on Google Play';
-                        document.getElementById('main-download-btn').onclick = () => downloadApp('android');
-                    } else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-                        document.getElementById('platform-suggestion').textContent = 'Download on the App Store';
-                        document.getElementById('main-download-btn').onclick = () => downloadApp('ios');
-                    } else {
-                        document.getElementById('platform-suggestion').textContent = 'Download App';
-                        document.getElementById('main-download-btn').onclick = () => downloadApp('apk');
+                    if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                        // iOS device
+                        document.querySelector('.instructions').innerHTML = 
+                            '<h3>For iOS Devices:</h3>' +
+                            '<p>Please contact your administrator for iOS installation instructions. ' +
+                            'You can also use the web version below.</p>';
+                        
+                        document.querySelector('.security-notice').innerHTML = 
+                            '📱 iOS installation requires different setup. Please contact support.';
                     }
                 }
                 
                 document.addEventListener('DOMContentLoaded', detectPlatform);
             </script>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <div class="app-icon">RSA</div>
-                    <h1>RSA Staff App</h1>
-                    <p>Manage showroom operations on the go</p>
-                </div>
-                
-                <div class="content">
-                    <div class="showroom-info">
-                        <h3>Showroom Details</h3>
-                        <div class="info-item">
-                            <strong>Name:</strong> ${showroom.name}
-                        </div>
-                        <div class="info-item">
-                            <strong>Location:</strong> ${showroom.location}
-                        </div>
-                        <div class="info-item">
-                            <strong>Contact:</strong> ${showroom.phone || showroom.helpline}
-                        </div>
-                        <div class="info-item">
-                            <strong>ID:</strong> ${showroom.showroomId}
-                        </div>
-                    </div>
-                    
-                    <div class="download-section">
-                        <button id="main-download-btn" class="download-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            <span id="platform-suggestion">Download App</span>
-                        </button>
-                        
-                        <div class="platform-buttons">
-                            <button onclick="downloadApp('android')" class="platform-btn android-btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993.0001.5511-.4482.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.2439 13.8523 7.8508 12 7.8508s-3.5902.3931-5.1352 1.0588L4.8425 5.4067a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.8345 11.5847 1 14.7069 1 18.088v.392h22v-.392c0-3.3811-1.8345-6.5033-4.1185-8.7666"/>
-                                </svg>
-                                Android
-                            </button>
-                            <button onclick="downloadApp('ios')" class="platform-btn ios-btn">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.31-2.33 1.05-3.11z"/>
-                                </svg>
-                                iOS
-                            </button>
-                        </div>
-                        
-                        <button onclick="skipToWeb()" class="skip-btn">
-                            Continue to web version instead
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="footer">
-                    <p>Scan QR code with phone camera to download the app</p>
-                    <p style="font-size: 12px; margin-top: 5px;">Showroom ID: ${showroom.showroomId}</p>
-                </div>
-            </div>
         </body>
         </html>
         `;
