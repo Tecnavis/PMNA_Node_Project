@@ -305,7 +305,7 @@ app.get('/test-deeplink/:id', async (req, res) => {
     
     res.json(testData);
 });
-// Updated download flow route for direct APK download
+// Updated download flow route with auto-open script
 app.get('/app/download-flow/:showroomId', async (req, res) => {
     try {
         const { showroomId } = req.params;
@@ -334,6 +334,19 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>RSA Staff App</title>
+            
+            <!-- ===== ADD THIS AUTO-OPEN SCRIPT HERE ===== -->
+            <script>
+                // Auto-try to open the app when page loads
+                window.onload = function() {
+                    // Small delay to ensure page is loaded
+                    setTimeout(function() {
+                        window.location.href = 'rsastaff://signIn?showroomId=${showroomId}';
+                    }, 500);
+                };
+            </script>
+            <!-- ===== END OF AUTO-OPEN SCRIPT ===== -->
+            
             <style>
                 * {
                     margin: 0;
