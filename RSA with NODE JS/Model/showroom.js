@@ -24,11 +24,7 @@ const showroomSchema = new mongoose.Schema({
   qrData: { type: String },
       downloadFlowUrl: { type: String },
 
-  links: {
-    type: Map,
-    of: String,
-    default: {}
-  },
+
   cashInHand: { type: Number },
   services: {
     serviceCenter: {
