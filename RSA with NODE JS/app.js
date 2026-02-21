@@ -202,15 +202,16 @@ app.use(cookieParser());
 // Serve static files FIRST
 app.use(express.static(path.join(__dirname, 'public')));
 // ============ ADD APK FILES SERVING HERE ============
-// Serve APK files from /apps directory
-app.use('/apps', express.static(path.join(__dirname, 'public/apps')));
+// ============ ADD APK FILES SERVING HERE - CORRECTED ============
+// Serve APK files from /downloads directory as per image instruction
+app.use("/downloads", express.static(path.join(__dirname, "public/downloads")));
 
 // Create directory for APK files if it doesn't exist
 const fs = require('fs');
-const appsDir = path.join(__dirname, 'public/apps');
-if (!fs.existsSync(appsDir)) {
-    fs.mkdirSync(appsDir, { recursive: true });
-    console.log('Created apps directory for APK files');
+const downloadsDir = path.join(__dirname, 'public/downloads');
+if (!fs.existsSync(downloadsDir)) {
+    fs.mkdirSync(downloadsDir, { recursive: true });
+    console.log('Created downloads directory for APK files');
 }
 // ============ API ROUTES WITH SPECIFIC RATE LIMITING ============
 
@@ -309,8 +310,6 @@ app.get('/test-deeplink/:id', async (req, res) => {
 app.get('/app/download-flow/:showroomId', async (req, res) => {
     try {
         const { showroomId } = req.params;
-        const userAgent = req.headers['user-agent'] || '';
-        const isMobile = /mobile|android|ios/i.test(userAgent);
         
         // Fetch showroom details
         const Showroom = require('./Model/showroom');
@@ -323,8 +322,10 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
         // Your backend URL
         const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
         
-        // Direct APK download link
-        const apkDownloadUrl = `${backendUrl}/apps/rsa-staff-app.apk`;
+        // FIXED: Direct APK download link - use /downloads/ NOT /apps/
+        const apkDownloadUrl = `${backendUrl}/downloads/rsa-staff.apk`;
+        
+       
         
         // Simple, clean HTML for app download
         const html = `
