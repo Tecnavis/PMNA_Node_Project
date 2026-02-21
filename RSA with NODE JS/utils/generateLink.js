@@ -25,8 +25,8 @@ exports.generateShowRoomLink = (showroom) => {
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
     const downloadFlowUrl = `${backendUrl}/app/download-flow/${showroom._id}`;
     
-    // Direct APK download link - UPDATE THIS WITH YOUR ACTUAL APK URL
-    const apkDownloadUrl = `${backendUrl}/apps/rsa-staff-app.apk`;
+    // FIXED: Direct APK download link - use /downloads/ NOT /apps/
+    const apkDownloadUrl = `${backendUrl}/downloads/rsa-staff.apk`;
     
     return {
         webLink,
@@ -34,18 +34,6 @@ exports.generateShowRoomLink = (showroom) => {
         universalLink,
         qrData: downloadFlowUrl, // Use download flow for QR codes
         downloadFlowUrl,
-        apkDownloadUrl // Add direct APK download link
-    };
-};
-// ---------------------------------------------------------------
-// Generate staff-specific link with token
-exports.generateStaffLoginLink = async (staffId, showroomId) => {
-    // Generate a simple token (you can use JWT if needed)
-    const token = require('crypto').randomBytes(32).toString('hex');
-    
-    return {
-        webLink: `https://showroomstaff.rsakerala.com/staff/login?token=${token}`,
-        mobileDeepLink: `rsastaff://dashboard?staffId=${staffId}&showroomId=${showroomId}&token=${token}`,
-        token: token
+        apkDownloadUrl
     };
 };
