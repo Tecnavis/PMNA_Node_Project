@@ -25,7 +25,7 @@ import { ROLES } from '../../constants/roles'
 import { ImUserTie } from "react-icons/im";
 import IconMenuScrumboard from '../Icon/Menu/IconMenuScrumboard';
 import IconDollarSignCircle from '../Icon/IconDollarSignCircle';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, Images } from 'lucide-react';
 
 
 
@@ -485,6 +485,15 @@ const Sidebar = () => {
                                     <div className="flex items-center">
                                         <CalendarClock className="group-hover:!text-primary shrink-0" />
                                         <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Old Booking')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            {/* Case Photos */}
+                            <li className="nav-item">
+                                <NavLink to="/case-photos" className="group">
+                                    <div className="flex items-center">
+                                        <Images className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Case Photos')}</span>
                                     </div>
                                 </NavLink>
                             </li>

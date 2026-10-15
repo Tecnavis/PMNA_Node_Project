@@ -2,6 +2,7 @@ const express = require('express');
 const controller = require('../Controller/vehicle');
 const Jwt = require('../Middileware/jwt')
 const upload = require('../config/multer')
+const { bookingPhotos, dated, profile, vehiclePapers, reward, adminQr } = require('../config/mediaPlacement');
 const router = express.Router();
 
 // base url = vehicle
@@ -23,7 +24,7 @@ router.delete('/compliance-record/:id', Jwt,controller.deleteRecord);
 
 
 //Route for creating a new record for 
-router.post('/compliance-record', Jwt, upload.array('images', 2), controller.addRecord);
+router.post('/compliance-record', Jwt, upload.array('images', 2, vehiclePapers), controller.addRecord);
 
 
 // Route for creating a new vehicle
@@ -51,7 +52,7 @@ router.patch('/:vehicleNumber', Jwt, controller.updateServiceKm);
 // Route for deleting a vehicle by ID
 router.delete('/:id', Jwt, controller.deleteVehicle);
 
-router.put('/compliance-record/:id', Jwt, upload.array('images', 2), controller.updateRecord);
+router.put('/compliance-record/:id', Jwt, upload.array('images', 2, vehiclePapers), controller.updateRecord);
 
 
 module.exports = router;

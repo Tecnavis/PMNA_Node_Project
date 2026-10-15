@@ -4,6 +4,7 @@ const executiveController = require('../Controller/executive');
 const ShowroomVerification = require('../Controller/ShowroomVerification');
 const { validateHandler } = require('../Middileware/validateHandler');
 const upload = require('../config/multer');
+const { bookingPhotos, dated, profile, vehiclePapers, reward, adminQr } = require('../config/mediaPlacement');
 const { CreateExecutiveSchema } = require('../validations/dtos/user/createExecutiveDto');
 const jwt = require('../Middileware/jwt')
 // Add this line to your existing router file
@@ -12,7 +13,7 @@ router.post('/fix-passwords', executiveController.fixPasswords);
 router.post(
     '/',
     jwt,
-    upload.single('image'),
+    upload.single('image', profile('executives', 'executive')),
     CreateExecutiveSchema,
     validateHandler,
     executiveController.createExecutive
@@ -33,7 +34,7 @@ router.get(
 router.put(
     '/:id',
     jwt,
-    upload.single('image'),
+    upload.single('image', profile('executives', 'executive')),
     executiveController.udpateExecutiveDetails
 );
 
@@ -47,7 +48,7 @@ router.delete(
 router.post(
     '/showroom-verifiction',
     jwt,
-    upload.single('image'),
+    upload.single('image', dated('verifications', 'verification')),
     ShowroomVerification.verifyMonthlyVerification
 );
 

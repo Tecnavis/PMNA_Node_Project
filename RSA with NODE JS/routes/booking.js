@@ -3,13 +3,26 @@ const router = express.Router();
 const controller = require('../Controller/booking');
 const jwt = require('../Middileware/jwt');
 const upload = require('../config/multer');
+const { bookingPhotos, dated, profile, vehiclePapers, reward, adminQr } = require('../config/mediaPlacement');
 
 
 // Route to create a new booking
 router.post('/', jwt, controller.createBooking);
 
 //Route for getting approved bookings
-router.post('/new-booking', controller.createBookingNoAuth);
+// WhatsApp / external booking endpoint (no login).
+// Once BOOKING_API_KEY is set on the server, callers must send it as the "x-api-key" header (or ?apiKey=).
+// Unset = open, as before — so the integration keeps working until you configure both sides.
+const crypto = require('crypto');
+const bookingApiKey = (req, res, next) => {
+    const expected = process.env.BOOKING_API_KEY;
+    if (!expected) return next();
+    const given = String(req.header('x-api-key') || req.query.apiKey || '');
+    const ok = given.length === expected.length && crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+    if (!ok) return res.status(401).json({ success: false, message: 'Invalid or missing API key' });
+    next();
+};
+router.post('/new-booking', bookingApiKey, controller.createBookingNoAuth);
 
 //Route for getting approved bookings
 router.get('/approvedbookings', jwt, controller.getApprovedBookings);
@@ -39,7 +52,7 @@ router.get('/showroom-staff/bookings', jwt, controller.getBookingsForShowroomSta
 router.get('/pending-payments', jwt, controller.pendingPaymentBooking);
 
 // Rotute for upload image
-router.post('/upload', jwt, upload.single('image'), controller.uploadImage);
+router.post('/upload', jwt, upload.single('image', bookingPhotos('photo')), controller.uploadImage);
 
 // Route for settle driver balalance salary
 router.patch('/settle-driver-balance-salary', jwt, controller.updateBalanceSalary);
@@ -54,27 +67,27 @@ router.get('/new/:id', controller.getBookingByIdNew);
 router.get('/:id', controller.getBookingById);
 
 // Route to update booking
-router.put('/:id', jwt, upload.array('images', 6), controller.updateBooking);
+router.put('/:id', jwt, upload.array('images', 6, bookingPhotos((req) => (req.body.dropoffTime ? 'dropoff' : 'pickup'))), controller.updateBooking);
 
 // Route to cancel booking
-router.patch('/cancel/:id', jwt, upload.single('image'), controller.cancelBooking);
+router.patch('/cancel/:id', jwt, upload.single('image', bookingPhotos('cancel')), controller.cancelBooking);
 // Route to inventory image add 
-router.patch('/inventory/:id', jwt, upload.single('image'), controller.inventoryBooking);
+router.patch('/inventory/:id', jwt, upload.single('image', bookingPhotos('inventory')), controller.inventoryBooking);
 
 //Route to update the pickup and dropoff details
 router.put('/pickupbyadmin/:id', jwt, controller.updatePickupByAdmin);
 
 // Route for the removing the pickup Image
-router.patch('/pickupimage/:id/:index', jwt,upload.single('image'), controller.changePickupImages);
+router.patch('/pickupimage/:id/:index', jwt,upload.single('image', bookingPhotos('pickup')), controller.changePickupImages);
 
 // Route for adding pickup images
-router.patch('/addingpickupimage/:id', jwt, upload.array('images', 6), controller.addPickupImages);
+router.patch('/addingpickupimage/:id', jwt, upload.array('images', 6, bookingPhotos('pickup')), controller.addPickupImages);
 
 // Route for the removing the dropoff Image
-router.patch('/dropoffimage/:id/:index', jwt, upload.single('image'), controller.changeDropoffImages);
+router.patch('/dropoffimage/:id/:index', jwt, upload.single('image', bookingPhotos('dropoff')), controller.changeDropoffImages);
 
 // Route for adding pickup images
-router.patch('/addingdropoffimage/:id', jwt, upload.array('images', 6), controller.addDropoffImages);
+router.patch('/addingdropoffimage/:id', jwt, upload.array('images', 6, bookingPhotos('dropoff')), controller.addDropoffImages);
 router.delete('/removePickupImage/:id/:index',jwt, controller.removePickupImage);
 router.delete('/removeDropoffImage/:id/:index',jwt, controller.removeDropoffImage);
 router.delete('/:id/dropoff-images/all', controller.removeAllDropoffImages);//Route for editing fileNumber 
@@ -105,7 +118,7 @@ router.patch('/update-approve/:id', jwt, controller.updateBookingApproved);
 router.patch('/settle-cash-pending/:id', jwt, controller.settleCashPendingBooking);
 
 // Upload payment qr code
-router.patch('/upload-payment-qr/:bookingId', jwt, upload.single('image'), controller.uploadPaymentQrCode);
+router.patch('/upload-payment-qr/:bookingId', jwt, upload.single('image', bookingPhotos('payment-qr')), controller.uploadPaymentQrCode);
 router.post('/initiate-upi/:bookingId', jwt, controller.initiateUpiPayment);
 router.post('/verify-upi/:bookingId', jwt, controller.verifyUpiPayment);
 

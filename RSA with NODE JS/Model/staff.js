@@ -53,4 +53,9 @@ const staffSchema = new mongoose.Schema({
   
 }, { timestamps: true });
 
+// Never send passwords in API responses (login reads the document directly, so it still works)
+const hidePassword = (doc, ret) => { delete ret.password; return ret; };
+staffSchema.set('toJSON', { transform: hidePassword });
+staffSchema.set('toObject', { transform: hidePassword });
+
 module.exports = mongoose.model('Staff', staffSchema);

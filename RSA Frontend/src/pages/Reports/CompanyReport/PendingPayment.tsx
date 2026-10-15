@@ -25,6 +25,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { dateFormate } from '../../../utils/dateUtils';
 import { IconFileSpreadsheet } from '@tabler/icons-react';
 import * as XLSX from 'xlsx';
+import { getImageUrl } from '../../../utils/imageUrl';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -801,7 +802,7 @@ const fetchBookings = async () => {
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src={`${CLOUD_IMAGE}${company?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
+                                <img src={getImageUrl(company?.image)} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
                                 <p className="font-semibold text-primary text-xl">{company?.name}</p>
                                 <span className="whitespace-nowrap" dir="ltr">
                                     {company?.idNumber}

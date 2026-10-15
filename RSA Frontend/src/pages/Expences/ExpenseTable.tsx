@@ -69,10 +69,10 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
                                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                             <Tooltip title="View Image">
                                                 <img
-                                                    src={`${CLOUD_IMAGE}${expense.image}`}
+                                                    src={getImageUrl(expense.image)}
                                                     alt="Expense"
                                                     className="shadow-sm cursor-pointer relative inline-block h-12 w-20 rounded-full border-2 border-white object-cover object-center hover:z-10 focus:z-10"
-                                                    onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.image}`)}
+                                                    onClick={() => openImageModal(getImageUrl(expense.image))}
                                                 />
                                             </Tooltip>
                                         </motion.div>
@@ -130,7 +130,7 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
                                         {/* View Details Button (Optional) */}
                                         <Tooltip title="View Details">
                                             <button
-                                                onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.image}`)}
+                                                onClick={() => openImageModal(getImageUrl(expense.image))}
                                                 className="p-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors"
                                             >
                                                 <Eye size={18} />
@@ -149,3 +149,4 @@ const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
 export default ExpenseTable;
 // --------------------------------------------------
+import { getImageUrl } from '../../utils/imageUrl';

@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { deleteCloudinaryImage } = require("../config/multer");
+const { deleteStoredImage } = require("../services/mediaStorage");
 
 const TaxInsuranceSchema = new mongoose.Schema({
     emiDuedismissedBy: {
@@ -95,20 +95,14 @@ const TaxInsuranceSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-TaxInsuranceSchema.pre("findByIdAndDelete", async function (next) {
-    try {
-        const doc = await this.model.findOne(this.getFilter());
-        if (!doc) return next();
-
-        // Delete related Cloudinary images
-        await deleteCloudinaryImage(doc.insurancePaperUrl);
-        await deleteCloudinaryImage(doc.taxPaperUrl);
-
-        next();
-    } catch (err) {
-        console.error("Error during file cleanup:", err);
-        next(err);
-    }
+// findByIdAndDelete() fires the "findOneAndDelete" hook ("findByIdAndDelete" is not a Mongoose hook,
+// so the old cleanup never ran). Files are removed only after the record is actually deleted.
+TaxInsuranceSchema.post("findOneAndDelete", async function (doc) {
+    if (!doc) return;
+    await Promise.all([
+        deleteStoredImage(doc.insurancePaperUrl),
+        deleteStoredImage(doc.taxPaperUrl),
+    ]); // best effort, never throws
 });
 
 const TaxInsurance = mongoose.model("TaxInsurance", TaxInsuranceSchema);

@@ -17,6 +17,7 @@ import { VehicleNames } from '../../interface/Vehicle';
 import ReusableModal from '../../components/modal';
 import DieselExpenseFormFormik from './AddDieselExpense';
 import { getPetrolPumps } from './expensesService';
+import { getImageUrl } from '../../utils/imageUrl';
 
 const DieselExpenses = () => {
   const [expenses, setExpenses] = useState<IDieselExpense[]>([]);
@@ -264,19 +265,19 @@ const fetchPetrolPumpsList = async () => {
     if (!selectedImage) return;
 
     const expense = expenses.find(exp =>
-      exp.images.includes(selectedImage.replace(`${CLOUD_IMAGE}`, ''))
+      exp.images.some((img) => getImageUrl(img) === selectedImage)
     );
 
     if (!expense) return;
 
-    const currentIndex = expense.images.indexOf(selectedImage.replace(`${CLOUD_IMAGE}`, ''));
+    const currentIndex = expense.images.findIndex((img) => getImageUrl(img) === selectedImage);
     let newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
 
     // Wrap around if at ends
     if (newIndex >= expense.images.length) newIndex = 0;
     if (newIndex < 0) newIndex = expense.images.length - 1;
 
-    setSelectedImage(`${CLOUD_IMAGE}${expense.images[newIndex]}`);
+    setSelectedImage(getImageUrl(expense.images[newIndex]));
     setCurrentImageIndex(newIndex);
   };
 
@@ -623,10 +624,10 @@ const fetchPetrolPumpsList = async () => {
                               whileTap={{ scale: 0.95 }}
                             >
                               <img
-                                src={`${CLOUD_IMAGE}${img}`}
+                                src={getImageUrl(img)}
                                 alt={`Expense ${idx + 1}`}
                                 className=" shadow-sm cursor-pointer relative inline-block h-12 w-20 rounded-full border-2 border-white object-cover object-center hover:z-10 focus:z-10"
-                                onClick={() => openImageModal(`${CLOUD_IMAGE}${img}`, idx)}
+                                onClick={() => openImageModal(getImageUrl(img), idx)}
                               />
                             </motion.div>
                           ))}
@@ -635,7 +636,7 @@ const fetchPetrolPumpsList = async () => {
                               className="w-16 h-16 bg-indigo-100 rounded-lg flex items-center justify-center cursor-pointer"
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              onClick={() => openImageModal(`${CLOUD_IMAGE}${expense.images[0]}`)}
+                              onClick={() => openImageModal(getImageUrl(expense.images[0]))}
                             >
                               <span className="text-indigo-600 font-medium">
                                 +{expense.images.length - 2}
@@ -769,7 +770,7 @@ const fetchPetrolPumpsList = async () => {
               {/* Navigation Arrows */}
               {expenses.some(exp =>
                 exp.images.length > 1 &&
-                exp.images.includes(selectedImage?.replace(`${CLOUD_IMAGE}`, '') || '')
+                exp.images.some((img) => getImageUrl(img) === selectedImage)
               ) && (
                   <>
                     <button

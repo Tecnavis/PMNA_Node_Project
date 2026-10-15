@@ -18,6 +18,7 @@ import { BASE_URL } from '../../../config/axiosConfig';
 import Swal from 'sweetalert2';
 import { ROLES } from '../../../constants/roles';
 import RSALogo from '../../../assets/images/RSALogo.png';
+import { getImageUrl } from '../../../utils/imageUrl';
 
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -696,7 +697,7 @@ const calculateBalance = (amount: string | number | undefined, receivedAmountSho
             </div>
             <div className="mb-5 flex flex-col justify-center items-center">
               <img
-                src={showroom?.image ? `${CLOUD_IMAGE}${showroom.image}` : defaultShowroomImage}
+                src={showroom?.image ? getImageUrl(showroom.image) : defaultShowroomImage}
                 alt="Showroom"
                 className="w-24 h-24 rounded-full object-cover mb-5 border-2"
               />

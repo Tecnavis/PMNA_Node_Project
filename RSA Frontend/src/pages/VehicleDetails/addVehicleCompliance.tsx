@@ -9,6 +9,7 @@ import type { VehicleRecord } from './VehicleCompliance';
 import { formatToInputDate } from '../../utils/dateUtils';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { updateVehicleServiceKm } from '../../services';
+import { getImageUrl } from '../../utils/imageUrl';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -378,7 +379,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
                         <input id="insurancePaper" type="file" onChange={(e) => handleFileChange(e, 'insurance')} />
                         {formSubmitted && errors.insurancePaper && <span className="text-red-500 text-xs">{errors.insurancePaper}</span>}
                         {isEditMode && (
-                            <Link to={`${CLOUD_IMAGE}${insurancePaper || ''}`} className="text-blue-600">
+                            <Link to={getImageUrl(insurancePaper || '')} className="text-blue-600">
                                 View Insurance Paper
                             </Link>
                         )}
@@ -390,7 +391,7 @@ const AddVehicleCompliance: React.FC<AddVehicleComplianceType> = ({ open, handle
                         <input id="taxPaper" type="file" onChange={(e) => handleFileChange(e, 'tax')} />
                         {formSubmitted && errors.taxPaper && <span className="text-red-500 text-xs">{errors.taxPaper}</span>}
                         {isEditMode && (
-                            <Link to={`${CLOUD_IMAGE}${taxPaper || ''}`} className="text-blue-600">
+                            <Link to={getImageUrl(taxPaper || '')} className="text-blue-600">
                                 View Existing Tax Paper
                             </Link>
                         )}

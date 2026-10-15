@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { axiosInstance } from '../../config/axiosConfig';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface Booking {
     _id?: string;
@@ -130,7 +131,7 @@ const convertToAmPm = (time24h: string): string => {
                     // Assuming your backend returns dropoffImages as an array of filenames
                     if (data.dropoffImages && data.dropoffImages.length > 0) {
                         // Build the full URL for each image
-                        const imageUrls = data.dropoffImages.map((img) => `${CLOUD_IMAGE}${img}`);
+                        const imageUrls = data.dropoffImages.map((img) => getImageUrl(img));
                         setPreviews([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
                     }
                 })

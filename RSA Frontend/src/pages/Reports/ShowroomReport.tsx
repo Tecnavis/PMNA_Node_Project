@@ -7,6 +7,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { GrNext, GrPrevious } from 'react-icons/gr';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface Showroom {
   _id: string;
@@ -113,7 +114,7 @@ const ShowroomReport = () => {
                     {showroom.image && (
                       <img
                         className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover"
-                        src={`${CLOUD_IMAGE}${showroom.image}`}
+                        src={getImageUrl(showroom.image)}
                         alt=""
                       />
                     )}

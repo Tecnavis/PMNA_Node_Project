@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../Controller/provider');
 const upload = require('../config/multer'); // Import Multer configuration
+const { bookingPhotos, dated, profile, vehiclePapers, reward, adminQr } = require('../config/mediaPlacement');
 const jwt = require('../Middileware/jwt')
 
 // Create a new provider with image upload
-router.post('/', jwt, upload.single('image'), controller.createProvider);
+router.post('/', jwt, upload.single('image', profile('providers', 'provider')), controller.createProvider);
 
 // Get all providers
 router.get('/', controller.getAllProviders);
@@ -20,7 +21,7 @@ router.get('/drop-down',controller.getProvidersForDropdown);
 router.get('/:id', jwt, controller.getProviderById);
 
 // Update a provider by ID with image upload
-router.put('/:id', jwt, upload.single('image'), controller.updateProvider);
+router.put('/:id', jwt, upload.single('image', profile('providers', 'provider')), controller.updateProvider);
 
 // Delete a provider by ID
 router.delete('/:id', jwt, controller.deleteProvider);

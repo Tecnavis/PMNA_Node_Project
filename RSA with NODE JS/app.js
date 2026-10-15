@@ -52,6 +52,8 @@ var showroomPaymentRoutes = require('./routes/showroomPaymentRoutes.js');
 const companyExpenseRoutes = require('./routes/companyExpenses.js');
 const petrolPumpRoutes = require('./routes/petrol.js');
 const workRoutes = require('./routes/workRoutes.js');
+const mediaRoutes = require('./routes/media.js');
+const { accessPolicy } = require('./Middileware/accessPolicy');
 
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { default: axios } = require('axios');
@@ -166,8 +168,11 @@ app.use('/olamaps-proxy', async (req, res) => {
 });
 
 // CORS middleware
+// CORS_ORIGINS="https://admin.example.com,https://other.example.com" restricts which websites may call the API.
+// Unset = allow all (previous behaviour). Mobile apps are not affected by CORS.
+const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim().replace(/\/+$/, '')).filter(Boolean);
 app.use(cors({
-  origin: '*',
+  origin: corsOrigins.length ? corsOrigins : '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['*'],
   exposedHeaders: ['Content-Type', 'Authorization'],
@@ -215,6 +220,9 @@ if (!fs.existsSync(downloadsDir)) {
 }
 // ============ API ROUTES WITH SPECIFIC RATE LIMITING ============
 
+// Who may call admin-only actions (see Middileware/accessPolicy.js)
+app.use(accessPolicy);
+
 // Apply stricter rate limiting to booking routes
 app.use('/booking', bookingLimiter, bookingRouter);
 app.use('/bookingnote', bookingLimiter, bookingNotesRouter);
@@ -253,6 +261,7 @@ app.use('/transactions', transactionsRouter);
 app.use('/company-expenses', companyExpenseRoutes);
 app.use('/petrol-pumps', petrolPumpRoutes);
 app.use('/work', workRoutes);
+app.use('/media', mediaRoutes);
 // In app.js - Ensure this route exists and works
 app.get('/staff/showroom/:id', async (req, res) => {
     try {
@@ -328,6 +337,13 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
        
         
         // Simple, clean HTML for app download
+        // Escape everything that comes from the database before putting it in HTML
+        const esc = (v) => String(v ?? '').replace(/[&<>"'`]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
+        const safeShowroom = {
+            name: esc(showroom.name), location: esc(showroom.location), showroomId: esc(showroom.showroomId),
+            contact: esc(showroom.phone || showroom.helpline || 'N/A'),
+        };
+        const safeId = encodeURIComponent(showroomId);
         const html = `
         <!DOCTYPE html>
         <html lang="en">
@@ -342,7 +358,7 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
                 window.onload = function() {
                     // Small delay to ensure page is loaded
                     setTimeout(function() {
-                        window.location.href = 'rsastaff://signIn?showroomId=${showroomId}';
+                        window.location.href = 'rsastaff://signIn?showroomId=${safeId}';
                     }, 500);
                 };
             </script>
@@ -507,16 +523,16 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
                 <div class="showroom-info">
                     <h3>Showroom Details</h3>
                     <div class="info-item">
-                        <strong>Name:</strong> ${showroom.name}
+                        <strong>Name:</strong> ${safeShowroom.name}
                     </div>
                     <div class="info-item">
-                        <strong>Location:</strong> ${showroom.location}
+                        <strong>Location:</strong> ${safeShowroom.location}
                     </div>
                     <div class="info-item">
-                        <strong>ID:</strong> ${showroom.showroomId}
+                        <strong>ID:</strong> ${safeShowroom.showroomId}
                     </div>
                     <div class="info-item">
-                        <strong>Contact:</strong> ${showroom.phone || showroom.helpline || 'N/A'}
+                        <strong>Contact:</strong> ${safeShowroom.contact}
                     </div>
                 </div>
                 
@@ -562,7 +578,7 @@ app.get('/app/download-flow/:showroomId', async (req, res) => {
                 
                 function openApp() {
                     // Try to open the app if installed
-                    const deepLink = 'rsastaff://signIn?showroomId=${showroomId}';
+                    const deepLink = 'rsastaff://signIn?showroomId=${safeId}';
                     
                     // Try to open the app
                     window.location.href = deepLink;

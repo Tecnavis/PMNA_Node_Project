@@ -1,0 +1,18 @@
+# ---- Media folder: images only, never executable --------------------------
+Options -Indexes -ExecCGI
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar .cgi .pl .py
+<FilesMatch "\.(php\d?|phtml|phar|cgi|pl|py|sh)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+
+<IfModule mod_headers.c>
+    # Admin site fetch()es images for "Download all" — needs CORS like Cloudinary had.
+    Header set Access-Control-Allow-Origin "*"
+    Header set X-Content-Type-Options "nosniff"
+    # File names are unique per upload, so they can be cached for a long time.
+    Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>

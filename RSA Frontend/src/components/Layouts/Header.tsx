@@ -30,6 +30,7 @@ import BookingDashboard from '../../pages/Bookings/BookingChart';
 import toast from 'react-hot-toast';
 import { getAdminQrApi, updateQrApi } from '../../services/adminService';
 import ReusableModal from '../modal';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface ServiceData {
     serviceName: string;
@@ -941,7 +942,7 @@ const Header = () => {
                     {/* QR Box */}
                     <div className="w-64 h-64 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600">
                         {existingQr ? (
-                            <img src={existingQr} alt="QR Code" className="w-full h-full object-contain transform transition-all duration-300 hover:scale-105" />
+                            <img src={getImageUrl(existingQr)} alt="QR Code" className="w-full h-full object-contain transform transition-all duration-300 hover:scale-105" />
                         ) : (
                             <p className="text-gray-600 dark:text-gray-300">No QR available</p>
                         )}

@@ -1,5 +1,4 @@
 import axios, { isAxiosError, AxiosRequestConfig, AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 export const BASE_URL: string = import.meta.env.VITE_BACKEND_URL;
 export const VITE_STAFF_DASHBOARD_URL: string = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'http://localhost:5175/';
@@ -27,10 +26,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
     (response: AxiosResponse) => response,
     (error: AxiosError) => {
-        if (error.response?.status === 401) {
-            const navigate = useNavigate();
-            navigate('/auth/boxed-signin'); // Redirect to login if unauthorized
-        }
+        // 401 handling lives in config/authInterceptor.ts (calling a React hook here used to throw)
         return Promise.reject(error);
     }
 );

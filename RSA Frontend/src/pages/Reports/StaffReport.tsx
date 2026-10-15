@@ -11,6 +11,7 @@ import Tippy from '@tippyjs/react';
 import { IconInfoCircle, IconX } from '@tabler/icons-react';
 import { Modal } from '@mui/material';
 import './StaffReport.css';
+import { getImageUrl } from '../../utils/imageUrl';
 // Update your interface
 interface CashCollectionDetail {
     _id: string;
@@ -249,7 +250,7 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                                 title: 'Staff Name',
                                 render: (staff: Staff) => (
                                     <div className="flex items-center w-max">
-                                        {staff.image && <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={`${CLOUD_IMAGE}${staff.image}`} alt="" />}
+                                        {staff.image && <img className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" src={getImageUrl(staff.image)} alt="" />}
                                         <div>{staff.name}</div>
                                     </div>
                                 ),

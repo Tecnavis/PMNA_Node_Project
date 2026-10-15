@@ -165,6 +165,7 @@ const DriverReport = lazy(() => import('../pages/Reports/DriverReport/DriverRepo
 const VehicleDetails = lazy(() => import('../pages/VehicleDetails/VehicleDetails'))
 const Status = lazy(() => import('../pages/Status/Status'))
 const OldBookings = lazy(() => import('../pages/OldBookings/OldBookings'))
+const CasePhotos = lazy(() => import('../pages/CasePhotos/CasePhotos'));
 
 const BookingDashboard = lazy(() => import('../pages/Bookings/BookingChart'))
 
@@ -434,6 +435,10 @@ const routes = [
       {
         path: '/oldBookings',
         element: <OldBookings />,
+    },
+    {
+        path: '/case-photos',
+        element: <CasePhotos />,
     },
     {
         path: '/bookingDashBoard',

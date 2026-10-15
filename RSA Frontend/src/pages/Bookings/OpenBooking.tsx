@@ -15,6 +15,7 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { FiAlertTriangle, FiCheck, FiDollarSign, FiDownload, FiShare2, FiZoomIn } from 'react-icons/fi';
 import { FiUpload, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { ROLES } from '../../constants/roles';
+import { getImageUrl } from '../../utils/imageUrl';
 
 export interface Booking {
     _id: string;
@@ -224,22 +225,22 @@ const Preview = () => {
                 return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
             });
 
-            const urls = files?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
+            const urls = files?.map((file: any) => getImageUrl(file.name));
 
             const dropoffFiles = response.data.dropoffImages?.map((filename: any) => {
                 const blob = new Blob(); // Simulate a file blob (replace this if you receive actual blobs)
                 return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
             });
 
-            const dropoffUrls = dropoffFiles?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
+            const dropoffUrls = dropoffFiles?.map((file: any) => getImageUrl(file.name));
             setDropoffImageUrls(dropoffUrls);
             setPickuptImageUrls(urls);
             // Add inventory image URL if exists
             if (response.data.inventoryImage) {
-                setInventoryImageUrl(`${CLOUD_IMAGE}${response.data.inventoryImage}`);
+                setInventoryImageUrl(getImageUrl(response.data.inventoryImage));
             }
             if (response.data.qrImage) {
-                setQrImageUrl(`${CLOUD_IMAGE}${response.data.qrImage}`);
+                setQrImageUrl(getImageUrl(response.data.qrImage));
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
@@ -252,7 +253,7 @@ const Preview = () => {
             return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
         });
 
-        const urls = files?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
+        const urls = files?.map((file: any) => getImageUrl(file.name));
         setPickuptImageUrls(urls);
 
         const dropoffFiles = dropoffImages?.map((filename: any) => {
@@ -260,7 +261,7 @@ const Preview = () => {
             return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
         });
 
-        const dropoffUrls = dropoffFiles?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
+        const dropoffUrls = dropoffFiles?.map((file: any) => getImageUrl(file.name));
         setDropoffImageUrls(dropoffUrls);
     }, []);
 
@@ -861,7 +862,7 @@ const Preview = () => {
             });
 
             // Update local state with new image
-            setQrImageUrl(`${CLOUD_IMAGE}${response.data.data.qrImage}`);
+            setQrImageUrl(getImageUrl(response.data.data.qrImage));
 
             Swal.fire({
                 icon: 'success',
@@ -913,7 +914,7 @@ const Preview = () => {
             });
 
             // Update local state with new image
-            setInventoryImageUrl(`${CLOUD_IMAGE}${response.data.booking.inventoryImage}`);
+            setInventoryImageUrl(getImageUrl(response.data.booking.inventoryImage));
 
             Swal.fire({
                 icon: 'success',

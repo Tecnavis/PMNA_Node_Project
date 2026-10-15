@@ -13,7 +13,10 @@ setInterval(() => {
 
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        // Same allow-list as the API (CORS_ORIGINS); unset = allow all, as before
+        origin: (process.env.CORS_ORIGINS || '').split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean).length
+            ? (process.env.CORS_ORIGINS || '').split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean)
+            : "*",
     },
     // Add connection limits to prevent memory issues
     maxHttpBufferSize: 1e6, // 1MB max payload

@@ -1,6 +1,7 @@
 const DieselExpense = require('../Model/dieselExpense');
 const PetrolPump = require('../Model/petrol'); // Make sure to import
 const Booking = require('../Model/booking');
+const { deleteImage } = require('../config/multer');
 
 // In your createExpense controller
 exports.createExpense = async (req, res) => {
@@ -96,8 +97,10 @@ exports.updateExpense = async (req, res) => {
         const updates = req.body;
 
         // FIXED: Proper file validation for update
-        if (req.files) {
+        // Only replace images when new ones were actually sent (multer gives [] otherwise)
+        if (req.files && req.files.length) {
             if (req.files.length < 2 || req.files.length > 3) {
+                await Promise.all(req.files.map((img) => deleteImage(img.filename)));
                 return res.status(400).json({ message: 'Upload 2 to 3 images only' });
             }
             const images = req.files.map((img) => img.filename);
@@ -263,22 +266,12 @@ exports.deleteExpensesByDriver = async (req, res) => {
             return res.status(404).json({ message: 'Diesel expense not found' });
         }
 
-        // Delete images from Cloudinary if they exist
-        if (expense.images && expense.images.length > 0) {
-            try {
-                for (const imageUrl of expense.images) {
-                    // Extract public_id from Cloudinary URL
-                    const publicId = imageUrl.split('/').pop().split('.')[0];
-                    await cloudinary.uploader.destroy(`diesel-expenses/${publicId}`);
-                }
-                console.log('All images deleted from Cloudinary for expense:', id);
-            } catch (error) {
-                console.error('Error deleting images from Cloudinary:', error);
-                // Continue with deletion even if image deletion fails
-            }
-        }
-
         await DieselExpense.findByIdAndDelete(id);
+
+        // Remove the receipt images after the record is gone (best effort, never throws)
+        if (expense.images && expense.images.length > 0) {
+            await Promise.all(expense.images.map((img) => deleteImage(img)));
+        }
 
         res.status(200).json({
             success: true,

@@ -8,6 +8,24 @@ exports.registerAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Only the very first admin can be created without logging in.
+    // After that, a logged-in admin must create new admins.
+    const adminCount = await Admin.countDocuments();
+    if (adminCount > 0) {
+      const header = req.header('Authorization');
+      let caller = null;
+      try {
+        caller = header ? jwt.verify(header.replace('Bearer ', ''), process.env.JWT_SECRET) : null;
+      } catch (e) { caller = null; }
+      const role = caller?.user?.role || caller?.role;
+      if (role !== 'Admin') {
+        return res.status(403).json({ message: "Only a logged-in admin can create another admin" });
+      }
+    }
+    if (!email || !password || String(password).length < 8) {
+      return res.status(400).json({ message: "Email and a password of at least 8 characters are required" });
+    }
+
     // Check if email already exists
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
@@ -27,10 +45,8 @@ exports.registerAdmin = async (req, res) => {
 exports.loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(req.body, 'Request body');
 
-    const admin = await Admin.findOne({ email: email.trim() });
-    console.log(admin, 'Admin found in the database');
+    const admin = await Admin.findOne({ email: String(email || '').trim() });
 
     if (!admin) {
       console.log('No admin found');
@@ -38,15 +54,14 @@ exports.loginAdmin = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, admin.password);
-    console.log(isMatch, 'Password comparison result');
 
     if (!isMatch) {
       console.log('Password mismatch');
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ id: admin._id, user: { name: `${email}`, role: 'Admin' } }, process.env.JWT_SECRET);
-    console.log(token, 'Generated JWT token');
+    // Admin-website sessions expire (WEB_TOKEN_EXPIRES, default 7 days). Older tokens without expiry keep working.
+    const token = jwt.sign({ id: admin._id, user: { name: `${email}`, role: 'Admin' } }, process.env.JWT_SECRET, { expiresIn: process.env.WEB_TOKEN_EXPIRES || '7d' });
 
     admin.tokens = token;
     await admin.save();

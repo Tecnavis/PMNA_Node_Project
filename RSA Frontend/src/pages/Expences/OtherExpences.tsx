@@ -794,7 +794,7 @@ const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: nu
 
                             {/* Driver Info */}
                             <div className="flex items-center space-x-4 bg-white p-4 rounded-lg shadow-sm">
-                                <Avatar src={currentExpense.driver.image} alt={currentExpense.driver.name} className="h-12 w-12" />
+                                <Avatar src={getImageUrl(currentExpense.driver.image)} alt={currentExpense.driver.name} className="h-12 w-12" />
                                 <div>
                                     <p className="font-semibold">{currentExpense.driver.name}</p>
                                     <p className="text-sm text-gray-500">Driver Phone Number: {currentExpense.driver.phone}</p>
@@ -843,15 +843,15 @@ const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: nu
                             <div className="bg-white p-4 rounded-lg border shadow-sm">
                                 <div className="flex justify-between items-center mb-2">
                                     <p className="text-sm text-gray-600">Receipt:</p>
-                                    <Button onClick={() => openImageModal(`${CLOUD_IMAGE}${currentExpense.image}`)} className="text-indigo-600 text-sm font-medium flex items-center gap-1">
+                                    <Button onClick={() => openImageModal(getImageUrl(currentExpense.image))} className="text-indigo-600 text-sm font-medium flex items-center gap-1">
                                         View Full
                                     </Button>
                                 </div>
                                 <img
-                                    src={`${CLOUD_IMAGE}${currentExpense.image}`}
+                                    src={getImageUrl(currentExpense.image)}
                                     alt="Expense receipt"
                                     className="w-full h-32 object-contain rounded border bg-gray-50 cursor-pointer"
-                                    onClick={() => openImageModal(`${CLOUD_IMAGE}${currentExpense.image}`)}
+                                    onClick={() => openImageModal(getImageUrl(currentExpense.image))}
                                 />
                             </div>
 
@@ -1005,3 +1005,4 @@ const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: nu
 
 export default ExpenseApproveUI;
 // ----------------------------------------------------
+import { getImageUrl } from '../../utils/imageUrl';

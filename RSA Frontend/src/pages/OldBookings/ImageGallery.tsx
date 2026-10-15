@@ -8,6 +8,7 @@ import {
     CameraIcon,
     ArrowDownTrayIcon // Add download icon
 } from '@heroicons/react/24/outline';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface ImageGalleryProps {
     images: string[];
@@ -27,8 +28,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [imageNames, setImageNames] = useState<string[]>([]); // Store original image names
     
-    // Use Cloudinary base URL WITHOUT the version and uploads part
-    const CLOUDINARY_BASE = 'https://res.cloudinary.com/dksxgbcyi/image/upload/';
 
     // Generate placeholder SVG
     const generatePlaceholderSVG = (text: string, index: number): string => {
@@ -42,8 +41,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const extractFileName = (image: string): string => {
         if (!image) return `image-${Date.now()}.jpg`;
         
-        // If it's a Cloudinary URL, extract the filename
-        if (image.includes('cloudinary.com')) {
+        // If it's a full URL (Cloudinary or StackCP), extract the filename
+        if (/^https?:\/\//i.test(image)) {
             const parts = image.split('/');
             const lastPart = parts[parts.length - 1];
             
@@ -133,29 +132,15 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         console.log(`Completed downloading ${imageUrls.length} ${title.toLowerCase()}(s)`);
     };
 
-    // Test image URL
+    // Resolve stored value (bare ID, Cloudinary URL or StackCP URL) to a loadable URL
     const testImageUrl = (image: string): string => {
         if (!image || typeof image !== 'string') {
             return generatePlaceholderSVG('Invalid', 0);
         }
-        
-        // If already a full URL, return as-is
-        if (image.startsWith('http')) {
-            return image;
-        }
-        
-        // Try different patterns
-        const patterns = [
-            `${CLOUDINARY_BASE}v1745300782/uploads/${image}`,
-            `${CLOUDINARY_BASE}v1745300782/${image}`,
-            `${CLOUDINARY_BASE}uploads/${image}`,
-            `${CLOUDINARY_BASE}${image}`,
-        ];
-        
-        return patterns[0];
+        return getImageUrl(image);
     };
 
-    // Convert image filenames to Cloudinary URLs
+    // Convert stored image values to URLs
     useEffect(() => {
         if (!images || !Array.isArray(images) || images.length === 0) {
             setImageUrls([]);

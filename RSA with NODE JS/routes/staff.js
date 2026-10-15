@@ -1,13 +1,14 @@
 // routes/staffRoutes.js
 const express = require('express');
 const upload = require('../config/multer');
+const { bookingPhotos, dated, profile, vehiclePapers, reward, adminQr } = require('../config/mediaPlacement');
 const router = express.Router();
 const controller = require('../Controller/staff');
 const jwt = require('../Middileware/jwt');
 
 
 // Create staff route with image upload
-router.post('/',jwt,upload.single('image'), controller.createStaff);
+router.post('/',jwt,upload.single('image', profile('staff', 'staff')), controller.createStaff);
 
 // Get all staff
 router.get('/',jwt,controller.getAllStaff);
@@ -18,7 +19,7 @@ router.get('/filtered', jwt, controller.filterGetStaffs);
 // Get staff by ID
 router.get('/:id',jwt, controller.getStaffById);
 // Update staff
-router.put('/:id',jwt, upload.single('image'), controller.updateStaff);
+router.put('/:id',jwt, upload.single('image', profile('staff', 'staff')), controller.updateStaff);
 
 // Delete staff
 router.delete('/:id',jwt, controller.deleteStaff);

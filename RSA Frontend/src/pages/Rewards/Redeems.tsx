@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { approveRedeem, getAllRedeems, rejectRedeem } from '../../services/rewardService';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { IRedemption, IReward } from '../../interface/Rewards';
+import { getImageUrl } from '../../utils/imageUrl';
 
 const Redeems = () => {
     const [redemptions, setRedemptions] = useState<IRedemption[]>([]);
@@ -163,7 +164,7 @@ const Redeems = () => {
                                                     {reward.image && (
                                                         <img
                                                             className="h-16 w-16 rounded-md object-cover mr-4"
-                                                            src={`${CLOUD_IMAGE}${reward.image}`}
+                                                            src={getImageUrl(reward.image)}
                                                             alt={reward.name}
                                                         />
                                                     )}
@@ -242,7 +243,7 @@ const Redeems = () => {
                                         <div className="relative h-40 w-40 flex-shrink-0">
                                             <img
                                                 className="h-full w-full rounded-lg object-cover border border-gray-200"
-                                                src={`${CLOUD_IMAGE}${selectedRedemption.reward.image}`}
+                                                src={getImageUrl(selectedRedemption.reward.image)}
                                                 alt={selectedRedemption.reward.name}
                                             />
                                             <div className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">

@@ -19,6 +19,7 @@ import {
   deleteCompanyExpense 
 } from './expensesService';
 import logo from '../../assets/images/RSALogo.png'
+import { getImageUrl as resolveImageUrl } from '../../utils/imageUrl';
 
 const CompanyExpenses = () => {
   const [expenses, setExpenses] = useState<ICompanyExpense[]>([]);
@@ -337,17 +338,8 @@ const CompanyExpenses = () => {
     return foundCategory ? foundCategory.label : categoryValue;
   };
 
-  const getImageUrl = (imagePublicId: string): string => {
-    if (!imagePublicId) return '';
-    
-    const cloudName = 'dksxgbcyi';
-    
-    if (imagePublicId.includes('/')) {
-      return `https://res.cloudinary.com/${cloudName}/image/upload/${imagePublicId}`;
-    } else {
-      return `https://res.cloudinary.com/${cloudName}/image/upload/company-expenses/${imagePublicId}`;
-    }
-  };
+  // Old records hold "company-expenses/<id>", new ones a file name in uploads/ — the shared helper handles both.
+  const getImageUrl = (imagePublicId: string): string => resolveImageUrl(imagePublicId);
 
   const handleImageClick = (imagePublicId: string) => {
     const imageUrl = getImageUrl(imagePublicId);

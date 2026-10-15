@@ -3,6 +3,7 @@ import axios from 'axios';
 import { DataTable } from 'mantine-datatable';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl } from '../../utils/imageUrl';
 // -----------------------------------------------------------
 
 interface UnverifiedBooking {
@@ -238,7 +239,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
           <div className="flex items-center w-max">
             <img 
               className="w-9 h-9 rounded-full ltr:mr-2 rtl:ml-2 object-cover" 
-              src={`${import.meta.env.VITE_CLOUD_IMAGE}${userInfo.image}`} 
+              src={getImageUrl(userInfo.image)} 
               alt={userInfo.name}
               onError={(e) => {
                 e.currentTarget.src = '/default-avatar.png';

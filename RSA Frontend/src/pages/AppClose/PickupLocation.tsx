@@ -4,6 +4,7 @@ import { FiUploadCloud } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { CLOUD_IMAGE } from "../../constants/status";
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface Booking {
   _id?: string;
@@ -135,7 +136,7 @@ const convertToAmPm = (time24h: string): string => {
           if (data.pickupImages && data.pickupImages.length > 0) {
             // Build the full URL for each image
             const imageUrls = data.pickupImages.map(
-              (img) => `${CLOUD_IMAGE}${img}`
+              (img) => getImageUrl(img)
             );
             setPreviews([...imageUrls, ...Array(6 - imageUrls.length).fill(null)]);
           }

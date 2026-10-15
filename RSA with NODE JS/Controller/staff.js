@@ -1,6 +1,9 @@
 // controllers/staffController.js
 const Staff = require('../Model/staff');
 const bcrypt = require('bcryptjs');
+
+const isHashed = (value) => typeof value === 'string' && /^\$2[aby]\$\d{2}\$/.test(value);
+const hashPassword = (plain) => bcrypt.hash(String(plain), 10);
 const jwt = require('jsonwebtoken');
 const { calculateNetTotalAmountInHand } = require('../services/staffService');
 
@@ -13,7 +16,7 @@ exports.createStaff = async (req, res) => {
       address: req.body.address,
       phone: req.body.phone,
       userName: req.body.userName,
-      password: req.body.password,
+      password: req.body.password ? await hashPassword(req.body.password) : req.body.password,
       image: req.file ? req.file.filename : null, // Store the image 
       role: req.body.role,
     });
@@ -103,9 +106,14 @@ exports.updateStaff = async (req, res) => {
       address: req.body.address,
       phone: req.body.phone,
       userName: req.body.userName,
-      password: req.body.password,
       role: req.body.role,
     };
+
+    // Password only changes when a new one is typed; blank = keep the current password
+    const newPassword = typeof req.body.password === 'string' ? req.body.password.trim() : '';
+    if (newPassword && !isHashed(newPassword)) {
+      updatedData.password = await hashPassword(newPassword);
+    }
 
     // Add image to updatedData only if a new file is uploaded
     if (req.file) {
@@ -144,13 +152,21 @@ exports.loginStaff = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Directly compare passwords (not recommended for production unless passwords are hashed)
-    if (password !== staff.password) {
+    // Hashed passwords are checked with bcrypt. Old plain-text passwords still work once,
+    // and are converted to a hash on that successful login (same password, stored safely).
+    let valid = false;
+    if (isHashed(staff.password)) {
+      valid = await bcrypt.compare(String(password || ''), staff.password);
+    } else if (typeof password === 'string' && password.length && password === staff.password) {
+      valid = true;
+      await Staff.updateOne({ _id: staff._id }, { $set: { password: await hashPassword(password) } });
+    }
+    if (!valid) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ id: staff._id, role: "Staff", name: `${staff.name}` }, process.env.JWT_SECRET);
+    // Admin-website sessions expire (WEB_TOKEN_EXPIRES, default 7 days). Older tokens without expiry keep working.
+    const token = jwt.sign({ id: staff._id, role: "Staff", name: `${staff.name}` }, process.env.JWT_SECRET, { expiresIn: process.env.WEB_TOKEN_EXPIRES || '7d' });
 
     // Include role and name in the response
     res.status(200).json({

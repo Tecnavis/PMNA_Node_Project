@@ -11,6 +11,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { getImageUrl } from '../../utils/imageUrl';
 
 export interface User {
     _id: string;
@@ -141,7 +142,7 @@ const Staff: React.FC = () => {
                                 <tr key={item._id}>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
-                                            <img src={item.image ? `${CLOUD_IMAGE}${item.image}` : defaultImage} className="w-full h-full object-cover" alt="Profile" />{' '}
+                                            <img src={item.image ? getImageUrl(item.image) : defaultImage} className="w-full h-full object-cover" alt="Profile" />{' '}
                                         </div>
                                     </td>
                                     <td>
@@ -211,7 +212,7 @@ const Staff: React.FC = () => {
                                         <div className="max-w-[30rem] w-full bg-white shadow-[4px_6px_10px_-3px_#bfc9d4] rounded border border-white-light dark:border-[#1b2e4b] dark:bg-[#191e3a] dark:shadow-none">
                                             <div className="p-5 flex items-center flex-col sm:flex-row">
                                                 <div className="mb-5 w-20 h-20 rounded-full overflow-hidden">
-                                                    <img src={`${CLOUD_IMAGE}${staff?.image}`} alt="profile" className="w-full h-full object-cover" />
+                                                    <img src={getImageUrl(staff?.image)} alt="profile" className="w-full h-full object-cover" />
                                                 </div>
                                                 <div className="flex-1 ltr:sm:pl-5 rtl:sm:pr-5 text-center sm:text-left">
                                                     <h5 className="text-[#3b3f5c] text-[15px] font-semibold mb-2 dark:text-white-light">
@@ -259,7 +260,7 @@ const Staff: React.FC = () => {
                                                                     <p className="text-white-dark">Password:</p>
                                                                 </td>
                                                                 <td>
-                                                                    <p className="text-white-dark">{staff?.password}</p>
+                                                                    <p className="text-white-dark">•••••••• (hidden)</p>
                                                                 </td>
                                                             </tr>
                                                             <tr>

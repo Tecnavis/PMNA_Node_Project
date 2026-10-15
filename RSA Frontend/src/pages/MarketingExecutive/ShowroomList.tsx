@@ -27,6 +27,7 @@ import getCurrentLocation from '../../utils/getCurrentLocation';
 import { verifyShowroom } from '../../services';
 import { toast } from 'react-hot-toast'
 import VerificationModal from './VerificationModal';
+import { getImageUrl } from '../../utils/imageUrl';
 
 function ExecutiveShowroomsTable() {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -178,7 +179,7 @@ function ExecutiveShowroomsTable() {
                         <tr>
                             <td>
                                 <div class="w-14 h-14 rounded-full overflow-hidden">
-                                    <img src="${item.image ? `${CLOUD_IMAGE}${item.image}` : defaultImage}" class="w-full h-full object-cover" alt="Profile" />
+                                    <img src="${item.image ? getImageUrl(item.image) : defaultImage}" class="w-full h-full object-cover" alt="Profile" />
                                 </div>
                             </td>
                             <td>${item.name.charAt(0).toUpperCase() + item.name.slice(1)}</td>
@@ -399,7 +400,7 @@ function ExecutiveShowroomsTable() {
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
                                             <img
-                                                src={items.image ? `${CLOUD_IMAGE}${items.image}` : defaultImage}
+                                                src={items.image ? getImageUrl(items.image) : defaultImage}
                                                 className="w-full h-full object-cover"
                                                 alt="Profile"
                                             />
@@ -552,7 +553,7 @@ function ExecutiveShowroomsTable() {
                                                                 height: '100px',
                                                                 borderRadius: '50%',
                                                             }}
-                                                            src={showroom?.image ? `${CLOUD_IMAGE}${showroom.image}` : defaultImage}
+                                                            src={showroom?.image ? getImageUrl(showroom.image) : defaultImage}
                                                             alt="Showroom"
                                                         />
                                                     </div>

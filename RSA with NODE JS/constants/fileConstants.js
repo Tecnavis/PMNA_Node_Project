@@ -2,9 +2,10 @@ const allowedImageMimeTypes = [
     "image/jpg",
     "image/png",
     "image/jpeg",
+    "image/webp",
 ];
 
-const maxFileSize = 5 * 1024 * 1024; // 5MB
+const maxFileSize = 10 * 1024 * 1024; // 10MB (enforced in config/multer.js via MEDIA_MAX_UPLOAD_MB)
 
 const USER_TYPES = Object.freeze({
     ADMIN: 'Admin',

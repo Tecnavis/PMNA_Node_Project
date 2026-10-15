@@ -6,6 +6,8 @@ import { Provider } from 'react-redux';
 
 import router from './router/index';
 import store from './store/index';
+import { installAuthInterceptors } from './config/authInterceptor';
+installAuthInterceptors();
 import './tailwind.css';
 import './i18n';
 

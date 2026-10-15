@@ -2,7 +2,7 @@ const CompanyExpense = require('../Model/companyExpense');
 const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
 const { StatusCodes } = require('http-status-codes');
 const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
-const cloudinary = require('../config/cloudinary');
+const { deleteImage } = require('../config/multer');
 // --------------------------------------------------
 // Create new company expense
 // In your companyExpenseController.js - update createCompanyExpense function
@@ -26,29 +26,8 @@ const createCompanyExpense = asyncErrorHandler(async (req, res) => {
       throw new BadRequestError('Amount must be a valid number');
     }
 
-    let imageFilename = null;
-    let cloudinaryError = null;
-
-    // Handle single image upload with simplified approach
-    if (req.file) {
-      console.log('Processing file upload...');
-      try {
-        // Simple upload without complex retry logic first
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: 'company-expenses',
-          timeout: 15000 // Reduced timeout
-        });
-        
-        imageFilename = result.public_id;
-        console.log('Image uploaded successfully');
-        
-      } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
-        console.log('Continuing without image');
-        imageFilename = null;
-        cloudinaryError = uploadError;
-      }
-    }
+    // The upload middleware has already stored the image on StackCP.
+    const imageFilename = req.file ? req.file.filename : null;
 
     console.log('Creating expense in database...');
 
@@ -202,26 +181,9 @@ const updateCompanyExpense = asyncErrorHandler(async (req, res) => {
   }
 
   // Handle image upload if new image is provided
-  let imageFilename = expense.image; // Keep existing image by default
-  if (req.file) {
-    try {
-      // Delete old image from Cloudinary if exists
-      if (expense.image) {
-        await cloudinary.uploader.destroy(expense.image);
-      }
-
-      // Upload new image to Cloudinary
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'company-expenses'
-      });
-      
-      imageFilename = result.public_id;
-      console.log('Image updated successfully:', imageFilename);
-    } catch (uploadError) {
-      console.error('Cloudinary upload error:', uploadError);
-      throw new BadRequestError('Failed to upload image');
-    }
-  }
+  // New image (if any) is already on StackCP; the old one is removed after the DB update succeeds.
+  const previousImage = expense.image;
+  const imageFilename = req.file ? req.file.filename : expense.image;
 
   const updateData = {
     ...(title && { title }),
@@ -238,6 +200,10 @@ const updateCompanyExpense = asyncErrorHandler(async (req, res) => {
     updateData,
     { new: true, runValidators: true }
   );
+
+  if (req.file && previousImage && previousImage !== imageFilename) {
+    await deleteImage(previousImage); // best effort, never throws
+  }
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -303,12 +269,7 @@ const deleteCompanyExpense = asyncErrorHandler(async (req, res) => {
 
   // Delete image from Cloudinary if exists
   if (expense.image) {
-    try {
-      await cloudinary.uploader.destroy(expense.image);
-      console.log('Image deleted from Cloudinary:', expense.image);
-    } catch (error) {
-      console.error('Error deleting image from Cloudinary:', error);
-    }
+    await deleteImage(expense.image); // best effort, never throws
   }
 
   await CompanyExpense.findByIdAndDelete(id);
@@ -389,25 +350,16 @@ const uploadImage = asyncErrorHandler(async (req, res) => {
     throw new BadRequestError("No file uploaded");
   }
 
-  try {
-    // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: 'company-expenses'
-    });
-
-    res.status(StatusCodes.OK).json({
-      success: true,
-      message: 'Image uploaded successfully',
-      data: {
-        filename: result.public_id, // Use Cloudinary public_id as filename
-        url: result.secure_url,
-        publicId: result.public_id
-      }
-    });
-  } catch (error) {
-    console.error('Image upload error:', error);
-    throw new BadRequestError('Failed to upload image');
-  }
+  // Already stored on StackCP by the upload middleware. Response shape kept for the frontend.
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: 'Image uploaded successfully',
+    data: {
+      filename: req.file.filename,
+      url: req.file.path,
+      publicId: req.file.filename
+    }
+  });
 });
 
 // Export all functions

@@ -8,6 +8,7 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { PhoneCallIcon, User2Icon } from 'lucide-react';
 import defaultImage from '../../assets/images/user-front-side-with-white-background.jpg';
 import { formattedTime } from '../../utils/dateUtils';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface Reward {
   id: string;
@@ -116,7 +117,7 @@ const RewardDetails: React.FC = () => {
             <div className="flex items-center mb-4 md:mb-0 md:mr-6">
               {
                 <img
-                  src={`${CLOUD_IMAGE}${userData?.image}` }
+                  src={getImageUrl(userData?.image) }
                   alt={defaultImage}
                   onError={(e) => { e.currentTarget.src = defaultImage; }}
                   className="w-16 h-16 rounded-full border-4 border-red-400 mr-4"
@@ -193,7 +194,7 @@ const RewardDetails: React.FC = () => {
                     >
                       <div className="bg-gray-50 p-4 flex justify-center">
                         <img
-                          src={`${CLOUD_IMAGE}${reward?.image}`}
+                          src={getImageUrl(reward?.image)}
                           alt={reward.name} className="h-24 object-contain" />
                       </div>
                       <div className="p-4">
@@ -224,7 +225,7 @@ const RewardDetails: React.FC = () => {
                       <div key={redemption.id} className="border rounded-lg p-4 flex items-start">
                         <div className="bg-gray-100 p-3 rounded-lg mr-4">
                           <img
-                            src={`${CLOUD_IMAGE}${redemption?.image || ''}`}
+                            src={getImageUrl(redemption?.image || '')}
                             alt={redemption.reward.name} className="h-12 w-12 object-contain" />
                         </div>
                         <div className="flex-1">

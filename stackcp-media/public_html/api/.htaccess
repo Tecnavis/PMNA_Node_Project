@@ -1,0 +1,5 @@
+# Only the two endpoints are reachable; helpers and any fallback config are not.
+Options -Indexes
+<FilesMatch "^(_bootstrap|config)\.php$">
+    Require all denied
+</FilesMatch>

@@ -63,10 +63,6 @@ exports.loginExecutive = asyncErrorHandler(async (req, res) => {
         });
     }
 
-    // 3. Debug logging
-    console.log('Provided password:', password);
-    console.log('Stored hash:', executive.password);
-    console.log('User found:', executive.userName);
 
     // 4. Check if password matches
     const isPasswordMatched = await executive.comparePassword(password);

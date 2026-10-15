@@ -2,17 +2,18 @@
 const express = require('express');
 const driverController = require('../Controller/driver');
 const upload = require('../config/multer');
+const { bookingPhotos, dated, profile, vehiclePapers, reward, adminQr } = require('../config/mediaPlacement');
 const router = express.Router();
 const jwt = require('../Middileware/jwt')
 
-router.post('/', jwt, upload.single('image'), driverController.createDriver); // 'image' is the name of the file field
+router.post('/', jwt, upload.single('image', profile('drivers', 'driver')), driverController.createDriver); // 'image' is the name of the file field
 router.get('/', driverController.getDrivers);
 router.get('/driverBooking', driverController.getDriversBooking);
 
 router.get('/filtered', jwt, driverController.filtergetDrivers);
 router.get('/dropdown', jwt, driverController.getDriversForDropdown);
 router.get('/:id', jwt, driverController.getDriverById);
-router.put('/:id', jwt, upload.single('image'), driverController.updateDriver);
+router.put('/:id', jwt, upload.single('image', profile('drivers', 'driver')), driverController.updateDriver);
 router.delete('/:id', jwt, driverController.deleteDriver);
 
 // Log in for provider

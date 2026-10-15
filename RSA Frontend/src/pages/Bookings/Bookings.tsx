@@ -24,6 +24,7 @@ import ReusableModal from '../../components/modal';
 import { APIForCancelApiResponse, updateCancelData } from '../../services/bookingService';
 import CancelBookingModal from './CancelBookingModal';
 import toast from 'react-hot-toast';
+import { getImageUrl } from '../../utils/imageUrl';
 
 
 interface Company {
@@ -780,7 +781,7 @@ cashPending:false,
                                                                 height: '100px',
                                                                 borderRadius: '50%',
                                                             }}
-                                                            src={company?.image ? `${CLOUD_IMAGE}${company?.image}` : defaultImage}
+                                                            src={company?.image ? getImageUrl(company?.image) : defaultImage}
                                                             alt=""
                                                         />
                                                     </div>
@@ -980,7 +981,7 @@ cashPending:false,
                         <label htmlFor="ctnEmail">Cancel image</label>
                         <div className="w-full max-h-50 border rounded overflow-hidden">
                             <img
-                                src={`${CLOUD_IMAGE}${cancelFormData.kmImage}`}
+                                src={getImageUrl(cancelFormData.kmImage)}
                                 alt="cancel-image"
                                 className="w-auto h-auto object-cover"
                             />

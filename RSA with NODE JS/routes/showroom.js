@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../Controller/showroom');
 const upload = require('../config/multer'); // Assuming multer setup is exported here
+const { bookingPhotos, dated, profile, vehiclePapers, reward, adminQr } = require('../config/mediaPlacement');
 const jwt = require('../Middileware/jwt')
 
-router.post('/create',jwt, upload.single('image'), controller.createShowroom);
-router.post('/',jwt, upload.single('image'), controller.createShowroom);
+router.post('/create',jwt, upload.single('image', profile('showrooms', 'showroom')), controller.createShowroom);
+router.post('/',jwt, upload.single('image', profile('showrooms', 'showroom')), controller.createShowroom);
 router.get('/', controller.getShowrooms);
 // Login Showroom
 router.post('/login', controller.loginShowroom);
@@ -27,7 +28,7 @@ router.put('/update-staff/:staffId',  controller.updateStaffMember);
 
 
 // PUT /showroom/update-staff/:staffId
-router.put('/:id',jwt, upload.single('image'), controller.updateShowroom);
+router.put('/:id',jwt, upload.single('image', profile('showrooms', 'showroom')), controller.updateShowroom);
 router.get('/:id',jwt, controller.getShowroomById);
 router.delete('/:showroomId/staff-delete/:staffId',  controller.deleteShowroomStaff);
 router.delete('/:id',jwt, controller.deleteShowroom);

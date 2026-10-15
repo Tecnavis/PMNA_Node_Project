@@ -1,0 +1,41 @@
+# ---- Media folder: images only, never executable --------------------------
+Options -Indexes -ExecCGI
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar .cgi .pl .py
+<FilesMatch "\.(php\d?|phtml|phar|cgi|pl|py|sh)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+RewriteEngine On
+
+# ---- Apps that build URLs as ".../uploads/" + stored value ------------------
+# New uploads store organised keys like "bookings/2026/10/15/RSA-1234/pickup-....jpg";
+# "/uploads/bookings/..." is served from "/bookings/..." so those apps keep working.
+# Works whether the media folder is the site root or a sub-folder (e.g. /rsa-media/uploads/bookings/...)
+RewriteCond %{REQUEST_URI} ^(.*)/uploads/((?:bookings|expenses|diesel-expenses|profiles|vehicles|verifications|rewards|admin|company-expenses)/.+)$
+RewriteRule ^ %1/%2 [L]
+
+# ---- Legacy Cloudinary IDs were stored WITHOUT an extension -----------------
+# e.g. DB has "1745300782123-482910233" but the file is "1745300782123-482910233.jpg".
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.jpg -f
+RewriteRule ^([A-Za-z0-9_-]+)$ $1.jpg [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.png -f
+RewriteRule ^([A-Za-z0-9_-]+)$ $1.png [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.webp -f
+RewriteRule ^([A-Za-z0-9_-]+)$ $1.webp [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.jpeg -f
+RewriteRule ^([A-Za-z0-9_-]+)$ $1.jpeg [L]
+
+<IfModule mod_headers.c>
+    # Admin site fetch()es images for "Download all" — needs CORS like Cloudinary had.
+    Header set Access-Control-Allow-Origin "*"
+    Header set X-Content-Type-Options "nosniff"
+    # File names are unique per upload, so they can be cached for a long time.
+    Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>

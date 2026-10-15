@@ -108,6 +108,7 @@ const errorHandler = (error, req, res, next) => {
     const response = {
         success: false,
         errorCode,
+        message: errors[0]?.message || 'Something went wrong', // clients mostly read `message`
         errors,
         ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     };

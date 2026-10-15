@@ -18,6 +18,10 @@ import router from './router/index';
 import { Provider } from 'react-redux';
 import store from './store/index';
 
+// Send the login token with every backend request; go to login when the session expires
+import { installAuthInterceptors } from './config/authInterceptor';
+installAuthInterceptors();
+
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>

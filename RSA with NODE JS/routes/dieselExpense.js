@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const dieselExpenseController = require('../Controller/dieselExpense');
 const imageUpload = require('../config/multer')
+const { bookingPhotos, dated, profile, vehiclePapers, reward, adminQr } = require('../config/mediaPlacement');
 const jwt = require('../Middileware/jwt')
 
 
@@ -17,13 +18,10 @@ router.get('/:id', jwt, dieselExpenseController.getExpenseById);
 router.get('/driver/:driverId', jwt, dieselExpenseController.getExpensesByDriver);
 
 // POST /diesel-expenses - create new diesel-expenses
-router.post('/', imageUpload.array('images', 3), jwt, dieselExpenseController.createExpense);
+router.post('/', jwt, imageUpload.array('images', 3, dated('diesel-expenses', 'diesel')), dieselExpenseController.createExpense);
 
 // PUT /diesel-expenses/:id - udpate existing diesel-expenses
-router.get('/', jwt, dieselExpenseController.updateExpense);
-
-// PUT /diesel-expenses/:id - udpate existing diesel-expenses
-router.put('/:id', imageUpload.array('images', 3), jwt, dieselExpenseController.updateExpense);
+router.put('/:id', jwt, imageUpload.array('images', 3, dated('diesel-expenses', 'diesel')), dieselExpenseController.updateExpense);
 
 // PATCH /diesel-expenses/:id/approve - approve existing diesel-expenses
 router.patch('/:id/approve', jwt, dieselExpenseController.toggleApproval);

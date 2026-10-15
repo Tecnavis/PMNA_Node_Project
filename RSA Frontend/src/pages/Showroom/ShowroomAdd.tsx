@@ -11,6 +11,7 @@ import styles from './showroomAdd.module.css';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { getAllExecutives } from '../../services';
 import Loader from '../../components/loader';
+import { getImageUrl } from '../../utils/imageUrl';
 
 const ShowroomAdd: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -189,7 +190,7 @@ const ShowroomAdd: React.FC = () => {
                 setPhone(data.phone || '');
                 setPassword(data.password || '');
                 setConfirmPassword(data.password || '');
-                setImagePreview(`${CLOUD_IMAGE}${data.image}` || '');
+                setImagePreview(getImageUrl(data.image) || '');
                 setShowroomId(data.showroomId || '');
                 setDescription(data.description || '');
                 setLocation(data.location || '');

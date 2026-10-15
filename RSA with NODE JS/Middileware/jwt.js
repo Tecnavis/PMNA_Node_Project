@@ -5,7 +5,7 @@ module.exports = function (req, res, next) {
   const token = req.header('Authorization');
 
   if (!token) {
-    return res.status(401).json({ message: 'Authorization token is missing' });
+    return res.status(401).json({ code: 'AUTH_REQUIRED', message: 'Authorization token is missing' });
   }
 
   try {
@@ -14,7 +14,7 @@ module.exports = function (req, res, next) {
     req.user = decoded;
     next();
   } catch (error) {
-    console.log(error.message,token )
-    return res.status(401).json({ message: 'Invalid token' });
+    // never log the token itself
+    return res.status(401).json({ code: 'AUTH_REQUIRED', message: error.name === 'TokenExpiredError' ? 'Session expired, please log in again' : 'Invalid token' });
   }
 };

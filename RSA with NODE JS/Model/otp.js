@@ -9,6 +9,10 @@ const otpSchema = new mongoose.Schema({
     otp: {
         type: String,
         required: true,
+    },
+    attempts: {               // wrong guesses for the current code
+        type: Number,
+        default: 0,
     }
 }, {
     timestamps: true

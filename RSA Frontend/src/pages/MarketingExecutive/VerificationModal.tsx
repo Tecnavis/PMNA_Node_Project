@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BASE_URL } from '../../config/axiosConfig';
 import { Verification } from '../../interface/ShowroomVerification';
 import { getVerificationDocsForShowroom } from '../../services';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface VerificationModalProps {
     showroomId: string;
@@ -202,7 +203,7 @@ const VerificationModal = ({ showroomId, onClose }: VerificationModalProps) => {
                                                     <div className="flex flex-col sm:flex-row gap-4">
                                                         <div className="flex-shrink-0 relative">
                                                             <img
-                                                                src={verification.image}
+                                                                src={getImageUrl(verification.image)}
                                                                 alt="Verification"
                                                                 className="w-32 h-32 object-cover rounded-lg border border-gray-200"
                                                                 onError={(e) => {

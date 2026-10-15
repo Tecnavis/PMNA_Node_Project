@@ -2460,7 +2460,8 @@ exports.verifyBooking = async (req, res) => {
                 });
             }
             
-            if (password !== 'SALARY@RSA') {
+            // Set SALARY_VERIFY_PASSWORD on the server to change it (default kept for compatibility)
+            if (password !== (process.env.SALARY_VERIFY_PASSWORD || 'SALARY@RSA')) {
                 return res.status(401).json({ 
                     message: 'Invalid password. Please provide correct password to verify booking with driver salary > 1000.' 
                 });
@@ -3939,7 +3940,7 @@ exports.cancelBooking = async (req, res) => {
             });
         }
 
-        if (!req.file && !req.file.filename) {
+        if (!req.file || !req.file.filename) {
             return res.status(400).json({
                 message: 'Please upload image',
                 success: false

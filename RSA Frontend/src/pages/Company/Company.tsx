@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import { IoIosCloseCircleOutline } from 'react-icons/io';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { getImageUrl } from '../../utils/imageUrl';
 
 
 interface Company {
@@ -137,7 +138,7 @@ const company: React.FC = () => {
                                 <tr key={index}>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
-                                            <img src={items.image ? `${CLOUD_IMAGE}${items.image}` : defaultImage} className="w-full h-full object-cover" alt="Profile" />{' '}
+                                            <img src={items.image ? getImageUrl(items.image) : defaultImage} className="w-full h-full object-cover" alt="Profile" />{' '}
                                         </div>
                                     </td>
                                     <td>
@@ -221,7 +222,7 @@ const company: React.FC = () => {
                                                                 height: '100px',
                                                                 borderRadius: '50%',
                                                             }}
-                                                            src={company?.image ? `${CLOUD_IMAGE}${company?.image}` : defaultImage}
+                                                            src={company?.image ? getImageUrl(company?.image) : defaultImage}
                                                             alt=""
                                                         />
                                                     </div>

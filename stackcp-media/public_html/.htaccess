@@ -1,0 +1,13 @@
+Options -Indexes
+DirectoryIndex disabled
+
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Hide dotfiles and the optional in-docroot config
+<FilesMatch "^\.|^media-config\.php$">
+    Require all denied
+</FilesMatch>

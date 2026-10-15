@@ -6,6 +6,7 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import axios, { AxiosError } from 'axios';
 import styles from './providerAdd.module.css';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface BaseLocation {
     _id: string;
@@ -207,7 +208,7 @@ const ProviderAdd: React.FC = () => {
                 setPersonalPhoneNumber(data.personalPhoneNumber || '');
                 setPassword(data.password || '');
                 setConfirmPassword(data.password || '');
-                setImagePreview(`${CLOUD_IMAGE}${data.image}` || '');
+                setImagePreview(getImageUrl(data.image) || '');
 
                 // Transform serviceDetails and set selectedServiceTypes
                 if (data.serviceDetails?.length) {

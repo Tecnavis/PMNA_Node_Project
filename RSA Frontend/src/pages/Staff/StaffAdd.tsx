@@ -11,6 +11,7 @@ import axios from 'axios';
 import IconTrashLines from '../../components/Icon/IconTrashLines';
 import IconPencil from '../../components/Icon/IconPencil';
 import { CLOUD_IMAGE } from '../../constants/status';
+import { getImageUrl } from '../../utils/imageUrl';
 interface EditData {
     id?: string;
     name?: string;
@@ -172,8 +173,9 @@ const UserAdd: React.FC = () => {
             formErrors.userName = 'Username must be at least 3 characters';
         }
 
+        // When editing, a blank password keeps the current one
         if (!password.trim()) {
-            formErrors.password = 'Password is required';
+            if (!uid) formErrors.password = 'Password is required';
         } else if (password.length < 4) {
             formErrors.password = 'Password must be at least 4 characters';
         }
@@ -337,9 +339,10 @@ const UserAdd: React.FC = () => {
                 setPhone(response.data.phone || '');
                 setUserName(response.data.userName || '');
                 setAddress(response.data.address || '');
-                setImagePreview(`${CLOUD_IMAGE}${response.data.image}` || '');
-                setPassword(response.data.password || '');
-                setConfirmPassword(response.data.password || '');
+                setImagePreview(getImageUrl(response.data.image) || '');
+                // Passwords are never sent by the server; leave blank to keep the current one
+                setPassword('');
+                setConfirmPassword('');
             } catch (error) {
                 console.error('Error fetching staffs:', error);
             }
@@ -359,7 +362,7 @@ const UserAdd: React.FC = () => {
             formData.append('address', address);
             formData.append('phone', phone);
             formData.append('userName', userName);
-            formData.append('password', password);
+            if (password.trim()) formData.append('password', password);
             formData.append('role', selectedRole);
             if (profileImage) {
                 formData.append('image', profileImage);
@@ -487,7 +490,7 @@ const UserAdd: React.FC = () => {
                                     <input
                                         id="password"
                                         type={showPassword ? 'text' : 'password'}
-                                        placeholder="password"
+                                        placeholder={uid ? 'Leave blank to keep current password' : 'password'}
                                         className="form-input pr-10"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}

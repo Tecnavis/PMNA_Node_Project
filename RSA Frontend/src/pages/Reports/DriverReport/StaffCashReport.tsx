@@ -23,6 +23,7 @@ import { dateFormate } from '../../../utils/dateUtils';
 import { ROLES } from '../../../constants/roles';
 import IconUser from '../../../components/Icon/IconUser';
 import { CLOUD_IMAGE, NON_COMPLETED_STATUS } from '../../../constants/status';
+import { getImageUrl } from '../../../utils/imageUrl';
 
 
 
@@ -556,7 +557,7 @@ const fetchStaffReceivedDetails = async () => {
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
                                 <img
-                                    src={`${CLOUD_IMAGE}${staff?.image}`}
+                                    src={getImageUrl(staff?.image)}
                                     alt="Staff"
                                     className="w-24 h-24 rounded-full object-cover mb-5"
                                 />
