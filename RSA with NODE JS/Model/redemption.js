@@ -13,7 +13,7 @@ const redemptionSchema = new mongoose.Schema({
     },
     redeemByModel: {
         type: String,
-        enum: ['Showroom', 'ShowroomStaff', 'Staff', "Driver"]
+        enum: ['Showroom', 'ShowroomStaff', 'Staff', "Driver", 'Executive']
     },
     approval: {
         type: Boolean,

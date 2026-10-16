@@ -752,3 +752,9 @@ html,
 body {
     overflow-x: clip;
 }
+
+/* Maps: keep Leaflet's zoom buttons and layers inside the map, so pop-ups and dialogs always sit on top */
+.leaflet-container {
+    isolation: isolate;
+    z-index: 0;
+}

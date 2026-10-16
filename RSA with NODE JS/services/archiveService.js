@@ -150,7 +150,8 @@ class ArchiveService {
             
             // Find non-PaymentWork bookings in archive (like RSAWork, ServiceWork, etc.)
             const query = {
-                workType: { $ne: 'PaymentWork' }
+                workType: { $ne: 'PaymentWork' },
+                archiveReason: { $ne: 'one-year' } // closed bookings older than a year stay in Old Bookings
             };
             
             const countToRestore = await BookingArchive.countDocuments(query);

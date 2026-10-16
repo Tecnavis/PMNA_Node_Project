@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { BASE_URL } from '../../config/axiosConfig';
 import ImageGallery from '../OldBookings/ImageGallery';
+import BulkPhotoDelete from './BulkPhotoDelete';
 
 type PhotoGroups = {
     pickup: string[];
@@ -114,14 +115,23 @@ const CasePhotos: React.FC = () => {
         }
     };
 
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const isAdminUser = (localStorage.getItem('role') || '').toLowerCase() === 'admin';
+
     return (
         <div className="space-y-5">
             {/* Search */}
             <div className="panel">
-                <div className="mb-4">
-                    <h5 className="text-lg font-semibold dark:text-white-light">Case Photos</h5>
-                    <p className="text-sm text-white-dark">Find pickup, drop-off and other photos by case ID, vehicle number or date.</p>
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h5 className="text-lg font-semibold dark:text-white-light">Case Photos</h5>
+                        <p className="text-sm text-white-dark">Find pickup, drop-off and other photos by case ID, vehicle number or date — includes Old Bookings.</p>
+                    </div>
+                    {isAdminUser && (
+                        <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => setBulkOpen(true)}>Bulk delete photos</button>
+                    )}
                 </div>
+                <BulkPhotoDelete open={bulkOpen} onClose={() => setBulkOpen(false)} />
 
                 <form
                     className="grid grid-cols-1 gap-4 md:grid-cols-12 md:items-end"

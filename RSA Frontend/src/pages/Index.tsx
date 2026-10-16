@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import ReactApexChart from 'react-apexcharts';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { BarChart3, X } from 'lucide-react';
 import { IRootState } from '../store';
 import { setPageTitle } from '../store/themeConfigSlice';
 import { dateFormate } from '../utils/dateUtils';
@@ -12,7 +11,6 @@ import { VehicleRecord } from './VehicleDetails/VehicleCompliance';
 import { BASE_URL } from '../config/axiosConfig';
 import { ROLES } from '../constants/roles';
 import AddVehicleCompliance from './VehicleDetails/addVehicleCompliance';
-import BookingDashboard from './Bookings/BookingChart';
 import MyDayPanel from './Reminders/MyDayPanel';
 import { ApprovalsData, BoardData, LiveData, STATUS_COLORS, SummaryData, fetchApprovals, fetchBoard, fetchLive, fetchSummary, formatMinutes } from './Operations/opsApi';
 
@@ -56,7 +54,6 @@ const Index = () => {
     const [trend, setTrend] = useState<TrendPoint[]>([]);
     const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
     const [opsError, setOpsError] = useState('');
-    const [showCharts, setShowCharts] = useState(false);
 
     // compliance renewal modal
     const [recordId, setRecordId] = useState('');
@@ -229,13 +226,9 @@ const Index = () => {
                     <Link to="/add-booking" className="btn btn-primary btn-sm">+ New booking</Link>
                     <Link to="/operations" className="btn btn-outline-primary btn-sm">Operations</Link>
                     <Link to="/reports" className="btn btn-outline-primary btn-sm">Reports</Link>
-                    <button type="button" onClick={() => setShowCharts((s) => !s)} className="btn btn-outline-secondary btn-sm flex items-center gap-1">
-                        {showCharts ? <><X className="w-4 h-4" /> Hide charts</> : <><BarChart3 className="w-4 h-4" /> More charts</>}
-                    </button>
                 </div>
             </div>
 
-            {showCharts && <div className="panel"><BookingDashboard /></div>}
 
             {/* KPI strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">

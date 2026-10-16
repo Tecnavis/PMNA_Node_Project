@@ -160,6 +160,10 @@ bookingSchema.add({
     bookingSource: { type: String },
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     customerNotifiedStatus: { type: String },
+    driverPointsAwarded: { type: Boolean },     // driver booking points given (once, on verify)
+    executivePointsAwarded: { type: Boolean },  // executive booking points given (once, on verify)
+    photosDeletedAt: { type: Date },     // set when photos were removed with the bulk photo delete
+    photosDeletedNote: { type: String },
 });
 bookingSchema.pre('save', function (next) {
     if (this.isNew || this.isModified('status')) {

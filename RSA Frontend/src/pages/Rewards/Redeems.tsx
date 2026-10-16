@@ -183,10 +183,12 @@ const Redeems = () => {
                                                             {reward?.name || 'Unknown Reward'}
                                                         </h3>
                                                         <p className="text-sm text-gray-500">
-                                                            Redeemed by: {typeof redemption.user === 'string' ? redemption.user : redemption.user?.name || 'Deleted user'} ({redemption?.redeemByModel})
+                                                            Redeemed by: {typeof redemption.user === 'string' ? redemption.user : redemption.user?.name || 'Deleted user'} ({redemption?.redeemByModel === 'Executive' ? 'Marketing Executive' : redemption?.redeemByModel})
                                                         </p>
                                                         <p className="text-sm text-gray-500">
-                                                            {redemption?.address?.fullName} - {redemption?.address?.city}, {redemption?.address?.state}
+                                                            {redemption?.address
+                                                                ? `${redemption.address.fullName || ''} - ${redemption.address.city || ''}, ${redemption.address.state || ''}`
+                                                                : 'No delivery address — call to arrange'}
                                                         </p>
                                                     </div>
                                                 </div>

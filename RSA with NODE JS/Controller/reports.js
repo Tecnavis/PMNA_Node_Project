@@ -165,7 +165,9 @@ exports.bookings = asyncErrorHandler(async (req, res) => {
         .lean();
     let archived = [];
     if (withArchive && live.length <= MAX_ROWS) {
-        archived = await BookingArchive.find(filter).select(BOOKING_FIELDS).populate(POPULATE).sort({ [dateField]: -1 }).limit(MAX_ROWS + 1 - live.length).lean();
+        // archived copies whose original is still listed above would be counted twice
+        const liveIds = live.map((b) => b._id);
+        archived = await BookingArchive.find({ ...filter, originalId: { $nin: liveIds } }).select(BOOKING_FIELDS).populate(POPULATE).sort({ [dateField]: -1 }).limit(MAX_ROWS + 1 - live.length).lean();
     }
     let rows = [...live.map((b) => flatten(b, false)), ...archived.map((b) => flatten(b, true))];
     const truncated = rows.length > MAX_ROWS;
@@ -260,6 +262,36 @@ exports.showrooms = asyncErrorHandler(async (req, res) => {
         };
     }
     res.json({ success: true, monthStart, data });
+});
+
+/**
+ * GET /reports/showroom-bookings?ids=<id>,<id>&from=YYYY-MM-DD&to=YYYY-MM-DD
+ * Case ID, date, vehicle number and status of every booking for the chosen showrooms (for printing).
+ * Without dates: all bookings. Old (archived) bookings are included once.
+ */
+exports.showroomBookings = asyncErrorHandler(async (req, res) => {
+    const showroomIds = ids(req.query.ids).slice(0, 100);
+    if (!showroomIds.length) return res.status(400).json({ success: false, message: 'Choose at least one showroom.' });
+    const f = { showroom: { $in: showroomIds } };
+    const day = /^\d{4}-\d{2}-\d{2}$/;
+    if (day.test(req.query.from || '') || day.test(req.query.to || '')) {
+        f.createdAt = {};
+        if (day.test(req.query.from || '')) f.createdAt.$gte = dayStart(req.query.from);
+        if (day.test(req.query.to || '')) f.createdAt.$lt = new Date(dayStart(req.query.to).getTime() + 86400000);
+    }
+    const FIELDS = 'fileNumber createdAt customerVehicleNumber status customerName showroom totalAmount originalId';
+    const live = await Booking.find({ ...f, _includeHidden: true }).select(FIELDS).sort({ createdAt: -1 }).limit(20000).lean();
+    const archived = await BookingArchive.find({ ...f, originalId: { $nin: live.map((b) => b._id) } }).select(FIELDS).sort({ createdAt: -1 }).limit(20000).lean();
+    const showrooms = await Showroom.find({ _id: { $in: showroomIds } }).select('name showroomId phone').lean();
+    const byShowroom = Object.fromEntries(showrooms.map((s) => [String(s._id), { _id: s._id, name: s.name, showroomId: s.showroomId || '', phone: s.phone || '', bookings: [] }]));
+    for (const b of [...live, ...archived]) {
+        const g = byShowroom[String(b.showroom)];
+        if (!g) continue;
+        g.bookings.push({ fileNumber: b.fileNumber || '', date: b.createdAt, day: istDay(b.createdAt), vehicleNumber: b.customerVehicleNumber || '', status: b.status || '', customerName: b.customerName || '', amount: Number(b.totalAmount) || 0 });
+    }
+    const data = showroomIds.map((id) => byShowroom[String(id)]).filter(Boolean);
+    data.forEach((g) => g.bookings.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    res.json({ success: true, data });
 });
 
 exports._test = { bookingFilter, dateRange, flatten, summarise };

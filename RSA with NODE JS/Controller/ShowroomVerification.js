@@ -136,6 +136,15 @@ exports.verifyMonthlyVerification = asyncErrorHandler(async (req, res) => {
 
     await newVerification.save();
 
+    // monthly visit points for the executive (Rewards page setting)
+    try {
+        const Points = require('../Model/points');
+        const visitPts = Number((await Points.findOne().lean())?.executiveVisitPoint) || 0;
+        if (visitPts) await Executive.updateOne({ _id: executive._id }, { $inc: { rewardPoints: visitPts } });
+    } catch (e) {
+        logger.warn({ error: e.message }, 'Visit points not given');
+    }
+
     logger.info('Showroom verification record created successfully', {
         ...requestInfo,
         verificationId: newVerification._id

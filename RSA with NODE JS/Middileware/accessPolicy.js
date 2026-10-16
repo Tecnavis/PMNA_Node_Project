@@ -81,6 +81,7 @@ const RULES = [
 
     // admin tools
     [['POST'], /^\/archive\/.+$/, { roles: ADMIN_SITE }],
+    [['GET'], /^\/archive\/.+$/, { roles: ADMIN_SITE }],
     [['POST', 'PUT', 'DELETE'], /^\/work\/(templates|generate-daily|generate-all-daily)(\/.*)?$/, { roles: ADMIN_SITE }],
     [['POST'], /^\/attendance\/admin-check-in\/[^/]+\/?$/, { roles: ADMIN_SITE }],
 ];

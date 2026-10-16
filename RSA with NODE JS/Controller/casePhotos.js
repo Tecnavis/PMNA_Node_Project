@@ -14,7 +14,7 @@ const { BadRequestError } = require('../Middileware/errorHandler');
 
 const MAX_RESULTS = 100;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const PHOTO_FIELDS = 'fileNumber customerName customerVehicleNumber status createdAt pickupImages dropoffImages cancelImage inventoryImage qrImage';
+const PHOTO_FIELDS = 'fileNumber customerName customerVehicleNumber status createdAt pickupImages dropoffImages cancelImage inventoryImage qrImage archived originalId company';
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -81,7 +81,10 @@ exports.searchCasePhotos = asyncErrorHandler(async (req, res) => {
         BookingArchive.find(filter).select(PHOTO_FIELDS).sort({ createdAt: -1 }).limit(MAX_RESULTS + 1).lean(),
     ]);
 
-    let cases = [...live.map((d) => shape(d, false)), ...archived.map((d) => shape(d, true))]
+    // an archived copy of a booking that is also in the live list is the same case — show it once
+    const liveIds = new Set(live.map((d) => String(d._id)));
+    const archivedOnly = archived.filter((d) => !liveIds.has(String(d.originalId)));
+    let cases = [...live.map((d) => shape(d, !!d.archived)), ...archivedOnly.map((d) => shape(d, true))]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     if (onlyWithPhotos) cases = cases.filter((c) => c.photoCount > 0);
 

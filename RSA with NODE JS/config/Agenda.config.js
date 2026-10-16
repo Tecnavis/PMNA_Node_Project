@@ -35,20 +35,18 @@ const initAgenda = async () => {
     });
     await agenda.start();
   // Update config/Agenda.config.js
-agenda.define('archive and move old bookings', async (job) => {
-    console.log('🚀 Running automated archive AND move job...');
+// Every night: closed bookings older than a year → Old Bookings (copy + hide, nothing deleted)
+agenda.define('archive and move old bookings', async () => {
     try {
-        // Use the new combined method
-        const result = await ArchiveService.archiveAndMoveOldBookings(3, 1000);
-        console.log('✅ Archive and move job completed:', result.message);
+        const result = await require('../services/oneYearArchive').run();
+        console.log('✅ One-year archive:', result.message);
     } catch (error) {
-        console.error('❌ Archive and move job failed:', error);
+        console.error('❌ One-year archive failed:', error.message);
     }
 });
 
-// Update the schedule
-await agenda.every('0 2 * * *', 'archive and move old bookings');
-    console.log('📅 Archive job scheduled to run daily at 2 AM');
+await agenda.every('30 2 * * *', 'archive and move old bookings', {}, { timezone: 'Asia/Kolkata' });
+    console.log('📅 Old-booking archive scheduled daily at 2:30 AM India time');
     
     return agenda;
 };

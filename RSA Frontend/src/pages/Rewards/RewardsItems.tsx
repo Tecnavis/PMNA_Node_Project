@@ -19,7 +19,8 @@ export const REWAR_CATEGORYS = {
   Staff: "Staff",
   Showroom: "Showroom",
   ShowroomStaff: "Showroom Staff",
-  Driver: "Driver"
+  Driver: "Driver",
+  Executive: "Marketing Executive",
 }
 
 function RewardsItem() {
@@ -276,8 +277,13 @@ function RewardsItem() {
                     </button>
                   </li>
                   <li>
-                    <button type="button" onClick={() => handleCategoryChange('Showroom Staff')}>
+                    <button type="button" onClick={() => handleCategoryChange('ShowroomStaff')}>
                       Showroom Staff
+                    </button>
+                  </li>
+                  <li>
+                    <button type="button" onClick={() => handleCategoryChange('Executive')}>
+                      Marketing Executive
                     </button>
                   </li>
                 </ul>

@@ -79,6 +79,10 @@ const RewardDetails: React.FC = () => {
         data = await fetchDrivers(userId || '')
       } else if (userType === "Showroom") {
         data = await fetchShowrooms(userId || '')
+      } else if (userType === 'Executive') {
+        const { axiosInstance, BASE_URL } = await import('../../config/axiosConfig')
+        const r = await axiosInstance.get(`${BASE_URL}/marketing-executives/${userId}`)
+        data = r.data?.data || r.data
       } else {
         data = await fetchShowroomStaff(userId || '')
       }

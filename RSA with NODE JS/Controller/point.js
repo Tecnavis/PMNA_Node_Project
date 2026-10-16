@@ -46,6 +46,9 @@ exports.getShowroomBookingPoints = async (req, res) => {
             bookingPointsForShowroom: showroomPoints.showRoomBookingPoint,
             bookingPointsForShowroomStaff: showroomPoints.showRoomStaffBookingPoint,
             bookingPoints: showroomPoints.bookingPoint,
+            driverBookingPoint: showroomPoints.driverBookingPoint || 0,
+            executiveBookingPoint: showroomPoints.executiveBookingPoint || 0,
+            executiveVisitPoint: showroomPoints.executiveVisitPoint || 0,
             _id: showroomPoints._id
         });
     } catch (error) {
@@ -61,7 +64,7 @@ exports.getShowroomBookingPoints = async (req, res) => {
 // Update Showroom Booking Points
 exports.updateShowroomBookingPoints = async (req, res) => {
     try {
-        const { showroomBookingPoints, showroomStaffBookingPoints } = req.body;
+        const { showroomBookingPoints, showroomStaffBookingPoints, driverBookingPoint, executiveBookingPoint, executiveVisitPoint } = req.body;
 
         // Create an update object dynamically
         const updateData = {};
@@ -76,6 +79,16 @@ exports.updateShowroomBookingPoints = async (req, res) => {
         if (showroomStaffBookingPoints !== undefined) {
             if (clean(showroomStaffBookingPoints) === null) return res.status(400).json({ message: 'Showroom staff points must be 0 or more.' });
             updateData.showRoomStaffBookingPoint = clean(showroomStaffBookingPoints);
+        }
+
+        for (const [key, value, label] of [
+            ['driverBookingPoint', driverBookingPoint, 'Driver'],
+            ['executiveBookingPoint', executiveBookingPoint, 'Executive booking'],
+            ['executiveVisitPoint', executiveVisitPoint, 'Executive visit'],
+        ]) {
+            if (value === undefined) continue;
+            if (clean(value) === null) return res.status(400).json({ message: `${label} points must be 0 or more.` });
+            updateData[key] = clean(value);
         }
 
         if (Object.keys(updateData).length === 0) {

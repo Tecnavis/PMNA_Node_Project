@@ -129,13 +129,17 @@ const bookingArchiveSchema = new mongoose.Schema({
     upiVerifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
     originalId: { type: mongoose.Schema.Types.ObjectId, required: true },
     archiveDate: { type: Date, default: Date.now },
+    archiveReason: { type: String },   // 'one-year' = closed booking older than a year (never auto-restored)
     createdAt: { type: Date },
     updatedAt: { type: Date }
 }, { 
     timestamps: false, // We already have createdAt/updatedAt
-    collection: 'booking_archive' // Separate collection
+    collection: 'booking_archive', // Separate collection
+    strict: false, // keep every field of the original booking (newer fields included)
 });
 
-// No indexes for better performance in archive
+// Only the lookups the Old Booking page and the one-year mover need
+bookingArchiveSchema.index({ originalId: 1 });
+bookingArchiveSchema.index({ createdAt: -1 });
 const BookingArchive = mongoose.model('BookingArchive', bookingArchiveSchema);
 module.exports = BookingArchive;

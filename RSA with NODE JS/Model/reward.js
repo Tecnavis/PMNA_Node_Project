@@ -4,7 +4,8 @@ const RewardFor = {
   Staff: "Staff",
   Showroom: "Showroom",
   ShowroomStaff: "ShowroomStaff",
-  Driver: "Driver"
+  Driver: "Driver",
+  Executive: "Executive", // marketing executives
 };
 
 const rewardSchema = new mongoose.Schema({

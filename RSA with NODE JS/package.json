@@ -48,7 +48,7 @@
   "devDependencies": {
     "pino-pretty": "^13.0.0"
   },
-    "engines": {
-     "node": "22.x"
-   }
+  "engines": {
+    "node": "22.x"
+  }
 }

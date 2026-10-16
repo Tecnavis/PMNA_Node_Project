@@ -121,6 +121,13 @@ exports.redeemReward = async (req, res) => {
   const { rewardId = '', rewardFor, userId, bookingId = '', staffId, userType, address } = req.query;
 
   try {
+    const tokenRole = req.user?.role || req.user?.user?.role;
+    const forWhom = String(userId || staffId || '');
+    if (tokenRole === 'executive' || tokenRole === 'Executive') {
+      if (forWhom !== String(req.user.id) || (rewardFor || userType) !== 'Executive') {
+        return res.status(403).json({ success: false, message: 'You can only redeem your own points.' });
+      }
+    }
 
     let redemption
 
@@ -167,6 +174,9 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor, address) => {
         case 'Driver':
           userModel = Driver;
           break;
+        case 'Executive':
+          userModel = require('../Model/executive');
+          break;
         default:
           throw new Error('Invalid user type');
       }
@@ -178,7 +188,6 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor, address) => {
 
       if (!reward) throw new Error('Reward not found');
       if (!user) throw new Error('Staff member not found');
-      if (rewardFor === 'ShowroomStaff' && !address) throw new Error('Address is missing.');
       if (reward.rewardFor !== rewardFor) throw new Error(`This reward is not available for ${rewardFor}`);
       if (reward.stock <= 0) throw new Error('This reward is out of stock');
 
@@ -273,6 +282,10 @@ exports.getRedemptions = async (userId, userType) => {
 exports.getAllredemationsBaseUserType = async (req, res) => {
   const { userType, userId } = req.query
   try {
+    const tokenRole = req.user?.role || req.user?.user?.role;
+    if ((tokenRole === 'executive' || tokenRole === 'Executive') && String(userId) !== String(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Not allowed' });
+    }
 
     const redemptions = await this.getRedemptions(userId, userType)
 

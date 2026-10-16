@@ -804,55 +804,80 @@ exports.getArchiveStats = asyncErrorHandler(async (req, res) => {
  */
 exports.getArchivedBookings = asyncErrorHandler(async (req, res) => {
     try {
-        const { page = 1, limit = 20, workType, search = '' } = req.query;
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
+        const { page = 1, limit = 20, workType, search = '', status, serviceType, startDate, endDate, company, sortBy, sortOrder } = req.query;
+        const pageNum = Math.max(parseInt(page) || 1, 1);
+        const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 200);
         const skip = (pageNum - 1) * limitNum;
+        const mongoose = require('mongoose');
+        const isId = (v) => mongoose.Types.ObjectId.isValid(String(v || ''));
 
-        let query = {};
-        
-        if (workType) {
-            query.workType = workType;
+        const query = {};
+        if (workType) query.workType = workType;
+        if (status) query.status = status;
+        if (isId(serviceType)) query.serviceType = new mongoose.Types.ObjectId(String(serviceType));
+        if (isId(company)) query.company = new mongoose.Types.ObjectId(String(company));
+        // date range = when the booking was made
+        if (startDate || endDate) {
+            query.createdAt = {};
+            const day = /^\d{4}-\d{2}-\d{2}$/;
+            const at = (v) => (day.test(String(v)) ? new Date(`${v}T00:00:00+05:30`) : new Date(v)); // plain dates = India time
+            if (startDate && !isNaN(at(startDate))) query.createdAt.$gte = at(startDate);
+            if (endDate && !isNaN(at(endDate))) {
+                const e = at(endDate);
+                if (day.test(String(endDate))) e.setTime(e.getTime() + 86400000 - 1); // whole "to" day
+                query.createdAt.$lte = e;
+            }
+            if (!Object.keys(query.createdAt).length) delete query.createdAt;
         }
-        
-        if (search) {
-            const searchRegex = new RegExp(search, 'i');
+        const text = String(search || '').trim();
+        if (text) {
+            const rx = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
             query.$or = [
-                { fileNumber: searchRegex },
-                { customerName: searchRegex },
-                { customerVehicleNumber: searchRegex }
+                { fileNumber: rx }, { customerName: rx }, { customerVehicleNumber: rx },
+                { mob1: rx }, { mob2: rx }, { location: rx }, { dropoffLocation: rx }, { invoiceNumber: rx },
             ];
         }
 
-        const total = await BookingArchive.countDocuments(query);
-        
-        const bookings = await BookingArchive.find(query)
-            .sort({ archiveDate: -1 })
-            .skip(skip)
-            .limit(limitNum)
-            .lean();
+        const SORTABLE = ['createdAt', 'archiveDate', 'fileNumber', 'totalAmount', 'customerName', 'status'];
+        const sortKey = SORTABLE.includes(sortBy) ? sortBy : 'createdAt';
+        const sort = { [sortKey]: sortOrder === 'asc' ? 1 : -1 };
 
-        const totalPages = Math.ceil(total / limitNum);
-        
+        const [total, bookings] = await Promise.all([
+            BookingArchive.countDocuments(query),
+            BookingArchive.find(query)
+                .sort(sort)
+                .skip(skip)
+                .limit(limitNum)
+                .populate([
+                    { path: 'company', select: 'name' },
+                    { path: 'driver', select: 'name phone' },
+                    { path: 'provider', select: 'name phone' },
+                    { path: 'showroom', select: 'name' },
+                    { path: 'serviceType', select: 'serviceName' },
+                ])
+                .lean(),
+        ]);
+
         res.status(200).json({
             success: true,
             data: {
                 bookings,
-                pagination: {
-                    total,
-                    page: pageNum,
-                    limit: limitNum,
-                    totalPages
-                }
-            }
+                pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
+            },
         });
-
     } catch (error) {
         console.error('Error fetching archived bookings:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch archived bookings',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Failed to fetch archived bookings', error: error.message });
     }
+});
+
+/** GET /archive/one-year/preview — how many closed bookings older than a year are waiting to move */
+exports.oneYearPreview = asyncErrorHandler(async (req, res) => {
+    res.json({ success: true, ...(await require('../services/oneYearArchive').preview()) });
+});
+
+/** POST /archive/one-year/run — move them now (Admin). Also runs every night at 2:30 AM. */
+exports.oneYearRun = asyncErrorHandler(async (req, res) => {
+    const result = await require('../services/oneYearArchive').run();
+    res.status(result.success ? 200 : 409).json(result);
 });

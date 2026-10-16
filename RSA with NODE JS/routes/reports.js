@@ -10,5 +10,6 @@ router.get('/bookings', adminSite, reports.bookings);
 router.get('/expenses', adminSite, reports.expenses);
 router.get('/options', adminSite, reports.options);
 router.get('/showrooms', adminSite, reports.showrooms);
+router.get('/showroom-bookings', adminSite, reports.showroomBookings);
 
 module.exports = router;

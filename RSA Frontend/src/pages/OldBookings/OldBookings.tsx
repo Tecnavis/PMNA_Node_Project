@@ -26,6 +26,7 @@ import 'react-date-range/dist/theme/default.css';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import ImageGallery from './ImageGallery';
+import OneYearStrip from './OneYearStrip';
 
 // Define interfaces
 interface Filters {
@@ -184,8 +185,8 @@ const OldBookings: React.FC = () => {
 
     const applyDateFilter = () => {
         if (dateRange[0].startDate && dateRange[0].endDate) {
-            handleFilterChange('startDate', dateRange[0].startDate.toISOString());
-            handleFilterChange('endDate', dateRange[0].endDate.toISOString());
+            handleFilterChange('startDate', format(dateRange[0].startDate, 'yyyy-MM-dd'));
+            handleFilterChange('endDate', format(dateRange[0].endDate, 'yyyy-MM-dd'));
         }
         setShowFilters(false);
     };
@@ -299,7 +300,7 @@ const getDriverPhone = (booking: Booking): string => {
 
     // Stats calculation
     const totalAmount = bookings.reduce((sum, booking) => sum + (booking.totalAmount || 0), 0);
-    const completedBookings = bookings.filter(b => b.status === 'Completed').length;
+    const completedBookings = bookings.filter(b => b.status === 'Completed' || b.status === 'Order Completed').length;
     const cancelledBookings = bookings.filter(b => b.status === 'Cancelled').length;
     const bookingsWithDriver = bookings.filter(b => b.driver || b.provider).length;
 
@@ -313,9 +314,10 @@ const getDriverPhone = (booking: Booking): string => {
                             <ArchiveBoxIcon className="h-8 w-8 text-indigo-600" />
                             Archived Bookings
                         </h1>
-                        <p className="text-gray-600 mt-2">View and manage all archived bookings</p>
+                        <p className="text-gray-600 mt-2">Search old and archived bookings by file no., customer, vehicle no., phone or place</p>
                     </div>
                 </div>
+                <OneYearStrip onMoved={fetchArchivedBookings} />
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">

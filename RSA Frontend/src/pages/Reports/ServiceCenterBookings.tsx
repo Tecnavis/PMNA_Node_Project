@@ -158,192 +158,108 @@ const ServiceCenterBookings = () => {
     }));
   };
 
-  // Get selected showrooms data for printing
-  const getSelectedShowroomsData = (): PrintShowroomData[] => {
-    return filteredShowrooms
-      .filter(showroom => selectedShowrooms.includes(showroom._id))
-      .map(showroom => ({
-        name: showroom.name,
-        phone: showroom.phone || 'N/A',
-        lastTwoMonthsBookings: showroom.lastTwoMonthsBookings,
-        showroomId: showroom.showroomId,
-        remark: remarks[showroom._id] || '' // Use existing remark or empty string
-      }));
-  };
 
-  // Print functionality with Remarks column
-  const handlePrint = () => {
-    const selectedData = getSelectedShowroomsData();
-    
-    if (selectedData.length === 0) {
+  // Print: for each selected showroom, every case in the chosen period (case ID, date, vehicle no., status)
+  const [printPeriod, setPrintPeriod] = useState<'2m' | 'all' | 'custom'>('2m');
+  const [printFrom, setPrintFrom] = useState('');
+  const [printTo, setPrintTo] = useState('');
+  const [printing, setPrinting] = useState(false);
+
+  const handlePrint = async () => {
+    if (selectedShowrooms.length === 0) {
       alert('Please select at least one showroom to print.');
       return;
     }
-
+    const ist = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+    let from = '', to = '';
+    if (printPeriod === '2m') { const d = new Date(); d.setMonth(d.getMonth() - 2); from = ist(d); to = ist(new Date()); }
+    if (printPeriod === 'custom') {
+      if (!printFrom || !printTo) { alert('Choose the From and To dates.'); return; }
+      from = printFrom; to = printTo;
+    }
+    // open the window first (browsers block pop-ups opened after waiting)
     const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    if (!printWindow) { alert('Please allow pop-ups for this site to print.'); return; }
+    printWindow.document.write('<p style="font-family:Arial;padding:20px">Preparing report…</p>');
 
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Showroom Bookings Report</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              margin: 20px; 
-              line-height: 1.4;
-            }
-            h1 { 
-              color: #333; 
-              text-align: center; 
-              margin-bottom: 10px; 
-              border-bottom: 2px solid #333;
-              padding-bottom: 10px;
-            }
-            .report-info {
-              text-align: center;
-              margin-bottom: 20px;
-              color: #666;
-            }
-            table { 
-              width: 100%; 
-              border-collapse: collapse; 
-              margin-top: 20px;
-              font-size: 14px;
-            }
-            th, td { 
-              border: 1px solid #ddd; 
-              padding: 12px; 
-              text-align: left; 
-            }
-            th { 
-              background-color: #f5f5f5; 
-              font-weight: bold;
-              position: sticky;
-              top: 0;
-            }
-            tr:nth-child(even) { 
-              background-color: #f9f9f9; 
-            }
-            .summary { 
-              margin-bottom: 20px; 
-              padding: 15px; 
-              background-color: #e8f4fd; 
-              border-radius: 5px;
-              border-left: 4px solid #2196F3;
-            }
-            .timestamp { 
-              color: #666; 
-              font-size: 14px; 
-              margin-bottom: 10px; 
-            }
-            .remark-cell {
-              min-height: 40px;
-              border: 1px dashed #ccc;
-            }
-            .footer {
-              margin-top: 30px;
-              padding-top: 20px;
-              border-top: 1px solid #ddd;
-              font-size: 12px;
-              color: #666;
-            }
-            @media print {
-              body { margin: 0; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <h1>Showroom Bookings Report</h1>
-          <div class="report-info">
-            <div class="timestamp">Generated on: ${new Date().toLocaleString()}</div>
+    setPrinting(true);
+    let groups: { _id: string; name: string; showroomId: string; phone: string; bookings: { fileNumber: string; date: string; vehicleNumber: string; status: string; customerName: string }[] }[] = [];
+    try {
+      const ids = selectedShowrooms; // selections from every page
+      const r = await axios.get(`${backendUrl}/reports/showroom-bookings`, { params: { ids: ids.join(','), ...(from ? { from } : {}), ...(to ? { to } : {}) } });
+      groups = Array.isArray(r.data?.data) ? r.data.data : [];
+    } catch (e: any) {
+      printWindow.document.body.innerHTML = `<p style="font-family:Arial;padding:20px;color:#b91c1c">Could not load the bookings: ${String(e?.response?.data?.message || e?.message || 'error')}</p>`;
+      setPrinting(false);
+      return;
+    }
+    setPrinting(false);
+
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+    const fmt = (d: string) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '');
+    const periodText = printPeriod === 'all' ? 'All bookings' : `${fmt(`${from}T12:00:00+05:30`)} – ${fmt(`${to}T12:00:00+05:30`)}`;
+    const statusColor = (st: string) => (st === 'Order Completed' ? '#15803d' : st === 'Cancelled' || st === 'Rejected' ? '#b91c1c' : '#1d4ed8');
+    const remarkFor = (id: string) => remarks[id] || '';
+    const total = groups.reduce((a, g) => a + g.bookings.length, 0);
+
+    const sections = groups.map((g, gi) => `
+      <section class="showroom">
+        <div class="sh-head">
+          <div>
+            <div class="sh-name">${gi + 1}. ${esc(g.name)}</div>
+            <div class="sh-meta">ID: ${esc(g.showroomId)}${g.phone ? ` · Phone: ${esc(g.phone)}` : ''}</div>
           </div>
-          
-          <div class="summary">
-            <strong>Report Summary:</strong><br>
-            • Total Showrooms: ${selectedData.length}<br>
-            • Booking Filter: ${bookingFilter === 'all' ? 'All Showrooms' : bookingFilter + ' bookings'}<br>
-            • Report Date: ${new Date().toLocaleDateString()}
-          </div>
+          <div class="sh-count">${g.bookings.length} booking${g.bookings.length === 1 ? '' : 's'}</div>
+        </div>
+        ${remarkFor(g._id) ? `<div class="remark"><b>Remarks:</b> ${esc(remarkFor(g._id))}</div>` : ''}
+        ${g.bookings.length === 0 ? '<p class="none">No bookings in this period.</p>' : `
+        <table>
+          <thead><tr><th style="width:5%">#</th><th style="width:27%">Case ID</th><th style="width:18%">Date</th><th style="width:22%">Vehicle no.</th><th style="width:28%">Status</th></tr></thead>
+          <tbody>
+            ${g.bookings.map((b, i) => `<tr>
+              <td>${i + 1}</td>
+              <td><b>${esc(b.fileNumber)}</b></td>
+              <td>${fmt(b.date)}</td>
+              <td>${esc(b.vehicleNumber)}</td>
+              <td style="color:${statusColor(b.status)};font-weight:600">${esc(b.status === 'Order Completed' ? 'Completed' : b.status)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`}
+      </section>`).join('');
 
-          <table>
-            <thead>
-              <tr>
-                <th width="5%">#</th>
-                <th width="25%">Showroom Name</th>
-                <th width="15%">Phone</th>
-                <th width="15%">Last 2 Months Bookings</th>
-                <th width="40%">Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${selectedData.map((showroom, index) => `
-                <tr>
-                  <td>${index + 1}</td>
-                  <td><strong>${showroom.name}</strong><br><small style="color: #666;">ID: ${showroom.showroomId}</small></td>
-                  <td>${showroom.phone}</td>
-                  <td style="text-align: center;">
-                    <span style="
-                      display: inline-block; 
-                      padding: 4px 12px; 
-                      background-color: ${showroom.lastTwoMonthsBookings > 10 ? '#4CAF50' : showroom.lastTwoMonthsBookings > 5 ? '#FF9800' : '#F44336'}; 
-                      color: white; 
-                      border-radius: 12px; 
-                      font-weight: bold;
-                      min-width: 30px;
-                    ">
-                      ${showroom.lastTwoMonthsBookings}
-                    </span>
-                  </td>
-                  <td class="remark-cell">
-                    ${showroom.remark || '&nbsp;'}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+    const printContent = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Showroom Bookings Report</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 18px; color: #111; font-size: 12px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #555; margin-bottom: 14px; }
+  .summary { display: flex; gap: 24px; padding: 10px 14px; background: #f1f5f9; border-radius: 6px; margin-bottom: 16px; }
+  .showroom { margin-bottom: 18px; page-break-inside: auto; }
+  .sh-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #b91c1c; padding-bottom: 4px; margin-bottom: 6px; page-break-after: avoid; }
+  .sh-name { font-size: 15px; font-weight: 700; }
+  .sh-meta { color: #555; }
+  .sh-count { font-weight: 700; }
+  .remark { background: #fff7ed; border-left: 3px solid #f59e0b; padding: 4px 8px; margin: 4px 0 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #d4d4d8; padding: 5px 7px; text-align: left; }
+  th { background: #f4f4f5; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .none { color: #777; font-style: italic; margin: 4px 0; }
+  .no-print { margin: 12px 0; }
+  @media print { .no-print { display: none; } body { margin: 8mm; } }
+</style></head>
+<body>
+  <div class="no-print"><button onclick="window.print()">Print</button> <button onclick="window.close()">Close</button></div>
+  <h1>Showroom Bookings Report</h1>
+  <div class="sub">Period: <b>${esc(periodText)}</b> · Generated ${esc(new Date().toLocaleString('en-IN'))}</div>
+  <div class="summary"><span>Showrooms: <b>${groups.length}</b></span><span>Total bookings: <b>${total}</b></span></div>
+  ${sections}
+  <script>setTimeout(function () { window.print(); }, 400);</script>
+</body></html>`;
 
-          <div class="footer">
-            <p><strong>Note:</strong> This report shows booking statistics for the last 2 months. Remarks column is provided for additional notes and observations.</p>
-            <p>Printed by: User • Page 1 of 1</p>
-          </div>
-
-          <div class="no-print" style="margin-top: 20px; text-align: center;">
-            <button onclick="window.print()" style="
-              padding: 10px 20px; 
-              background: #2196F3; 
-              color: white; 
-              border: none; 
-              border-radius: 5px; 
-              cursor: pointer;
-            ">
-              Print Report
-            </button>
-            <button onclick="window.close()" style="
-              padding: 10px 20px; 
-              background: #f44336; 
-              color: white; 
-              border: none; 
-              border-radius: 5px; 
-              cursor: pointer; 
-              margin-left: 10px;
-            ">
-              Close Window
-            </button>
-          </div>
-
-          <script>
-            // Auto-print after window opens
-            setTimeout(() => {
-              window.print();
-            }, 500);
-          </script>
-        </body>
-      </html>
-    `;
-
+    printWindow.document.open();
     printWindow.document.write(printContent);
     printWindow.document.close();
   };
@@ -419,13 +335,24 @@ const ServiceCenterBookings = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             
-            {/* Print Button */}
+            {/* Print: period + button */}
+            <select className="form-select w-auto" value={printPeriod} onChange={(e) => setPrintPeriod(e.target.value as any)} title="Bookings to list in the print">
+              <option value="2m">Last 2 months</option>
+              <option value="all">All bookings</option>
+              <option value="custom">Choose dates…</option>
+            </select>
+            {printPeriod === 'custom' && (
+              <>
+                <input type="date" className="form-input w-auto" value={printFrom} max={printTo || undefined} onChange={(e) => setPrintFrom(e.target.value)} aria-label="From" />
+                <input type="date" className="form-input w-auto" value={printTo} min={printFrom || undefined} onChange={(e) => setPrintTo(e.target.value)} aria-label="To" />
+              </>
+            )}
             <button
               onClick={handlePrint}
-              disabled={selectedShowrooms.length === 0}
+              disabled={selectedShowrooms.length === 0 || printing}
               className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Print Selected ({selectedShowrooms.length})
+              {printing ? 'Preparing…' : `Print Selected (${selectedShowrooms.length})`}
             </button>
           </div>
         </div>

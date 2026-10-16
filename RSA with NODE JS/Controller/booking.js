@@ -2469,6 +2469,36 @@ async function awardShowroomBookingPoints(booking) {
 }
 exports.awardShowroomBookingPoints = awardShowroomBookingPoints;
 
+/**
+ * Driver + marketing executive booking points (Rewards page settings) — once per booking, on verify.
+ * Driver: the driver who did the case. Executive: the one who added the booking's showroom.
+ */
+async function awardDriverAndExecutivePoints(booking) {
+    if (!booking) return;
+    const Points = require('../Model/points');
+    const settings = await Points.findOne().lean();
+    const driverPts = Number(settings?.driverBookingPoint) || 0;
+    const execPts = Number(settings?.executiveBookingPoint) || 0;
+
+    const driverId = booking.driver?._id || booking.driver;
+    if (driverPts && driverId && mongoose.Types.ObjectId.isValid(String(driverId))) {
+        const claimed = await Booking.findOneAndUpdate({ _id: booking._id, driverPointsAwarded: { $ne: true } }, { $set: { driverPointsAwarded: true } })
+            .setOptions({ _includeHidden: true });
+        if (claimed) await Driver.updateOne({ _id: driverId }, { $inc: { rewardPoints: driverPts } });
+    }
+
+    const showroomId = booking.showroom?._id || booking.showroom;
+    if (execPts && showroomId && mongoose.Types.ObjectId.isValid(String(showroomId))) {
+        const sr = await Showroom.findById(showroomId).select('addedBy').lean();
+        if (sr?.addedBy && mongoose.Types.ObjectId.isValid(String(sr.addedBy))) {
+            const claimed = await Booking.findOneAndUpdate({ _id: booking._id, executivePointsAwarded: { $ne: true } }, { $set: { executivePointsAwarded: true } })
+                .setOptions({ _includeHidden: true });
+            if (claimed) await require('../Model/executive').updateOne({ _id: sr.addedBy }, { $inc: { rewardPoints: execPts } });
+        }
+    }
+}
+exports.awardDriverAndExecutivePoints = awardDriverAndExecutivePoints;
+
 exports.verifyBooking = async (req, res) => {
     try {
         const { id } = req.params;
@@ -2618,6 +2648,7 @@ exports.verifyBooking = async (req, res) => {
         // Showroom booking points (set on the Rewards page) are earned when the case is verified
         try {
             await awardShowroomBookingPoints(updatedBooking);
+            await awardDriverAndExecutivePoints(updatedBooking);
         } catch (e) {
             routeLogger.warn({ bookingId: id, error: e.message }, 'Showroom booking points not awarded');
         }

@@ -37,7 +37,7 @@ export interface Address {
     country: string
     addressType: "Home" | "Work" | "Other"
 }
-export type RedeemByModel = 'Showroom' | 'ShowroomStaff' | 'Staff';
+export type RedeemByModel = 'Showroom' | 'ShowroomStaff' | 'Staff' | 'Driver' | 'Executive';
 export interface IRedemption {
     _id: string;
     reward: IReward | string;

@@ -44,4 +44,9 @@ router.post('/restore-nonpaymentwork', jwt, controller.restoreNonPaymentWorkBook
 router.get('/stats', jwt, controller.getArchiveStats);
 router.get('/bookings', jwt, controller.getArchivedBookings);
 
+// Closed bookings older than a year → Old Bookings
+const roleAuth = require('../Middileware/roleAuth');
+router.get('/one-year/preview', jwt, roleAuth('Admin', 'Staff'), controller.oneYearPreview);
+router.post('/one-year/run', jwt, roleAuth('Admin'), controller.oneYearRun);
+
 module.exports = router;

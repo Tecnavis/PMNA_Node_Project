@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
 import IconEye from '../../components/Icon/IconEye';
-import { ClientRewardDetails } from '../../interface/Rewards';
 
 // Kept for other files that import it
 export interface Staff {
@@ -14,90 +13,105 @@ export interface Staff {
     showroomId?: any;
 }
 
-type Tab = 'Driver' | 'Showroom' | 'ShowroomStaff';
-const TAB_LABEL: Record<Tab, string> = { Driver: 'Drivers', Showroom: 'Showrooms', ShowroomStaff: 'Showroom staff' };
+type Tab = 'Driver' | 'Showroom' | 'ShowroomStaff' | 'Executive';
+const TAB_LABEL: Record<Tab, string> = { Driver: 'Drivers', Showroom: 'Showrooms', ShowroomStaff: 'Showroom staff', Executive: 'Marketing executives' };
+const TABS = Object.keys(TAB_LABEL) as Tab[];
 
-interface PointSettings {
-    _id: string;
-    showroom: number;
-    showroomStaff: number;
-}
+type Row = { _id: string; name: string; rewardPoints: number; extra?: string; count?: number };
+type ListState = { rows: Row[]; loading: boolean; error: string };
+
+type Settings = { showroom: string; showroomStaff: string; driver: string; executiveBooking: string; executiveVisit: string };
+const SETTING_FIELDS: { key: keyof Settings; api: string; label: string; hint: string; group: string }[] = [
+    { key: 'showroom', api: 'showroomBookingPoints', label: 'Showroom gets', hint: 'per booking made by the showroom or its staff', group: 'Showrooms' },
+    { key: 'showroomStaff', api: 'showroomStaffBookingPoints', label: 'Showroom staff who booked gets', hint: 'per booking they made', group: 'Showrooms' },
+    { key: 'driver', api: 'driverBookingPoint', label: 'Driver gets', hint: 'per case they completed (plus customer-feedback points)', group: 'Drivers' },
+    { key: 'executiveBooking', api: 'executiveBookingPoint', label: 'Executive gets', hint: 'per booking from a showroom they added', group: 'Marketing executives' },
+    { key: 'executiveVisit', api: 'executiveVisitPoint', label: 'Executive gets', hint: 'per monthly showroom visit verified', group: 'Marketing executives' },
+];
 
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const emptyList = (): ListState => ({ rows: [], loading: true, error: '' });
+const errText = (e: any) => e?.response?.data?.message || (e?.code === 'ECONNABORTED' ? 'The server took too long' : 'Could not load');
 
 function Rewards() {
     const navigate = useNavigate();
     const [tab, setTab] = useState<Tab>('Driver');
     const [search, setSearch] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [drivers, setDrivers] = useState<ClientRewardDetails[]>([]);
-    const [showrooms, setShowrooms] = useState<ClientRewardDetails[]>([]);
-    const [showroomStaff, setShowroomStaff] = useState<(ClientRewardDetails & { showroomName?: string })[]>([]);
-    const [settings, setSettings] = useState<PointSettings>({ _id: '', showroom: 0, showroomStaff: 0 });
-    const [form, setForm] = useState({ showroom: '', showroomStaff: '' });
+    const [lists, setLists] = useState<Record<Tab, ListState>>({ Driver: emptyList(), Showroom: emptyList(), ShowroomStaff: emptyList(), Executive: emptyList() });
+    const [saved, setSaved] = useState<Settings>({ showroom: '0', showroomStaff: '0', driver: '0', executiveBooking: '0', executiveVisit: '0' });
+    const [form, setForm] = useState<Settings>(saved);
+    const [settingsError, setSettingsError] = useState('');
     const [saving, setSaving] = useState(false);
     const [pendingRedeems, setPendingRedeems] = useState<number | null>(null);
 
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            const [d, s, st, pts, red] = await Promise.allSettled([
-                axiosInstance.get(`${BASE_URL}/driver/driverBooking`),
-                axiosInstance.get(`${BASE_URL}/showroom`),
-                axiosInstance.get(`${BASE_URL}/showroom/showroom-staff`),
-                axiosInstance.get(`${BASE_URL}/point/showroom`),
-                axiosInstance.get(`${BASE_URL}/reward/redeems`),
-            ]);
+    const setList = (t: Tab, patch: Partial<ListState>) => setLists((l) => ({ ...l, [t]: { ...l[t], ...patch } }));
 
-            if (d.status === 'fulfilled' && Array.isArray(d.value.data)) {
-                setDrivers(d.value.data.map((x: any) => ({ _id: x._id, name: x.name, rewardPoints: num(x.rewardPoints), staff: [] })));
-            }
-            const staffRows = st.status === 'fulfilled' && Array.isArray(st.value.data?.data) ? st.value.data.data : [];
-            const staffList = staffRows.map((x: any) => ({
-                _id: x._id,
-                name: x.name,
-                rewardPoints: num(x.rewardPoints),
-                showroomId: x.showroomId?._id || x.showroomId || '',
-                showroomName: x.showroomId?.name || '',
-                staff: [],
-            }));
-            setShowroomStaff(staffList);
-            if (s.status === 'fulfilled' && Array.isArray(s.value.data)) {
-                setShowrooms(
-                    s.value.data.map((x: any) => ({
-                        _id: x._id,
-                        name: x.name,
-                        rewardPoints: num(x.rewardPoints),
-                        staff: staffList.filter((m: any) => String(m.showroomId) === String(x._id)),
-                    }))
-                );
-            }
-            if (pts.status === 'fulfilled') {
-                const p = pts.value.data;
-                const next = { _id: p._id, showroom: num(p.bookingPointsForShowroom), showroomStaff: num(p.bookingPointsForShowroomStaff) };
-                setSettings(next);
-                setForm({ showroom: String(next.showroom), showroomStaff: String(next.showroomStaff) });
-            }
-            if (red.status === 'fulfilled') {
-                const rows = red.value.data?.data || [];
-                setPendingRedeems(rows.filter((r: any) => !r.approval && !r.rejected).length);
-            }
-            setLoading(false);
-        };
-        load();
+    // every part loads on its own — one slow or failing list never blocks the page
+    const load = useCallback(() => {
+        TABS.forEach((t) => setList(t, { loading: true, error: '' }));
+
+        axiosInstance.get(`${BASE_URL}/driver/driverBooking`, { timeout: 30000 })
+            .then((r) => setList('Driver', { loading: false, rows: (Array.isArray(r.data) ? r.data : r.data?.data || []).map((x: any) => ({ _id: x._id, name: x.name, rewardPoints: num(x.rewardPoints) })) }))
+            .catch((e) => setList('Driver', { loading: false, error: errText(e) }));
+
+        Promise.allSettled([
+            axiosInstance.get(`${BASE_URL}/showroom`, { timeout: 30000 }),
+            axiosInstance.get(`${BASE_URL}/showroom/showroom-staff`, { timeout: 30000 }),
+        ]).then(([s, st]) => {
+            const staffRaw = st.status === 'fulfilled' ? (Array.isArray(st.value.data?.data) ? st.value.data.data : Array.isArray(st.value.data) ? st.value.data : []) : [];
+            const staff = staffRaw.map((x: any) => ({ _id: x._id, name: x.name, rewardPoints: num(x.rewardPoints), extra: x.showroomId?.name || '', showroomId: String(x.showroomId?._id || x.showroomId || '') }));
+            setList('ShowroomStaff', st.status === 'fulfilled' ? { loading: false, rows: staff } : { loading: false, error: errText(st.reason) });
+            if (s.status === 'fulfilled') {
+                const raw = Array.isArray(s.value.data) ? s.value.data : s.value.data?.data || [];
+                setList('Showroom', { loading: false, rows: raw.map((x: any) => ({ _id: x._id, name: x.name, rewardPoints: num(x.rewardPoints), count: staff.filter((m: any) => m.showroomId === String(x._id)).length })) });
+            } else setList('Showroom', { loading: false, error: errText(s.reason) });
+        });
+
+        axiosInstance.get(`${BASE_URL}/marketing-executives`, { params: { disablePagination: true, limit: 1000 }, timeout: 30000 })
+            .then((r) => {
+                const raw = Array.isArray(r.data?.data) ? r.data.data : Array.isArray(r.data) ? r.data : [];
+                setList('Executive', { loading: false, rows: raw.map((x: any) => ({ _id: x._id, name: x.name, rewardPoints: num(x.rewardPoints), extra: x.phone || '' })) });
+            })
+            .catch((e) => setList('Executive', { loading: false, error: errText(e) }));
+
+        axiosInstance.get(`${BASE_URL}/point/showroom`, { timeout: 30000 })
+            .then((r) => {
+                const p = r.data || {};
+                const next: Settings = {
+                    showroom: String(num(p.bookingPointsForShowroom)),
+                    showroomStaff: String(num(p.bookingPointsForShowroomStaff)),
+                    driver: String(num(p.driverBookingPoint)),
+                    executiveBooking: String(num(p.executiveBookingPoint)),
+                    executiveVisit: String(num(p.executiveVisitPoint)),
+                };
+                setSaved(next);
+                setForm(next);
+                setSettingsError('');
+            })
+            .catch((e) => setSettingsError(errText(e)));
+
+        axiosInstance.get(`${BASE_URL}/reward/redeems`, { timeout: 30000 })
+            .then((r) => { const rows = Array.isArray(r.data?.data) ? r.data.data : []; setPendingRedeems(rows.filter((x: any) => !x.approval && !x.rejected).length); })
+            .catch(() => setPendingRedeems(null));
     }, []);
 
+    useEffect(() => { load(); }, [load]);
+
+    const changed = SETTING_FIELDS.some((f) => form[f.key] !== saved[f.key]);
     const savePoints = async () => {
-        const showroom = Number(form.showroom);
-        const staff = Number(form.showroomStaff);
-        if (!Number.isFinite(showroom) || !Number.isFinite(staff) || showroom < 0 || staff < 0) {
-            Swal.fire({ icon: 'warning', title: 'Enter 0 or a positive number for both' });
-            return;
+        const body: Record<string, number> = {};
+        for (const f of SETTING_FIELDS) {
+            const n = Number(form[f.key]);
+            if (form[f.key] === '' || !Number.isFinite(n) || n < 0) {
+                Swal.fire({ icon: 'warning', title: 'Enter 0 or a positive number in every box' });
+                return;
+            }
+            body[f.api] = n;
         }
         setSaving(true);
         try {
-            await axiosInstance.put(`${BASE_URL}/point/showroom`, { showroomBookingPoints: showroom, showroomStaffBookingPoints: staff });
-            setSettings((s) => ({ ...s, showroom, showroomStaff: staff }));
+            await axiosInstance.put(`${BASE_URL}/point/showroom`, body);
+            setSaved({ ...form });
             Swal.fire({ icon: 'success', title: 'Points saved', timer: 1500, showConfirmButton: false });
         } catch (e: any) {
             Swal.fire({ icon: 'error', title: 'Could not save', text: e?.response?.data?.message || e?.message });
@@ -106,20 +120,13 @@ function Rewards() {
         }
     };
 
+    const current = lists[tab];
     const rows = useMemo(() => {
-        const list = tab === 'Driver' ? drivers : tab === 'Showroom' ? showrooms : showroomStaff;
         const q = search.trim().toLowerCase();
-        return list
-            .filter((r: any) => !q || r.name?.toLowerCase().includes(q) || r.showroomName?.toLowerCase().includes(q))
-            .sort((a, b) => b.rewardPoints - a.rewardPoints);
-    }, [tab, drivers, showrooms, showroomStaff, search]);
-
-    const totals = {
-        Driver: drivers.reduce((a, r) => a + r.rewardPoints, 0),
-        Showroom: showrooms.reduce((a, r) => a + r.rewardPoints, 0),
-        ShowroomStaff: showroomStaff.reduce((a, r) => a + r.rewardPoints, 0),
-    };
-    const changed = String(settings.showroom) !== form.showroom || String(settings.showroomStaff) !== form.showroomStaff;
+        return current.rows.filter((r) => !q || r.name?.toLowerCase().includes(q) || r.extra?.toLowerCase().includes(q)).sort((a, b) => b.rewardPoints - a.rewardPoints);
+    }, [current, search]);
+    const total = (t: Tab) => lists[t].rows.reduce((a, r) => a + r.rewardPoints, 0);
+    const groups = Array.from(new Set(SETTING_FIELDS.map((f) => f.group)));
 
     return (
         <div className="space-y-5">
@@ -134,46 +141,42 @@ function Rewards() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                {/* How points are earned */}
-                <div className="panel lg:col-span-2">
-                    <h5 className="font-semibold mb-1">Points per booking</h5>
-                    <p className="text-xs text-white-dark mb-4">
-                        Given automatically when a booking made by a showroom (or its staff) is <b>verified</b>. Each booking earns once.
-                        Drivers earn points from customer feedback.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                        <label className="block">
-                            <span className="text-sm font-medium">Showroom gets</span>
-                            <div className="flex mt-1">
-                                <input
-                                    id="pts-showroom"
-                                    type="number"
-                                    min={0}
-                                    className="form-input ltr:rounded-r-none rtl:rounded-l-none"
-                                    value={form.showroom}
-                                    onChange={(e) => setForm((f) => ({ ...f, showroom: e.target.value }))}
-                                />
-                                <span className="flex items-center px-3 border border-white-light bg-[#eee] dark:border-[#17263c] dark:bg-[#1b2e4b] ltr:rounded-r-md rtl:rounded-l-md text-xs">pts</span>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                {/* Points settings */}
+                <div className="panel xl:col-span-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+                        <div>
+                            <h5 className="font-semibold">Points settings</h5>
+                            <p className="text-xs text-white-dark">Points are given automatically when a case is <b>verified</b> (visits: when the visit is recorded). Each case earns once.</p>
+                        </div>
+                        <button type="button" className="btn btn-primary btn-sm" disabled={!changed || saving} onClick={savePoints}>{saving ? 'Saving…' : 'Save all'}</button>
+                    </div>
+                    {settingsError && <p className="text-danger text-sm mb-2">Settings: {settingsError} <button type="button" className="underline" onClick={load}>Retry</button></p>}
+                    <div className="space-y-4">
+                        {groups.map((g) => (
+                            <div key={g}>
+                                <div className="text-[11px] font-semibold uppercase tracking-wide text-white-dark mb-1.5">{g}</div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {SETTING_FIELDS.filter((f) => f.group === g).map((f) => (
+                                        <label key={f.key} className="block">
+                                            <span className="text-sm font-medium">{f.label}</span>
+                                            <div className="flex mt-1">
+                                                <input
+                                                    id={`pts-${f.key}`}
+                                                    type="number"
+                                                    min={0}
+                                                    className="form-input ltr:rounded-r-none rtl:rounded-l-none"
+                                                    value={form[f.key]}
+                                                    onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
+                                                />
+                                                <span className="flex items-center px-3 border border-white-light bg-[#eee] dark:border-[#17263c] dark:bg-[#1b2e4b] ltr:rounded-r-md rtl:rounded-l-md text-xs whitespace-nowrap">pts</span>
+                                            </div>
+                                            <span className="text-[11px] text-white-dark">{f.hint}</span>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
-                        </label>
-                        <label className="block">
-                            <span className="text-sm font-medium">Showroom staff who booked gets</span>
-                            <div className="flex mt-1">
-                                <input
-                                    id="pts-staff"
-                                    type="number"
-                                    min={0}
-                                    className="form-input ltr:rounded-r-none rtl:rounded-l-none"
-                                    value={form.showroomStaff}
-                                    onChange={(e) => setForm((f) => ({ ...f, showroomStaff: e.target.value }))}
-                                />
-                                <span className="flex items-center px-3 border border-white-light bg-[#eee] dark:border-[#17263c] dark:bg-[#1b2e4b] ltr:rounded-r-md rtl:rounded-l-md text-xs">pts</span>
-                            </div>
-                        </label>
-                        <button type="button" className="btn btn-primary" disabled={!changed || saving} onClick={savePoints}>
-                            {saving ? 'Saving…' : 'Save'}
-                        </button>
+                        ))}
                     </div>
                 </div>
 
@@ -181,30 +184,24 @@ function Rewards() {
                 <div className="panel">
                     <h5 className="font-semibold mb-3">Points held</h5>
                     <ul className="space-y-2 text-sm">
-                        {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
+                        {TABS.map((t) => (
                             <li key={t} className="flex justify-between">
                                 <span>{TAB_LABEL[t]}</span>
-                                <b>{totals[t].toLocaleString('en-IN')}</b>
+                                <b>{lists[t].loading ? '…' : lists[t].error ? '—' : total(t).toLocaleString('en-IN')}</b>
                             </li>
                         ))}
                     </ul>
-                    <p className="text-xs text-white-dark mt-3">A showroom can use up to half its points as a discount on a booking.</p>
+                    <p className="text-xs text-white-dark mt-3">A showroom can use up to half its points as a discount on a booking. Drivers, showroom staff and marketing executives redeem reward items in their apps.</p>
                 </div>
             </div>
 
             <div className="panel">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                     <div className="flex flex-wrap gap-2" role="tablist">
-                        {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
-                            <button
-                                key={t}
-                                role="tab"
-                                aria-selected={tab === t}
-                                type="button"
-                                onClick={() => setTab(t)}
-                                className={`btn btn-sm ${tab === t ? 'btn-primary' : 'btn-outline-primary'}`}
-                            >
-                                {TAB_LABEL[t]} <span className="opacity-70 ltr:ml-1 rtl:mr-1">({(t === 'Driver' ? drivers : t === 'Showroom' ? showrooms : showroomStaff).length})</span>
+                        {TABS.map((t) => (
+                            <button key={t} role="tab" aria-selected={tab === t} type="button" onClick={() => setTab(t)}
+                                className={`btn btn-sm ${tab === t ? 'btn-primary' : 'btn-outline-primary'}`}>
+                                {TAB_LABEL[t]} <span className="opacity-70 ltr:ml-1 rtl:mr-1">({lists[t].loading ? '…' : lists[t].rows.length})</span>
                             </button>
                         ))}
                     </div>
@@ -218,32 +215,28 @@ function Rewards() {
                                 <th>Name</th>
                                 {tab === 'ShowroomStaff' && <th>Showroom</th>}
                                 {tab === 'Showroom' && <th>Staff</th>}
+                                {tab === 'Executive' && <th>Phone</th>}
                                 <th className="text-right">Points</th>
                                 <th className="text-center w-24">History</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={4} className="text-center py-8 text-white-dark">Loading…</td>
-                                </tr>
+                            {current.loading ? (
+                                <tr><td colSpan={4} className="text-center py-8 text-white-dark">Loading…</td></tr>
+                            ) : current.error ? (
+                                <tr><td colSpan={4} className="text-center py-8 text-danger">{current.error}. <button type="button" className="underline" onClick={load}>Try again</button></td></tr>
                             ) : rows.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="text-center py-8 text-white-dark">Nothing to show</td>
-                                </tr>
+                                <tr><td colSpan={4} className="text-center py-8 text-white-dark">Nothing to show</td></tr>
                             ) : (
-                                rows.map((r: any) => (
+                                rows.map((r) => (
                                     <tr key={r._id}>
                                         <td className="font-medium">{r.name || '—'}</td>
-                                        {tab === 'ShowroomStaff' && <td>{r.showroomName || '—'}</td>}
-                                        {tab === 'Showroom' && <td>{r.staff?.length || 0}</td>}
+                                        {tab === 'ShowroomStaff' && <td>{r.extra || '—'}</td>}
+                                        {tab === 'Showroom' && <td>{r.count || 0}</td>}
+                                        {tab === 'Executive' && <td>{r.extra || '—'}</td>}
                                         <td className="text-right font-semibold">{r.rewardPoints.toLocaleString('en-IN')}</td>
                                         <td className="text-center">
-                                            <button
-                                                type="button"
-                                                title="Redemption history"
-                                                onClick={() => navigate(`/reward-details?userType=${tab}&id=${r._id}`)}
-                                            >
+                                            <button type="button" title="Redemption history" onClick={() => navigate(`/reward-details?userType=${tab}&id=${r._id}`)}>
                                                 <IconEye className="text-primary m-auto" />
                                             </button>
                                         </td>
