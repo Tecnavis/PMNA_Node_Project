@@ -85,7 +85,7 @@ async function postWithRetry(url, buildInit, { retries = 2, timeoutMs }) {
             lastError = new MediaStorageError(`Media server error (${res.status}): ${body.error}`);
         } catch (err) {
             if (err.noRetry) throw err;
-            lastError = err instanceof MediaStorageError ? err : new MediaStorageError(`Media server unreachable: ${err.message}`);
+            lastError = err instanceof MediaStorageError ? err : new MediaStorageError(`Media server unreachable: ${err.message}${err.cause ? ` (${err.cause.code || err.cause.message})` : ""}`);
         }
         if (attempt < retries) await new Promise(r => setTimeout(r, 500 * 2 ** attempt));
     }

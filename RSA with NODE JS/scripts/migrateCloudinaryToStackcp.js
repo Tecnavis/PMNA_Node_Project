@@ -11,6 +11,7 @@
  *   node scripts/migrateCloudinaryToStackcp.js rollback --file=migration-logs/rewrite-....json
  *
  * Options: --concurrency=4  --limit=N (copy only, for a trial run)  --optimize (copy: recompress like new uploads)
+ *          --fresh (list Cloudinary again instead of resuming / reusing migration-logs/cloudinary-list.json)
  *
  * Env (.env): MONGO_URI, CLOUD_NAME, CLOUD_API_KEY, CLOUD_API_SECRET,
  *             MEDIA_API_URL, MEDIA_PUBLIC_URL, MEDIA_SECRET
@@ -56,10 +57,10 @@ function openLog(name, header) {
     return { file, row: (...cols) => fs.appendFileSync(file, cols.map(csv).join(',') + '\n') };
 }
 
-async function pool(items, worker, concurrency = CONCURRENCY) {
+async function pool(items, worker, concurrency = CONCURRENCY, shouldStop = () => false) {
     let index = 0;
     const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-        while (index < items.length) {
+        while (index < items.length && !shouldStop()) {
             const i = index++;
             await worker(items[i], i);
         }
@@ -80,22 +81,81 @@ function cloudinaryAuthHeader() {
 }
 
 /** All image assets of type "upload" via the Cloudinary Admin API (500 per page). */
+const LIST_CACHE = path.join(LOG_DIR, 'cloudinary-list.json');
+const LIST_CACHE_MAX_AGE_MS = 12 * 60 * 60 * 1000; // a finished list is reused for 12 hours
+
+function saveListCache(state) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    const tmp = LIST_CACHE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(state));
+    fs.renameSync(tmp, LIST_CACHE); // never leaves a half-written file behind
+}
+
+function loadListCache() {
+    try { return JSON.parse(fs.readFileSync(LIST_CACHE, 'utf8')); } catch { return null; }
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// One page of the Admin API, retried on dropped connections, timeouts, 429 and 5xx.
+async function fetchListPage(url, attempts = 8) {
+    for (let attempt = 1; ; attempt++) {
+        try {
+            const res = await fetch(url, { headers: cloudinaryAuthHeader(), signal: AbortSignal.timeout(60000) });
+            if (res.ok) return await res.json();
+            const body = (await res.text()).slice(0, 300);
+            const retryable = res.status === 429 || res.status >= 500;
+            if (!retryable || attempt >= attempts) throw Object.assign(new Error(`Cloudinary Admin API ${res.status}: ${body}`), { final: true });
+            const wait = res.status === 429 ? 60000 : Math.min(30000, 2000 * 2 ** (attempt - 1));
+            process.stdout.write(`\n  Cloudinary answered ${res.status}, retrying in ${Math.round(wait / 1000)}s (try ${attempt + 1}/${attempts})...`);
+            await sleep(wait);
+        } catch (err) {
+            if (err.final || attempt >= attempts) throw err;
+            const wait = Math.min(30000, 2000 * 2 ** (attempt - 1));
+            const why = err.cause?.code || err.name || err.message;
+            process.stdout.write(`\n  connection problem (${why}), retrying in ${Math.round(wait / 1000)}s (try ${attempt + 1}/${attempts})...`);
+            await sleep(wait);
+        }
+    }
+}
+
+// Lists every image in Cloudinary. Progress is saved after each page to
+// migration-logs/cloudinary-list.json, so if the connection drops, running the
+// command again carries on from the same place. --fresh starts over.
 async function listCloudinaryImages() {
-    const all = [];
-    let cursor;
+    let state = flag('fresh') ? null : loadListCache();
+    if (state && state.cloud !== process.env.CLOUD_NAME) state = null;
+    if (state?.complete) {
+        const age = Date.now() - new Date(state.finishedAt).getTime();
+        if (age < LIST_CACHE_MAX_AGE_MS) {
+            console.log(`  using saved list of ${state.resources.length} images from ${state.finishedAt} (add --fresh to list again)`);
+            return state.resources;
+        }
+        state = null;
+    }
+    if (state && !state.complete) {
+        console.log(`  resuming saved listing: ${state.resources.length} images listed so far`);
+    } else {
+        state = { cloud: process.env.CLOUD_NAME, startedAt: new Date().toISOString(), cursor: null, resources: [], complete: false };
+    }
     do {
         const qs = new URLSearchParams({ max_results: '500' });
-        if (cursor) qs.set('next_cursor', cursor);
+        if (state.cursor) qs.set('next_cursor', state.cursor);
         const url = `https://api.cloudinary.com/v1_1/${process.env.CLOUD_NAME}/resources/image/upload?${qs}`;
-        const res = await fetch(url, { headers: cloudinaryAuthHeader() });
-        if (!res.ok) throw new Error(`Cloudinary Admin API ${res.status}: ${(await res.text()).slice(0, 300)}`);
-        const page = await res.json();
-        all.push(...page.resources);
-        cursor = page.next_cursor;
-        process.stdout.write(`\r  listed ${all.length} assets...`);
-    } while (cursor);
+        const page = await fetchListPage(url);
+        for (const r of page.resources || []) {
+            state.resources.push({ public_id: r.public_id, format: r.format, bytes: r.bytes, secure_url: r.secure_url });
+        }
+        state.cursor = page.next_cursor || null;
+        if (!state.cursor) {
+            state.complete = true;
+            state.finishedAt = new Date().toISOString();
+        }
+        saveListCache(state);
+        process.stdout.write(`\r  listed ${state.resources.length} assets...`);
+    } while (state.cursor);
     process.stdout.write('\n');
-    return all;
+    return state.resources;
 }
 
 function targetFor(resource) {
@@ -195,6 +255,10 @@ async function copy() {
     const log = openLog('copy', 'public_id,format,bytes,status,key,error');
     const counts = { copied: 0, skipped: 0, unsupported: 0, failed: 0 };
     let done = 0;
+    const reasons = {};
+    let inARow = 0;
+    let stopped = null;
+    const STOP_AFTER = Number(option('stop-after', 25)); // consecutive failures before giving up
 
     await pool(resources, async (r) => {
         const t = targetFor(r);
@@ -204,23 +268,40 @@ async function copy() {
                 log.row(r.public_id, r.format, r.bytes, 'unsupported-folder', '', `folder "${t.folder}"`);
                 return;
             }
-            const res = await fetch(r.secure_url, { signal: AbortSignal.timeout(60000) });
-            if (!res.ok) throw new Error(`download ${res.status}`);
-            let buffer = Buffer.from(await res.arrayBuffer());
-            let mimetype = res.headers.get('content-type') || `image/${r.format}`;
-            if (optimize) ({ buffer, mimetype } = await processImage(buffer, mimetype));
-
-            const out = await media.uploadBuffer(buffer, { folder: t.folder, name: t.name, mimetype, ifExists: 'skip' });
-            out.skipped ? counts.skipped++ : counts.copied++;
-            log.row(r.public_id, r.format, r.bytes, out.skipped ? 'already-there' : 'copied', out.key, '');
+            let stage = 'download from Cloudinary';
+            let buffer, mimetype;
+            try {
+                const res = await fetch(r.secure_url, { signal: AbortSignal.timeout(60000) });
+                if (!res.ok) throw new Error(`HTTP ${res.status}${res.headers.get('x-cld-error') ? ' ' + res.headers.get('x-cld-error') : ''}`);
+                buffer = Buffer.from(await res.arrayBuffer());
+                mimetype = res.headers.get('content-type') || `image/${r.format}`;
+                if (optimize) { stage = 'optimize'; ({ buffer, mimetype } = await processImage(buffer, mimetype)); }
+                stage = 'upload to StackCP';
+                const out = await media.uploadBuffer(buffer, { folder: t.folder, name: t.name, mimetype, ifExists: 'skip' });
+                out.skipped ? counts.skipped++ : counts.copied++;
+                log.row(r.public_id, r.format, r.bytes, out.skipped ? 'already-there' : 'copied', out.key, '');
+                inARow = 0;
+            } catch (err) {
+                const why = [err.message, err.cause?.code, err.cause?.message].filter(Boolean).join(' / ');
+                throw new Error(`${stage}: ${why}`);
+            }
         } catch (err) {
             counts.failed++;
             log.row(r.public_id, r.format, r.bytes, 'FAILED', '', err.message);
+            const key = err.message.slice(0, 200);
+            if (!reasons[key]) process.stdout.write(`\n  FAILED ${r.public_id} -> ${err.message}\n`);
+            reasons[key] = (reasons[key] || 0) + 1;
+            if (++inARow >= STOP_AFTER && !stopped) stopped = `${inARow} images failed in a row`;
         } finally {
             progress(++done, resources.length, `copied ${counts.copied}, skipped ${counts.skipped}, failed ${counts.failed}`);
         }
-    });
+    }, CONCURRENCY, () => !!stopped);
 
+    if (stopped) console.log(`\n  STOPPED: ${stopped}. Fix the problem below, then run the same command again.`);
+    if (Object.keys(reasons).length) {
+        console.log('  Failure reasons:');
+        for (const [k, n] of Object.entries(reasons).sort((a, b) => b[1] - a[1]).slice(0, 5)) console.log(`   ${n} x ${k}`);
+    }
     console.log(counts);
     console.log(`Log: ${log.file}`);
     if (counts.failed) console.log('Re-run "copy" to retry failures — already-copied files are skipped.');
