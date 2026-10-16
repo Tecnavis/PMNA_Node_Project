@@ -9,6 +9,7 @@ import IconPrinter from '../../components/Icon/IconPrinter';
 import { AdvanceDetailsTableColumn, CashCollectionDetailsTableColumn, colsForAdvance, ReceivedDetailsTableColumn } from './constant';
 import { AdvanceData, ReceivedDetails, CashCollectionDetails } from './types';
 import './AdvancePayment.module.css';
+import CashDesk from './CashDesk';
 import Staff from '../Staff/Staff';
 
 import Swal from 'sweetalert2';
@@ -46,7 +47,7 @@ interface Provider {
 const AdvancePayment: React.FC = () => {
 const [providers, setProviders] = useState<Provider[]>([]); // Use proper Provider type
     const [selectedProvider, setSelectedProvider] = useState<string>('');
-    const [selectedType, setSelectedType] = useState<string>('');
+    const [selectedType, setSelectedType] = useState<string>('salary');
     const [amount, setAmount] = useState<number | ''>('');
     const [advanceDetails, setAdvanceDetails] = useState<AdvanceData[]>([]);
     const [receivedDetails, setReceivedDetails] = useState<ReceivedDetails[]>([]);
@@ -110,6 +111,7 @@ const fetchAllProviders = async () => {
 
 
    const fetchProviderData = async () => {
+    if (!selectedProvider) return;
     try {
         const response = await axios.get(`${BASE_URL}/provider/${selectedProvider}`);
         const updatedProvider = response.data;
@@ -413,266 +415,49 @@ useEffect(() => {
     }
 }, [search]);
 // -----------------------------------------------
+    const partyList = providers.map((d: any) => ({ _id: d._id, name: d.name, cashInHand: d.cashInHand, advance: d.advance, phone: d.phone }));
+    const historyTabs =
+        selectedType === 'advance'
+            ? [
+                  { label: 'Advance details', columns: colsForAdvanceDetails as any, records: advanceDetails },
+                  { label: 'Salary deductions', columns: colsForAdvance as any, records: advanceDetails },
+              ]
+            : [
+                  { label: 'Cash collection', columns: colsForCashCollection as any, records: cashCollectionDetails },
+                  { label: 'Received details', columns: colsForReceivedDetails as any, records: receivedDetails },
+              ];
     return (
-        <main className="flex flex-col items-center justify-center">
-            <div className="rounded-md shadow-md min-w-[85%] p-5">
-                <p className="text-4xl text-gray-700 uppercase text-center mb-4 font-bold">Payment Management</p>
-                <div className="my-3">
-                    <label htmlFor="driverDropdown" className="mb-2 text-base">
-                        Select Provider :
-                    </label>
-                    <select
-                        id="driverDropdown"
-                        value={selectedProvider}
-                        onChange={(e) => setSelectedProvider(e.target.value)}
-                        className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
-                    >
-                        <option value="" disabled>
-                            -- Select a Provider --
-                        </option>
-                            {providers?.map((provider) => (
-                            <option key={provider._id} value={provider._id}>
-                                {provider.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div className="form-group my-3">
-                    <label htmlFor="typeDropdown">Types :</label>
-                    <select
-                        id="typeDropdown"
-                        value={selectedType}
-                        onChange={(e) => setSelectedType(e.target.value)}
-                        className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
-                    >
-                        <option value="" disabled>
-                            -- Select a Type --
-                        </option>
-                        {/* <option value="advance">Advance</option> */}
-                        <option value="salary">Cash Collection</option>
-                        {/* <option value="">Expense</option> */}
-                    </select>
-                </div>
-                {selectedType !== '' && (
-                    <div className="mt-10">
-                        {selectedType === 'advance' ? (
-                            <>
-                                <label htmlFor="dateField" className="my-3 font-semibold">
-                                    Advance Amount :{' '}
-                                </label>
-                                <input
-                                    type="text"
-                                    id="dateField"
-                                    value={amount}
-                                    onChange={(e) => setAmount(+e.target.value)}
-                                    className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
-                                />
-                            </>
-                        ) : (
-                            <>
-                                <label htmlFor="dateField" className="my-3 font-semibold">
-                                    Received Amount:
-                                </label>
-                                <input
-                                    type="number"
-                                    id="dateField"
-                                    value={receivedAmount}
-                                    onChange={(e) => setReceivedAmount(e.target.value)}
-                                   className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
-                    />
-                                <label htmlFor="dateField" className="my-3 font-semibold">
-                                    Net Total Amount In Hand:
-                                </label>
-                                <input
-                                    type="number"
-                                    id="dateField"
-                                    value={inHandAmount}
-                                    onChange={(e) => setInHandAmount(+e.target.value)}
-                                    className="appearance-none  bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
-                                />
-                                  {validationError && (
-                        <div className="text-red-500 text-sm mt-1">{validationError}</div>
-                    )}
-                            </>
-                        )}
-                    </div>
-                )}
-                {selectedType !== '' && (
-                    <>
-                        <div style={{ marginBottom: '16px' }}>
-                            <label htmlFor="amountField" className="my-3 font-semibold">
-                                Remark
-                            </label>
-                            <input
-                                type="text"
-                                id="amountField"
-                                value={remark}
-                                onChange={(e) => setRemark(e.target.value)}
-                                placeholder={'Enter remark'}
-                                className="appearance-none bg-white bg-no-repeat bg-right pr-10 border-2 border-gray-300 p-2 w-full rounded-lg text-base transition-all focus:outline-none"
-                            />
-                        </div>
-
-
-                        <button
-                            className="w-full btn btn-primary py-3 rounded-md"
-                            onClick={selectedType === 'advance' ? createAdvancePayment : settleReceivedAmount}
-                            disabled={isSubmitting}
-                        >
-                            {
-                                isSubmitting ? (
-                                    <Loader />
-                                ) : (
-                                    /* Show normal button text when not submitting */
-                                    selectedType === 'advance' ? 'Add And Settle Amount' : 'Settle Received Amount'
-                                )
-                            }
-                        </button></>)
-                }
-            </div>
-            {/* Tabs and Tables */}
-            {/* Tabs and Tables */}
-
-            {selectedType !== '' && (
-                <section className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5 overflow-x-auto">
-                    <Tab.Group selectedIndex={tabIndex} onChange={setTabIndex}>
-                        <Tab.List className="mt-5 flex justify-evenly w-full">
-                            {selectedType === 'advance' ? (
-                                <>
-                                    <Tab
-                                        as="button"
-                                        className={({ selected }) => `
-                                                        ${selected ? 'text-gray-700 !outline-none before:!w-full bg-gray-100' : ''} 
-                                                        relative flex justify-center text-3xl w-full p-3 rounded   
-                                                        before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
-                                                        before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
-                                                        before:transition-all before:duration-700 hover:text-gray-700 hover:before:w-full
-                                        `}
-                                    >
-                                        Advance Details
-                                    </Tab>
-                                    <Tab
-                                        as="button"
-                                        className={({ selected }) => `
-                                                        ${selected ? 'text-gray-700 !outline-none before:!w-full bg-gray-100' : ''} 
-                                                        relative flex justify-center text-3xl w-full p-3 rounded   
-                                                        before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
-                                                        before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
-                                                        before:transition-all before:duration-700 hover:text-gray-700 hover:before:w-full
-                                        `}
-                                    >
-                                        Advance
-                                    </Tab>
-                                </>
-                            ) : (
-                                <>
-                                    <Tab
-                                        as="button"
-                                        className={({ selected }) => `
-                                                        ${selected ? 'text-gray-700 !outline-none before:!w-full bg-gray-100' : ''} 
-                                                        relative flex justify-center text-3xl w-full p-3 rounded   
-                                                        before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
-                                                        before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
-                                                        before:transition-all before:duration-700 hover:text-gray-700 hover:before:w-full
-                                    `}
-                                    >
-                                        Cash Collection
-                                    </Tab>
-                                    <Tab
-                                        as="button"
-                                        className={({ selected }) => `
-                                                        ${selected ? 'text-gray-700 !outline-none before:!w-full bg-gray-100' : ''} 
-                                                        relative flex justify-center text-3xl w-full p-3 rounded
-                                                        before:absolute before:bottom-0 before:left-0 before:right-0 before:m-auto 
-                                                        before:inline-block before:h-[1px] before:w-0 before:bg-gray-700 
-                                                        before:transition-all before:duration-700 hover:text-gray-700 hover:before:w-full
-                                `}
-                                    >
-                                        Received Details
-                                    </Tab>
-                                </>
-                            )}
-                        </Tab.List>
-                        <Tab.Panels className="mt-5">
-                            <div className="my-5 flex flex-row gap-2">
-                                {selectedType !== 'advance' && (
-                                    <button type="button" className="btn btn-primary gap-2" onClick={handlePrint}>
-                                        <IconPrinter />
-                                        Print
-                                    </button>
-                                )}
-                                <input
-                                    type="text"
-                                    placeholder="Search by Driver or File Number"
-                                    className="p-3 w-full rounded-md border-2 "
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
-                            </div>
-                            {selectedType === 'advance' ? (
-                                <>
-                                    <Tab.Panel className="overflow-x-auto">
-                                        <DataTable
-                                            minHeight={300}
-                                            withBorder
-                                            withColumnBorders
-                                            striped
-                                            highlightOnHover
-                                            columns={colsForAdvanceDetails}
-                                            records={advanceDetails}
-                                            rowStyle={(record) => ({
-                                                backgroundColor: getColorForDateTime(record.createdAt.toString()),
-
-                                            })}
-                                        />
-                                    </Tab.Panel>
-                                    <Tab.Panel className="overflow-x-auto">
-                                        <DataTable minHeight={300} withBorder withColumnBorders striped highlightOnHover columns={colsForAdvance} records={advanceDetails} />
-                                    </Tab.Panel>
-                                </>
-                            ) : (
-                                <>
-                                    <div ref={tabIndex === 0 ? printRef : null} className="">
-                                        <h1 className="hidden print:block text-2xl font-bold text-center mb-2">Received Details</h1>
-                                           <Tab.Panel className="overflow-x-auto">
-                                            <DataTable
-                                                withBorder
-                                                withColumnBorders
-                                                striped
-                                                highlightOnHover
-                                                columns={colsForCashCollection}
-                                                records={cashCollectionDetails}
-                                                rowStyle={(record) => ({
-                                                    backgroundColor: getColorForDateTime(record.createdAt.toString()),
-
-                                                })}
-                                            />
-                                        </Tab.Panel>
-                                    </div>
-                                    <div ref={tabIndex === 1 ? printRef : null} className="w-full overflow-x-auto print:overflow-visible print:w-full print:whitespace-normal print:text-sm">
-                                        <h1 className="hidden print:block text-2xl font-bold text-center mb-2">Cash Collection</h1>
-                                        <Tab.Panel className="overflow-x-auto">
-                                            <DataTable
-                                                withBorder
-                                                withColumnBorders
-                                                striped
-                                                highlightOnHover
-                                                columns={colsForReceivedDetails}
-                                                records={receivedDetails}
-                                                rowStyle={(record) => ({
-                                                    backgroundColor: getColorForDateTime(record.createdAt.toString()),
-
-                                                })}
-                                            />
-                                        </Tab.Panel>
-                                    </div>
-                                </>
-                            )}
-                        </Tab.Panels>
-                    </Tab.Group>
-                </section>
-            )}
-        </main>
+        <CashDesk
+            title="Provider payments"
+            subtitle="Collect cash from service providers"
+            partyLabel="Provider"
+            parties={partyList}
+            selectedId={selectedProvider}
+            onSelect={setSelectedProvider}
+            types={[{ value: 'salary', label: 'Cash collection' }]}
+            selectedType={selectedType}
+            onType={(t) => {
+                setSelectedType(t);
+                setTabIndex(0);
+            }}
+            amount={amount}
+            setAmount={setAmount}
+            receivedAmount={receivedAmount}
+            setReceivedAmount={setReceivedAmount}
+            inHandAmount={inHandAmount}
+            setInHandAmount={setInHandAmount}
+            validationError={validationError}
+            remark={remark}
+            setRemark={setRemark}
+            isSubmitting={isSubmitting}
+            onSubmit={selectedType === 'advance' ? createAdvancePayment : settleReceivedAmount}
+            tabs={historyTabs}
+            tabIndex={tabIndex}
+            setTabIndex={setTabIndex}
+            search={search}
+            setSearch={setSearch}
+            loading={isLoading}
+        />
     );
 };
 

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { axiosInstance } from '../../config/axiosConfig';
+import { Badge, DataExportButtons, PageHeader, SearchBox, Section, StatCard, StatGrid, money } from '../../components/ui/PageKit';
 import { DataTable } from 'mantine-datatable';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -63,6 +65,7 @@ const SettlementTransaction = () => {
   const [settlementTransactions, setSettlementTransactions] = useState<SettlementTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -92,7 +95,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
     const endpoint = `${backendUrl}/booking/unverified-by-users`;
         console.log(`Fetching unverified bookings for ${userType}s:`, userIds);
 
-    const response = await axios.get(endpoint, {
+    const response = await axiosInstance.get(endpoint, {
       params: {
         [userType === 'driver' ? 'driverIds' : 'providerIds']: userIds.join(','),
         userType: userType
@@ -143,7 +146,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
         return;
       }
 
-      const response = await axios.get(`${backendUrl}/settlementTransaction/transaction`, {
+      const response = await axiosInstance.get(`${backendUrl}/settlementTransaction/transaction`, {
         params: {
           page,
           limit: pageSize,
@@ -184,10 +187,14 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
     fetchSettlementTransactions();
   }, [page, pageSize, searchTerm]);
 
-  // Reset page when searching
+  // Reset page when searching; wait until typing pauses before asking the server
   useEffect(() => {
-    setPage(1);
-  }, [searchTerm]);
+    const t = setTimeout(() => {
+      setPage(1);
+      setSearchTerm(searchInput.trim());
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const getUnverifiedDataForUser = (userId: string): UserUnverifiedData | null => {
     return unverifiedDataMap[userId] || null;
@@ -248,9 +255,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
             <div>
               <div className="flex items-center gap-2">
                 <div className="font-semibold">{userInfo.name}</div>
-                <span className={`px-2 py-0.5 text-xs rounded-full ${userInfo.typeClass}`}>
-                  {userInfo.type}
-                </span>
+                <Badge tone={userInfo.type === 'Driver' ? 'primary' : userInfo.type === 'Provider' ? 'info' : 'default'}>{userInfo.type}</Badge>
               </div>
               <div className="text-xs text-gray-500">
                 ID: {userInfo.idNumber}
@@ -282,7 +287,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
       title: 'Total Salary',
       render: (record: SettlementTransaction) => (
         <div className="text-right font-semibold text-green-600">
-          ₹{record.totalSalary?.toLocaleString() || 0}
+          {money(record.totalSalary)}
         </div>
       ),
     },
@@ -291,7 +296,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
       title: 'Cash in Hand',
       render: (record: SettlementTransaction) => (
         <div className="text-right">
-          ₹{record.cashInHand?.toLocaleString() || 0}
+          {money(record.cashInHand)}
         </div>
       ),
     },
@@ -300,7 +305,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
       title: 'Advance',
       render: (record: SettlementTransaction) => (
         <div className="text-right text-orange-600">
-          ₹{record.advance?.toLocaleString() || 0}
+          {money(record.advance)}
         </div>
       ),
     },
@@ -309,7 +314,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
       title: 'Cash Collection',
       render: (record: SettlementTransaction) => (
         <div className="text-right">
-          ₹{record.cashCollection?.toLocaleString() || 0}
+          {money(record.cashCollection)}
         </div>
       ),
     },
@@ -318,7 +323,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
       title: 'Pending Expenses',
       render: (record: SettlementTransaction) => (
         <div className="text-right text-red-600">
-          {record.userType === 'driver' ? `₹${record.pendingExpenses?.toLocaleString() || 0}` : 'N/A'}
+          {record.userType === 'driver' ? money(record.pendingExpenses) : 'N/A'}
         </div>
       ),
     },
@@ -326,10 +331,10 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
       accessor: 'settlementAmount',
       title: 'Settlement Amount',
       render: (record: SettlementTransaction) => (
-        <div className={`text-right font-bold text-lg ${
+        <div className={`text-right font-bold ${
           (record.settlementAmount || 0) >= 0 ? 'text-green-600' : 'text-red-600'
         }`}>
-          ₹{(record.balanceAmount || 0)?.toLocaleString()}
+          {money(record.balanceAmount)}
 
         </div>
       ),
@@ -347,19 +352,18 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
   {
   accessor: 'unverifiedSalary',
  
-  title: 'Unverified Amount❌',
+  title: 'Unverified bookings',
    render: (record: SettlementTransaction) => {
     const userInfo = getUserDisplay(record);
     if (!userInfo._id) return null;
     
     const unverifiedData = getUnverifiedDataForUser(userInfo._id);
     
-    console.log(`Unverified data for ${userInfo._id}:`, unverifiedData);
     
     if (!unverifiedData || unverifiedData.unverifiedCount === 0) {
       return (
         <div className="text-center text-green-500">
-          <span className="font-semibold">All Verified ✓</span>
+          <Badge tone="success">All verified</Badge>
         </div>
       );
     }
@@ -429,68 +433,47 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
   const driverCount = settlementTransactions.filter(t => t.userType === 'driver').length;
   const providerCount = settlementTransactions.filter(t => t.userType === 'provider').length;
 
-  return (
-    <div className="panel mt-6">
-      <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
-        <h5 className="font-semibold text-lg dark:text-white-light">
-          Settlement Transactions
-        </h5>
-        <div className="ltr:ml-auto rtl:mr-auto flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            {/* User Type Filter */}
-            <select 
-              className="form-select w-auto"
-              value={selectedUserType}
-              onChange={(e) => setSelectedUserType(e.target.value)}
-            >
-              <option value="all">All Users</option>
-              <option value="driver">Drivers Only</option>
-              <option value="provider">Providers Only</option>
-            </select>
-            
-            {/* Stats display */}
-            <div className="flex gap-4">
-              <div className="bg-blue-50 px-3 py-1 rounded border border-blue-200">
-                <div className="text-xs text-gray-500">Driver Settlements</div>
-                <div className="font-bold text-blue-600">
-                  {driverCount}
-                </div>
-              </div>
-              <div className="bg-purple-50 px-3 py-1 rounded border border-purple-200">
-                <div className="text-xs text-gray-500">Provider Settlements</div>
-                <div className="font-bold text-purple-600">
-                  {providerCount}
-                </div>
-              </div>
-              <div className="bg-red-50 px-3 py-1 rounded border border-red-200">
-                <div className="text-xs text-gray-500">Unverified Total</div>
-                <div className="font-bold text-red-600">
-                  ₹{calculateTotalUnverifiedSalary().toLocaleString()}
-                </div>
-                <div className="text-xs text-gray-400">
-                  {calculateTotalUnverifiedCount()} bookings
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center text-sm text-gray-500">
-              <div className="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
-              Unverified
-              <div className="w-3 h-3 rounded-full bg-green-500 ml-4 mr-1"></div>
-              Verified
-            </div>
-            
-            <input 
-              type="text" 
-              className="form-input w-auto" 
-              placeholder="Search by name or ID..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
+  const exportCols = [
+    { key: 'name', label: 'Name', value: (t: SettlementTransaction) => getUserDisplay(t).name },
+    { key: 'type', label: 'Type', value: (t: SettlementTransaction) => getUserDisplay(t).type },
+    { key: 'idNumber', label: 'ID', value: (t: SettlementTransaction) => getUserDisplay(t).idNumber },
+    { key: 'settlementDate', label: 'Settlement date', value: (t: SettlementTransaction) => (t.settlementDate ? new Date(t.settlementDate).toLocaleString('en-IN') : '') },
+    { key: 'totalSalary', label: 'Total salary', numeric: true, value: (t: SettlementTransaction) => t.totalSalary || 0 },
+    { key: 'cashInHand', label: 'Cash in hand', numeric: true, value: (t: SettlementTransaction) => t.cashInHand || 0 },
+    { key: 'advance', label: 'Advance', numeric: true, value: (t: SettlementTransaction) => t.advance || 0 },
+    { key: 'cashCollection', label: 'Cash collection', numeric: true, value: (t: SettlementTransaction) => t.cashCollection || 0 },
+    { key: 'pendingExpenses', label: 'Pending expenses', numeric: true, value: (t: SettlementTransaction) => (t.userType === 'driver' ? t.pendingExpenses || 0 : '') },
+    { key: 'balanceAmount', label: 'Settlement amount', numeric: true, value: (t: SettlementTransaction) => t.balanceAmount || 0 },
+    { key: 'unverified', label: 'Unverified bookings', value: (t: SettlementTransaction) => {
+        const u = getUnverifiedDataForUser(getUserDisplay(t)._id);
+        return u && u.unverifiedCount ? `${u.unverifiedCount} (${money(u.totalSalary)}): ${u.bookings.map((b) => b.fileNumber).join(', ')}` : 'All verified';
+      } },
+    { key: 'remarks', label: 'Remarks' },
+  ];
+  const pageSettled = filteredTransactions.reduce((s, t) => s + (t.balanceAmount || 0), 0);
 
+  return (
+    <div>
+      <PageHeader
+        title="Settlement details"
+        subtitle="Final settlements with drivers and providers"
+        actions={<DataExportButtons title="Settlement transactions" subtitle={`Page ${page} · ${selectedUserType === 'all' ? 'All users' : selectedUserType === 'driver' ? 'Drivers' : 'Providers'}${searchTerm ? ` · "${searchTerm}"` : ''}`} columns={exportCols} rows={filteredTransactions} totals={{ 'Settled (this page)': money(pageSettled) }} />}
+      />
+      <StatGrid>
+        <StatCard label="Settlements" value={(totalRecords || 0).toLocaleString('en-IN')} hint="all pages" />
+        <StatCard label="Drivers / providers" value={`${driverCount} / ${providerCount}`} hint="on this page" onClick={() => setSelectedUserType('all')} active={selectedUserType === 'all'} />
+        <StatCard label="Settled (this page)" value={money(pageSettled)} tone="success" />
+        <StatCard label="Unverified" value={money(calculateTotalUnverifiedSalary())} hint={`${calculateTotalUnverifiedCount()} ${calculateTotalUnverifiedCount() === 1 ? 'booking' : 'bookings'} not verified`} tone="danger" />
+      </StatGrid>
+      <Section bodyClassName="p-0">
+        <div className="flex flex-wrap items-center gap-2 border-b border-white-light p-3 dark:border-[#1b2e4b]">
+          <SearchBox value={searchInput} onChange={setSearchInput} placeholder="Search by name or ID" className="w-full sm:w-72" />
+          <select className="form-select w-auto" value={selectedUserType} onChange={(e) => setSelectedUserType(e.target.value)} aria-label="User type">
+            <option value="all">All users</option>
+            <option value="driver">Drivers only</option>
+            <option value="provider">Providers only</option>
+          </select>
+        </div>
       <div className="datatables">
         <DataTable
           className="whitespace-nowrap table-hover"
@@ -512,6 +495,7 @@ const [unverifiedDataMap, setUnverifiedDataMap] = useState<Record<string, UserUn
           }
         />
       </div>
+      </Section>
     </div>
   );
 };

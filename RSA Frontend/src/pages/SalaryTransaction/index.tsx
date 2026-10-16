@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Tooltip, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
-import { Button } from '@headlessui/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import { DataTable } from 'mantine-datatable';
 import { getDriverForDropDown, getProviderForDropDown } from '../../services/driverService';
 import { DriverDropdownItem } from '../../interface/Driver';
 import { dateFormate, formattedTime } from '../../utils/dateUtils';
-import Loader from '../../components/loader';
 import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
+import { Badge, DataExportButtons, Field, PageHeader, SearchBox, Section, StatCard, StatGrid, money, tableProps, usePaged } from '../../components/ui/PageKit';
 
 interface ITransaction {
     _id: string;
@@ -21,261 +19,168 @@ interface ITransaction {
     bookingIds?: string[];
 }
 
+const dayKey = (d: string | Date) => {
+    const x = new Date(d);
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+};
+
 const TransactionList = () => {
     const [transactions, setTransactions] = useState<ITransaction[]>([]);
     const [drivers, setDrivers] = useState<DriverDropdownItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
-    const [filterLoading, setFilterLoading] = useState(false);
-    const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
 
-    // Filter states
     const [driverType, setDriverType] = useState<'Driver' | 'Provider' | ''>('Driver');
     const [driverId, setDriverId] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+    const [search, setSearch] = useState('');
 
-    const fetchTransactions = async () => {
+    const fetchTransactions = async (type = driverType, id = driverId) => {
         try {
             setLoading(true);
-            setFilterLoading(true);
-
-            const params = new URLSearchParams();
-            if (driverType) params.append('driverType', driverType);
-            if (driverId) params.append('driverId', driverId);
-            if (startDate) params.append('startDate', startDate);
-            if (endDate) params.append('endDate', endDate);
-
-            const response = await axiosInstance.get(`${BASE_URL}/transactions/?driverType=${driverType}&driverId=${driverId}`);
-            setTransactions(response.data.data);
+            const response = await axiosInstance.get(`${BASE_URL}/transactions/?driverType=${type}&driverId=${id}`);
+            setTransactions(response.data.data || []);
         } catch (error) {
             console.error('Error fetching transactions:', error);
+            setTransactions([]);
         } finally {
-            setFilterLoading(false);
             setLoading(false);
         }
     };
+
     useEffect(() => {
-        fetchTransactions()
-    }, [driverId])
+        fetchTransactions(driverType, driverId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [driverType, driverId]);
 
-    const fetchDrivers = async () => {
-        try {
-            let driverList
-            if (driverType == 'Driver') {
-                driverList = await getDriverForDropDown();
-            } else {
-                driverList = await getProviderForDropDown();
+    useEffect(() => {
+        (async () => {
+            try {
+                if (driverType === 'Driver') setDrivers(await getDriverForDropDown());
+                else if (driverType === 'Provider') setDrivers(await getProviderForDropDown());
+                else setDrivers([]);
+            } catch (error) {
+                console.error('Error fetching drivers:', error);
             }
-            setDrivers(driverList);
-        } catch (error) {
-            console.error('Error fetching drivers:', error);
-        }
-    };
+        })();
+    }, [driverType]);
 
-    const handleFilterSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        fetchTransactions();
-    };
-
-    const handleResetFilters = () => {
-        setDriverType('');
+    const resetFilters = () => {
+        setDriverType('Driver');
         setDriverId('');
         setStartDate('');
         setEndDate('');
-        fetchTransactions();
+        setSearch('');
     };
 
-    useEffect(() => {
-        fetchTransactions();
-        fetchDrivers();
-    }, []);
+    const rows = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return transactions.filter((t) => {
+            const k = t.createdAt ? dayKey(t.createdAt) : '';
+            if (startDate && k < startDate) return false;
+            if (endDate && k > endDate) return false;
+            if (q && !`${t.transactionId || ''} ${t.driver?.name || ''}`.toLowerCase().includes(q)) return false;
+            return true;
+        });
+    }, [transactions, startDate, endDate, search]);
 
-    useEffect(() => {
-        fetchDrivers();
-    }, [driverType]);
+    const totalAmount = rows.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const now = new Date();
+    const thisMonth = rows.filter((t) => {
+        const d = new Date(t.createdAt);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const people = new Set(rows.map((t) => t.driver?._id)).size;
+    const filtered = !!(startDate || endDate || search || driverId);
+    const { pageRows, paging } = usePaged(rows, 50);
+    const exportCols = [
+        { key: 'transactionId', label: 'Transaction ID' },
+        { key: 'userModel', label: 'Type' },
+        { key: 'name', label: 'Name', value: (t: ITransaction) => t.driver?.name || '' },
+        { key: 'amount', label: 'Amount', numeric: true, value: (t: ITransaction) => Number(t.amount) || 0 },
+        { key: 'createdAt', label: 'Date', value: (t: ITransaction) => (t.createdAt ? `${dateFormate(t.createdAt)} ${formattedTime(t.createdAt)}` : '') },
+    ];
+    const exportSubtitle = [driverType || 'All types', drivers.find((d) => d._id === driverId)?.label, startDate && `from ${startDate}`, endDate && `to ${endDate}`].filter(Boolean).join(' · ');
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-        >
-            <Card className="p-6 shadow-xl rounded-2xl bg-white">
-                <div className="flex justify-between items-center mb-6">
-                    <motion.h2
-                        className="text-2xl font-semibold text-indigo-700"
-                        initial={{ x: -20 }}
-                        animate={{ x: 0 }}
-                    >
-                        Driver Transactions
-                    </motion.h2>
-                    <Button
-                        onClick={() => setIsFilterOpen(!isFilterOpen)}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg"
-                    >
-                        Filters
-                    </Button>
-                </div>
+        <div>
+            <PageHeader title="Salary transactions" subtitle="Salary paid to drivers and providers" actions={<DataExportButtons title="Salary transactions" subtitle={exportSubtitle} columns={exportCols} rows={rows} totals={{ 'Total paid': money(totalAmount) }} />} />
 
-                <AnimatePresence>
-                    {isFilterOpen && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="overflow-hidden"
+            <StatGrid>
+                <StatCard label="Transactions" value={rows.length.toLocaleString('en-IN')} hint={filtered ? 'matching filters' : undefined} />
+                <StatCard label="Total paid" value={money(totalAmount)} tone="success" />
+                <StatCard label="Paid this month" value={money(thisMonth.reduce((s, t) => s + (Number(t.amount) || 0), 0))} hint={`${thisMonth.length} transactions`} tone="primary" />
+                <StatCard label={driverType === 'Provider' ? 'Providers paid' : driverType === 'Driver' ? 'Drivers paid' : 'People paid'} value={people} />
+            </StatGrid>
+
+            <Section bodyClassName="p-3">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+                    <Field label="Type">
+                        <select
+                            className="form-select"
+                            value={driverType}
+                            onChange={(e) => {
+                                setDriverType(e.target.value as 'Driver' | 'Provider' | '');
+                                setDriverId('');
+                            }}
                         >
-                            <Card className="py-4 px-1 shadow-sm">
-                                <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                    <FormControl fullWidth size="small">
-                                        <InputLabel>Driver Type</InputLabel>
-                                        <Select
-                                            value={driverType}
-                                            label="Driver Type"
-                                            onChange={(e) => setDriverType(e.target.value as 'Driver' | 'Provider')}
-                                        >
-                                            <MenuItem value="">All Types</MenuItem>
-                                            <MenuItem value="Driver">Driver</MenuItem>
-                                            <MenuItem value="Provider">Provider</MenuItem>
-                                        </Select>
-                                    </FormControl>
-
-                                    <FormControl fullWidth size="small">
-                                        <InputLabel>Driver Name</InputLabel>
-                                        <Select
-                                            value={driverId}
-                                            label="Driver Name"
-                                            onChange={(e) => setDriverId(e.target.value)}
-                                            disabled={!driverType}
-                                        >
-                                            <MenuItem value="">All Drivers</MenuItem>
-                                            {drivers
-                                                .map((driver) => (
-                                                    <MenuItem key={driver._id} value={driver._id}>
-                                                        {driver?.label}
-                                                    </MenuItem>
-                                                ))}
-                                        </Select>
-                                    </FormControl>
-
-                                    {/* <FormControl fullWidth size="small">
-                                        <InputLabel shrink>Start Date</InputLabel>
-                                        <input
-                                            type="date"
-                                            className="border rounded-md p-2 mt-2 w-full"
-                                            value={startDate}
-                                            onChange={(e) => setStartDate(e.target.value)}
-                                        />
-                                    </FormControl>
-
-                                    <FormControl fullWidth size="small">
-                                        <InputLabel shrink>End Date</InputLabel>
-                                        <input
-                                            type="date"
-                                            className="border rounded-md p-2 mt-2 w-full"
-                                            value={endDate}
-                                            onChange={(e) => setEndDate(e.target.value)}
-                                            min={startDate}
-                                        />
-                                    </FormControl> */}
-
-                                    <div className="flex items-end gap-2 h-10 col-span-2">
-                                        <Button
-                                            type="submit"
-                                            className={`bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg w-full flex items-center justify-center ${filterLoading ? 'text-xs px-0 gap-1' : 'px-4'}`}
-                                        >
-                                            Apply Filters {filterLoading && <Loader />}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            onClick={handleResetFilters}
-                                            className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2.5 rounded-lg w-full"
-                                        >
-                                            Reset
-                                        </Button>
-                                    </div>
-                                </form>
-                            </Card>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm text-left text-gray-600">
-                        <thead className="bg-indigo-50 border-b text-indigo-700">
-                            <tr>
-                                <th className="px-4 py-3">Transaction ID</th>
-                                <th className="px-4 py-3">Driver Type</th>
-                                <th className="px-4 py-3">Driver Name</th>
-                                <th className="px-4 py-3">Amount (₹)</th>
-                                <th className="px-4 py-3">Date</th>
-                                {/* <th className="px-4 py-3">Bookings Count</th> */}
-                                {/* <th className="px-4 py-3 text-center">Action</th> */}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={7} className="px-4 py-6 text-center">
-                                        <Loader />
-                                    </td>
-                                </tr>
-                            ) : transactions.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-                                        No transactions found
-                                    </td>
-                                </tr>
-                            ) : (
-                                transactions.map((transaction) => (
-                                    <motion.tr
-                                        key={transaction._id}
-                                        className="hover:bg-gray-50"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        <td className="px-4 py-3 font-medium">{transaction.transactionId}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2 py-1 rounded-full text-xs ${transaction.userModel === 'Driver'
-                                                ? 'bg-blue-100 text-blue-800'
-                                                : 'bg-purple-100 text-purple-800'
-                                                }`}>
-                                                {transaction.userModel}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Tooltip title={`Driver ID: ${transaction.driver._id}`}>
-                                                <span className="cursor-help">{transaction.driver.name}</span>
-                                            </Tooltip>
-                                        </td>
-                                        <td className="px-4 py-3 font-semibold text-green-700">
-                                            ₹{transaction.amount.toLocaleString()}
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            {dateFormate(transaction?.createdAt as unknown as string)}, {formattedTime(transaction?.createdAt as unknown as string)}
-                                        </td>
-                                        {/* <td className="px-4 py-3 text-center">
-                                            {transaction.bookingIds?.length || 0}
-                                        </td> */}
-                                        {/* <td className="px-4 py-3 text-center">
-                                            <Button
-                                                onClick={() => downloadReceipt(transaction._id)}
-                                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg flex items-center gap-1 mx-auto"
-                                            >
-                                                <Download size={16} />
-                                                Receipt
-                                            </Button>
-                                        </td> */}
-                                    </motion.tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                            <option value="">All types</option>
+                            <option value="Driver">Driver</option>
+                            <option value="Provider">Provider</option>
+                        </select>
+                    </Field>
+                    <Field label="Name" className="col-span-2 md:col-span-1">
+                        <select className="form-select" value={driverId} onChange={(e) => setDriverId(e.target.value)} disabled={!driverType}>
+                            <option value="">All</option>
+                            {drivers.map((d) => (
+                                <option key={d._id} value={d._id}>
+                                    {d?.label}
+                                </option>
+                            ))}
+                        </select>
+                    </Field>
+                    <Field label="From">
+                        <input type="date" className="form-input" value={startDate} onChange={(e) => setStartDate(e.target.value)} max={endDate || undefined} />
+                    </Field>
+                    <Field label="To">
+                        <input type="date" className="form-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || undefined} />
+                    </Field>
+                    <Field label="Search" className="col-span-2 md:col-span-1">
+                        <SearchBox value={search} onChange={setSearch} placeholder="Transaction ID or name" />
+                    </Field>
+                    <div className="col-span-2 flex items-end md:col-span-1">
+                        <button type="button" className="btn btn-outline-secondary w-full" onClick={resetFilters} disabled={!filtered && driverType === 'Driver'}>
+                            Reset
+                        </button>
+                    </div>
                 </div>
-            </Card>
-        </motion.div>
+            </Section>
+
+            <Section bodyClassName="p-0">
+                <div id="salary-tx-table" className="datatables">
+                    <DataTable
+                        {...tableProps}
+                        fetching={loading}
+                        idAccessor="_id"
+                        records={pageRows}
+                        {...paging}
+                        noRecordsText={filtered ? 'No transactions match these filters' : 'No transactions found'}
+                        columns={[
+                            { accessor: 'transactionId', title: 'Transaction ID', render: (t) => <span className="font-semibold">{t.transactionId}</span> },
+                            { accessor: 'userModel', title: 'Type', render: (t) => <Badge tone={t.userModel === 'Driver' ? 'primary' : 'info'}>{t.userModel}</Badge> },
+                            { accessor: 'driver.name', title: 'Name', render: (t) => t.driver?.name || 'N/A' },
+                            { accessor: 'amount', title: 'Amount', textAlignment: 'right', render: (t) => <span className="font-semibold text-success">{money(t.amount)}</span> },
+                            { accessor: 'createdAt', title: 'Date', render: (t) => (t.createdAt ? `${dateFormate(t.createdAt)}, ${formattedTime(t.createdAt)}` : 'N/A') },
+                        ]}
+                    />
+                </div>
+                {rows.length > 0 && (
+                    <div className="flex justify-end border-t border-white-light px-4 py-2 text-sm dark:border-[#1b2e4b]">
+                        Total: <b className="text-success ltr:ml-2 rtl:mr-2">{money(totalAmount)}</b>
+                    </div>
+                )}
+            </Section>
+        </div>
     );
 };
 

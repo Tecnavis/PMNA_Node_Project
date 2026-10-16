@@ -7,6 +7,8 @@ import { executeWithRetry, handleNetworkError, offlineQueue } from '../../utils/
 import { isAxiosError } from 'axios';
 import { PaymentTransaction, Showroom } from './types'; // Import from types
 import { PaymentTransactionsColumns } from './constant';
+import TableExportButtons from '../../components/TableExportButtons';
+import { EmptyState, Field, PageHeader, SearchBox, Section, money, tableProps } from '../../components/ui/PageKit';
 
 const getColorForDateTime = (dateTimeString: string) => {
   let hash = 0;
@@ -235,133 +237,140 @@ const fetchPaymentTransactions = async () => {
     }
   }, [selectedShowroom, showrooms]);
 
+  useEffect(() => {
+    if (!selectedShowroom) return;
+    const t = setTimeout(() => fetchPaymentTransactions(), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  const [showroomFilter, setShowroomFilter] = useState('');
+  const showroomData = showrooms.find((s) => s._id === selectedShowroom);
+  const withBalance = showrooms.filter((s) => (s.cashInHand || 0) > 0);
+  const visibleShowrooms = (() => {
+    const q = showroomFilter.trim().toLowerCase();
+    const list = q ? showrooms.filter((s) => (s.name || '').toLowerCase().includes(q)) : showrooms;
+    return showroomData && !list.includes(showroomData) ? [showroomData, ...list] : list;
+  })();
+  const afterThis = (Number(currentBalance) || 0) - (Number(collectedAmount) || 0);
+  const collectedTotal = paymentTransactions.reduce((a, t: any) => a + (Number(t.collectedAmount) || 0), 0);
+  const refLabel = paymentMode === 'bank_transfer' ? 'Transaction reference' : paymentMode === 'upi' ? 'UPI reference' : 'Cheque number';
+
   return (
-    <main className="flex flex-col items-center justify-center">
-      <div className="rounded-md shadow-md min-w-[85%] p-5">
-        <h1 className="text-4xl text-gray-700 uppercase text-center mb-4 font-bold">Showroom Payment Management</h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div>
-            <label className="block mb-2 text-sm font-medium">Select Showroom</label>
-            <select 
-              value={selectedShowroom} 
-              onChange={(e) => setSelectedShowroom(e.target.value)} 
-              className="w-full p-2 border rounded-lg" 
-              disabled={isSubmitting}
-            >
-              <option value="">-- Select Showroom --</option>
-              {showrooms.map((showroom) => (
-                <option key={showroom._id} value={showroom._id}>
-                  {showroom.name} (₹{showroom.cashInHand || 0})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block mb-2 text-sm font-medium">Current Balance</label>
-            <input 
-              type="number" 
-              value={currentBalance} 
-              readOnly 
-              className="w-full p-2 border rounded-lg bg-gray-100" 
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 text-sm font-medium">Collected Amount</label>
-            <input
-              type="number"
-              value={collectedAmount}
-              onChange={(e) => setCollectedAmount(Number(e.target.value))}
-              className="w-full p-2 border rounded-lg"
-              disabled={isSubmitting || !selectedShowroom}
-              min="0"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 text-sm font-medium">Payment Mode</label>
-            <select
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-              disabled={isSubmitting}
-            >
-              <option value="cash">Cash</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="upi">UPI</option>
-              <option value="cheque">Cheque</option>
-            </select>
-          </div>
-
-          {paymentMode !== 'cash' && (
+    <div>
+      <PageHeader
+        title="Showroom payments"
+        subtitle="Collect amounts that showrooms owe"
+        actions={
+          <div className="flex gap-4 text-right text-xs">
             <div>
-              <label className="block mb-2 text-sm font-medium">
-                {paymentMode === 'bank_transfer' ? 'Transaction Reference' : 
-                 paymentMode === 'upi' ? 'UPI Reference' : 'Cheque Number'}
-              </label>
-              <input
-                type="text"
-                value={referenceNumber}
-                onChange={(e) => setReferenceNumber(e.target.value)}
-                className="w-full p-2 border rounded-lg"
-                disabled={isSubmitting}
-                placeholder={`Enter ${paymentMode === 'bank_transfer' ? 'transaction reference' : 
-                paymentMode === 'upi' ? 'UPI reference' : 'cheque number'}`}
-              />
+              <div className="text-white-dark">Showrooms with balance</div>
+              <div className="text-base font-bold">{withBalance.length}</div>
             </div>
-          )}
-
-          <div>
-            <label className="block mb-2 text-sm font-medium">Remarks</label>
-            <input 
-              type="text" 
-              value={remark} 
-              onChange={(e) => setRemark(e.target.value)} 
-              className="w-full p-2 border rounded-lg" 
-              disabled={isSubmitting} 
-              placeholder="Enter remarks" 
-            />
+            <div>
+              <div className="text-white-dark">Total outstanding</div>
+              <div className="text-base font-bold text-danger">{money(withBalance.reduce((a, s) => a + (s.cashInHand || 0), 0))}</div>
+            </div>
           </div>
+        }
+      />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          <Section title="Record a collection">
+            <div className="space-y-3">
+              <Field label="Showroom">
+                {showrooms.length > 12 && (
+                  <input className="form-input form-input-sm mb-1" placeholder="Filter showrooms…" value={showroomFilter} onChange={(e) => setShowroomFilter(e.target.value)} />
+                )}
+                <select value={selectedShowroom} onChange={(e) => setSelectedShowroom(e.target.value)} className="form-select" disabled={isSubmitting} aria-label="Select showroom">
+                  <option value="">Select showroom</option>
+                  {visibleShowrooms.map((showroom) => (
+                    <option key={showroom._id} value={showroom._id}>
+                      {showroom.name} · {money(showroom.cashInHand)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {showroomData && (
+                <div className="rounded-md bg-danger/10 p-2">
+                  <div className="text-[11px] text-white-dark">Current balance</div>
+                  <div className="text-lg font-bold text-danger">{money(currentBalance)}</div>
+                </div>
+              )}
+              <Field
+                label="Amount collected (₹)"
+                hint={collectedAmount ? <span className={afterThis < 0 ? 'text-danger' : 'text-white-dark'}>{afterThis < 0 ? 'More than the balance' : `Balance after this: ${money(afterThis)}`}</span> : undefined}
+              >
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={collectedAmount}
+                  onChange={(e) => setCollectedAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="form-input"
+                  disabled={isSubmitting || !selectedShowroom}
+                  min="0"
+                  placeholder="0"
+                />
+              </Field>
+              <Field label="Payment mode">
+                <div className="grid grid-cols-4 gap-1">
+                  {[
+                    ['cash', 'Cash'],
+                    ['upi', 'UPI'],
+                    ['bank_transfer', 'Bank'],
+                    ['cheque', 'Cheque'],
+                  ].map(([v, l]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => setPaymentMode(v)}
+                      className={`rounded-md border px-2 py-1.5 text-xs font-semibold ${paymentMode === v ? 'border-primary bg-primary/10 text-primary' : 'border-white-light dark:border-[#253b5c]'}`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              {paymentMode !== 'cash' && (
+                <Field label={refLabel}>
+                  <input type="text" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} className="form-input" disabled={isSubmitting} placeholder={`Enter ${refLabel.toLowerCase()}`} />
+                </Field>
+              )}
+              <Field label="Remark">
+                <input type="text" value={remark} onChange={(e) => setRemark(e.target.value)} className="form-input" disabled={isSubmitting} placeholder="Optional" />
+              </Field>
+              <button type="button" onClick={collectPayment} disabled={isSubmitting || !selectedShowroom || !collectedAmount} className="btn btn-primary w-full">
+                {isSubmitting ? 'Saving…' : 'Record collection'}
+              </button>
+            </div>
+          </Section>
         </div>
-
-        <button
-          onClick={collectPayment}
-          disabled={isSubmitting || !selectedShowroom || !collectedAmount}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
-        >
-          {isSubmitting ? <Loader /> : 'Record Payment Collection'}
-        </button>
+        <div className="lg:col-span-2 min-w-0">
+          <Section
+            title={showroomData ? `${showroomData.name}: payment history` : 'Payment history'}
+            actions={showroomData ? <TableExportButtons containerId="showroom-pay-table" title={`${showroomData.name} - payments`} /> : undefined}
+            bodyClassName="p-0"
+          >
+            {!showroomData ? (
+              <EmptyState title="Choose a showroom" text="Its collections will show here." />
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white-light p-3 dark:border-[#1b2e4b]">
+                  <SearchBox value={search} onChange={setSearch} placeholder="Search payment records" className="w-full sm:w-72" />
+                  <div className="text-xs text-white-dark">
+                    {paymentTransactions.length} {paymentTransactions.length === 1 ? 'payment' : 'payments'} · collected <b className="text-success">{money(collectedTotal)}</b>
+                  </div>
+                </div>
+                <div id="showroom-pay-table" className="datatables">
+                  <DataTable {...tableProps} columns={PaymentTransactionsColumns as any} records={paymentTransactions || []} idAccessor="_id" />
+                </div>
+              </>
+            )}
+          </Section>
+        </div>
       </div>
-
-      {/* Payment Transactions Table */}
-      <div className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5">
-        <div className="mb-4">
-          <input 
-            type="text" 
-            placeholder="Search payment records..." 
-            value={search} 
-            onChange={(e) => setSearch(e.target.value)} 
-            className="w-full p-2 border rounded-lg" 
-          />
-        </div>
-
-        <div ref={printRef}>
-          <DataTable
-            withBorder
-            withColumnBorders
-            striped
-            highlightOnHover
-            columns={PaymentTransactionsColumns}
-            records={paymentTransactions}
-            rowStyle={(record) => ({
-              backgroundColor: getColorForDateTime(record.createdAt.toString()),
-            })}
-          />
-        </div>
-      </div>
-    </main>
+    </div>
   );
 };
 

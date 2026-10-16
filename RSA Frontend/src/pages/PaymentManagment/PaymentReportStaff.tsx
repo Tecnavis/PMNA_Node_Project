@@ -11,6 +11,8 @@ import Swal from 'sweetalert2';
 import Loader from '../../components/loader';
 import { executeWithRetry, handleNetworkError, offlineQueue } from '../../utils/networkUtils';
 import { isAxiosError } from 'axios';
+import TableExportButtons from '../../components/TableExportButtons';
+import { EmptyState, Field, PageHeader, SearchBox, Section, money, tableProps } from '../../components/ui/PageKit';
 
 const getColorForDateTime = (dateTimeString: string) => {
     let hash = 0;
@@ -243,136 +245,102 @@ console.log("requestData.................................",requestData)
         }
     }, [selectedStaff, staffs]);
 
+    // search the history as the user types (it used to only search when the staff changed)
+    useEffect(() => {
+        if (!selectedStaff) return;
+        const t = setTimeout(() => fetchReceivedDetails(), 400);
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
+
+    const staffData = staffs.find((s) => s._id === selectedStaff);
+    const withCash = staffs.filter((s) => (s.cashInHand || 0) > 0);
+    const afterThis = (Number(inHandAmount) || 0) - (Number(receivedAmount) || 0);
+
     return (
-        <main className="flex flex-col items-center justify-center">
-            <div className="rounded-md shadow-md min-w-[85%] p-5">
-                <h1 className="text-4xl text-gray-700 uppercase text-center mb-4 font-bold">Staff Cash Management</h1>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div>
-                        <label className="block mb-2 text-sm font-medium">Select Staff</label>
-                        <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)} className="w-full p-2 border rounded-lg" disabled={isSubmitting}>
-                            <option value="">-- Select Staff --</option>
-                            {staffs.map((staff) => (
-                                <option key={staff._id} value={staff._id}>
-                                    {staff.name} (₹{staff.cashInHand || 0})
-                                </option>
-                            ))}
-                        </select>
+        <div>
+            <PageHeader
+                title="Staff payments"
+                subtitle="Collect cash that staff members are holding"
+                actions={
+                    <div className="flex gap-4 text-right text-xs">
+                        <div>
+                            <div className="text-white-dark">Staff holding cash</div>
+                            <div className="text-base font-bold">{withCash.length}</div>
+                        </div>
+                        <div>
+                            <div className="text-white-dark">Total with staff</div>
+                            <div className="text-base font-bold text-danger">{money(withCash.reduce((a, s) => a + (s.cashInHand || 0), 0))}</div>
+                        </div>
                     </div>
-
-                    <div>
-                        <label className="block mb-2 text-sm font-medium">Current Balance</label>
-                        <input type="number" value={inHandAmount} readOnly className="w-full p-2 border rounded-lg bg-gray-100" />
-                    </div>
-
-                    <div>
-                        <label className="block mb-2 text-sm font-medium">Received Amount</label>
-                        <input
-                            type="number"
-                            value={receivedAmount}
-                            onChange={(e) => setReceivedAmount(Number(e.target.value))}
-                            className="w-full p-2 border rounded-lg"
-                            disabled={isSubmitting || !selectedStaff}
-                            min="0"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block mb-2 text-sm font-medium">Remarks</label>
-                        <input type="text" value={remark} onChange={(e) => setRemark(e.target.value)} className="w-full p-2 border rounded-lg" disabled={isSubmitting} placeholder="Enter remarks" />
-                    </div>
-                </div>
-
-                <button
-                    onClick={settleReceivedAmount}
-                    disabled={isSubmitting || !selectedStaff || !receivedAmount}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
-                >
-                    {isSubmitting ? <Loader /> : 'Record Cash Received'}
-                </button>
-            </div>
-            {/* Received Details Table */}
-            <div className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5">
-                <div className="mb-4">
-                    <input type="text" placeholder="Search records..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full p-2 border rounded-lg" />
-                </div>
-
-                <div ref={printRef}>
-                    <DataTable
-                        withBorder
-                        withColumnBorders
-                        striped
-                        highlightOnHover
-                        columns={colsForReceivedDetailsStaff}
-                        records={receivedDetailsStaff}
-                        rowStyle={(record) => ({
-                            backgroundColor: getColorForDateTime(record.createdAt.toString()),
-                        })}
-                    />
-                </div>
-            </div>
-            {/* Report Tabs */}
-            {/* <div className="w-full min-w-[85%] my-7 rounded-md shadow-md p-5">
-                <Tab.Group selectedIndex={tabIndex} onChange={setTabIndex}>
-                    <Tab.List className="flex border-b mb-4">
-                        <Tab className={({ selected }) => 
-                            `px-4 py-2 font-medium ${selected ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`
-                        }>
-                            Cash Collection
-                        </Tab>
-                        <Tab className={({ selected }) => 
-                            `px-4 py-2 font-medium ${selected ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`
-                        }>
-                            Received Details
-                        </Tab>
-                    </Tab.List>
-
-                    <div className="mb-4">
-                        <input
-                            type="text"
-                            placeholder="Search records..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full p-2 border rounded-lg"
-                        />
-                    </div>
-
-                    <Tab.Panels>
-                        <Tab.Panel>
-                            <div ref={printRef}>
-                                <DataTable
-                                    withBorder
-                                    withColumnBorders
-                                    striped
-                                    highlightOnHover
-                                    columns={colsForCashCollection}
-                                    records={cashCollectionDetails}
-                                    rowStyle={(record) => ({
-                                        backgroundColor: getColorForDateTime(record.createdAt.toString())
-                                    })}
+                }
+            />
+            <div className="grid gap-4 lg:grid-cols-3">
+                <div className="lg:col-span-1">
+                    <Section title="Record cash received">
+                        <div className="space-y-3">
+                            <Field label="Staff member">
+                                <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)} className="form-select" disabled={isSubmitting} aria-label="Select staff">
+                                    <option value="">Select staff</option>
+                                    {staffs.map((staff) => (
+                                        <option key={staff._id} value={staff._id}>
+                                            {staff.name} · {money(staff.cashInHand)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </Field>
+                            {staffData && (
+                                <div className="rounded-md bg-danger/10 p-2">
+                                    <div className="text-[11px] text-white-dark">Current balance with {staffData.name}</div>
+                                    <div className="text-lg font-bold text-danger">{money(inHandAmount)}</div>
+                                </div>
+                            )}
+                            <Field
+                                label="Amount received (₹)"
+                                hint={receivedAmount ? <span className={afterThis < 0 ? 'text-danger' : 'text-white-dark'}>{afterThis < 0 ? 'More than the balance' : `Balance after this: ${money(afterThis)}`}</span> : undefined}
+                            >
+                                <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    value={receivedAmount}
+                                    onChange={(e) => setReceivedAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                                    className="form-input"
+                                    disabled={isSubmitting || !selectedStaff}
+                                    min="0"
+                                    placeholder="0"
                                 />
-                            </div>
-                        </Tab.Panel>
-                        <Tab.Panel>
-                            <div ref={printRef}>
-                                <DataTable
-                                    withBorder
-                                    withColumnBorders
-                                    striped
-                                    highlightOnHover
-                                    columns={colsForReceivedDetailsStaff}
-                                    records={receivedDetailsStaff}
-                                    rowStyle={(record) => ({
-                                        backgroundColor: getColorForDateTime(record.createdAt.toString())
-                                    })}
-                                />
-                            </div>
-                        </Tab.Panel>
-                    </Tab.Panels>
-                </Tab.Group>
-            </div> */}
-        </main>
+                            </Field>
+                            <Field label="Remark">
+                                <input type="text" value={remark} onChange={(e) => setRemark(e.target.value)} className="form-input" disabled={isSubmitting} placeholder="e.g. Handed over at office" />
+                            </Field>
+                            <button type="button" onClick={settleReceivedAmount} disabled={isSubmitting || !selectedStaff || !receivedAmount} className="btn btn-primary w-full">
+                                {isSubmitting ? 'Saving…' : 'Record cash received'}
+                            </button>
+                        </div>
+                    </Section>
+                </div>
+                <div className="lg:col-span-2 min-w-0">
+                    <Section
+                        title={staffData ? `${staffData.name}: received history` : 'Received history'}
+                        actions={staffData ? <TableExportButtons containerId="staff-pay-table" title={`${staffData.name} - cash received`} /> : undefined}
+                        bodyClassName="p-0"
+                    >
+                        {!staffData ? (
+                            <EmptyState title="Choose a staff member" text="Their cash handovers will show here." />
+                        ) : (
+                            <>
+                                <div className="border-b border-white-light p-3 dark:border-[#1b2e4b]">
+                                    <SearchBox value={search} onChange={setSearch} placeholder="Search records" className="w-full sm:w-72" />
+                                </div>
+                                <div id="staff-pay-table" className="datatables">
+                                    <DataTable {...tableProps} columns={colsForReceivedDetailsStaff as any} records={receivedDetailsStaff || []} idAccessor="_id" />
+                                </div>
+                            </>
+                        )}
+                    </Section>
+                </div>
+            </div>
+        </div>
     );
 };
 
