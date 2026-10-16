@@ -1,3 +1,4 @@
+const { emitOps } = require('../config/socket');
 // controllers/driver.controller.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -392,9 +393,11 @@ exports.updateDriver = async (req, res) => {
     driver.image = req.file ? req.file.filename : driver.image;
     driver.vehicle = vehicleData;
     driver.currentLocation = currentLocation || driver.currentLocation;
+    if (currentLocation) driver.locationUpdatedAt = new Date(); // live tracking: when the app last reported
     driver.fcmToken = fcmToken || driver.fcmToken;
 
     await driver.save();
+    if (currentLocation) emitOps('ops:location', { type: 'driver', id: String(driver._id), name: driver.name, location: driver.currentLocation, at: driver.locationUpdatedAt });
     res.status(200).json(driver);
   } catch (error) {
     console.error('Error updating driver:', error);

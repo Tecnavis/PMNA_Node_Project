@@ -53,6 +53,13 @@ const companyExpenseRoutes = require('./routes/companyExpenses.js');
 const petrolPumpRoutes = require('./routes/petrol.js');
 const workRoutes = require('./routes/workRoutes.js');
 const mediaRoutes = require('./routes/media.js');
+const opsRoutes = require('./routes/ops.js');
+const execAppRoutes = require('./routes/execApp.js');
+const reportsRoutes = require('./routes/reports.js');
+const reminderRoutes = require('./routes/reminders.js');
+const tvRoutes = require('./routes/tv.js');
+const customerRoutes = require('./routes/customer.js');
+const whatsappRoutes = require('./routes/whatsapp.js');
 const { accessPolicy } = require('./Middileware/accessPolicy');
 
 const { createProxyMiddleware } = require('http-proxy-middleware');
@@ -200,6 +207,7 @@ app.get('/health', (req, res) => {
 app.set('views', path.join(__dirname, 'views'));
 
 app.use(logger('dev'));
+app.use('/whatsapp', whatsappRoutes); // before express.json: the webhook needs the raw body
 app.use(express.json({ limit: '10mb' })); // Reduced from 50mb to prevent memory issues
 app.use(express.urlencoded({ extended: false, limit: '10mb' })); // Reduced from 50mb
 app.use(cookieParser());
@@ -262,6 +270,13 @@ app.use('/company-expenses', companyExpenseRoutes);
 app.use('/petrol-pumps', petrolPumpRoutes);
 app.use('/work', workRoutes);
 app.use('/media', mediaRoutes);
+app.use('/ops', opsRoutes);
+app.use('/exec', execAppRoutes);
+app.use('/reports', reportsRoutes);
+app.use('/reminders', reminderRoutes.reminders);
+app.use('/me', reminderRoutes.me);
+app.use('/tv', tvRoutes);
+app.use('/customer', customerRoutes);
 // In app.js - Ensure this route exists and works
 app.get('/staff/showroom/:id', async (req, res) => {
     try {

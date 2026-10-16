@@ -8,6 +8,12 @@ const LoggerFactory = require('../utils/logger/LoggerFactory');
 const { StatusCodes } = require('http-status-codes');
 const { USER_TYPES } = require('../constants/fileConstants');
 const { NotFoundError, BadRequestError } = require('../Middileware/errorHandler');
+
+function distanceMeters(lat1, lng1, lat2, lng2) {
+    const r = (d) => (d * Math.PI) / 180;
+    const a = Math.sin(r(lat2 - lat1) / 2) ** 2 + Math.cos(r(lat1)) * Math.cos(r(lat2)) * Math.sin(r(lng2 - lng1) / 2) ** 2;
+    return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 // Controller method to get verifications by showroom ID
 exports.getVerificationsByShowroomId = asyncErrorHandler(async (req, res) => {
     const logger = LoggerFactory.createChildLogger({
@@ -66,6 +72,12 @@ exports.verifyMonthlyVerification = asyncErrorHandler(async (req, res) => {
     const longitude = parseFloat(req.body.longitude);
     const latitude = parseFloat(req.body.latitude);
 
+    if (!req.file) {
+        throw new BadRequestError('A photo of the showroom is required for the visit.');
+    }
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+        throw new BadRequestError('Live location is required for the visit.');
+    }
     const image = req.file.path;
 
     const showroom = await Showroom.findById(showroomId);
@@ -73,14 +85,30 @@ exports.verifyMonthlyVerification = asyncErrorHandler(async (req, res) => {
         throw new NotFoundError('Showroom Not found')
     };
 
+    // An executive may only verify their own showrooms (admin / staff may verify any).
+    const role = String(req.user?.role || '').toLowerCase();
+    if (role === 'executive' && String(showroom.addedBy || '') !== String(req.user?.id || req.user?._id || '')) {
+        return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'This showroom is not assigned to you.' });
+    }
+
     const executive = await Executive.findById(showroom.addedBy);
     if (!executive) {
         throw new NotFoundError('Executive Not found')
     };
 
-    const currentMonthStart = new Date();
-    currentMonthStart.setDate(1);
-    currentMonthStart.setHours(0, 0, 0, 0);
+    // Must be at the showroom (when the showroom has a saved location).
+    const saved = String(showroom.latitudeAndLongitude || '').split(',').map((x) => parseFloat(x));
+    const maxDistance = Number(process.env.VISIT_MAX_DISTANCE_M) || 500;
+    if (saved.length === 2 && saved.every(Number.isFinite) && !(saved[0] === 0 && saved[1] === 0)) {
+        const distance = distanceMeters(saved[0], saved[1], latitude, longitude);
+        if (distance > maxDistance) {
+            throw new BadRequestError(`You are about ${Math.round(distance)} m from the showroom. Please verify at the showroom.`);
+        }
+    }
+
+    // Calendar month in India time
+    const ym = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit' }).format(new Date());
+    const currentMonthStart = new Date(`${ym}-01T00:00:00+05:30`);
 
     const existingVerification = await Verification.findOne({
         showroom: showroomId,

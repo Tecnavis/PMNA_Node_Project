@@ -282,8 +282,9 @@ const Header = () => {
                             <IconMenu className="w-5 h-5" />
                         </button>
                     </div>
-                    <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
-                        <div className="sm:ltr:mr-auto sm:rtl:ml-auto flex justify-center items-center gap-2">
+                    <div className="min-w-0 sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
+                        {/* shortcut icons scroll sideways on phones instead of pushing the page wider */}
+                        <div className="min-w-0 overflow-x-auto sm:ltr:mr-auto sm:rtl:ml-auto flex justify-start sm:justify-center items-center gap-2 [&>*]:shrink-0">
                             <span className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
                                 <HiOutlineCalculator
                                     onClick={() => {

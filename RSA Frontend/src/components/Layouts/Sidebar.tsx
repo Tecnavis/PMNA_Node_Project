@@ -25,7 +25,7 @@ import { ROLES } from '../../constants/roles'
 import { ImUserTie } from "react-icons/im";
 import IconMenuScrumboard from '../Icon/Menu/IconMenuScrumboard';
 import IconDollarSignCircle from '../Icon/IconDollarSignCircle';
-import { CalendarClock, Images } from 'lucide-react';
+import { CalendarClock, Images, RadioTower, BellRing, ListChecks } from 'lucide-react';
 
 
 
@@ -383,6 +383,9 @@ const Sidebar = () => {
                                     <AnimateHeight duration={300} height={currentMenu === 'reports' ? 'auto' : 0}>
                                         <ul className="sub-menu text-gray-500">
                                             <li>
+                                                <NavLink to="/reports">{t('Reports Centre (filter & export)')}</NavLink>
+                                            </li>
+                                            <li>
                                                 <NavLink to="/dcpreport">{t('Driver/Company/Provider Report')}</NavLink>
                                             </li>
                                             {![ROLES.VERIFIER, ROLES.CASHIER].includes(role) && (
@@ -488,6 +491,35 @@ const Sidebar = () => {
                                     </div>
                                 </NavLink>
                             </li>
+                            {/* Operations */}
+                            <li className="nav-item">
+                                <NavLink to="/operations" className="group">
+                                    <div className="flex items-center">
+                                        <RadioTower className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Operations')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            {/* Reminders */}
+                            <li className="nav-item">
+                                <NavLink to="/reminders" className="group">
+                                    <div className="flex items-center">
+                                        <BellRing className="group-hover:!text-primary shrink-0" />
+                                        <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Reminders')}</span>
+                                    </div>
+                                </NavLink>
+                            </li>
+                            {/* Staff daily tasks (admin) */}
+                            {role === 'admin' && (
+                                <li className="nav-item">
+                                    <NavLink to="/dashboardtodo" className="group">
+                                        <div className="flex items-center">
+                                            <ListChecks className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 text-black dark:text-[#506690] dark:group-hover:text-white-dark">{t('Staff Tasks')}</span>
+                                        </div>
+                                    </NavLink>
+                                </li>
+                            )}
                             {/* Case Photos */}
                             <li className="nav-item">
                                 <NavLink to="/case-photos" className="group">

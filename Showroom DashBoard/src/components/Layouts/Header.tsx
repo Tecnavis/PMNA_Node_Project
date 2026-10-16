@@ -1,232 +1,98 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import IconLogout from '../Icon/IconLogout';
-import Dropdown from '../Dropdown';
-import { axiosInstance, BASE_URL } from "../../config/axiosConfig";
-import { IShowroom } from "../../interface/showroom";
-import { getShowroomById } from "../../service/showroom";
-import { CLOUD_IMAGE } from "../../constants/status";
+import React, { useEffect, useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, ClipboardList, CalendarPlus, Users, QrCode, Wallet, CheckCircle2, LogOut, Menu, X, Phone } from 'lucide-react';
+import { getShowroomById } from '../../service/showroom';
+import { getImageUrl } from '../../utils/imageUrl';
+
+const NAV = [
+    { to: '/index', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/addbook', label: 'New booking', icon: CalendarPlus },
+    { to: '/showrm', label: 'Bookings', icon: ClipboardList },
+    { to: '/home', label: 'Completed', icon: CheckCircle2 },
+    { to: '/staff', label: 'Staff', icon: Users },
+    { to: '/showrm/qr', label: 'Staff QR', icon: QrCode },
+    { to: '/report', label: 'Cash report', icon: Wallet },
+];
 
 const Header: React.FC = () => {
-  const [tollFreeNumber, setTollFreeNumber] = useState<string>("");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showroomName, setShowroomName] = useState<string>("");
-  const [mobileNumber, setMobileNumber] = useState<string>("");
-  const [img, setImg] = useState<string>("");
+    const navigate = useNavigate();
+    const showroomId = localStorage.getItem('showroomId');
+    const [open, setOpen] = useState(false);
+    const [menu, setMenu] = useState(false);
+    const [info, setInfo] = useState<{ name: string; helpline: string; mobile: string; image: string }>({ name: '', helpline: '', mobile: '', image: '' });
 
-  const navigate = useNavigate();
-  const showroomId = localStorage.getItem("showroomId");
+    useEffect(() => {
+        if (!showroomId) return;
+        getShowroomById(showroomId)
+            .then((d: any) => {
+                setInfo({ name: d?.name || '', helpline: d?.helpline || '', mobile: d?.mobile || d?.phone || '', image: d?.image || '' });
+                localStorage.setItem('showroomRewardPoints', String(d?.rewardPoints ?? 0));
+            })
+            .catch(() => undefined);
+    }, [showroomId]);
 
-  const logOut = async () => {
-    navigate("/");
-  };
-
-  useEffect(() => {
-    const fetchTollFreeNumber = async () => {
-      try {
-        if (showroomId) {
-          const data = await getShowroomById(showroomId)
-          setTollFreeNumber(data.helpline || "");
-          setShowroomName(data.name || "Showroom Name");
-          setMobileNumber(data.mobile || "Showroom Name");
-          setImg(data.image || "Showroom Name");
-          localStorage.setItem("showroomRewardPoints", String(data?.rewardPoints));
-
-        }
-      } catch (error) {
-        console.error("Error fetching toll-free number:", error);
-      }
+    const logOut = () => {
+        ['token', 'showroomId', 'userName', 'password', 'showroomRewardPoints'].forEach((k) => localStorage.removeItem(k));
+        navigate('/');
     };
 
-    fetchTollFreeNumber();
-  }, [showroomId]);
+    const linkClass = ({ isActive }: { isActive: boolean }) =>
+        `flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-semibold transition ${isActive ? 'bg-red-700 text-white' : 'text-slate-700 hover:bg-red-50 hover:text-red-700 dark:text-white-light dark:hover:bg-[#1b2e4b]'}`;
+    const avatar = getImageUrl(info.image);
 
-  return (
-    <header className="shadow-lg text-white font-poppins bg-slate-50">
-      <div className="container mx-auto flex items-center justify-between px-6 py-4">
-        {/* Logo Section */}
-        <div className="flex flex-col items-start">
-          <Link to="/index" className="flex items-center">
-            <img
-              className="w-36"
-              src="/assets/images/auth/rsa-png.png"
-              alt="logo"
-            />
-          </Link>
-          <div
-            className="toll-free-number text-lg font-extrabold text-red-700 mt-2"
-          >
-            Help-Line: {tollFreeNumber || "N/A"}
-          </div>
-        </div>
+    return (
+        <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0e1726]/95 backdrop-blur border-b border-slate-100 dark:border-[#1b2e4b] shadow-sm">
+            <div className="container mx-auto flex items-center gap-3 px-3 sm:px-6 py-2">
+                <Link to="/index" className="flex items-center gap-3 shrink-0">
+                    <img className="h-12 w-[150px] sm:w-[176px] object-cover" src="/assets/images/RSALogo.png" alt="RSA Kerala" />
+                </Link>
+                {info.helpline && (
+                    <a href={`tel:${info.helpline}`} className="hidden sm:flex xl:hidden 2xl:flex items-center gap-1 whitespace-nowrap text-xs font-bold text-red-700 border border-red-200 rounded-full px-2 py-1">
+                        <Phone className="w-3.5 h-3.5" /> Help-line {info.helpline}
+                    </a>
+                )}
 
-        {/* Navigation Menu and Profile */}
-        <div className="flex items-center space-x-4">  {/* Adjusted space-x to space them closer */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link
-              to="/home"
-              className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
-            >
-              Home
-            </Link>
-            <Link
-              to="/showrm"
-              className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
-            >
-              Booking
-            </Link>
-            <Link
-              to="/staff"
-              className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
-            >
-              Staffs
-            </Link>
-            <Link
-              to="/showrm/qr"
-              className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
-            >
-              QRCode Login
-            </Link>
-            <Link
-              to="/addbook"
-              className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
-            >
-              Add Booking
-            </Link>
-            <Link
-              to="/report"
-              className="text-red-700 font-semibold text-lg hover:text-red-500 transition duration-200"
-            >
-              Cash Report
-            </Link>
-          </nav>
+                <nav className="hidden xl:flex items-center gap-1 ml-auto" aria-label="Main">
+                    {NAV.map(({ to, label, icon: Icon }) => (
+                        <NavLink key={to} to={to} end className={linkClass}><Icon className="w-4 h-4" />{label}</NavLink>
+                    ))}
+                </nav>
 
-          {/* Profile Dropdown */}
-          <div className="dropdown shrink-0 flex">
-            <Dropdown
-              offset={[0, 8]}
-              placement="bottom-end"
-              btnClassName="relative group block"
-              button={
-                <img
-                  className="w-14 h-14 rounded-full object-cover saturate-50 group-hover:saturate-100 border-2 border-red-500"
-                  src={`${CLOUD_IMAGE}${img}` || "/default-avatar.png"} // Use img URL or fallback to a default image
-                  alt="userProfile"
-                />
-              }
-            >
-              <ul className="text-dark dark:text-white-dark !py-0 w-[230px] font-semibold dark:text-white-light/90">
-                <li>
-                  <div className="flex items-center px-4 py-4">
-                    <img
-                      className="rounded-md w-10 h-10 object-cover border border-red-500"
-                      src={`${CLOUD_IMAGE}${img}` || "/default-avatar.png"} // Use img URL or fallback to a default image
-                      alt="userProfile"
-                    />
-                    <div className="ltr:pl-4 rtl:pr-4 truncate">
-                      <h4 className="text-base">{showroomName}</h4>
-                      <button type="button" className="text-black/60 hover:text-primary dark:text-dark-light/60 dark:hover:text-white">
-                        {mobileNumber}
-                      </button>
-                    </div>
-                  </div>
-                </li>
-                <li className="border-t border-white-light dark:border-white-light/10">
-                  <button
-                    type="button"
-                    className="text-danger !py-3 flex items-center w-full"
-                    onClick={logOut}
-                  >
-                    <IconLogout className="w-4.5 h-4.5 ltr:mr-2 rtl:ml-2 rotate-90 shrink-0" />
-                    Sign Out
-                  </button>
-                </li>
-              </ul>
-            </Dropdown>
-          </div>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden text-red-700 focus:outline-none"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Menu"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 12h16m-7 6h7"
-            />
-          </svg>
-        </button>
-      </div>
-
-      {/* Mobile Navigation Menu */}
-      {isMobileMenuOpen && (
-        <nav className="md:hidden  shadow-lg rounded-lg border border-gray-200">
-          <ul className="flex flex-col space-y-2 px-6 py-4">
-            <li>
-              <Link
-                to="/home"
-                className="block text-lg font-medium text-gray-800 hover:bg-gray-100 transition-all duration-200 rounded-md px-4 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/staff"
-                className="block text-lg font-medium text-gray-800 hover:bg-gray-100 transition-all duration-200 rounded-md px-4 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Staffs
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/showrm/qr"
-                className="block text-lg font-medium text-gray-800 hover:bg-gray-100 transition-all duration-200 rounded-md px-4 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                QRCode Login
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/addbook"
-                className="block text-lg font-medium text-gray-800 hover:bg-gray-100 transition-all duration-200 rounded-md px-4 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Add Booking
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/cashreport"
-                className="block text-lg font-medium text-gray-800 hover:bg-gray-100 transition-all duration-200 rounded-md px-4 py-2"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Cash Report
-              </Link>
-            </li>
-          </ul>
-        </nav>
-      )}
-
-    </header>
-
-
-
-  );
+                <div className="relative ml-auto xl:ml-2 flex items-center gap-2">
+                    <button type="button" onClick={() => setMenu((m) => !m)} className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-[#1b2e4b] pl-1 pr-3 py-1" aria-haspopup="menu" aria-expanded={menu}>
+                        {avatar ? (
+                            <img src={avatar} alt="" className="w-8 h-8 rounded-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
+                        ) : (
+                            <span className="w-8 h-8 rounded-full bg-red-700 text-white grid place-content-center text-sm font-bold">{(info.name || 'S')[0]}</span>
+                        )}
+                        <span className="hidden sm:block xl:hidden 2xl:block max-w-[160px] truncate text-sm font-semibold text-slate-700 dark:text-white-light">{info.name || 'Showroom'}</span>
+                    </button>
+                    {menu && (
+                        <div role="menu" className="absolute right-0 top-12 w-56 rounded-lg border border-slate-100 dark:border-[#1b2e4b] bg-white dark:bg-[#0e1726] shadow-lg p-2" onMouseLeave={() => setMenu(false)}>
+                            <div className="px-2 py-2 border-b border-slate-100 dark:border-[#1b2e4b] mb-1">
+                                <div className="font-semibold text-sm truncate">{info.name}</div>
+                                {info.mobile && <div className="text-xs text-slate-500">{info.mobile}</div>}
+                            </div>
+                            <button type="button" role="menuitem" onClick={logOut} className="w-full flex items-center gap-2 rounded px-2 py-2 text-sm text-red-700 hover:bg-red-50">
+                                <LogOut className="w-4 h-4" /> Sign out
+                            </button>
+                        </div>
+                    )}
+                    <button type="button" className="xl:hidden p-2 rounded-lg text-red-700 hover:bg-red-50" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open}>
+                        {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                    </button>
+                </div>
+            </div>
+            {open && (
+                <nav className="xl:hidden border-t border-slate-100 dark:border-[#1b2e4b] px-3 py-2 grid grid-cols-2 sm:grid-cols-4 gap-1" aria-label="Main">
+                    {NAV.map(({ to, label, icon: Icon }) => (
+                        <NavLink key={to} to={to} end className={linkClass} onClick={() => setOpen(false)}><Icon className="w-4 h-4" />{label}</NavLink>
+                    ))}
+                    {info.helpline && <a href={`tel:${info.helpline}`} className="sm:hidden col-span-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-red-700"><Phone className="w-4 h-4" /> Help-line {info.helpline}</a>}
+                </nav>
+            )}
+        </header>
+    );
 };
 
 export default Header;

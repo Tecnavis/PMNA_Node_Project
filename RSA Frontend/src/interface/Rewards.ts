@@ -50,4 +50,5 @@ export interface IRedemption {
     createdAt?: string;
     updatedAt?: string;
     approval: boolean;
+    rejected?: boolean;
 }

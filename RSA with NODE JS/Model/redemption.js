@@ -19,6 +19,10 @@ const redemptionSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    rejected: {               // set when an admin rejects (approval alone can't tell rejected from pending)
+        type: Boolean,
+        default: false
+    },
     address: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Address',

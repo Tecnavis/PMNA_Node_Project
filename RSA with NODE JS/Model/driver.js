@@ -76,6 +76,9 @@ const driverSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  locationUpdatedAt: {          // when the app last sent its GPS position (live tracking)
+    type: Date,
+  },
   currentBookingStatus: {
     type: String,
   },

@@ -7,7 +7,7 @@ module.exports = (agenda) => {
         const { bookingId } = job.attrs.data;
 
         try {
-            const booking = await Booking.findById(bookingId)
+            const booking = await Booking.findOne({ _id: bookingId, _includeHidden: true })
                 .populate('driver')
                 .populate('provider'); // populate both
 
@@ -21,7 +21,7 @@ module.exports = (agenda) => {
                 const notificationResult = await NotificationService.sendNotification({
                     token: receiver.fcmToken,
                     title: "New Booking Notification",
-                    body: 'A new booking has been assigned to you.',
+                    body: `New case ${booking.fileNumber || ''} assigned to you${booking.location ? ` · Pickup: ${String(booking.location).slice(0, 80)}` : ''}`,
                     sound: 'alert'
                 });
 

@@ -20,8 +20,8 @@ import CompleteShowRoom from './ShowRoom/CompleteShowRoom';
 import PendingBookingsShowRoom from './ShowRoom/PendingBookingShowRoom';
 
 const COLORS = {
-  primary: '#6366F1',
-  secondary: '#34D399',
+  primary: '#B91C1C',   // RSA red
+  secondary: '#334155',
   accent: '#FBBF24',
   background: '#F8FAFC',
   text: '#4B5563',
@@ -76,13 +76,14 @@ const ShowRm: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen panel"
+      className="min-h-screen"
       style={{ backgroundColor: COLORS.background }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <h1 className="text-lg font-bold text-slate-800 mb-4">Bookings</h1>
         {/* Main Tabs */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex rounded-lg p-1 " style={{ backgroundColor: COLORS.border }}>
+        <div className="flex sm:justify-center mb-4 overflow-x-auto -mx-3 px-3">
+          <div className="inline-flex rounded-lg p-1 shrink-0" style={{ backgroundColor: COLORS.border }}>
             {Object.entries(tabConfig).map(([key, { label, icon }]) => (
               <button
                 key={key}
@@ -90,7 +91,7 @@ const ShowRm: React.FC = () => {
                   setActiveTab(key as keyof typeof tabConfig);
                   setSelectedOption('bookings'); // Reset to default sub-tab
                 }}
-                className={`flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-all duration-300 ${activeTab === key
+                className={`flex items-center justify-center whitespace-nowrap px-3 sm:px-4 py-2 text-sm font-medium rounded-md transition-all duration-300 ${activeTab === key
                   ? 'shadow-sm text-white'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                   }`}
@@ -106,8 +107,8 @@ const ShowRm: React.FC = () => {
         </div>
 
         {/* Sub Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-full p-1" style={{ backgroundColor: COLORS.border }}>
+        <div className="flex sm:justify-center mb-4 overflow-x-auto -mx-3 px-3">
+          <div className="inline-flex rounded-full p-1 shrink-0" style={{ backgroundColor: COLORS.border }}>
             {Object.entries(subTabLabels).map(([key, { label, icon }]) => (
               <button
                 key={key}
@@ -135,7 +136,7 @@ const ShowRm: React.FC = () => {
           />
 
           {/* Animated Content */}
-          <div className="p-6 shadow-md">
+          <div className="p-3 sm:p-6 overflow-x-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${activeTab}-${selectedOption}`}

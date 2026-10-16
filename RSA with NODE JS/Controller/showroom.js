@@ -77,8 +77,10 @@ exports.createShowroom = async (req, res) => {
     const imagePath = req.file ? req.file.filename : null;
 
     // Generate links first
+    // Use the SAME id for the links and the saved showroom (links used to point to a random id)
+    const newShowroomId = new mongoose.Types.ObjectId();
     const showroomLinks = generateShowRoomLink({
-        _id: new mongoose.Types.ObjectId().toString(),
+        _id: newShowroomId.toString(),
         showroomId: finalShowroomId,
         name,
         location,
@@ -91,6 +93,7 @@ exports.createShowroom = async (req, res) => {
 
     // Create showroom with all links
     const showroom = new Showroom({
+      _id: newShowroomId,
       name,
       showroomId: finalShowroomId,
       description,
@@ -117,7 +120,8 @@ exports.createShowroom = async (req, res) => {
           selected: parsedServices.showroom?.selected || false,
         },
       },
-      addedBy: addedBy || null,
+      // a marketing executive's own showrooms are linked to them automatically
+      addedBy: req.user?.role === 'executive' ? req.user.id : (addedBy || null),
       // Set individual link fields
       showroomLink: showroomLinks.webLink,
       mobileDeepLink: showroomLinks.mobileDeepLink,
@@ -887,7 +891,9 @@ exports.loginShowroom = async (req, res) => {
 
     const token = jwt.sign({ id: isShowroomExist._id, role: "Showroom", name: isShowroomExist?.name }, process.env.JWT_SECRET);
 
-    return res.status(200).json({ message: 'Login sucessfull', success: true, data: isShowroomExist, token });
+    const safe = isShowroomExist.toObject();
+    delete safe.password; // never send the password back to the browser
+    return res.status(200).json({ message: 'Login sucessfull', success: true, data: safe, token });
   } catch (error) {
     console.error("Error in showroom login:", error);
 

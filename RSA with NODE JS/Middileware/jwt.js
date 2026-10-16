@@ -11,6 +11,14 @@ module.exports = function (req, res, next) {
   try {
     const decoded = jwt.verify(token.replace('Bearer ', ''), process.env.JWT_SECRET);
 
+    // TV-screen tokens are view-only and work only on /tv/live
+    if (decoded && decoded.role === 'TV') {
+      return res.status(403).json({ message: 'Not allowed' });
+    }
+    // Public customer logins (RSA app) only work on the customer API
+    if (decoded && decoded.role === 'Customer' && !String(req.originalUrl || '').startsWith('/customer/')) {
+      return res.status(403).json({ message: 'Not allowed' });
+    }
     req.user = decoded;
     next();
   } catch (error) {

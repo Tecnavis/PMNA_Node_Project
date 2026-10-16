@@ -1,4 +1,5 @@
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
+import TableExportButtons from '../../components/TableExportButtons';
 import { useEffect, useState } from 'react';
 import sortBy from 'lodash/sortBy';
 import Tippy from '@tippyjs/react';
@@ -371,11 +372,12 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                 <div className="panel mt-6">
                     <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
                         <h5 className="font-semibold text-lg dark:text-white-light">PMNA Drivers</h5>
-                        <div className="ltr:ml-auto rtl:mr-auto">
+                        <TableExportButtons containerId="tbl-dcp-drivers" title="Drivers" />
+<div className="ltr:ml-auto rtl:mr-auto">
                             <input type="text" className="form-input w-auto" placeholder="Search..." value={searchDriver} onChange={(e) => setSearchDriver(e.target.value)} />
                         </div>
                     </div>
-                    <div className="datatables">
+                    <div className="datatables" id="tbl-dcp-drivers">
                         <DataTable
                             className="whitespace-nowrap table-hover"
                             records={drivers} // Set an empty array to clear the table
@@ -431,11 +433,12 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                 <div className="panel mt-6">
                     <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
                         <h5 className="font-semibold text-lg dark:text-white-light">Providers</h5>
-                        <div className="ltr:ml-auto rtl:mr-auto">
+                        <TableExportButtons containerId="tbl-dcp-providers" title="Providers" />
+<div className="ltr:ml-auto rtl:mr-auto">
                             <input type="text" className="form-input w-auto" placeholder="Search..." value={searchProviders} onChange={(e) => setSearchProviders(e.target.value)} />
                         </div>
                     </div>
-                    <div className="datatables">
+                    <div className="datatables" id="tbl-dcp-providers">
                         <DataTable
                             className="whitespace-nowrap table-hover"
                             records={providers} // Set an empty array to clear the table
@@ -488,11 +491,12 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
             <div className="panel mt-6">
                 <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
                     <h5 className="font-semibold text-lg dark:text-white-light">Companies</h5>
-                    <div className="ltr:ml-auto rtl:mr-auto">
+                    <TableExportButtons containerId="tbl-dcp-companies" title="Companies" />
+<div className="ltr:ml-auto rtl:mr-auto">
                         <input type="text" className="form-input w-auto" placeholder="Search..." value={searchCompnies} onChange={(e) => setSearchCompanies(e.target.value)} />
                     </div>
                 </div>
-                <div className="datatables">
+                <div className="datatables" id="tbl-dcp-companies">
                     <DataTable
                         className="whitespace-nowrap table-hover"
                         records={companies} // Set an empty array to clear the table

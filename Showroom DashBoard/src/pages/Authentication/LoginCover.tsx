@@ -35,7 +35,7 @@ const LoginCover: React.FC = () => {
 
             localStorage.setItem('showroomId', data?._id);
             localStorage.setItem('userName', data?.username);
-            localStorage.setItem('password', data?.password);
+            localStorage.removeItem('password'); // older versions stored it — clean up
             localStorage.setItem('token', token);
 
             if (success) {

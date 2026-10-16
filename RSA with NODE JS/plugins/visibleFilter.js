@@ -2,8 +2,13 @@
 const visibleFilter = (schema) => {
     const methods = ['find', 'findOne', 'countDocuments', 'findOneAndUpdate', 'findById'];
 
-    const today = new Date();
-    today.setUTCHours(23, 59, 59, 999);
+    // "today" must be worked out on every query — it used to be fixed when the server started,
+    // so after midnight scheduled bookings stayed hidden until the next restart.
+    const endOfToday = () => {
+        const today = new Date();
+        today.setUTCHours(23, 59, 59, 999);
+        return today;
+    };
 
     methods.forEach((method) => {
         schema.pre(method, function () {
@@ -12,6 +17,7 @@ const visibleFilter = (schema) => {
                 delete query._includeHidden;
                 return;
             }
+            const today = endOfToday();
 
             this.where({
                 $or: [

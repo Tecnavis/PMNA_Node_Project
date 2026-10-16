@@ -59,6 +59,18 @@ io.on("connection", (socket) => {
 
     io.emit('getOnlineUsers', Object.keys(userSocketMap))
 
+    // Admin website joins the Operations room (live driver locations) with its login token
+    socket.on('join-ops', (token) => {
+        try {
+            const decoded = require('jsonwebtoken').verify(String(token || '').replace('Bearer ', ''), process.env.JWT_SECRET);
+            const role = decoded?.user?.role || decoded?.role;
+            if (['Admin', 'Staff'].includes(role)) {
+                socket.join('ops');
+                socket.emit('ops-joined');
+            }
+        } catch (e) { /* invalid token: ignore */ }
+    });
+
     socket.on('authenticate-logger', (token) => {
         if (token === process.env.LOGGER_SECRET) {
             socket.join('logger-room');
@@ -90,4 +102,9 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-module.exports = { io, app, server };
+/** Push an event to logged-in admin website users only (Operations page). */
+const emitOps = (event, data) => {
+    try { io.to('ops').emit(event, data); } catch (e) { /* never break the request */ }
+};
+
+module.exports = { io, app, server, emitOps };

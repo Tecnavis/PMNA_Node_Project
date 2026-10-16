@@ -1,4 +1,5 @@
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
+import TableExportButtons from '../../components/TableExportButtons';
 import { useEffect, useState } from 'react';
 import sortBy from 'lodash/sortBy';
 import { setPageTitle } from '../../store/themeConfigSlice';
@@ -235,12 +236,13 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                 {/* Header */}
                 <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
                     <h5 className="font-semibold text-lg dark:text-white-light">Staff Report</h5>
-                    <div className="ltr:ml-auto rtl:mr-auto">
+                    <TableExportButtons containerId="tbl-staff-report" title="Staff report" />
+<div className="ltr:ml-auto rtl:mr-auto">
                         <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
                 </div>
                 {/* Data Table */}
-                <div className="datatables">
+                <div className="datatables" id="tbl-staff-report">
                     <DataTable
                         className="whitespace-nowrap table-hover"
                         records={recordsData}

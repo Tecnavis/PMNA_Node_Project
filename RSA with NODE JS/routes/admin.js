@@ -13,7 +13,8 @@ router.post('/register', controller.registerAdmin);
 router.post('/login', controller.loginAdmin);
 
 // Add/Update Admin QR
-router.get('/qr', jwt, roleAuth('Admin', "Driver", "Provider", 'Staff'), controller.getAdminQR);
+// Payment QR shown in the driver & provider apps — any logged-in user (older provider tokens carry no role)
+router.get('/qr', jwt, controller.getAdminQR);
 
 router.patch('/qr', jwt, roleAuth('Admin'), upload.single('qr', adminQr), controller.updateAdminQR);
 

@@ -1354,8 +1354,10 @@ useEffect(() => {
                 },
             });
 
-            if (rewardAmount > 0 && (bookingRewardAmount !== rewardAmount)) {
-                await redeemShowroomReward(data.showroom || '', rewardAmount);
+            // Only the change is deducted (or returned) — the earlier amount was already taken from the showroom
+            if (bookingRewardAmount !== rewardAmount) {
+                await redeemShowroomReward(data.showroom || '', rewardAmount - (bookingRewardAmount || 0));
+                setBookingRewardAmount(rewardAmount);
             }
 
             Swal.fire({

@@ -35,16 +35,17 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-2">
       {/* Main Tabs */}
-      <div className="flex justify-center mb-6">
-        <div className="inline-flex bg-gray-200 p-1 rounded-lg">
+      <h1 className="text-lg font-bold text-slate-800 mb-4 max-w-7xl mx-auto px-1">Completed bookings</h1>
+      <div className="flex sm:justify-center mb-4 overflow-x-auto">
+        <div className="inline-flex bg-gray-200 p-1 rounded-lg shrink-0">
             
           {Object.entries(tabConfig).map(([key, { label, icon }]) => (
             <button
               key={key}
               onClick={() => setActiveTab(key as any)}
-              className={`flex items-center px-4 py-2 rounded-md font-medium transition ${
+              className={`flex items-center whitespace-nowrap px-3 sm:px-4 py-2 rounded-md font-medium transition ${
                 activeTab === key
-                  ? 'bg-indigo-600 text-white shadow'
+                  ? 'bg-red-700 text-white shadow'
                   : 'text-gray-700 hover:bg-white'
               }`}
             >
@@ -56,7 +57,7 @@ const Home: React.FC = () => {
       </div>
 
       {/* Only Completed Panel */}
-      <div className="bg-white rounded-xl shadow-sm p-6  mx-auto">
+      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-6 max-w-7xl mx-auto overflow-x-auto">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <IoMdCheckmarkCircleOutline className="mr-2 text-green-500" />
           {label} — Completed Bookings

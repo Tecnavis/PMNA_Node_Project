@@ -1,586 +1,447 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { IRootState } from '../store';
 import ReactApexChart from 'react-apexcharts';
-import { setPageTitle } from '../store/themeConfigSlice';
 import axios from 'axios';
+import Swal from 'sweetalert2';
+import { BarChart3, X } from 'lucide-react';
+import { IRootState } from '../store';
+import { setPageTitle } from '../store/themeConfigSlice';
 import { dateFormate } from '../utils/dateUtils';
-import Swal from "sweetalert2";
 import { VehicleRecord } from './VehicleDetails/VehicleCompliance';
 import { BASE_URL } from '../config/axiosConfig';
 import { ROLES } from '../constants/roles';
 import AddVehicleCompliance from './VehicleDetails/addVehicleCompliance';
 import BookingDashboard from './Bookings/BookingChart';
-import { FaChartBar, FaTimes } from 'react-icons/fa';
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import { BarChart3, ChartBarIcon, X } from 'lucide-react';
+import MyDayPanel from './Reminders/MyDayPanel';
+import { ApprovalsData, BoardData, LiveData, STATUS_COLORS, SummaryData, fetchApprovals, fetchBoard, fetchLive, fetchSummary, formatMinutes } from './Operations/opsApi';
 
-interface Record {
-    _id: string,
-    type: string,
-    expiryDate: string,
-    vehicleNumber: string,
+interface ComplianceRecord {
+    _id: string;
+    type: string;
+    expiryDate: string;
+    vehicleNumber: string;
 }
+type Counts = { showroom: number; whatsapp: number; other: number; inProgress: number; completed: number };
+type TrendPoint = { day: string; count: number; completed: number; cancelled: number; amount: number };
+
+const REFRESH_MS = 30000;
+const inr = (n: number) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
+const ALERT_SOUND = '/mixkit-signal-alert-771.wav';
+
+const Kpi: React.FC<{ label: string; value: React.ReactNode; to?: string; tone?: string; pulse?: boolean; hint?: string }> = ({ label, value, to, tone = '', pulse, hint }) => {
+    const body = (
+        <div className={`panel !p-3 h-full transition hover:shadow-md ${pulse ? 'ring-2 ring-offset-1 ring-primary animate-pulse' : ''}`} title={hint}>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-white-dark truncate">{label}</div>
+            <div className={`mt-1 text-2xl font-bold leading-none ${tone}`}>{value}</div>
+        </div>
+    );
+    return to ? <Link to={to} className="block h-full">{body}</Link> : body;
+};
 
 const Index = () => {
-
-    const [blink, setBlink] = useState<boolean>(false);
-    const [role, setRole] = useState<string>('');
-    const [recordId, setRecordId] = useState<string>('');
-    const [openRenewal, setOpenRenewal] = useState<boolean>(false);
-    const [expiredRecords, setExpiredRecords] = useState<Record[]>([]);
-    const [exceededRecords, setExceededRecords] = useState<VehicleRecord[]>([]);
-    const [showBookingDashboard, setShowBookingDashboard] = useState<boolean>(false);
-    const [userInteracted, setUserInteracted] = useState(false);
-    const [openCompilanceModalForDissmiss, setOpenCompilanceModalForDissmiss] = useState(false);
-    const [pendingAlerts, setPendingAlerts] = useState<{type: 'showroom' | 'whatsapp', count: number}[]>([]);
-    const [dismissRecordType, setDismissRecordType] = useState<string>('');
-    const [dismissVehicleNumber, setDismissVehicleNumber] = useState<string>('');
-
     const navigate = useNavigate();
     const dispatch = useDispatch();
-
+    const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    const today = new Date()
+
+    const [role, setRole] = useState<string>(localStorage.getItem('role') || '');
+    const [counts, setCounts] = useState<Counts | null>(null);
+    const [expiredRecords, setExpiredRecords] = useState<ComplianceRecord[]>([]);
+    const [exceededRecords, setExceededRecords] = useState<VehicleRecord[]>([]);
+    const [board, setBoard] = useState<BoardData | null>(null);
+    const [approvals, setApprovals] = useState<ApprovalsData | null>(null);
+    const [live, setLive] = useState<LiveData | null>(null);
+    const [today, setToday] = useState<SummaryData | null>(null);
+    const [trend, setTrend] = useState<TrendPoint[]>([]);
+    const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+    const [opsError, setOpsError] = useState('');
+    const [showCharts, setShowCharts] = useState(false);
+
+    // compliance renewal modal
+    const [recordId, setRecordId] = useState('');
+    const [openRenewal, setOpenRenewal] = useState(false);
+    const [dismissMode, setDismissMode] = useState(false);
+    const [dismissRecordType, setDismissRecordType] = useState('');
+    const [dismissVehicleNumber, setDismissVehicleNumber] = useState('');
+
+    // new-booking sound alerts
+    const prev = useRef<{ showroom: number; whatsapp: number } | null>(null);
+    const audio = useRef<HTMLAudioElement | null>(null);
+    const interacted = useRef(false);
+    const pendingSound = useRef(false);
+
+    useEffect(() => { dispatch(setPageTitle('Dashboard')); }, [dispatch]);
 
     useEffect(() => {
-        dispatch(setPageTitle('Sales Admin'));
-    });
+        audio.current = new Audio(ALERT_SOUND);
+        audio.current.preload = 'auto';
+        const onInteract = () => {
+            interacted.current = true;
+            if (pendingSound.current) { pendingSound.current = false; audio.current?.play().catch(() => undefined); }
+        };
+        ['click', 'keydown', 'touchstart'].forEach((e) => document.addEventListener(e, onInteract, { once: false }));
+        return () => {
+            ['click', 'keydown', 'touchstart'].forEach((e) => document.removeEventListener(e, onInteract));
+            audio.current?.pause();
+            audio.current = null;
+        };
+    }, []);
+    const ding = () => {
+        if (!audio.current) return;
+        if (!interacted.current) { pendingSound.current = true; return; }
+        audio.current.currentTime = 0;
+        audio.current.play().catch(() => undefined);
+    };
 
-    useEffect(() => {
-        const storedRole = localStorage.getItem('role');
-        setRole(storedRole || '')
-    }, [])
-
-    // checking for token 
+    // login check + staff role name (role id → name), as before
     useEffect(() => {
         const token = localStorage.getItem('token');
         const storedRole = localStorage.getItem('role');
-        const navigateToLogin = () => navigate('/auth/boxed-signin');
-        // Define the type of the role object
-        interface Role {
-            _id: string;
-            name: string;
+        if (!token) { navigate('/auth/boxed-signin'); return; }
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        if (storedRole && storedRole !== 'admin' && /^[0-9a-f]{24}$/i.test(storedRole)) {
+            axios.get<{ _id: string; name: string }[]>(`${backendUrl}/role`).then((r) => {
+                const found = r.data.find((x) => x._id === storedRole);
+                if (found) { localStorage.setItem('role', found.name); setRole(found.name); }
+            }).catch(() => undefined);
         }
+    }, [navigate, backendUrl]);
 
-
-        const fetchRole = async () => {
-            try {
-                const response = await axios.get<Role[]>(`${backendUrl}/role`); // Define the response type
-                const roles = response.data;
-
-                const userRole = roles.find((r: Role) => r._id === storedRole); // Type of 'r' is Role
-
-                if (userRole) {
-                    localStorage.setItem('role', userRole.name);
-                    setRole(userRole.name)
-                } else {
-                    setRole('')
-                }
-            } catch (error) {
-                console.error('Error fetching roles:', error);
-            }
+    const loadCounts = useCallback(async () => {
+        const r = await axios.get(`${backendUrl}/dashboard`);
+        const d = (Array.isArray(r.data?.bookingData) && r.data.bookingData[0]) || {};
+        const next: Counts = {
+            showroom: d.newBookingsShowRoom || 0,
+            whatsapp: d.whatsappBooking || 0,
+            other: d.newBookingsOther || 0,
+            inProgress: d.pendingBookings || 0,
+            completed: d.completedBookings || 0,
         };
+        if (prev.current && (next.showroom > prev.current.showroom || next.whatsapp > prev.current.whatsapp)) ding();
+        prev.current = { showroom: next.showroom, whatsapp: next.whatsapp };
+        setCounts(next);
+        setExpiredRecords(Array.isArray(r.data?.records) ? r.data.records : []);
+    }, [backendUrl]);
 
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-            if (storedRole !== 'admin') {
-                fetchRole();
-            }
-        } else {
-            console.log('Token not found in localStorage');
-            navigateToLogin();
+    const loadServiceKm = useCallback(async () => {
+        try {
+            const res = await axios.get(`${BASE_URL}/vehicle/exceeded-service`, { timeout: 15000 });
+            setExceededRecords(Array.isArray(res.data?.vehicles) ? res.data.vehicles : []);
+        } catch (error: any) {
+            if (error?.response?.status === 404) setExceededRecords([]);
         }
-        fetchBookings()
-        fetchServiceKmExceededVehicle()
-    }, [navigate]);
-
-    const [loading, setLoading] = useState(true);
-    const [salesByCategory, setSalesByCategory] = useState({
-        series: [0, 0, 0, 0],
-        options: { /* Initial chart options */ }
-    });
-
-    const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
-
-    const [prevBookings, setPrevBookings] = useState({
-        showroom: 0,
-        whatsapp: 0
-    });
-    
-    // Refs for audio elements
-    const showroomAlertRef = useRef<HTMLAudioElement | null>(null);
-    const whatsappAlertRef = useRef<HTMLAudioElement | null>(null);
-
-    // Initialize audio elements
-    useEffect(() => {
-        showroomAlertRef.current = new Audio('/public/mixkit-signal-alert-771.wav');
-        whatsappAlertRef.current = new Audio('/public/mixkit-signal-alert-771.wav');
-        
-        // Optional: Preload audio files
-        showroomAlertRef.current.preload = 'auto';
-        whatsappAlertRef.current.preload = 'auto';
-        
-        return () => {
-            // Cleanup
-            if (showroomAlertRef.current) {
-                showroomAlertRef.current.pause();
-                showroomAlertRef.current = null;
-            }
-            if (whatsappAlertRef.current) {
-                whatsappAlertRef.current.pause();
-                whatsappAlertRef.current = null;
-            }
-        };
     }, []);
 
-    // Initialize audio elements with user interaction
+    const loadOps = useCallback(async () => {
+        const results = await Promise.allSettled([
+            fetchBoard(), fetchApprovals(), fetchLive(), fetchSummary(),
+            axios.get(`${BASE_URL}/ops/trend`, { params: { days: 14 } }).then((r) => (Array.isArray(r.data?.series) ? (r.data.series as TrendPoint[]) : [])),
+        ]);
+        const [b, a, l, s, t] = results;
+        if (b.status === 'fulfilled') setBoard(b.value);
+        if (a.status === 'fulfilled') setApprovals(a.value);
+        if (l.status === 'fulfilled') setLive(l.value);
+        if (s.status === 'fulfilled') setToday(s.value);
+        if (t.status === 'fulfilled') setTrend(t.value);
+        const failed = results.filter((x) => x.status === 'rejected').length;
+        setOpsError(failed === results.length ? 'Live figures could not be loaded. Retrying…' : '');
+        setUpdatedAt(new Date());
+    }, []);
+
+    const loadAll = useCallback(() => {
+        loadCounts().catch(() => undefined);
+        loadOps();
+    }, [loadCounts, loadOps]);
+
     useEffect(() => {
-        const handleUserInteraction = () => {
-            setUserInteracted(true);
-            // Play any pending alerts
-            pendingAlerts.forEach(alert => {
-                if (alert.type === 'showroom') {
-                    playShowroomAlert();
-                } else {
-                    playWhatsappAlert();
-                }
-            });
-            setPendingAlerts([]);
-            
-            // Remove event listeners after first interaction
-            document.removeEventListener('click', handleUserInteraction);
-            document.removeEventListener('keydown', handleUserInteraction);
-            document.removeEventListener('touchstart', handleUserInteraction);
-        };
+        loadAll();
+        loadServiceKm();
+        const t = window.setInterval(() => { if (!document.hidden) loadAll(); }, REFRESH_MS);
+        return () => window.clearInterval(t);
+    }, [loadAll, loadServiceKm]);
 
-        // Add event listeners for user interaction
-        document.addEventListener('click', handleUserInteraction);
-        document.addEventListener('keydown', handleUserInteraction);
-        document.addEventListener('touchstart', handleUserInteraction);
-
-        return () => {
-            document.removeEventListener('click', handleUserInteraction);
-            document.removeEventListener('keydown', handleUserInteraction);
-            document.removeEventListener('touchstart', handleUserInteraction);
-        };
-    }, [pendingAlerts]);
-
-    const fetchBookings = async () => {
-        const response = await axios.get(`${backendUrl}/dashboard`);
-        const data = response.data.bookingData[0];
-        setExpiredRecords(response.data.records);
-
-        // Check for new ShowRoom bookings
-        if (data.newBookingsShowRoom > prevBookings.showroom) {
-            setBlink(true);
-            if (userInteracted) {
-                playShowroomAlert();
-            } else {
-                setPendingAlerts(prev => [...prev, { type: 'showroom', count: data.newBookingsShowRoom }]);
-            }
-        } else if (data.newBookingsShowRoom === 0) {
-            setBlink(false);
-        }
-
-        // Check for new WhatsApp bookings
-        if (data.whatsappBooking > prevBookings.whatsapp) {
-            if (userInteracted) {
-                playWhatsappAlert();
-            } else {
-                setPendingAlerts(prev => [...prev, { type: 'whatsapp', count: data.whatsappBooking }]);
-            }
-        }
-
-        // Update previous bookings state
-        setPrevBookings({
-            showroom: data.newBookingsShowRoom,
-            whatsapp: data.whatsappBooking
-        });
-        setSalesByCategory({
-            series: [data.newBookingsShowRoom, data.newBookingsOther, data.pendingBookings, data.completedBookings, data.whatsappBooking],
-            options: {
-                chart: {
-                    type: 'donut',
-                    height: 460,
-                    fontFamily: 'Nunito, sans-serif',
-                },
-                dataLabels: {
-                    enabled: false,
-                },
-                stroke: {
-                    show: true,
-                    width: 25,
-                    colors: isDark ? '#0e1726' : '#fff',
-                },
-                colors: isDark ? ['#5c1ac3', '#e2a03f', '#e7515a', '#3182ce'] : ['#e2a03f', '#5c1ac3', '#e7515a', '#3182ce'],
-                legend: {
-                    position: 'bottom',
-                    horizontalAlign: 'center',
-                    fontSize: '14px',
-                    markers: {
-                        width: 10,
-                        height: 10,
-                        offsetX: -2,
-                    },
-                    height: 50,
-                    offsetY: 20,
-                },
-                plotOptions: {
-                    pie: {
-                        donut: {
-                            size: '65%',
-                            background: 'transparent',
-                            labels: {
-                                show: true,
-                                name: {
-                                    show: true,
-                                    fontSize: '29px',
-                                    offsetY: -10,
-                                },
-                                value: {
-                                    show: true,
-                                    fontSize: '26px',
-                                    color: isDark ? '#bfc9d4' : undefined,
-                                    offsetY: 16,
-                                    formatter: (val: any) => {
-                                        return val;
-                                    },
-                                },
-                                total: {
-                                    show: true,
-                                    label: 'Total',
-                                    color: '#888ea8',
-                                    fontSize: '29px',
-                                    formatter: (w: any) => {
-                                        return w.globals.seriesTotals.reduce(function (a: any, b: any) {
-                                            return a + b;
-                                        }, 0);
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                labels: ['ShowRoom Booking', 'Other New Bookings', 'Pending Bookings', 'Completed Bookings'],
-                states: {
-                    hover: {
-                        filter: {
-                            type: 'none',
-                            value: 0.15,
-                        },
-                    },
-                    active: {
-                        filter: {
-                            type: 'none',
-                            value: 0.15,
-                        },
-                    },
-                },
-            }
-        });
-        setLoading(false);
-
-    };
-// Function to play ShowRoom booking alert
-    const playShowroomAlert = () => {
-        if (showroomAlertRef.current) {
-            showroomAlertRef.current.currentTime = 0; // Reset to start
-            showroomAlertRef.current.play().catch(error => {
-                console.warn('ShowRoom alert play failed:', error);
-            });
-        }
-    };
-
-    // Function to play WhatsApp booking alert
-    const playWhatsappAlert = () => {
-        if (whatsappAlertRef.current) {
-            whatsappAlertRef.current.currentTime = 0; // Reset to start
-            whatsappAlertRef.current.play().catch(error => {
-                console.warn('WhatsApp alert play failed:', error);
-            });
-        }
-    };
-
-    // Optional: Add manual trigger functions for testing
-    const testShowroomAlert = () => {
-        playShowroomAlert();
-    };
-
-    const testWhatsappAlert = () => {
-        playWhatsappAlert();
-    };
-   // Example for your vehicle query
-const fetchServiceKmExceededVehicle = async () => {
-  try {
-    const res = await axios.get(`${BASE_URL}/vehicle/exceeded-service`, {
-      timeout: 15000 // 15 second timeout
-    });
-    setExceededRecords(res.data.vehicles || []);
-  } catch (error: any) {
-    console.error('Fetch service km exceeded vehicle failed:', error);
-    if(error?.response.status === 404){
-        setExceededRecords([])
-    }
-  }
-};
-    
-    const handleDismissRecord = async (record: Record) => {
-        try {
-            const result = await Swal.fire({
-                title: `Dismiss ${record.type} Expiry?`,
-                text: `Are you sure you want to dismiss the ${record.type} expiry for vehicle ${record.vehicleNumber}?`,
-                color: '#ffff',
-                showCancelButton: true,
-                confirmButtonColor: "#ef4444",
-                cancelButtonColor: "#e5e7eb",
-                confirmButtonText: "Yes, Dismiss and update record."
-            });
-
-            if (!result.isConfirmed) {
-                return
-            } 
-            await axios.patch(`${backendUrl}/vehicle/compliance-record-dismiss`, {
-                    type: record.type,
-                    vehicleNumber: record.vehicleNumber,
-                    role,
-                });
-            
-            Swal.fire({
-                icon: 'success',
-                title: `${record.type} dismissed successfully.`,
-                toast: true,
-                position: 'top',
-                timer: 3000,
-                showConfirmButton: false,
-            });
-            setRecordId(record._id);
-            setDismissRecordType(record.type);
-            setOpenCompilanceModalForDissmiss(true);
-            setOpenRenewal(true);
-
-        } catch (error: any) {
-            Swal.fire({
-                title: "Error",
-                text: error.message || "Failed to dismiss the record.",
-                toast: true,
-                icon: "error",
-                position: 'top',
-                showConfirmButton: false,
-                timer: 3000,
-                padding: '10px 20px',
-            });
-        }
-    }
-
-   const handleDismissVehicleServiceKm = async (vehicle: VehicleRecord) => {
-    try {
+    // ---------------- compliance actions (unchanged behaviour)
+    const handleRenewal = (id: string) => { setRecordId(id); setOpenRenewal(true); };
+    const handleDismissVehicleServiceKm = async (vehicle: VehicleRecord) => {
         const result = await Swal.fire({
-            title: `Dismiss Service KM Exceeded?`,
-            text: `This will update the vehicle status and mark all completed bookings as requiring service. Continue?`,
-            color: '#ffff',
+            title: 'Dismiss Service KM Exceeded?',
+            text: 'This will update the vehicle status and mark all completed bookings as requiring service. Continue?',
             showCancelButton: true,
-            confirmButtonColor: "#ef4444",
-            cancelButtonColor: "#e5e7eb",
-            confirmButtonText: "Yes, Dismiss it and update record"
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Yes, dismiss and update record',
         });
-            
         if (!result.isConfirmed) return;
-
         setRecordId(vehicle?.recordId || '');
-        setDismissRecordType("Service KM Exceeded");
+        setDismissRecordType('Service KM Exceeded');
         setDismissVehicleNumber(vehicle.serviceVehicle);
-        setOpenCompilanceModalForDissmiss(true);
+        setDismissMode(true);
         setOpenRenewal(true);
-    } catch (error: any) {
-        Swal.fire({
-            title: "Error",
-            text: error.message || "Failed to update service status",
-            toast: true,
-            icon: "error",
-            position: 'top',
-            showConfirmButton: false,
-            timer: 3000,
-            padding: '10px 20px',
-        });
-    }
-};
-
-
-    const compareDates = (dateString: string, currentDate: Date): boolean => {
-        const dateObj = new Date(dateString);
-        return dateObj > currentDate;
     };
+    const expiryText = (r: ComplianceRecord) => {
+        const d = new Date(r.expiryDate);
+        const t = new Date();
+        if (d.toDateString() === t.toDateString()) return 'expires today';
+        return d > t ? `expires ${dateFormate(r.expiryDate)}` : `expired ${dateFormate(r.expiryDate)}`;
+    };
+    const canRenew = ['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER, ROLES.Manager].includes(role);
 
-    const handleRenewal = (recordId: string) => {
-        setRecordId(recordId)
-        setOpenRenewal(true)
-    }
+    // ---------------- derived
+    const delayedCases = useMemo(() => (board?.columns || []).flatMap((c) => c.cases).filter((c) => c.delayed).sort((a, b) => (b.minutesInStatus || 0) - (a.minutesInStatus || 0)), [board]);
+    const unassigned = useMemo(() => (board?.columns || []).flatMap((c) => c.cases).filter((c) => c.unassigned), [board]);
+    const pipeline = board?.columns.filter((c) => c.status !== 'Scheduled') || [];
+    const pipelineMax = Math.max(1, ...pipeline.map((c) => c.cases.length));
+    const alertsCount = expiredRecords.length + exceededRecords.length;
+
+    const chart = useMemo(() => ({
+        series: [
+            { name: 'Bookings', type: 'column', data: trend.map((d) => d.count) },
+            { name: 'Completed', type: 'line', data: trend.map((d) => d.completed) },
+        ],
+        options: {
+            chart: { toolbar: { show: false }, fontFamily: 'inherit', zoom: { enabled: false } },
+            colors: ['#D7141A', '#00ab55'],
+            stroke: { width: [0, 2], curve: 'smooth' as const },
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
+            dataLabels: { enabled: false },
+            legend: { position: 'top' as const, horizontalAlign: 'right' as const, fontSize: '11px', labels: { colors: isDark ? '#bfc9d4' : undefined } },
+            grid: { borderColor: isDark ? '#191e3a' : '#e0e6ed', padding: { left: 4, right: 4 } },
+            xaxis: { categories: trend.map((d) => new Date(`${d.day}T12:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })), labels: { style: { fontSize: '10px', colors: isDark ? '#888ea8' : undefined } } },
+            yaxis: { labels: { style: { fontSize: '10px', colors: isDark ? '#888ea8' : undefined } }, forceNiceScale: true, min: 0 },
+            tooltip: { theme: isDark ? 'dark' : 'light', shared: true, intersect: false, y: { formatter: (v: number, o: any) => (o.seriesIndex === 0 ? `${v} · ${inr(trend[o.dataPointIndex]?.amount || 0)}` : `${v}`) } },
+        },
+    }), [trend, isDark]);
+
+    const totalToday = trend.length ? trend[trend.length - 1] : null;
 
     return (
-        <div className="container mx-auto p-6 bg-cover bg-center bg-no-repeat">
-            <ul className="flex space-x-2 rtl:space-x-reverse">
-                <li>
-                    <Link to="/" className="text-primary hover:underline">
-                        Dashboard
-                    </Link>
-                </li>
-                <li className="before:content-['/'] ltr:before:mr-2 rtl:before:ml-2">
-                    <span>Bookings</span>
-                </li>
-            </ul>
- {/* Toggle Button for Booking Dashboard */}
-    <div className="mb-6 flex justify-end">
-    <button
-        onClick={() => setShowBookingDashboard(!showBookingDashboard)}
-        className="btn btn-primary flex items-center gap-2"
-    >
-        {showBookingDashboard ? (
-            <>
-                <X className="w-4 h-4" />
-                <span>Hide Graph</span>
-            </>
-        ) : (
-            <>
-                <BarChart3 className="w-4 h-4" />
-                <span>Show Graph</span>
-            </>
-        )}
-    </button>
-</div>
-        {showBookingDashboard ? (
-            // Show Booking Dashboard when toggled
-            <div className="flex mb-6">
-                <BookingDashboard />
+        <div className="space-y-4">
+            {/* Title row */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <h2 className="text-xl font-semibold dark:text-white-light">Dashboard</h2>
+                    <p className="text-[11px] text-white-dark">
+                        {updatedAt ? `Live · updated ${updatedAt.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}` : 'Loading…'}
+                        {opsError && <span className="text-danger ltr:ml-2">{opsError}</span>}
+                    </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Link to="/add-booking" className="btn btn-primary btn-sm">+ New booking</Link>
+                    <Link to="/operations" className="btn btn-outline-primary btn-sm">Operations</Link>
+                    <Link to="/reports" className="btn btn-outline-primary btn-sm">Reports</Link>
+                    <button type="button" onClick={() => setShowCharts((s) => !s)} className="btn btn-outline-secondary btn-sm flex items-center gap-1">
+                        {showCharts ? <><X className="w-4 h-4" /> Hide charts</> : <><BarChart3 className="w-4 h-4" /> More charts</>}
+                    </button>
+                </div>
             </div>
-        ) : (
-            <div className="pt-5">
-                <div className="grid xl:grid-cols-1 gap-6 mb-6">
-                    <div className="grid xl:grid-cols-4 gap-4 mb-6">
-                        <div className={`panel bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6  ${blink ? 'animate-pulse' : ''}`}>
-                            <h5 className="font-semibold text-lg mb-3">ShowRoom Booking</h5>
-                            <p className="text-2xl">{salesByCategory.series[0]}</p>
-                        </div>
-                        <div className={`panel bg-gradient-to-r from-purple-400 to-purple-500 text-white rounded-lg shadow-lg p-6 ${salesByCategory.series[4] > 0 && 'animate-pulse'}`}>
-                            <h5 className="font-semibold text-lg mb-3">Whatsapp Booking</h5>
-                            <p className="text-2xl">{salesByCategory.series[4]}</p>
-                        </div>
-                        <div className="panel bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-lg shadow-lg p-6">
-                            <h5 className="font-semibold text-lg mb-3">New Bookings</h5>
-                            <p className="text-2xl">{salesByCategory.series[1]}</p>
-                        </div>
-                        <div className="panel bg-gradient-to-r from-red-400 to-pink-500 text-white rounded-lg shadow-lg p-6">
-                            <h5 className="font-semibold text-lg mb-3">Pending Bookings</h5>
-                            <p className="text-2xl">{salesByCategory.series[2]}</p>
-                        </div>
-                        <div className="panel bg-gradient-to-r from-green-400 to-green-500 text-white rounded-lg shadow-lg p-6">
-                            <h5 className="font-semibold text-lg mb-3">Completed Bookings</h5>
-                            <p className="text-2xl">{salesByCategory.series[3]}</p>
-                        </div>
-                       
+
+            {showCharts && <div className="panel"><BookingDashboard /></div>}
+
+            {/* KPI strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+                <Kpi label="Showroom new" value={counts?.showroom ?? '–'} to="/bookings" tone="text-success" pulse={!!counts?.showroom} hint="Showroom bookings waiting to be taken" />
+                <Kpi label="WhatsApp new" value={counts?.whatsapp ?? '–'} to="/bookings" tone="text-[#25D366]" pulse={!!counts?.whatsapp} hint="WhatsApp bookings waiting to be taken" />
+                <Kpi label="Other new" value={counts?.other ?? '–'} to="/bookings" tone="text-primary" />
+                <Kpi label="In progress" value={board?.totals.open ?? counts?.inProgress ?? '–'} to="/operations" tone="text-info" />
+                <Kpi label="Delayed" value={board?.totals.delayed ?? '–'} to="/operations" tone={board?.totals.delayed ? 'text-danger' : ''} pulse={!!board?.totals.delayed} hint="Cases stuck in a status longer than allowed" />
+                <Kpi label="Not assigned" value={board?.totals.unassigned ?? '–'} to="/operations" tone={board?.totals.unassigned ? 'text-warning' : ''} />
+                <Kpi label="Done today" value={today?.totals.completed ?? '–'} tone="text-success" hint={`${today?.totals.created ?? 0} created today`} />
+                <Kpi label="Approvals" value={approvals?.total ?? '–'} to="/operations" tone={approvals?.total ? 'text-warning' : ''} hint="Expenses, redemptions, verifications and cash waiting" />
+            </div>
+
+            {/* Row: pipeline | today | fleet */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="panel !p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-semibold text-base">Live status</h5>
+                        <Link to="/operations" className="text-xs text-primary">Board →</Link>
                     </div>
-
-                    {
-                        expiredRecords?.map((record, index) => {
-                            const bgColor =
-                                record.type === "EMI" ? "bg-orange-500" :
-                                    record.type === "Pollution" ? "bg-yellow-400" :
-                                        record.type === "Insurance" ? "bg-white" :
-                                            "bg-white";
-
-                            return (
-                                <div key={index} className="w-full gap-5">
-                                    <div  className={`w-full h-16 ${bgColor} rounded-xl flex items-center justify-between px-4 border-l-4 border-blue-500  shadow` }>
-                                        {
-                                            compareDates(record.expiryDate, today) ? (
-                                                <span>
-                                                    🔔 {record.type} for vehicle {record.vehicleNumber} will expire soon! Expiry Date: {dateFormate(record.expiryDate)}
-                                                </span>
-                                            ) : (
-                                                new Date(record.expiryDate).getFullYear() === today.getFullYear() &&
-                                                new Date(record.expiryDate).getMonth() === today.getMonth() &&
-                                                new Date(record.expiryDate).getDate() === today.getDate()
-                                            ) ? (
-                                                <span>
-                                                    🔔 {record.type} for vehicle {record.vehicleNumber} expires today! Expiry Date: {dateFormate(record.expiryDate)}
-                                                </span>
-                                            ) : (
-                                                <span>
-                                                    🔔 {record.type} for vehicle {record.vehicleNumber} is expired! Expiry Date: {dateFormate(record.expiryDate)}
-                                                </span>
-                                            )
-                                        }
-                                        <div className='flex flex-row gap-1'>
-                                            {/* {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER,ROLES.Manager].includes(role) && (
-                                                <button
-                                                    className="btn btn-danger text-white rounded-md py-2 px-3"
-                                                    onClick={() => handleDismissRecord(record)}
-                                                >
-                                                    Dismiss
-                                                </button>
-                                            )} */}
-                                            {['', ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER,ROLES.Manager].includes(role) && (
-                                                <button
-                                                    className="btn btn-primary text-white rounded-md py-2 px-3"
-                                                    onClick={()=>handleRenewal(record._id)}
-                                                >
-                                                    Renewal
-                                                </button>
-                                            )}
+                    {!board ? <p className="text-sm text-white-dark">Loading…</p> : pipeline.length === 0 ? <p className="text-sm text-white-dark">No open cases.</p> : (
+                        <ul className="space-y-1.5">
+                            {pipeline.map((c) => {
+                                const late = c.cases.filter((x) => x.delayed).length;
+                                return (
+                                    <li key={c.status} className="text-xs">
+                                        <div className="flex justify-between mb-0.5">
+                                            <span className="truncate">{c.status}</span>
+                                            <span className="font-semibold">{c.cases.length}{late ? <span className="text-danger"> · {late} late</span> : null}</span>
                                         </div>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    }
-                    {
-                        exceededRecords.map((vehicle, index) => (
-                            <div key={index} className="w-full gap-5">
-                                <div className={`w-full h-16  rounded-xl flex items-center justify-between px-4 border-l-4 border-blue-500  shadow`}>
+                                        <div className="h-1.5 rounded-full bg-white-light dark:bg-[#1b2e4b] overflow-hidden">
+                                            <div className="h-full rounded-full" style={{ width: `${(c.cases.length / pipelineMax) * 100}%`, background: STATUS_COLORS[c.status] || '#4361ee' }} />
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                            {!!board.totals.scheduled && <li className="text-xs text-white-dark pt-1">+ {board.totals.scheduled} scheduled for later</li>}
+                        </ul>
+                    )}
+                </div>
 
-                                    <span>
-                                        🔔 Vehicle {vehicle.serviceVehicle} has exceeded the service limit ({vehicle.serviceKM} KM). Please service it soon!
-                                    </span>
-                                    <button
-                                        className="bg-pink-500 text-white rounded-md py-2 px-3"
-                                        onClick={() => handleDismissVehicleServiceKm(vehicle)}
-                                    >
-                                        Dismiss
-                                    </button>
-                                </div>
+                <div className="panel !p-4">
+                    <h5 className="font-semibold text-base mb-2">Today</h5>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                        {[
+                            ['Created', today?.totals.created, ''],
+                            ['Completed', today?.totals.completed, 'text-success'],
+                            ['Cancelled', today?.totals.cancelled, 'text-danger'],
+                        ].map(([l, v, tone]) => (
+                            <div key={l as string} className="rounded-md bg-white-light/40 dark:bg-[#1b2e4b] py-2">
+                                <div className={`text-xl font-bold ${tone}`}>{v ?? '–'}</div>
+                                <div className="text-[11px] text-white-dark">{l}</div>
                             </div>
-                        ))
-                    }
-                   
-                    <div className="panel h-full bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-lg shadow-lg p-6">
-                 
+                        ))}
                     </div>
-                    <AddVehicleCompliance
-                        isEditingForDissmissBtn={openCompilanceModalForDissmiss}
-                        open={openRenewal}
-                        id={recordId}
-                        recordType={dismissRecordType} 
-                        dissmissVehicleNumber={dismissVehicleNumber}
+                    <div className="mt-3 space-y-1 text-sm">
+                        <div className="flex justify-between"><span className="text-white-dark">Booked value today</span><b>{inr(totalToday?.amount || 0)}</b></div>
+                        <div className="flex justify-between"><span className="text-white-dark">Cash pending (all)</span><Link to="/reports" className="font-semibold text-danger">{today?.totals.cashPending ?? '–'} cases</Link></div>
+                        <div className="flex justify-between"><span className="text-white-dark">Scheduled ahead</span><b>{today?.totals.scheduledUpcoming ?? '–'}</b></div>
+                    </div>
+                    {!!today?.perPerson.length && (
+                        <div className="mt-3">
+                            <div className="text-[11px] font-semibold text-white-dark mb-1">BUSIEST TODAY</div>
+                            <ul className="space-y-0.5 text-xs">
+                                {today.perPerson.slice(0, 4).map((p) => (
+                                    <li key={p._id} className="flex justify-between"><span className="truncate">{p.name}</span><span className="text-white-dark">{p.completed}/{p.cases} done</span></li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
 
-                        handleClose={() => {
-                            setOpenRenewal(false);
-                            setOpenCompilanceModalForDissmiss(false);
-                            setRecordId('');
-                            setDismissRecordType('');
-                            setDismissVehicleNumber('');
-                            fetchBookings();
-                            fetchServiceKmExceededVehicle();
-                        }}
-                        fetchComplianceDetails={fetchServiceKmExceededVehicle}
-                        isEditMode={true}
-                    />
+                <div className="panel !p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-semibold text-base">Drivers & providers</h5>
+                        <Link to="/operations" className="text-xs text-primary">Map →</Link>
                     </div>
+                    {!live ? <p className="text-sm text-white-dark">Loading…</p> : (
+                        <>
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className="rounded-md bg-success/10 py-2"><div className="text-xl font-bold text-success">{live.counts.online}</div><div className="text-[11px] text-white-dark">Online</div></div>
+                                <div className="rounded-md bg-info/10 py-2"><div className="text-xl font-bold text-info">{live.counts.busy}</div><div className="text-[11px] text-white-dark">On a job</div></div>
+                                <div className="rounded-md bg-warning/10 py-2"><div className="text-xl font-bold text-warning">{live.counts.gpsStale}</div><div className="text-[11px] text-white-dark">GPS old</div></div>
+                            </div>
+                            <p className="text-[11px] text-white-dark mt-2">{live.counts.drivers} drivers · {live.counts.providers} providers · {live.counts.withLocation} with location</p>
+                            {unassigned.length > 0 && (
+                                <div className="mt-3">
+                                    <div className="text-[11px] font-semibold text-warning mb-1">WAITING FOR A DRIVER</div>
+                                    <ul className="space-y-0.5 text-xs">
+                                        {unassigned.slice(0, 4).map((c) => (
+                                            <li key={c._id} className="flex justify-between gap-2">
+                                                <Link to={`/add-booking/${c._id}`} className="text-primary truncate">{c.fileNumber || 'No file no.'}</Link>
+                                                <span className="text-white-dark whitespace-nowrap">{formatMinutes(c.minutesInStatus)}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
-        )}
-    </div>
-);
+
+            {/* Row: trend | my day */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                <div className="xl:col-span-2 space-y-4">
+                    <div className="panel !p-4">
+                        <div className="flex items-center justify-between">
+                            <h5 className="font-semibold text-base">Last 14 days</h5>
+                            <span className="text-xs text-white-dark">{trend.reduce((a, d) => a + d.count, 0)} bookings · {inr(trend.reduce((a, d) => a + d.amount, 0))}</span>
+                        </div>
+                        {trend.length ? <ReactApexChart type="line" height={220} series={chart.series} options={chart.options as any} /> : <p className="text-sm text-white-dark py-10 text-center">Loading…</p>}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Needs attention */}
+                        <div className="panel !p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <h5 className="font-semibold text-base">Needs attention</h5>
+                                <span className="badge bg-danger/10 text-danger rounded-full">{delayedCases.length}</span>
+                            </div>
+                            {delayedCases.length === 0 ? <p className="text-sm text-white-dark">No delayed cases. 👍</p> : (
+                                <ul className="space-y-1.5 max-h-64 overflow-auto pr-1">
+                                    {delayedCases.slice(0, 10).map((c) => (
+                                        <li key={c._id} className="rounded border border-danger/30 px-2 py-1 text-xs">
+                                            <div className="flex justify-between gap-2">
+                                                <Link to={`/add-booking/${c._id}`} className="font-semibold text-primary truncate">{c.fileNumber || 'No file no.'}</Link>
+                                                <span className="text-danger whitespace-nowrap">{formatMinutes(c.minutesInStatus)}</span>
+                                            </div>
+                                            <div className="text-white-dark truncate">{c.status} · {c.driver?.name || c.provider?.name || 'not assigned'}{c.customerName ? ` · ${c.customerName}` : ''}</div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+
+                        {/* Approvals */}
+                        <div className="panel !p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <h5 className="font-semibold text-base">Waiting for approval</h5>
+                                <Link to="/operations" className="text-xs text-primary">Open →</Link>
+                            </div>
+                            {!approvals ? <p className="text-sm text-white-dark">Loading…</p> : approvals.total === 0 ? <p className="text-sm text-white-dark">Nothing waiting. 👍</p> : (
+                                <ul className="space-y-1 text-sm">
+                                    {approvals.queues.filter((q) => q.count > 0).map((q) => (
+                                        <li key={q.key}>
+                                            <Link to={q.link || '/operations'} className="flex justify-between rounded px-2 py-1 hover:bg-white-light/40 dark:hover:bg-[#1b2e4b]">
+                                                <span>{q.label}</span><b className="text-warning">{q.count}</b>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <MyDayPanel />
+
+                    {/* Vehicle alerts */}
+                    <div className="panel !p-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <h5 className="font-semibold text-base">Vehicle alerts</h5>
+                            <span className={`badge rounded-full ${alertsCount ? 'bg-warning/15 text-warning' : 'bg-success/10 text-success'}`}>{alertsCount}</span>
+                        </div>
+                        {alertsCount === 0 ? <p className="text-sm text-white-dark">No renewals or services due.</p> : (
+                            <ul className="space-y-1.5 max-h-72 overflow-auto pr-1">
+                                {expiredRecords.map((r, i) => (
+                                    <li key={`${r._id}-${r.type}-${i}`} className="flex items-center justify-between gap-2 rounded border border-white-light dark:border-[#1b2e4b] px-2 py-1 text-xs">
+                                        <span><b>{r.vehicleNumber}</b> · {r.type} <span className={new Date(r.expiryDate) < new Date() ? 'text-danger' : 'text-warning'}>{expiryText(r)}</span></span>
+                                        {canRenew && <button type="button" className="btn btn-primary btn-sm !py-0.5 !px-2 text-[11px]" onClick={() => handleRenewal(r._id)}>Renew</button>}
+                                    </li>
+                                ))}
+                                {exceededRecords.map((v, i) => (
+                                    <li key={`km-${i}`} className="flex items-center justify-between gap-2 rounded border border-white-light dark:border-[#1b2e4b] px-2 py-1 text-xs">
+                                        <span><b>{v.serviceVehicle}</b> · service due <span className="text-danger">({v.serviceKM} km)</span></span>
+                                        <button type="button" className="btn btn-outline-danger btn-sm !py-0.5 !px-2 text-[11px]" onClick={() => handleDismissVehicleServiceKm(v)}>Serviced</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <AddVehicleCompliance
+                isEditingForDissmissBtn={dismissMode}
+                open={openRenewal}
+                id={recordId}
+                recordType={dismissRecordType}
+                dissmissVehicleNumber={dismissVehicleNumber}
+                handleClose={() => {
+                    setOpenRenewal(false);
+                    setDismissMode(false);
+                    setRecordId('');
+                    setDismissRecordType('');
+                    setDismissVehicleNumber('');
+                    loadCounts().catch(() => undefined);
+                    loadServiceKm();
+                }}
+                fetchComplianceDetails={loadServiceKm}
+                isEditMode={true}
+            />
+        </div>
+    );
 };
 
 export default Index;

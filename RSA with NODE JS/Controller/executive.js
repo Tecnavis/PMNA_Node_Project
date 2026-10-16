@@ -81,7 +81,7 @@ exports.loginExecutive = asyncErrorHandler(async (req, res) => {
             role: 'executive'
         }, 
         process.env.JWT_SECRET || 'secret_key', 
-        { expiresIn: '24h' }
+        { expiresIn: process.env.EXEC_TOKEN_EXPIRES || '7d' } // app logins last a week (was 24h)
     );
 
     // 6. Remove password from output

@@ -54,7 +54,7 @@ multipleReceivedUser:{ type: Boolean },
     createdBy: { type: mongoose.Schema.Types.ObjectId, refPath: 'bookedByModel' },
     bookedByModel: {
         type: String,
-        enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff']
+        enum: ['Showroom', 'ShowroomStaff', 'Admin', 'Staff', 'Customer']
     },
      showroomApprove:{type:Boolean},
     bookedBy: { type: String },
@@ -82,6 +82,7 @@ multipleReceivedUser:{ type: Boolean },
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
 verifiedAt: Date,
     feedbackCheck: { type: Boolean },
+    showroomPointsAwarded: { type: Boolean, default: false }, // showroom booking points given (once, on verify)
     accountantVerified: { type: Boolean },
     cashPending: { type: Boolean },
     approve: { type: Boolean, default: false },
@@ -150,6 +151,44 @@ bookingSchema.index({ createdAt: -1 });
 bookingSchema.index({ status: 1, createdAt: -1 });
 bookingSchema.index({ archived: 1, createdAt: -1 }); // For archiving
 bookingSchema.index({ archived: 1, status: 1 }); // For filtering
+
+// When the status last changed — used by the Operations board for "stuck for X min" alerts.
+// Set automatically on every status change (save, findOneAndUpdate, updateOne, updateMany).
+bookingSchema.add({ statusChangedAt: { type: Date } });
+// Our own customer channels: 'customer-app' | 'whatsapp' (empty for office / showroom / partner bookings)
+bookingSchema.add({
+    bookingSource: { type: String },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    customerNotifiedStatus: { type: String },
+});
+bookingSchema.pre('save', function (next) {
+    if (this.isNew || this.isModified('status')) {
+        this.statusChangedAt = new Date();
+        this.$locals.statusChanged = !this.isNew;
+    }
+    next();
+});
+bookingSchema.post('save', function (doc) {
+    if (doc.$locals?.statusChanged && doc.bookingSource) require('../services/customerNotify').statusChanged(doc._id);
+});
+const markStatusChange = function (next) {
+    const update = this.getUpdate() || {};
+    const changesStatus = Object.prototype.hasOwnProperty.call(update, 'status')
+        || (update.$set && Object.prototype.hasOwnProperty.call(update.$set, 'status'));
+    if (changesStatus && !Array.isArray(update)) {
+        update.$set = update.$set || {};
+        update.$set.statusChangedAt = new Date();
+        this.setUpdate(update);
+    }
+    next();
+};
+bookingSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], markStatusChange);
+bookingSchema.post(['findOneAndUpdate', 'updateOne'], function () {
+    const u = this.getUpdate() || {};
+    if (u.status === undefined && u.$set?.status === undefined) return;
+    const q = this.getQuery() || {};
+    if (q._id) require('../services/customerNotify').statusChanged(q._id);
+});
 
 bookingSchema.plugin(visibleFilter);
 

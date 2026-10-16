@@ -1,4 +1,5 @@
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
+import TableExportButtons from '../../components/TableExportButtons';
 import { useEffect, useState } from 'react';
 import sortBy from 'lodash/sortBy';
 import { setPageTitle } from '../../store/themeConfigSlice';
@@ -90,7 +91,8 @@ const ShowroomReport = () => {
       <div className="panel mt-6">
         <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
           <h5 className="font-semibold text-lg dark:text-white-light">Showroom Report</h5>
-          <div className="ltr:ml-auto rtl:mr-auto">
+          <TableExportButtons containerId="tbl-showroom-report" title="Showroom report" />
+<div className="ltr:ml-auto rtl:mr-auto">
             <input
               type="text"
               className="form-input w-auto"
@@ -100,7 +102,7 @@ const ShowroomReport = () => {
             />
           </div>
         </div>
-        <div className="datatables">
+        <div className="datatables" id="tbl-showroom-report">
           <DataTable
           fetching={loading}
             className="whitespace-nowrap table-hover"

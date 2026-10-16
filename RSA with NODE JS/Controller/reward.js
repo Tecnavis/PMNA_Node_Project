@@ -224,42 +224,41 @@ const manageRewardRedeem = async (rewardId, userId, rewardFor, address) => {
 };
 
 const manageRewardRedeemForShowroom = async (showroomId, bookingId) => {
-  try {
-    const showroom = await Showroom.findById(showroomId);
-    const booking = await Booking.findById(bookingId);
-
-    if (!showroom || !booking) {
-      throw new Error('Invalid showroom or booking ID.');
-    }
-
-    if (booking.rewardAmount) {
-      throw new Error('Rewards have already been redeemed for this booking.');
-    }
-
-    if (showroom.rewardPoints > 0) {
-      throw new Error(`Insufficient points. Available points (${showroom.rewardPoints})`);
-    }
-
-    const usablePoints = showroom.rewardPoints / 2;
-
-    const pointsToUse = Math.min(usablePoints, booking.totalAmount);
-
-    booking.rewardAmount = pointsToUse;
-    booking.totalAmount -= pointsToUse;
-    showroom.rewardPoints -= pointsToUse;
-
-    await Promise.all([booking.save(), showroom.save()]);
-
-    return {
-      message: 'Reward applied successfully',
-      rewardUsed: pointsToUse,
-      updatedBooking: booking,
-      updatedShowroom: showroom,
-    };
-  } catch (error) {
-    console.error('Error redeeming reward:', error);
-    throw new Error('Internal server error.');
+  if (!mongoose.Types.ObjectId.isValid(showroomId) || !mongoose.Types.ObjectId.isValid(bookingId)) {
+    throw new Error('Invalid showroom or booking ID.');
   }
+  const showroom = await Showroom.findById(showroomId);
+  const booking = await Booking.findById(bookingId);
+
+  if (!showroom || !booking) {
+    throw new Error('Invalid showroom or booking ID.');
+  }
+  if (booking.rewardAmount) {
+    throw new Error('Rewards have already been redeemed for this booking.');
+  }
+  if (!(showroom.rewardPoints > 0)) {
+    throw new Error(`Insufficient points. Available points (${showroom.rewardPoints || 0})`);
+  }
+
+  // A showroom can use up to half of its points on one booking
+  const usablePoints = Math.floor(showroom.rewardPoints / 2);
+  const pointsToUse = Math.max(0, Math.min(usablePoints, Number(booking.totalAmount) || 0));
+  if (pointsToUse <= 0) {
+    throw new Error('Nothing to redeem for this booking.');
+  }
+
+  booking.rewardAmount = pointsToUse;
+  booking.totalAmount -= pointsToUse;
+  showroom.rewardPoints -= pointsToUse;
+
+  await Promise.all([booking.save(), showroom.save()]);
+
+  return {
+    message: 'Reward applied successfully',
+    rewardUsed: pointsToUse,
+    updatedBooking: booking,
+    updatedShowroom: showroom,
+  };
 };
 
 
@@ -353,39 +352,45 @@ exports.getAllRedeemableRewards = async (req, res) => {
 
 exports.redeemShowroomPoint = async (req, res) => {
   const { showroomId } = req.params;
-  const { rewardAmount } = req.body;
+  const amount = Number(req.body?.rewardAmount);
 
   try {
-    const showroom = await Showroom.findById(showroomId);
-
-    if (!showroom) {
-      throw new Error('Invalid showroom.');
+    if (!mongoose.Types.ObjectId.isValid(showroomId)) {
+      return res.status(400).json({ success: false, message: 'Invalid showroom.' });
+    }
+    if (!Number.isFinite(amount) || amount === 0) {
+      return res.status(400).json({ success: false, message: 'rewardAmount must be a non-zero number.' });
     }
 
-    if (showroom.rewardPoints <= 0) {
-      throw new Error(`Insufficient points. Available points (${showroom.rewardPoints})`);
+    let showroom;
+    if (amount > 0) {
+      // Deduct only if enough points (atomic, so two tabs can't overspend)
+      showroom = await Showroom.findOneAndUpdate(
+        { _id: showroomId, rewardPoints: { $gte: amount } },
+        { $inc: { rewardPoints: -amount } },
+        { new: true }
+      );
+      if (!showroom) {
+        const s = await Showroom.findById(showroomId).select('rewardPoints');
+        if (!s) return res.status(404).json({ success: false, message: 'Showroom not found.' });
+        return res.status(400).json({ success: false, message: `Insufficient points. Available points (${s.rewardPoints || 0})` });
+      }
+    } else {
+      // A negative amount returns points (reward reduced when a booking was edited)
+      showroom = await Showroom.findByIdAndUpdate(showroomId, { $inc: { rewardPoints: -amount } }, { new: true });
+      if (!showroom) return res.status(404).json({ success: false, message: 'Showroom not found.' });
     }
-
-    const usablePoints = rewardAmount;
-    showroom.rewardPoints -= usablePoints;
-
-    showroom.save()
 
     return res.status(200).json({
-      message: 'Reward point redeemed successfully',
-      rewardUsed: usablePoints,
+      success: true,
+      message: amount > 0 ? 'Reward point redeemed successfully' : 'Reward points returned',
+      rewardUsed: amount,
       updatedShowroom: showroom,
+      data: showroom,
     });
-
   } catch (error) {
-
     console.error('[REDEEM ERROR]', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Internal server error',
-      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-    });
-
+    return res.status(500).json({ success: false, message: error.message || 'Internal server error' });
   }
 };
 
@@ -411,10 +416,6 @@ exports.getAllRedeems = asyncErrorHandler(async (req, res) => {
     })
   );
 
-  if (!populatedRedeems || populatedRedeems.length === 0) {
-    throw new NotFoundError('No redemptions found');
-  }
-
   return res.status(StatusCodes.OK).json({
     success: true,
     message: "All redeems fetched successfully",
@@ -436,13 +437,17 @@ exports.approveRedeemById = asyncErrorHandler(async (req, res) => {
   }
 
   if (redemption.approval) {
-    throw new ConflictError('Redemption is already approved');
+    throw new BadRequestError('Redemption is already approved');
+  }
+  if (redemption.rejected) {
+    throw new BadRequestError('This redemption was rejected and its points were returned. Ask the user to redeem again.');
   }
 
   const updatedRedemption = await Redemption.findByIdAndUpdate(
     id,
     {
       approval: true,
+      rejected: false,
     },
     { new: true, runValidators: true }
   );
@@ -457,26 +462,37 @@ exports.approveRedeemById = asyncErrorHandler(async (req, res) => {
 exports.rejectRedeemById = asyncErrorHandler(async (req, res) => {
   const { id } = req.params;
 
-  if (!id) {
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
     throw new BadRequestError('Redemption id is missing.');
   }
 
-  const redemption = await Redemption.findById(id);
-  if (!redemption) {
-    throw new NotFoundError('Redemption not found');
-  }
-
-  const updatedRedemption = await Redemption.findByIdAndUpdate(
-    id,
-    {
-      approval: false,
-    },
+  // Flip to rejected only once (atomic) so points are never returned twice
+  const redemption = await Redemption.findOneAndUpdate(
+    { _id: id, rejected: { $ne: true } },
+    { approval: false, rejected: true },
     { new: true }
   );
+  if (!redemption) {
+    const exists = await Redemption.exists({ _id: id });
+    if (!exists) throw new NotFoundError('Redemption not found');
+    throw new BadRequestError('Redemption is already rejected');
+  }
+
+  // Return the points to the user and the item to stock
+  let refunded = 0;
+  const reward = await Reward.findById(redemption.reward);
+  if (reward) {
+    refunded = Number(reward.pointsRequired) || 0;
+    await Reward.updateOne({ _id: reward._id }, { $inc: { stock: 1, TotalRedeem: -1 } });
+    const modelName = redemption.redeemByModel;
+    if (refunded > 0 && modelName && mongoose.modelNames().includes(modelName)) {
+      await mongoose.model(modelName).updateOne({ _id: redemption.user }, { $inc: { rewardPoints: refunded } });
+    }
+  }
 
   return res.status(StatusCodes.OK).json({
     success: true,
-    message: "Redemption rejected successfully",
-    data: updatedRedemption,
+    message: refunded ? `Redemption rejected — ${refunded} points returned` : "Redemption rejected successfully",
+    data: redemption,
   });
 });

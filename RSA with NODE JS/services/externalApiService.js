@@ -242,7 +242,8 @@ class ExternalApiService {
                 throw new Error(`Booking with ID ${bookingId} not found`);
             }
 
-            if (!booking.isWhatsappBooking) {
+            // Bookings from our own customer app / WhatsApp number are not known to the external partner
+            if (!booking.isWhatsappBooking || booking.bookingSource) {
                 return {
                     success: true,
                     message: 'Booking is not a WhatsApp booking, skipping external API update',

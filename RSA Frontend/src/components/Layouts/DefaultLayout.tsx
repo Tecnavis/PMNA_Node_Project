@@ -8,6 +8,7 @@ import Header from './Header';
 import Setting from './Setting';
 import Sidebar from './Sidebar';
 import Portals from '../../components/Portals';
+import ReminderNotifier from '../../pages/Reminders/ReminderNotifier';
 
 const DefaultLayout = ({ children }: PropsWithChildren) => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -98,6 +99,7 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
                         <Footer />
                         {/* END FOOTER */}
                         <Portals />
+                        <ReminderNotifier />
                     </div>
                 </div>
             </div>

@@ -747,3 +747,8 @@ pre.hljs {
       margin: 0;
     }
   }
+/* Phones: the closed settings drawer sits off-screen to the right and caused sideways scrolling on some pages */
+html,
+body {
+    overflow-x: clip;
+}

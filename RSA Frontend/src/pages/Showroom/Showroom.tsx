@@ -82,6 +82,8 @@ const Showroom: React.FC = () => {
     const [totalCount, setTotalCount] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [showAllMode, setShowAllMode] = useState(false);
+    // per-showroom activity: bookings this month, last booking, points, executive visit
+    const [insights, setInsights] = useState<Record<string, { bookingsThisMonth: number; bookingsTotal: number; openBookings: number; lastBookingAt: string | null; rewardPoints: number; executive: string; lastVisitAt: string | null; visitedThisMonth: boolean }>>({});
     const navigate = useNavigate();
  const showroomStaffUrl = import.meta.env.VITE_STAFF_DASHBOARD_URL || 'https://showroomstaff.rsakerala.com';
 
@@ -126,10 +128,12 @@ const Showroom: React.FC = () => {
             confirmButtonText: 'Yes, delete it!',
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.delete(`${backendUrl}/showroom/${itemId}`);
-                // Remove role logic
-                setFilteredShowrooms((prev) => prev.filter((item) => item._id !== itemId));
-                Swal.fire('Deleted!', 'The showroom has been deleted.', 'success');
+                axios.delete(`${backendUrl}/showroom/${itemId}`)
+                    .then(() => {
+                        setFilteredShowrooms((prev) => prev.filter((item) => item._id !== itemId));
+                        Swal.fire('Deleted!', 'The showroom has been deleted.', 'success');
+                    })
+                    .catch((e) => Swal.fire('Not deleted', e?.response?.data?.message || 'Could not delete the showroom.', 'error'));
             }
         });
     };
@@ -146,7 +150,12 @@ const Showroom: React.FC = () => {
     useEffect(() => {
         gettingToken();
         fetchShowroom();
+        axios.get(`${backendUrl}/reports/showrooms`).then((r) => setInsights(r.data?.data || {})).catch(() => setInsights({}));
     }, []);
+
+    const daysSince = (iso: string | null) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : null);
+    const insightList = Object.values(insights);
+    const quietCount = insightList.filter((x) => { const d = daysSince(x.lastBookingAt); return d === null || d > 30; }).length;
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
@@ -333,6 +342,14 @@ const Showroom: React.FC = () => {
                     </div>
                     <input type="text" className="form-input w-auto" placeholder="Search..." onChange={handleSearchChange} />
                 </div>
+                {insightList.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                        <div className="rounded-md border border-white-light dark:border-[#1b2e4b] p-3"><div className="text-[11px] uppercase text-white-dark font-semibold">Showrooms</div><div className="text-xl font-bold">{totalCount || insightList.length}</div></div>
+                        <div className="rounded-md border border-white-light dark:border-[#1b2e4b] p-3"><div className="text-[11px] uppercase text-white-dark font-semibold">Booked this month</div><div className="text-xl font-bold text-success">{insightList.filter((x) => x.bookingsThisMonth > 0).length}</div></div>
+                        <div className="rounded-md border border-white-light dark:border-[#1b2e4b] p-3" title="No booking in the last 30 days — worth a call or visit"><div className="text-[11px] uppercase text-white-dark font-semibold">Quiet 30+ days</div><div className="text-xl font-bold text-danger">{quietCount}</div></div>
+                        <div className="rounded-md border border-white-light dark:border-[#1b2e4b] p-3"><div className="text-[11px] uppercase text-white-dark font-semibold">Not visited this month</div><div className="text-xl font-bold text-warning">{insightList.filter((x) => !x.visitedThisMonth).length}</div></div>
+                    </div>
+                )}
                 <div className="table-responsive mb-5">
                     <table>
                         <thead>
@@ -340,6 +357,7 @@ const Showroom: React.FC = () => {
                                 <th>No</th>
                                 <th>Photo</th>
                                 <th>Name</th>
+                                <th>Activity</th>
                                 <th>Staffs</th>
                                 <th>Location</th>
                                 <th>Helpline</th>
@@ -367,9 +385,23 @@ const Showroom: React.FC = () => {
                                         </div>
                                     </td>
                                     <td>
-                                        <div onClick={() => openStaffModal(items._id)}>
+                                        {(() => {
+                                            const x = insights[items._id];
+                                            if (!x) return <span className="text-white-dark text-xs">—</span>;
+                                            const d = daysSince(x.lastBookingAt);
+                                            return (
+                                                <div className="text-xs whitespace-nowrap leading-5">
+                                                    <div><b>{x.bookingsThisMonth}</b> this month · {x.bookingsTotal} total{x.openBookings ? <span className="text-info"> · {x.openBookings} live</span> : null}</div>
+                                                    <div className={d === null || d > 30 ? 'text-danger' : 'text-white-dark'}>{d === null ? 'No bookings yet' : d === 0 ? 'Last booking today' : `Last booking ${d} d ago`}</div>
+                                                    <div className="text-white-dark">{x.rewardPoints} pts{x.executive ? ` · ${x.executive}` : ''} · <span className={x.visitedThisMonth ? 'text-success' : 'text-warning'}>{x.visitedThisMonth ? 'visited' : 'visit due'}</span></div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </td>
+                                    <td>
+                                        <button type="button" className="hover:text-primary" title="Showroom staff" onClick={() => openStaffModal(items._id)}>
                                             <IconUsersGroup />
-                                        </div>
+                                        </button>
                                     </td>
                                     <td>
                                         <div className="whitespace-nowrap">{items.location}</div>

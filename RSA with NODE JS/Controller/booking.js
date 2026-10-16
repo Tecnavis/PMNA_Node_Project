@@ -1840,13 +1840,19 @@ let receiverOld = (booking.driver ? booking.driver._id : null) || (booking.provi
 
 const isDifferentReceiver = receiver?._id?.toString() !== receiverOld?.toString();
         if (receiver?.fcmToken && isDifferentReceiver) {
-            const notificationResult = await NotificationService.sendNotification({
-                token: receiver?.fcmToken || '',
-                title: "Booking Edited",
-                body: 'A booking assigned to you has been edited.',
-                sound: 'alert'
-            });
-            console.log('notificationResult', notificationResult)
+            // A case was (re)assigned to this driver/provider → push with the alert sound.
+            // Never let a push failure turn a saved update into an error for the office.
+            try {
+                const notificationResult = await NotificationService.sendNotification({
+                    token: receiver.fcmToken,
+                    title: 'New Booking Notification',
+                    body: `New case ${updatedBooking.fileNumber || ''} assigned to you${updatedBooking.location ? ` · Pickup: ${String(updatedBooking.location).slice(0, 80)}` : ''}`,
+                    sound: 'alert'
+                });
+                console.log('notificationResult', notificationResult?.success);
+            } catch (e) {
+                routeLogger.warn({ bookingId: id, error: e.message }, 'Push to driver failed');
+            }
         }
 
         routeLogger.info({
@@ -2431,6 +2437,38 @@ exports.updateFilenumber = async (req, res) => {
 };
 
 //   Booking verify 
+/**
+ * Gives the configured points for a booking made by a showroom (and its staff member) — once per booking.
+ * Points come from the Points settings (Rewards page): showRoomBookingPoint / showRoomStaffBookingPoint.
+ */
+async function awardShowroomBookingPoints(booking) {
+    if (!booking || !booking.showroom) return;
+    if (!['Showroom', 'ShowroomStaff'].includes(booking.bookedByModel)) return;
+    const Points = require('../Model/points');
+    const settings = await Points.findOne().lean();
+    const showroomPts = Number(settings?.showRoomBookingPoint) || 0;
+    const staffPts = Number(settings?.showRoomStaffBookingPoint) || 0;
+    if (!showroomPts && !staffPts) return;
+
+    // Claim the booking first so points can never be given twice
+    const claimed = await Booking.findOneAndUpdate(
+        { _id: booking._id, showroomPointsAwarded: { $ne: true } },
+        { $set: { showroomPointsAwarded: true } },
+        { new: true }
+    ).setOptions({ _includeHidden: true });
+    if (!claimed) return;
+
+    const showroomId = booking.showroom?._id || booking.showroom;
+    if (showroomPts) {
+        await Showroom.updateOne({ _id: showroomId }, { $inc: { rewardPoints: showroomPts } });
+    }
+    const staffId = booking.bookedByModel === 'ShowroomStaff' ? (booking.showroomStaff?._id || booking.showroomStaff || booking.createdBy) : null;
+    if (staffPts && staffId && mongoose.Types.ObjectId.isValid(String(staffId))) {
+        await ShowroomStaff.updateOne({ _id: staffId }, { $inc: { rewardPoints: staffPts } });
+    }
+}
+exports.awardShowroomBookingPoints = awardShowroomBookingPoints;
+
 exports.verifyBooking = async (req, res) => {
     try {
         const { id } = req.params;
@@ -2450,6 +2488,10 @@ exports.verifyBooking = async (req, res) => {
         const booking = await Booking.findById(id);
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
+        }
+
+        if (booking.verified) {
+            return res.status(400).json({ message: 'This booking is already verified.' });
         }
 
         // Check driverSalary condition and validate password if needed
@@ -2571,6 +2613,13 @@ exports.verifyBooking = async (req, res) => {
         
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found.' });
+        }
+
+        // Showroom booking points (set on the Rewards page) are earned when the case is verified
+        try {
+            await awardShowroomBookingPoints(updatedBooking);
+        } catch (e) {
+            routeLogger.warn({ bookingId: id, error: e.message }, 'Showroom booking points not awarded');
         }
 
         // Call the vehicle service status check function after successful verification
@@ -2791,20 +2840,24 @@ exports.postFeedback = async (req, res) => {
             { new: true }
         );
 
+        // Feedback can be edited: give the driver only the change in points, and add salary only the first time
+        const firstFeedback = !booking.feedbackCheck;
+        const pointsDelta = totalPoints - (firstFeedback ? 0 : (Number(booking.totalPoints) || 0));
+
         // If the booking contains a valid driver, update the driver's rewardPoints
-        if (booking.driver && mongoose.Types.ObjectId.isValid(booking.driver)) {
+        if (pointsDelta !== 0 && booking.driver && mongoose.Types.ObjectId.isValid(booking.driver)) {
             const driverExists = await Driver.findById(booking.driver);
             if (driverExists) {
-                const updated = await Driver.findByIdAndUpdate(
+                await Driver.findByIdAndUpdate(
                     booking.driver,
-                    { $inc: { rewardPoints: totalPoints } },
+                    { $inc: { rewardPoints: pointsDelta } },
                     { new: true }
                 );
             }
         }
 
         // **Additional Condition: Update Driver Salary if workType is "paymentWork"**
-        if (booking.driver) {
+        if (firstFeedback && booking.driver) {
             const selectedDriver = await Driver.findById(booking.driver);
 
             if (selectedDriver) {

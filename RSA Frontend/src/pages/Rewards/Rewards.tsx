@@ -1,424 +1,261 @@
-import AnimateHeight from 'react-animate-height';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import IconCaretDown from '../../components/Icon/IconCaretDown';
 import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
-import Driver from '../Driver/Driver';
 import IconEye from '../../components/Icon/IconEye';
-import { Showroom } from '../Showroom/Showroom';
 import { ClientRewardDetails } from '../../interface/Rewards';
-import { useNavigate } from 'react-router-dom';
 
-
-type ClientCategory = 'Driver' | 'Showroom' | 'Marketing Executive' | 'ShowroomStaff';
-// Corrected Interfaces
-
+// Kept for other files that import it
 export interface Staff {
-  _id: string;
-  name: string;
-  phoneNumber: string;
-  rewardPoints?: number;
-  showroomId?: {
-    bookingPoint?: number;
-    _id?: string;
-  };
+    _id: string;
+    name: string;
+    phoneNumber?: string;
+    rewardPoints?: number;
+    showroomId?: any;
 }
 
+type Tab = 'Driver' | 'Showroom' | 'ShowroomStaff';
+const TAB_LABEL: Record<Tab, string> = { Driver: 'Drivers', Showroom: 'Showrooms', ShowroomStaff: 'Showroom staff' };
+
+interface PointSettings {
+    _id: string;
+    showroom: number;
+    showroomStaff: number;
+}
+
+const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 function Rewards() {
+    const navigate = useNavigate();
+    const [tab, setTab] = useState<Tab>('Driver');
+    const [search, setSearch] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [drivers, setDrivers] = useState<ClientRewardDetails[]>([]);
+    const [showrooms, setShowrooms] = useState<ClientRewardDetails[]>([]);
+    const [showroomStaff, setShowroomStaff] = useState<(ClientRewardDetails & { showroomName?: string })[]>([]);
+    const [settings, setSettings] = useState<PointSettings>({ _id: '', showroom: 0, showroomStaff: 0 });
+    const [form, setForm] = useState({ showroom: '', showroomStaff: '' });
+    const [saving, setSaving] = useState(false);
+    const [pendingRedeems, setPendingRedeems] = useState<number | null>(null);
 
-  const [active2, setActive2] = useState<string>('1');
-  const [driverRewards, setDriverRewards] = useState<ClientRewardDetails[]>([])
-  const [showRoomRewards, setShowRoom] = useState<ClientRewardDetails[]>([])
-  const [showroomStaffRewards, setShowroomStaffRewards] = useState<ClientRewardDetails[]>([])
-  const [visibleCategory, setVisibleCategory] = useState<ClientCategory | null>(null);
-  const [customerRewards, setCustomerRewards] = useState<ClientCategory | null>(null);
-  const [showroomPoints, setShowroomPoints] = useState("");
-  const [showroomStaffPoints, setShowroomStaffPoints] = useState("");
-  const [point, setPoint] = useState<number>(0)
-  const [points, setPoints] = useState<{ showroomPoints: number, showroomStaffPoints: number }>(
-    { showroomPoints: 0, showroomStaffPoints: 0 });
-  const [showRoomBookingPoint, setShowRoomBookingPoint] = useState<{ bookingPoint: number; _id: string }>({
-    bookingPoint: 0,
-    _id: ''
-  });
-  const [inputValue, setInputValue] = useState("");
-  const [nestedAccord, setNestedAccord] = useState("");
+    useEffect(() => {
+        const load = async () => {
+            setLoading(true);
+            const [d, s, st, pts, red] = await Promise.allSettled([
+                axiosInstance.get(`${BASE_URL}/driver/driverBooking`),
+                axiosInstance.get(`${BASE_URL}/showroom`),
+                axiosInstance.get(`${BASE_URL}/showroom/showroom-staff`),
+                axiosInstance.get(`${BASE_URL}/point/showroom`),
+                axiosInstance.get(`${BASE_URL}/reward/redeems`),
+            ]);
 
-  const navigate = useNavigate()
+            if (d.status === 'fulfilled' && Array.isArray(d.value.data)) {
+                setDrivers(d.value.data.map((x: any) => ({ _id: x._id, name: x.name, rewardPoints: num(x.rewardPoints), staff: [] })));
+            }
+            const staffRows = st.status === 'fulfilled' && Array.isArray(st.value.data?.data) ? st.value.data.data : [];
+            const staffList = staffRows.map((x: any) => ({
+                _id: x._id,
+                name: x.name,
+                rewardPoints: num(x.rewardPoints),
+                showroomId: x.showroomId?._id || x.showroomId || '',
+                showroomName: x.showroomId?.name || '',
+                staff: [],
+            }));
+            setShowroomStaff(staffList);
+            if (s.status === 'fulfilled' && Array.isArray(s.value.data)) {
+                setShowrooms(
+                    s.value.data.map((x: any) => ({
+                        _id: x._id,
+                        name: x.name,
+                        rewardPoints: num(x.rewardPoints),
+                        staff: staffList.filter((m: any) => String(m.showroomId) === String(x._id)),
+                    }))
+                );
+            }
+            if (pts.status === 'fulfilled') {
+                const p = pts.value.data;
+                const next = { _id: p._id, showroom: num(p.bookingPointsForShowroom), showroomStaff: num(p.bookingPointsForShowroomStaff) };
+                setSettings(next);
+                setForm({ showroom: String(next.showroom), showroomStaff: String(next.showroomStaff) });
+            }
+            if (red.status === 'fulfilled') {
+                const rows = red.value.data?.data || [];
+                setPendingRedeems(rows.filter((r: any) => !r.approval && !r.rejected).length);
+            }
+            setLoading(false);
+        };
+        load();
+    }, []);
 
-  const fetchDrivers = async () => {
-    const response = await axiosInstance.get(`${BASE_URL}/driver/driverBooking`)
-    setDriverRewards(response.data.map((driver: Driver) => {
-      return {
-        _id: driver._id,
-        name: driver.name,
-        rewardPoints: driver.rewardPoints,
-        companyName: "RSA",
-        staff: []
-      }
-    }))
-  }
-
-  const fetchShowRooms = async () => {
-    try {
-      const response = await axiosInstance.get(`${BASE_URL}/showroom`);
-
-      if (!response.data || !Array.isArray(response.data)) {
-        console.error("Invalid showroom data received");
-        return;
-      }
-      // Fetch staff data only once
-      const staffData = await fetchStaff();
-
-      // Map over showrooms and attach staff
-      const formattedShowrooms = response.data.map((showroom: Showroom) => ({
-        _id: showroom._id,
-        name: showroom.name,
-        rewardPoints: showroom.rewardPoints,
-        bookingPoints: showroom.bookingPoints || 0,
-        category: "Showroom",
-        staff: staffData.filter((staff: Staff) => staff.showroomId === showroom._id) || [],
-      }));
-      // @ts-ignore
-      setShowRoom(formattedShowrooms);
-    } catch (error) {
-      console.error("Error fetching showrooms:", error);
-    }
-  };
-
-  const fetchStaff = async () => {
-    try {
-      const response = await axiosInstance.get(`${BASE_URL}/showroom/showroom-staff`);
-
-      if (!response.data || !Array.isArray(response.data.data)) {
-        console.error("Invalid staff data received");
-        return [];
-      }
-
-      const formattedData = response.data.data.map((staff: Staff) => ({
-        _id: staff._id,
-        name: staff.name,
-        rewardPoints: staff.rewardPoints,
-        bookingPoint: staff.showroomId?.bookingPoint || 0,
-        showroomId: staff.showroomId?._id || 0,
-        category: "ShowroomStaff",
-        staff: [],
-      }));
-
-      setShowroomStaffRewards(formattedData);
-      return formattedData;
-    } catch (error) {
-      console.error("Error fetching staff:", error);
-      return [];
-    }
-  };
-
-  const togglePara2 = (value: string) => {
-    console.log(value)
-    setActive2((oldValue) => {
-      return oldValue === value ? '' : value;
-    });
-  };
-
-  const getCategoryRewards = (category: ClientCategory): ClientRewardDetails[] => {
-    switch (category) {
-      case 'Driver':
-        return driverRewards;
-      case 'Showroom':
-        return showRoomRewards;
-      case 'ShowroomStaff':
-        return showroomStaffRewards;
-
-      // case 'Marketing Executive':
-      //     return customerRewards;
-      default:
-        return [];
-    }
-  };
-
-  const getRewardsList = (): { category: ClientCategory; rewards: ClientRewardDetails[] }[] => {
-    if (!visibleCategory) {
-      return [
-        { category: 'Driver', rewards: driverRewards },
-        { category: 'Showroom', rewards: showRoomRewards },
-        { category: 'ShowroomStaff', rewards: showroomStaffRewards },
-        { category: 'Marketing Executive', rewards: [] },
-      ];
-    } else {
-      return [{ category: visibleCategory, rewards: getCategoryRewards(visibleCategory) }];
-    }
-  };
-
-  const updatePoint = async () => {
-    try {
-      const res = await axiosInstance.put(
-        `${BASE_URL}/point`,
-        { point: showRoomBookingPoint?.bookingPoint },
-        { params: { id: showRoomBookingPoint?._id } }
-      );
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Point updated successfully.',
-      });
-
-      setInputValue("");
-
-      setPoint(showRoomBookingPoint?.bookingPoint);
-    } catch (error: any) {
-      console.error('Error updating point:', error);
-
-      Swal.fire({
-        icon: 'error',
-        title: 'Error!',
-        text: error.response?.data?.error || 'Failed to update point. Please try again.',
-      });
-    }
-  };
-
-  const handleUpdatePoints = async () => {
-    const requestData = {
-      showroomBookingPoints: showroomPoints ? parseInt(showroomPoints) : undefined,
-      showroomStaffBookingPoints: showroomStaffPoints ? parseInt(showroomStaffPoints) : undefined,
+    const savePoints = async () => {
+        const showroom = Number(form.showroom);
+        const staff = Number(form.showroomStaff);
+        if (!Number.isFinite(showroom) || !Number.isFinite(staff) || showroom < 0 || staff < 0) {
+            Swal.fire({ icon: 'warning', title: 'Enter 0 or a positive number for both' });
+            return;
+        }
+        setSaving(true);
+        try {
+            await axiosInstance.put(`${BASE_URL}/point/showroom`, { showroomBookingPoints: showroom, showroomStaffBookingPoints: staff });
+            setSettings((s) => ({ ...s, showroom, showroomStaff: staff }));
+            Swal.fire({ icon: 'success', title: 'Points saved', timer: 1500, showConfirmButton: false });
+        } catch (e: any) {
+            Swal.fire({ icon: 'error', title: 'Could not save', text: e?.response?.data?.message || e?.message });
+        } finally {
+            setSaving(false);
+        }
     };
 
-    try {
-      const response = await axiosInstance.put(`${BASE_URL}/point/showroom`, requestData)
+    const rows = useMemo(() => {
+        const list = tab === 'Driver' ? drivers : tab === 'Showroom' ? showrooms : showroomStaff;
+        const q = search.trim().toLowerCase();
+        return list
+            .filter((r: any) => !q || r.name?.toLowerCase().includes(q) || r.showroomName?.toLowerCase().includes(q))
+            .sort((a, b) => b.rewardPoints - a.rewardPoints);
+    }, [tab, drivers, showrooms, showroomStaff, search]);
 
-      if (response.status === 200) {
-        Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: "Showroom points updated successfully!",
-        });
-        setPoints({ showroomPoints: requestData.showroomBookingPoints || points.showroomPoints, showroomStaffPoints: requestData.showroomStaffBookingPoints || points.showroomStaffPoints })
-        setShowroomPoints("");
-        setShowroomStaffPoints("");
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: response.data.message || "Failed to update points.",
-        });
-      }
-    } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Something went wrong! Please try again.",
-      });
-      console.error(error);
-    }
-  };
+    const totals = {
+        Driver: drivers.reduce((a, r) => a + r.rewardPoints, 0),
+        Showroom: showrooms.reduce((a, r) => a + r.rewardPoints, 0),
+        ShowroomStaff: showroomStaff.reduce((a, r) => a + r.rewardPoints, 0),
+    };
+    const changed = String(settings.showroom) !== form.showroom || String(settings.showroomStaff) !== form.showroomStaff;
 
-  useEffect(() => {
-    fetchDrivers()
-    fetchShowRooms()
-    fetchStaff()
-
-    async function fetchShowroomPoints() {
-      const res = await axiosInstance.get(`${BASE_URL}/point/showroom`)
-      const data = res.data
-
-      setPoints({
-        showroomPoints: data.bookingPointsForShowroom,
-        showroomStaffPoints: data.bookingPointsForShowroomStaff
-      })
-      setShowRoomBookingPoint({ _id: data._id, bookingPoint: data.bookingPoints })
-      setPoint(data.bookingPoints)
-    }
-    fetchShowroomPoints()
-  }, [])
-
-  return (
-    <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
-      <div className="panel">
-        <div className='w-full'>
-          <div className=" mb-5 w-1/2">
-            <h5 className="font-semibold text-lg dark:text-white-light">Client Rewards</h5>
-          </div>
-          <div className="mt-10">
-            <div className="flex flex-wrap gap-10 justify-center">
-              {[
-                { category: 'Driver', rewardPoints: 100 },
-                { category: 'Showroom', rewardPoints: 10 },
-                { category: 'ShowroomStaff', rewardPoints: 100 },
-                { category: 'Marketing Executive', rewardPoints: 100 },
-              ].map((client, index) => (
-                <div
-                  key={index}
-                  className="border border-gray-300 rounded-lg p-5 w-full sm:w-[calc(100%-40px)] md:w-[calc(50%-40px)] xl:w-[calc(25%-40px)] shadow-md transition-transform duration-200 hover:scale-105 gap-2  h-[320px] flex flex-col justify-between"
-                >
-                  <div className="flex justify-center text-center h-8 ">
-                    <h3 className="font-bold text-xl">{client.category}</h3>
-                  </div>
-                  <div className="text-center h-8">
-                    {['Showroom'].includes(client.category) && (
-                      <p>Booking Point: {point}</p>
-                    )}
-                    {['ShowroomStaff'].includes(client.category) && (
-                      <p>Booking Point Staff: {points.showroomPoints}</p>
-                    )}
-                    {['ShowroomStaff'].includes(client.category) && (
-                      <p>Booking Point For <br /> Showroom: {points.showroomStaffPoints}</p>
-                    )}
-                  </div>
-                  {/* Show input fields for categories other than 'Driver' */}
-                  {client.category !== 'Driver' && client.category !== 'ShowroomStaff' && client.category !== 'Marketing Executive' && (
-                    <div>
-                      <input
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => {
-                          setShowRoomBookingPoint({
-                            ...showRoomBookingPoint,
-                            bookingPoint: Number(e.target.value)
-                          })
-                          setInputValue(e.target.value)
-                        }
-                        }
-                        className="border rounded p-2 w-full"
-                        placeholder="Enter showroom points"
-                      />
-                    </div>
-                  )}
-                  {client.category === 'Marketing Executive' && (
-                    <div>
-                      <input
-                        type="text"
-                        className="border rounded p-2 w-full"
-                        placeholder="Enter points for showroom"
-                      />
-                    </div>
-                  )}
-
-                  {client.category !== 'Driver' && client.category !== 'ShowroomStaff' && (
-                    <div>
-                      <button className="mt-1 w-full bg-blue-500 text-white text-sm rounded-md py-1.5" onClick={updatePoint}>Update</button>
-                      <button className="w-full mt-2 bg-gray-200 text-gray-500 text-sm rounded-md py-1.5" onClick={() => togglePara2(client.category)}>View Rewards</button>
-                    </div>
-                  )}
-
-                  <div className="w-full">
-                    {/* Show two input fields for 'ShowroomStaff' */}
-                    {client.category === 'ShowroomStaff' && (<>
-                      <input
-                        type="text"
-                        className="border rounded p-2 w-full mt-1"
-                        placeholder="Points for showroom"
-                        value={showroomStaffPoints}
-                        onChange={(e) => setShowroomStaffPoints(e.target.value)}
-                      />
-                      <input
-                        type="text"
-                        className="border rounded p-2 w-full mt-1"
-                        placeholder="Points for Showroostaff"
-                        value={showroomPoints}
-                        onChange={(e) => setShowroomPoints(e.target.value)}
-                      />
-                      <button
-                        className="mt-2 w-full bg-blue-500 text-white text-sm rounded-md py-1.5"
-                        onClick={handleUpdatePoints}>
-                        Update
-                      </button>
-                      <button className="w-full mt-2 bg-gray-200 text-gray-500 text-sm rounded-md py-1.5" onClick={() => togglePara2(client.category)}>View Rewards</button>
-                    </>
-                    )}
-
-                    {client.category === 'Driver' && (
-                      <button className="w-full mt-2 bg-gray-200 text-gray-500 text-sm rounded-md py-1.5" onClick={() => togglePara2(client.category)}>View Rewards</button>
-                    )}
-                  </div>
+    return (
+        <div className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold dark:text-white-light">Rewards</h2>
+                <div className="flex flex-wrap gap-2">
+                    <Link to="/redeems" className="btn btn-outline-primary btn-sm">
+                        Redemptions
+                        {pendingRedeems ? <span className="badge bg-danger ltr:ml-2 rtl:mr-2 rounded-full">{pendingRedeems}</span> : null}
+                    </Link>
+                    <Link to="/reward-item" className="btn btn-primary btn-sm">Reward items</Link>
                 </div>
-              ))}
             </div>
-          </div>
 
-          {/* Rewards */}
-          <div className="mx-5 mt-10">
-            <div className="space-y-2 font-semibold">
-              {getRewardsList().map(({ category, rewards }, index) => (
-                <div className="border border-[#d3d3d3] dark:border-[#1b2e4b] rounded" key={category}>
-                  <button
-                    type="button"
-                    className={`p-4 w-full flex items-center text-gray-500 dark:bg-[#1b2e4b] h-14`}
-                    onClick={() => togglePara2(category)}
-                  >
-                    {category} Rewards
-                    <div className={`ltr:ml-auto rtl:mr-auto `}>
-                      <IconCaretDown className='text-black' />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* How points are earned */}
+                <div className="panel lg:col-span-2">
+                    <h5 className="font-semibold mb-1">Points per booking</h5>
+                    <p className="text-xs text-white-dark mb-4">
+                        Given automatically when a booking made by a showroom (or its staff) is <b>verified</b>. Each booking earns once.
+                        Drivers earn points from customer feedback.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                        <label className="block">
+                            <span className="text-sm font-medium">Showroom gets</span>
+                            <div className="flex mt-1">
+                                <input
+                                    id="pts-showroom"
+                                    type="number"
+                                    min={0}
+                                    className="form-input ltr:rounded-r-none rtl:rounded-l-none"
+                                    value={form.showroom}
+                                    onChange={(e) => setForm((f) => ({ ...f, showroom: e.target.value }))}
+                                />
+                                <span className="flex items-center px-3 border border-white-light bg-[#eee] dark:border-[#17263c] dark:bg-[#1b2e4b] ltr:rounded-r-md rtl:rounded-l-md text-xs">pts</span>
+                            </div>
+                        </label>
+                        <label className="block">
+                            <span className="text-sm font-medium">Showroom staff who booked gets</span>
+                            <div className="flex mt-1">
+                                <input
+                                    id="pts-staff"
+                                    type="number"
+                                    min={0}
+                                    className="form-input ltr:rounded-r-none rtl:rounded-l-none"
+                                    value={form.showroomStaff}
+                                    onChange={(e) => setForm((f) => ({ ...f, showroomStaff: e.target.value }))}
+                                />
+                                <span className="flex items-center px-3 border border-white-light bg-[#eee] dark:border-[#17263c] dark:bg-[#1b2e4b] ltr:rounded-r-md rtl:rounded-l-md text-xs">pts</span>
+                            </div>
+                        </label>
+                        <button type="button" className="btn btn-primary" disabled={!changed || saving} onClick={savePoints}>
+                            {saving ? 'Saving…' : 'Save'}
+                        </button>
                     </div>
-                  </button>
-                  <div>
-                    <AnimateHeight duration={300} height={active2 === category ? 'auto' : 0}>
-                      <div className="p-4 text-[13px] border-t border-[#d3d3d3] dark:border-[#1b2e4b]">
-                        <ul className="space-y-1">
-                          {rewards.map((reward, index) => (<>
-                            <li className='text-gray-800 bg-gray-200 p-5 rounded sm:flex justify-between'>
-                              <p className='sm:text-left text-center sm:font-normal  underline sm:no-underline'>{reward.name}</p>
-                              <div className='flex flex-col sm:flex-row gap-3 text-center sm:text-nowrap'>
-                                {
-                                  reward.category === "Showroom" && (<>
-                                    <span className='mt-1.5'>Reward Points : {reward.bookingPoint || 0}</span>
-                                    <div className="hidden sm:inline-block  h-[30px] min-h-[1em] w-0.5 self-stretch bg-gray-600 dark:bg-white/10"></div>
-                                  </>
-                                  )
-                                }
-                                <button type="button">Points : {reward.rewardPoints}</button>
-                                <button
-                                  onClick={() => navigate(`/reward-details?userType=${active2.split(' ')[0]}&id=${reward._id}`, {
-                                    replace: true
-                                  })}
-                                >
-                                  <IconEye className='text-purple-500 hover:cursor-pointer m-auto' />
-                                </button>
-                                {
-                                  reward.category === "Showroom" && (<>
-                                    <button onClick={() => setNestedAccord(reward.name)}>
-                                      <IconCaretDown className='text-black sm:ml-5 m-auto sm:m-0' />
-                                    </button>
-                                  </>
-                                  )
-                                }
-                              </div>
+                </div>
+
+                {/* Totals */}
+                <div className="panel">
+                    <h5 className="font-semibold mb-3">Points held</h5>
+                    <ul className="space-y-2 text-sm">
+                        {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
+                            <li key={t} className="flex justify-between">
+                                <span>{TAB_LABEL[t]}</span>
+                                <b>{totals[t].toLocaleString('en-IN')}</b>
                             </li>
-                            {reward.category === 'Showroom' && <AnimateHeight duration={300} height={nestedAccord === reward.name ? 'auto' : 0}>
-                              <div className="pl-5 p-1 text-[13px] border-[#d3d3d3] dark:border-[#1b2e4b]">
-                                <ul className="space-y-1">
-                                  {reward.staff.length > 0 ? (
-                                    reward.staff.map((staff: Staff) => (
-                                      <li key={staff._id} className="text-gray-800 bg-gray-100 p-5 rounded flex justify-between text-sm">
-                                        <p>{staff.name}</p>
-                                        <div className="flex gap-3">
-                                          <button type="button">Points : {staff.rewardPoints || 0}</button>
-                                          <IconEye className="text-purple-500 hover:cursor-pointer" />
-                                        </div>
-                                      </li>
-                                    ))
-                                  ) : (
-                                    <li className="text-gray-800 bg-gray-100 p-5 rounded flex justify-between text-sm">
-                                      <p>No staff found for this showroom.</p>
-                                    </li>
-                                  )}
-                                </ul>
-                              </div >
-                            </AnimateHeight>
-                            }
-                          </>))}
-                        </ul>
-                      </div>
-                    </AnimateHeight >
-                  </div>
+                        ))}
+                    </ul>
+                    <p className="text-xs text-white-dark mt-3">A showroom can use up to half its points as a discount on a booking.</p>
                 </div>
-              ))}
             </div>
-          </div>
+
+            <div className="panel">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div className="flex flex-wrap gap-2" role="tablist">
+                        {(Object.keys(TAB_LABEL) as Tab[]).map((t) => (
+                            <button
+                                key={t}
+                                role="tab"
+                                aria-selected={tab === t}
+                                type="button"
+                                onClick={() => setTab(t)}
+                                className={`btn btn-sm ${tab === t ? 'btn-primary' : 'btn-outline-primary'}`}
+                            >
+                                {TAB_LABEL[t]} <span className="opacity-70 ltr:ml-1 rtl:mr-1">({(t === 'Driver' ? drivers : t === 'Showroom' ? showrooms : showroomStaff).length})</span>
+                            </button>
+                        ))}
+                    </div>
+                    <input className="form-input w-full sm:w-64" placeholder="Search name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+
+                <div className="table-responsive">
+                    <table className="table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                {tab === 'ShowroomStaff' && <th>Showroom</th>}
+                                {tab === 'Showroom' && <th>Staff</th>}
+                                <th className="text-right">Points</th>
+                                <th className="text-center w-24">History</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={4} className="text-center py-8 text-white-dark">Loading…</td>
+                                </tr>
+                            ) : rows.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="text-center py-8 text-white-dark">Nothing to show</td>
+                                </tr>
+                            ) : (
+                                rows.map((r: any) => (
+                                    <tr key={r._id}>
+                                        <td className="font-medium">{r.name || '—'}</td>
+                                        {tab === 'ShowroomStaff' && <td>{r.showroomName || '—'}</td>}
+                                        {tab === 'Showroom' && <td>{r.staff?.length || 0}</td>}
+                                        <td className="text-right font-semibold">{r.rewardPoints.toLocaleString('en-IN')}</td>
+                                        <td className="text-center">
+                                            <button
+                                                type="button"
+                                                title="Redemption history"
+                                                onClick={() => navigate(`/reward-details?userType=${tab}&id=${r._id}`)}
+                                            >
+                                                <IconEye className="text-primary m-auto" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-      </div >
-    </div >
-  )
+    );
 }
 
-export default Rewards
+export default Rewards;

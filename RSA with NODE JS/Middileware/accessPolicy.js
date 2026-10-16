@@ -60,6 +60,8 @@ const RULES = [
     [['POST'], /^\/reward\/?$/, { roles: ADMIN_SITE }],
     [['PUT', 'DELETE'], new RegExp(`^/reward/${ID}/?$`), { roles: ADMIN_SITE }],
     [['PATCH'], /^\/reward\/(approve|reject)-redeem\/[^/]+\/?$/, { roles: ADMIN_SITE }],
+    [['PATCH'], /^\/reward\/showroom-redeem\/[^/]+\/?$/, { roles: ADMIN_SITE }],
+    [['PUT'], /^\/point(\/showroom)?\/?$/, { roles: ADMIN_SITE }],
 
     // vehicles & compliance papers
     [['POST'], /^\/vehicle\/?$/, { roles: ADMIN_SITE }],
@@ -73,7 +75,8 @@ const RULES = [
     [['PATCH'], /^\/expense\/update-expense\/[^/]+\/?$/, { roles: ADMIN_SITE }],
     [['PATCH'], /^\/expense\/complete-settlement\/[^/]+\/?$/, { roles: ADMIN_SITE }],
     [['PATCH'], /^\/diesel-expenses\/[^/]+\/approve\/?$/, { roles: ADMIN_SITE }],
-    [['PATCH'], /^\/booking\/(sattle-amount|sattle-amount-staff|settle-amount-company|settle-cash-pending|update-approve|accountantverify)\/[^/]+\/?$/, { roles: ADMIN_SITE }],
+    // NOTE: /booking/sattle-amount/:id is used by the driver & provider apps (cash settlement) — deliberately not restricted
+    [['PATCH'], /^\/booking\/(sattle-amount-staff|settle-amount-company|settle-cash-pending|update-approve|accountantverify)\/[^/]+\/?$/, { roles: ADMIN_SITE }],
     [['PATCH'], /^\/booking\/(distribute-amount|settle-driver-balance-salary)\/?$/, { roles: ADMIN_SITE }],
 
     // admin tools
@@ -89,7 +92,10 @@ function readToken(req) {
     const header = req.header('Authorization');
     if (!header) return { error: 'Authorization token is missing' };
     try {
-        return { user: jwt.verify(header.replace('Bearer ', ''), process.env.JWT_SECRET) };
+        const user = jwt.verify(header.replace('Bearer ', ''), process.env.JWT_SECRET);
+        if (user && user.role === 'TV') return { error: 'Invalid token' }; // TV screen tokens only work on /tv/live
+        if (user && user.role === 'Customer' && !String(req.originalUrl || '').startsWith('/customer/')) return { error: 'Invalid token' };
+        return { user };
     } catch (err) {
         return { error: err.name === 'TokenExpiredError' ? 'Session expired, please log in again' : 'Invalid token' };
     }

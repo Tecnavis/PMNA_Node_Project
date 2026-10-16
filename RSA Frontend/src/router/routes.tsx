@@ -166,6 +166,10 @@ const VehicleDetails = lazy(() => import('../pages/VehicleDetails/VehicleDetails
 const Status = lazy(() => import('../pages/Status/Status'))
 const OldBookings = lazy(() => import('../pages/OldBookings/OldBookings'))
 const CasePhotos = lazy(() => import('../pages/CasePhotos/CasePhotos'));
+const Operations = lazy(() => import('../pages/Operations/Operations'));
+const ReportsCenter = lazy(() => import('../pages/Reports/ReportsCenter'));
+const RemindersPage = lazy(() => import('../pages/Reminders/RemindersPage'));
+const TvScreen = lazy(() => import('../pages/TV/TvScreen'));
 
 const BookingDashboard = lazy(() => import('../pages/Bookings/BookingChart'))
 
@@ -437,8 +441,20 @@ const routes = [
         element: <OldBookings />,
     },
     {
+        path: '/reminders',
+        element: <RemindersPage />,
+    },
+    {
+        path: '/reports',
+        element: <ReportsCenter />,
+    },
+    {
         path: '/case-photos',
         element: <CasePhotos />,
+    },
+    {
+        path: '/operations',
+        element: <Operations />,
     },
     {
         path: '/bookingDashBoard',
@@ -463,6 +479,11 @@ const routes = [
     {
         path: '/appBooking',
         element: <AppBokk />,
+    },
+    {
+        path: '/tv',
+        element: <TvScreen />,
+        layout: 'blank',
     },
     {
         path: '/screen',

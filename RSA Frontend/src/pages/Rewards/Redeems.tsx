@@ -6,6 +6,15 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { IRedemption, IReward } from '../../interface/Rewards';
 import { getImageUrl } from '../../utils/imageUrl';
 
+type RedeemStatus = 'pending' | 'approved' | 'rejected';
+const statusOf = (r: IRedemption): RedeemStatus => (r.rejected ? 'rejected' : r.approval ? 'approved' : 'pending');
+const STATUS_STYLE: Record<RedeemStatus, string> = {
+    pending: 'bg-amber-100 text-amber-800',
+    approved: 'bg-green-100 text-green-800',
+    rejected: 'bg-gray-200 text-gray-700',
+};
+const STATUS_LABEL: Record<RedeemStatus, string> = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected (points returned)' };
+
 const Redeems = () => {
     const [redemptions, setRedemptions] = useState<IRedemption[]>([]);
     const [filterdRedemptions, setFilterdRedemptions] = useState<IRedemption[]>([]);
@@ -60,6 +69,7 @@ const Redeems = () => {
     };
 
     const handleReject = async (id: string) => {
+        if (!window.confirm('Reject this redemption? The points will be returned to the user and the item goes back to stock.')) return;
         setIsRejecting(true);
         try {
             const data = await rejectRedeem(id);
@@ -94,17 +104,8 @@ const Redeems = () => {
     };
 
     useEffect(() => {
-        if (filter === 'all') {
-            setFilterdRedemptions(redemptions)
-        } else if (filter === 'pending') {
-            const filterdData = redemptions?.filter((item) => item.approval === false)
-            setFilterdRedemptions(filterdData)
-        } else {
-            const filterdData = redemptions?.filter((item) => item.approval === true)
-            setFilterdRedemptions(filterdData)
-        }
-
-    }, [filter])
+        setFilterdRedemptions((redemptions || []).filter((item) => filter === 'all' || statusOf(item) === filter));
+    }, [filter, redemptions])
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -141,7 +142,16 @@ const Redeems = () => {
                             >
                                 Approved
                             </button>
+                            <button
+                                onClick={() => setFilter('rejected')}
+                                className={`px-4 py-2 rounded-md ${filter === 'rejected' ? 'bg-red-600 text-white' : 'bg-white text-gray-700 border'}`}
+                            >
+                                Rejected
+                            </button>
                         </div>
+                        <p className="text-sm text-gray-500">
+                            {redemptions.filter((r) => statusOf(r) === 'pending').length} waiting for approval
+                        </p>
                     </div>
                 </div>
 
@@ -173,7 +183,7 @@ const Redeems = () => {
                                                             {reward?.name || 'Unknown Reward'}
                                                         </h3>
                                                         <p className="text-sm text-gray-500">
-                                                            Redeemed by: {typeof redemption.user === 'string' ? redemption.user : redemption.user.name} ({redemption?.redeemByModel})
+                                                            Redeemed by: {typeof redemption.user === 'string' ? redemption.user : redemption.user?.name || 'Deleted user'} ({redemption?.redeemByModel})
                                                         </p>
                                                         <p className="text-sm text-gray-500">
                                                             {redemption?.address?.fullName} - {redemption?.address?.city}, {redemption?.address?.state}
@@ -181,8 +191,8 @@ const Redeems = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center">
-                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${redemption.approval ? 'bg-green-500' : 'bg-red-500'}`}>
-                                                        {redemption.approval ? 'Approved' : "Pending"}
+                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${STATUS_STYLE[statusOf(redemption)]}`}>
+                                                        {STATUS_LABEL[statusOf(redemption)]}
                                                     </span>
                                                     <span className="ml-4 text-sm text-gray-500">
                                                         {new Date(redemption.createdAt || '').toLocaleDateString()}
@@ -407,7 +417,7 @@ const Redeems = () => {
                             <div className="flex space-x-3">
                                 <ToastContainer />
                                 {/* Modal content... */}
-                                {!selectedRedemption.approval && (
+                                {statusOf(selectedRedemption) === 'pending' && (
 
                                     <button
                                         onClick={() => handleApprove(selectedRedemption._id)}
@@ -433,7 +443,7 @@ const Redeems = () => {
                                         )}
                                     </button>
                                 )}
-                                {selectedRedemption.approval && (
+                                {statusOf(selectedRedemption) !== 'rejected' && (
                                     <div className="flex space-x-3">
                                         <button
                                             onClick={() => handleReject(selectedRedemption._id)}
@@ -454,7 +464,7 @@ const Redeems = () => {
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
-                                                    Pending
+                                                    {selectedRedemption.approval ? 'Cancel & return points' : 'Reject'}
                                                 </>
                                             )}
                                         </button>

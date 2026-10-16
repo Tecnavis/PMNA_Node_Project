@@ -1,3 +1,4 @@
+const { emitOps } = require('../config/socket');
 const Provider = require('../Model/provider');
 const mongoose = require('mongoose');
 const Booking = require('../Model/booking');
@@ -189,10 +190,12 @@ exports.updateProvider = async (req, res) => {
     provider.password = password || provider.password;
     provider.image = req.file ? req.file.filename : provider.image;
     provider.serviceDetails = serviceData;
-    provider.currentLocation = currentLocation || provider.currentLocation
+    provider.currentLocation = currentLocation || provider.currentLocation;
+    if (currentLocation) provider.locationUpdatedAt = new Date(); // live tracking: when the app last reported
     provider.fcmToken = fcmToken || provider.fcmToken;
 
     await provider.save();
+    if (currentLocation) emitOps('ops:location', { type: 'provider', id: String(provider._id), name: provider.name, location: provider.currentLocation, at: provider.locationUpdatedAt });
     res.status(200).json(provider);
   } catch (error) {
     console.error('Error updating provider:', error);
@@ -267,7 +270,8 @@ exports.verifyOTP = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: provider._id }, process.env.JWT_SECRET);
+    // include role like the driver token (the provider app needs it for role-checked routes such as /admin/qr)
+    const token = jwt.sign({ id: provider._id, role: 'Provider', name: `${provider.name}` }, process.env.JWT_SECRET);
 
     res.status(200).json({
       token,

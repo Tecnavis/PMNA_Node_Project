@@ -1,4 +1,5 @@
 // @ts-nocheck
+import TableExportButtons from '../../../components/TableExportButtons';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -712,6 +713,7 @@ const ProviderReport = () => {
                                 className='btn btn-primary'
                                 onClick={() => handlePrint(printRef, selectedYear, selectedMonth, role, driver?.name, bookings, filterData.totalCollectedAmount, filterData.balanceAmountToCollect)}
                             ><IconPrinter />Print</button>
+                            <TableExportButtons containerId="tbl-provider-report" title="Provider report" className="items-center" />
                         </div>
                         <div className="flex items-center gap-5 ltr:ml-auto rtl:mr-auto">
                             <div className="text-right">
@@ -719,7 +721,7 @@ const ProviderReport = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="datatables">
+                    <div className="datatables" id="tbl-provider-report">
                         <DataTable
                             fetching={isLoading}
                             totalRecords={totalRecords}
