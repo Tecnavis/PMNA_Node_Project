@@ -1,6 +1,10 @@
 import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client'
 
+// Images: retry a broken image at the other storage (Cloudinary ↔ StackCP) while the copy runs
+import { installImageFallback } from './utils/imageUrl';
+installImageFallback();
+
 // Perfect Scrollbar
 import 'react-perfect-scrollbar/dist/css/styles.css';
 
