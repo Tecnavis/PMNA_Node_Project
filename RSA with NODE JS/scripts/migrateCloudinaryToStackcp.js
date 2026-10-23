@@ -12,6 +12,7 @@
  *
  * Options: --concurrency=4  --limit=N (copy only, for a trial run)  --optimize (copy: recompress like new uploads)
  *          --fresh (list Cloudinary again instead of resuming / reusing migration-logs/cloudinary-list.json)
+ *          --recheck (copy: ignore earlier copy logs and check every image again)
  *
  * Env (.env): MONGO_URI, CLOUD_NAME, CLOUD_API_KEY, CLOUD_API_SECRET,
  *             MEDIA_API_URL, MEDIA_PUBLIC_URL, MEDIA_SECRET
@@ -244,6 +245,33 @@ async function inventory() {
     console.log(`Total: ${resources.length} images, ${(total / 1048576).toFixed(1)} MB`);
 }
 
+// Images already copied, read from earlier copy-*.csv logs (so a restart skips them with no network at all).
+function loadCopiedIds() {
+    const done = new Set();
+    let files = [];
+    try { files = fs.readdirSync(LOG_DIR).filter(f => /^copy-.*\.csv$/.test(f)); } catch { return done; }
+    for (const f of files) {
+        const lines = fs.readFileSync(path.join(LOG_DIR, f), 'utf8').split('\n');
+        for (const line of lines) {
+            const m = line.match(/^"((?:[^"]|"")*)","(?:[^"]|"")*","(?:[^"]|"")*","(copied|already-there)"/);
+            if (m) done.add(m[1].replace(/""/g, '"'));
+        }
+    }
+    return done;
+}
+
+// Cheap check before downloading: is the file already served by StackCP? (.htaccess serves it without the extension)
+async function existsOnMedia(t) {
+    const base = String(process.env.MEDIA_PUBLIC_URL || '').replace(/\/+$/, '');
+    try {
+        const r = await fetch(`${base}/${t.folder}/${t.name}`, { method: 'HEAD', signal: AbortSignal.timeout(15000) });
+        // only trust a real image answer (a 200 'not found' page must not count as copied)
+        return r.ok && /^image\//i.test(r.headers.get('content-type') || '');
+    } catch {
+        return false;
+    }
+}
+
 async function copy() {
     requireEnv('CLOUD_NAME', 'CLOUD_API_KEY', 'CLOUD_API_SECRET', 'MEDIA_API_URL', 'MEDIA_PUBLIC_URL', 'MEDIA_SECRET');
     const optimize = flag('optimize');
@@ -252,13 +280,23 @@ async function copy() {
     const limit = Number(option('limit', 0));
     if (limit) resources = resources.slice(0, limit);
 
+    const already = flag('recheck') ? new Set() : loadCopiedIds();
+    let alreadyCount = 0;
+    if (already.size) {
+        const before = resources.length;
+        resources = resources.filter(r => !already.has(r.public_id));
+        alreadyCount = before - resources.length;
+        console.log(`  ${before - resources.length} already copied in earlier runs (from migration-logs) - skipping them. ${resources.length} to go.`);
+    }
     const log = openLog('copy', 'public_id,format,bytes,status,key,error');
-    const counts = { copied: 0, skipped: 0, unsupported: 0, failed: 0 };
+    const counts = { copied: 0, skipped: alreadyCount, unsupported: 0, failed: 0, retried: 0 };
     let done = 0;
     const reasons = {};
     let inARow = 0;
     let stopped = null;
     const STOP_AFTER = Number(option('stop-after', 25)); // consecutive failures before giving up
+    let pauseUntil = 0;
+    const networkPause = async () => { const w = pauseUntil - Date.now(); if (w > 0) await sleep(w); };
 
     await pool(resources, async (r) => {
         const t = targetFor(r);
@@ -268,22 +306,39 @@ async function copy() {
                 log.row(r.public_id, r.format, r.bytes, 'unsupported-folder', '', `folder "${t.folder}"`);
                 return;
             }
-            let stage = 'download from Cloudinary';
-            let buffer, mimetype;
-            try {
-                const res = await fetch(r.secure_url, { signal: AbortSignal.timeout(60000) });
-                if (!res.ok) throw new Error(`HTTP ${res.status}${res.headers.get('x-cld-error') ? ' ' + res.headers.get('x-cld-error') : ''}`);
-                buffer = Buffer.from(await res.arrayBuffer());
-                mimetype = res.headers.get('content-type') || `image/${r.format}`;
-                if (optimize) { stage = 'optimize'; ({ buffer, mimetype } = await processImage(buffer, mimetype)); }
-                stage = 'upload to StackCP';
-                const out = await media.uploadBuffer(buffer, { folder: t.folder, name: t.name, mimetype, ifExists: 'skip' });
-                out.skipped ? counts.skipped++ : counts.copied++;
-                log.row(r.public_id, r.format, r.bytes, out.skipped ? 'already-there' : 'copied', out.key, '');
+            if (await existsOnMedia(t)) {
+                counts.skipped++;
+                log.row(r.public_id, r.format, r.bytes, 'already-there', `${t.folder}/${t.name}`, '');
                 inARow = 0;
-            } catch (err) {
-                const why = [err.message, err.cause?.code, err.cause?.message].filter(Boolean).join(' / ');
-                throw new Error(`${stage}: ${why}`);
+                return;
+            }
+            // Network trouble (timeouts, resets, 5xx, 429) is retried a few times before the image counts as failed.
+            const RETRYABLE = /timeout|aborted|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|UND_ERR|socket|fetch failed|HTTP 5\d\d|HTTP 429|unreachable|Media server error \(5/i;
+            const tries = Number(option('retries', 3)) + 1;
+            for (let attempt = 1; ; attempt++) {
+                let stage = 'download from Cloudinary';
+                try {
+                    await networkPause();
+                    const res = await fetch(r.secure_url, { signal: AbortSignal.timeout(60000) });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}${res.headers.get('x-cld-error') ? ' ' + res.headers.get('x-cld-error') : ''}`);
+                    let buffer = Buffer.from(await res.arrayBuffer());
+                    let mimetype = res.headers.get('content-type') || `image/${r.format}`;
+                    if (optimize) { stage = 'optimize'; ({ buffer, mimetype } = await processImage(buffer, mimetype)); }
+                    stage = 'upload to StackCP';
+                    const out = await media.uploadBuffer(buffer, { folder: t.folder, name: t.name, mimetype, ifExists: 'skip' });
+                    out.skipped ? counts.skipped++ : counts.copied++;
+                    log.row(r.public_id, r.format, r.bytes, out.skipped ? 'already-there' : 'copied', out.key, '');
+                    inARow = 0;
+                    break;
+                } catch (err) {
+                    const why = `${stage}: ${[err.message, err.cause?.code, err.cause?.message].filter(Boolean).join(' / ')}`;
+                    if (attempt < tries && RETRYABLE.test(why)) {
+                        counts.retried++;
+                        await sleep(Math.min(30000, 3000 * 2 ** (attempt - 1)) + Math.floor(Math.random() * 1000));
+                        continue;
+                    }
+                    throw new Error(attempt > 1 ? `${why} (after ${attempt} tries)` : why);
+                }
             }
         } catch (err) {
             counts.failed++;
@@ -292,6 +347,10 @@ async function copy() {
             if (!reasons[key]) process.stdout.write(`\n  FAILED ${r.public_id} -> ${err.message}\n`);
             reasons[key] = (reasons[key] || 0) + 1;
             if (++inARow >= STOP_AFTER && !stopped) stopped = `${inARow} images failed in a row`;
+            else if (inARow % 5 === 0 && !stopped) {
+                process.stdout.write(`\n  ${inARow} failures in a row - pausing 60s for the connection to recover...\n`);
+                pauseUntil = Date.now() + 60000;
+            }
         } finally {
             progress(++done, resources.length, `copied ${counts.copied}, skipped ${counts.skipped}, failed ${counts.failed}`);
         }
@@ -304,7 +363,7 @@ async function copy() {
     }
     console.log(counts);
     console.log(`Log: ${log.file}`);
-    if (counts.failed) console.log('Re-run "copy" to retry failures — already-copied files are skipped.');
+    if (counts.failed) console.log('Re-run "copy" (without --fresh) to retry the failures - already-copied images are skipped instantly.');
 }
 
 /**

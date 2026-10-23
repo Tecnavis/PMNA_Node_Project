@@ -6,6 +6,7 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { IRedemption, IReward } from '../../interface/Rewards';
 import { getImageUrl } from '../../utils/imageUrl';
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 type RedeemStatus = 'pending' | 'approved' | 'rejected';
 const statusOf = (r: IRedemption): RedeemStatus => (r.rejected ? 'rejected' : r.approval ? 'approved' : 'pending');
 const STATUS_STYLE: Record<RedeemStatus, string> = {
@@ -18,6 +19,12 @@ const STATUS_LABEL: Record<RedeemStatus, string> = { pending: 'Pending', approve
 const Redeems = () => {
     const [redemptions, setRedemptions] = useState<IRedemption[]>([]);
     const [filterdRedemptions, setFilterdRedemptions] = useState<IRedemption[]>([]);
+    const lc = useListControls(filterdRedemptions, {
+        search: (r: any) => [typeof r.user === 'string' ? r.user : r.user?.name, typeof r.reward === 'string' ? r.reward : r.reward?.name, r.redeemByModel],
+        filters: [{ key: 'who', label: 'Redeemed by', get: (r: any) => r.redeemByModel }],
+        pageSize: 25,
+        storageKey: 'redeems',
+    });
     const [selectedRedemption, setSelectedRedemption] = useState<IRedemption | null>(null);
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
     const [isApproving, setIsApproving] = useState<boolean>(false);
@@ -156,10 +163,11 @@ const Redeems = () => {
                 </div>
 
                 {/* Redemptions List */}
+                <ListToolbar lc={lc} placeholder="Search name or reward…" />
                 <div className="bg-white shadow overflow-hidden sm:rounded-lg">
                     <ul className="divide-y divide-gray-200">
-                        {filterdRedemptions && filterdRedemptions.length > 0 ? (
-                            filterdRedemptions?.map((redemption) => {
+                        {lc.pageRows.length > 0 ? (
+                            lc.pageRows.map((redemption) => {
                                 const reward: IReward = typeof redemption.reward === 'string'
                                     ? JSON.parse(redemption.reward) as IReward
                                     : redemption.reward as IReward;
@@ -212,6 +220,7 @@ const Redeems = () => {
                         )}
                     </ul>
                 </div>
+                <Pager {...lc.pager} />
             </main>
 
             {selectedRedemption && (

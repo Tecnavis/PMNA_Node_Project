@@ -29,10 +29,11 @@ const ShowroomStaffModal: React.FC<ShowroomStaffModalProps> = ({ modal, setModal
 
     // getting all showroomstaff
     const fetchShowroomStaff = async () => {
+        if (!shoroomId) return; // nothing chosen yet
         try {
             const response = await axiosInstance.get(`${BASE_URL}/showroom/showroom-staff/${shoroomId}`);
-            setShowroomsStaff(response.data.data);
-            setShowroomName(response.data.showroomName);
+            setShowroomsStaff(Array.isArray(response.data?.data) ? response.data.data : []);
+            setShowroomName(response.data?.showroomName || '');
         } catch (error) {
             console.error('Error fetching showrooms:', error);
         }
@@ -67,7 +68,7 @@ const ShowroomStaffModal: React.FC<ShowroomStaffModalProps> = ({ modal, setModal
                             </div>
                             {/* Scrollable Content Area */}
                             <div className="p-5 overflow-y-auto" style={{ maxHeight: '70vh' }}>
-                                {showroomsStaff.length > 0 ? (
+                                {showroomsStaff?.length > 0 ? (
                                     showroomsStaff?.map((staff: ShowroomStaff, index) => (
                                         <div key={index} className="panel px-2 py-4 min-w-full min-h-30 rounded-md flex justify-between items-center">
                                             <div className='text-gray-800'>

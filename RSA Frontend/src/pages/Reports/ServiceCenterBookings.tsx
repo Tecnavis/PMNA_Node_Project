@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import { useDispatch } from 'react-redux';
 import axios from 'axios';
@@ -7,6 +7,7 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { GrNext, GrPrevious } from 'react-icons/gr';
 import { getImageUrl } from '../../utils/imageUrl';
 
+import { DebouncedSearch } from '../../components/ui/ListControls';
 interface ShowroomBookingStats {
   _id: string;
   name: string;
@@ -49,13 +50,16 @@ const ServiceCenterBookings = () => {
   const [remarks, setRemarks] = useState<{[key: string]: string}>({}); // Store remarks for each showroom
 
   // Fetch showroom booking statistics
+  const loadSeq = useRef(0);
   const fetchShowroomBookings = async (searchTerm = '', page = 1, limit = pageSize) => {
+    const seq = ++loadSeq.current;
     try {
       setLoading(true);
       const response = await axios.get(`${backendUrl}/showroom/bookings-stats`, {
         params: { search: searchTerm, page, limit },
       });
-      setShowrooms(response.data.data);
+      if (seq !== loadSeq.current) return; // an older search answered late
+      setShowrooms(Array.isArray(response.data?.data) ? response.data.data : []);
       setTotalPages(response.data.totalPages);
       setCurrentPage(response.data.page);
     } catch (error) {
@@ -327,13 +331,7 @@ const ServiceCenterBookings = () => {
         <div className="flex md:items-center md:flex-row flex-col mb-5 gap-5">
           <h5 className="font-semibold text-lg dark:text-white-light">Showroom Bookings Report</h5>
           <div className="ltr:ml-auto rtl:mr-auto flex flex-wrap gap-4">
-            <input
-              type="text"
-              className="form-input w-auto"
-              placeholder="Search showrooms..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <DebouncedSearch className="form-input w-auto" placeholder="Search showrooms…" value={searchTerm} onSearch={setSearchTerm} />
             
             {/* Print: period + button */}
             <select className="form-select w-auto" value={printPeriod} onChange={(e) => setPrintPeriod(e.target.value as any)} title="Bookings to list in the print">

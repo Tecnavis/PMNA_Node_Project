@@ -29,6 +29,7 @@ import { toast } from 'react-hot-toast'
 import VerificationModal from './VerificationModal';
 import { getImageUrl } from '../../utils/imageUrl';
 
+import { Pager, useServerPaging } from '../../components/ui/ListControls';
 function ExecutiveShowroomsTable() {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
@@ -45,7 +46,10 @@ function ExecutiveShowroomsTable() {
     const [showroomId, setShowroomId] = useState<string>('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
-    const [searchTerm, setSearchTerm] = useState('');
+    const sp = useServerPaging({ storageKey: 'exec-showrooms', pageSize: 25 });
+    const searchTerm = sp.search;
+    const [listLoading, setListLoading] = useState(false);
+    const loadSeq = useRef(0);
     const [selectedShowroomForVerification, setSelectedShowroomForVerification] = useState<string | null>(null);
 
     const navigate = useNavigate();
@@ -70,18 +74,25 @@ function ExecutiveShowroomsTable() {
     };
 
     // getting all showroom
-    const fetchShowroom = async (searchTerm = '', page = 1, limit = 10) => {
+    // args kept for old callers; always loads the current page / search
+    const fetchShowroom = async (..._ignored: unknown[]) => {
+        const seq = ++loadSeq.current;
+        setListLoading(true);
         try {
             const response = await axios.get(`${backendUrl}/showroom/all-showrooms`, {
-                params: { search: searchTerm, page, limit, addedBy: true },
+                params: { search: sp.search, page: sp.page, limit: sp.pageSize, addedBy: true },
             });
-
-            setShowrooms(response.data.data);
-            setFilteredShowrooms(response.data.data);
-            setTotalPages(response.data.totalPages);
-            setCurrentPage(response.data.page);
+            if (seq !== loadSeq.current) return;
+            const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+            setShowrooms(rows);
+            setFilteredShowrooms(rows);
+            setTotalPages(response.data?.totalPages || 0);
+            setCurrentPage(response.data?.page || sp.page);
+            sp.setTotal(Number(response.data?.totalCount ?? response.data?.total) || 0);
         } catch (error) {
-            console.error('Error fetching showroom staff:', error);
+            if (seq === loadSeq.current) console.error('Error fetching showrooms:', error);
+        } finally {
+            if (seq === loadSeq.current) setListLoading(false);
         }
     };
 
@@ -116,13 +127,12 @@ function ExecutiveShowroomsTable() {
 
     useEffect(() => {
         gettingToken();
-        fetchShowroom();
     }, []);
 
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-        fetchShowroom(searchTerm, page); // use current search term
-    };
+    useEffect(() => {
+        fetchShowroom();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sp.page, sp.pageSize, sp.search]);
 
     // Download excel sheet
     const handleDownloadExcel = () => {
@@ -158,12 +168,7 @@ function ExecutiveShowroomsTable() {
         XLSX.writeFile(workbook, 'showrooms.xlsx');
     };
 
-    const handleSearchChange = (e: any) => {
-        const value = e.target.value;
-        setSearchTerm(value);
-        setCurrentPage(1); // reset to first page on search
-        fetchShowroom(value, 1); // fetch results based on search
-    };
+
 
     // Print the table
     const handlePrint = () => {
@@ -374,7 +379,7 @@ function ExecutiveShowroomsTable() {
                             <option value="Hadhi">Hadhi Hassan</option>
                             <option value="Hadhi">Hadhi Hassan</option>
                         </select>
-                        <input type="text" className="form-input w-auto" placeholder="Search..." onChange={handleSearchChange} />
+                        <input type="search" className="form-input w-full sm:w-72" placeholder="Search name, ID, location, phone…" value={sp.searchInput} onChange={(e) => sp.setSearchInput(e.target.value)} />
                     </div>
                 </div>
                 <div className="table-responsive mb-5">
@@ -396,7 +401,7 @@ function ExecutiveShowroomsTable() {
                         <tbody>
                             {filteredShowrooms?.map((items, index) => (
                                 <tr key={index}>
-                                    <td>{index + 1}</td>
+                                    <td>{sp.rowNumber(index)}</td>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
                                             <img
@@ -507,9 +512,17 @@ function ExecutiveShowroomsTable() {
                                     </td>
                                 </tr>
                             ))}
+                            {filteredShowrooms.length === 0 && (
+                                <tr>
+                                    <td colSpan={20} className="py-8 text-center text-white-dark">
+                                        {listLoading ? 'Loading…' : sp.search ? `No showrooms match "${sp.search}".` : 'No showrooms yet.'}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
+                <Pager {...sp.pager} loading={listLoading} sizes={[10, 25, 50, 100, 500]} />
             </div >
             <Transition appear show={modal5} as={Fragment}>
                 <Dialog as="div" open={modal5} onClose={() => setModal5(false)}>
@@ -689,96 +702,7 @@ function ExecutiveShowroomsTable() {
             </Transition>
             {/* <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} /> */}
 
-            <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-                {/* Previous Button */}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                        disabled={currentPage === 1}
-                    >
-                        <GrPrevious />
-                    </button>
-                </li>
 
-                {/* Always show first page */}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(1)}
-                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                    >
-                        1
-                    </button>
-                </li>
-
-                {/* Show ellipsis if current page is far from start */}
-                {currentPage > 4 && totalPages > 7 && (
-                    <li className="flex items-end">
-                        <span className="px-1">...</span>
-                    </li>
-                )}
-
-                {/* Middle pages - dynamic range */}
-                {Array.from({ length: Math.min(5, totalPages - 2) }, (_, i) => {
-                    let pageNum;
-                    if (currentPage < 4) {
-                        pageNum = i + 2; // Show pages 2-6 when near start
-                    } else if (currentPage > totalPages - 3) {
-                        pageNum = totalPages - 4 + i; // Show last pages when near end
-                    } else {
-                        pageNum = currentPage - 2 + i; // Show pages around current
-                    }
-
-                    if (pageNum > 1 && pageNum < totalPages) {
-                        return (
-                            <li key={pageNum}>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePageChange(pageNum)}
-                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                                >
-                                    {pageNum}
-                                </button>
-                            </li>
-                        );
-                    }
-                    return null;
-                })}
-
-                {/* Show ellipsis if current page is far from end */}
-                {currentPage < totalPages - 3 && totalPages > 7 && (
-                    <li className="flex items-end">
-                        <span className="px-1">...</span>
-                    </li>
-                )}
-
-                {/* Always show last page if there's more than 1 page */}
-                {totalPages > 1 && (
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(totalPages)}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === totalPages ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                        >
-                            {totalPages}
-                        </button>
-                    </li>
-                )}
-
-                {/* Next Button */}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                        disabled={currentPage === totalPages}
-                    >
-                        <GrNext />
-                    </button>
-                </li>
-            </ul>
             {/* Delete confirmation modal  */}
             <ConfirmationModal
                 isVisible={isModalVisible}

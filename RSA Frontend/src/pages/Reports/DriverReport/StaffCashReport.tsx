@@ -28,6 +28,7 @@ import { getImageUrl } from '../../../utils/imageUrl';
 
 
 
+import { DebouncedSearch } from '../../../components/ui/ListControls';
 interface FilterData {
     totalCollectedAmount: number,
     overallAmount: number,
@@ -715,7 +716,7 @@ const fetchStaffReceivedDetails = async () => {
                         </div>
                         <div className="flex items-center gap-5 ltr:ml-auto rtl:mr-auto">
                             <div className="text-right">
-                                <input type="text" className="form-input" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                                <DebouncedSearch value={search} placeholder="Search file no., vehicle, customer…" onSearch={(v) => { setPage(1); setSearch(v); }} />
                             </div>
                         </div>
                     </div>

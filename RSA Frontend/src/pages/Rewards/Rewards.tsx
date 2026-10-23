@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { axiosInstance, BASE_URL } from '../../config/axiosConfig';
 import IconEye from '../../components/Icon/IconEye';
 
+import { useListControls, Pager } from '../../components/ui/ListControls';
 // Kept for other files that import it
 export interface Staff {
     _id: string;
@@ -126,6 +127,7 @@ function Rewards() {
         return current.rows.filter((r) => !q || r.name?.toLowerCase().includes(q) || r.extra?.toLowerCase().includes(q)).sort((a, b) => b.rewardPoints - a.rewardPoints);
     }, [current, search]);
     const total = (t: Tab) => lists[t].rows.reduce((a, r) => a + r.rewardPoints, 0);
+    const paged = useListControls(rows, { pageSize: 25 }); // paging only; the search box above narrows `rows`
     const groups = Array.from(new Set(SETTING_FIELDS.map((f) => f.group)));
 
     return (
@@ -228,7 +230,7 @@ function Rewards() {
                             ) : rows.length === 0 ? (
                                 <tr><td colSpan={4} className="text-center py-8 text-white-dark">Nothing to show</td></tr>
                             ) : (
-                                rows.map((r) => (
+                                paged.pageRows.map((r) => (
                                     <tr key={r._id}>
                                         <td className="font-medium">{r.name || '—'}</td>
                                         {tab === 'ShowroomStaff' && <td>{r.extra || '—'}</td>}
@@ -246,6 +248,7 @@ function Rewards() {
                         </tbody>
                     </table>
                 </div>
+                <Pager {...paged.pager} />
             </div>
         </div>
     );

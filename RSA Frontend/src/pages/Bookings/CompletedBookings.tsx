@@ -17,6 +17,7 @@ import IconMapPin from '../../components/Icon/IconMapPin';
 import { GrPrevious } from 'react-icons/gr';
 import { GrNext } from 'react-icons/gr';
 import { ROLES } from '../../constants/roles';
+import { Pager, useServerPaging } from '../../components/ui/ListControls';
 interface VerifiedByUser {
     _id: string;
     name: string;
@@ -145,19 +146,9 @@ const CompletedBookings: React.FC = () => {
     const [totalItems, setTotalItems] = useState(0);
     const role = localStorage.getItem('role') || '';
     const [activeTab, setActiveTab] = useState<'feedback' | 'verify'>('verify');
-    const [currentSearchTerm, setCurrentSearchTerm] = useState('');
-
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-        fetchBookings('', page); // Pass the current page
-    };
-    // -----------------------------------------
-    const toggleShowAll = () => {
-        const newShowingAll = !showingAll;
-        setShowingAll(newShowingAll);
-        // Pass the current search term when toggling
-        fetchBookings(currentSearchTerm, 1, newShowingAll ? 'all' : 10);
-    };
+    const sp = useServerPaging({ storageKey: 'completed-bookings', pageSize: 25 });
+    const [isLoading, setIsLoading] = useState(false);
+    const loadSeq = React.useRef(0);
     const navigate = useNavigate();
 
     // checking the token
@@ -174,25 +165,27 @@ const CompletedBookings: React.FC = () => {
     };
 
     // getting all bookings
+    // reload when the tab, page, rows per page or search changes
     useEffect(() => {
         fetchBookings();
-    }, [activeTab]);
-    const fetchBookings = async (searchTerm = '', page = 1, limit: number | 'all' = 10) => {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, sp.page, sp.pageSize, sp.search]);
+    const fetchBookings = async () => {
+        const seq = ++loadSeq.current;
+        setIsLoading(true);
         try {
-            const params: any = {
-                search: searchTerm,
-                tab: activeTab, // Add the active tab to the request
-                ...(limit === 'all' ? { all: true } : { page, limit }),
-            };
-
+            const params: any = { search: sp.search, tab: activeTab, page: sp.page, limit: sp.pageSize };
             const response = await axios.get(`${backendUrl}/booking/getordercompleted`, { params });
-
-            setBookings(response.data.bookings);
-            setTotalPages(response.data.totalPages);
-            setCurrentPage(response.data.page);
-            setTotalItems(response.data.total);
+            if (seq !== loadSeq.current) return;
+            setBookings(Array.isArray(response.data?.bookings) ? response.data.bookings : []);
+            setTotalPages(response.data?.totalPages || 0);
+            setCurrentPage(response.data?.page || sp.page);
+            setTotalItems(response.data?.total || 0);
+            sp.setTotal(Number(response.data?.total) || 0);
         } catch (error) {
-            console.error('Error fetching bookings:', error);
+            if (seq === loadSeq.current) console.error('Error fetching bookings:', error);
+        } finally {
+            if (seq === loadSeq.current) setIsLoading(false);
         }
     };
 
@@ -210,9 +203,13 @@ const CompletedBookings: React.FC = () => {
                 confirmButtonText: 'Yes, verify it!',
             }).then((result) => {
                 if (result.isConfirmed) {
-                    axios.patch(`${backendUrl}/booking/accountantverify/${id}`);
-                    setBookings((prev) => prev.filter((item) => item._id !== id));
-                    Swal.fire('Verified!', 'The booking has been verified.', 'success');
+                    axios
+                        .patch(`${backendUrl}/booking/accountantverify/${id}`)
+                        .then(() => {
+                            Swal.fire('Verified!', 'The booking has been verified.', 'success');
+                            fetchBookings(); // keeps the page full and the count right
+                        })
+                        .catch((e) => Swal.fire('Not verified', e?.response?.data?.message || 'Could not verify. Please try again.', 'error'));
                 }
             });
         } catch (error) {
@@ -222,9 +219,7 @@ const CompletedBookings: React.FC = () => {
 
     useEffect(() => {
         gettingToken();
-        fetchBookings();
     }, []);
-    console.log('bookings', bookings);
     return (
         <div className="grid xl:grid-cols-1 gap-6 grid-cols-1">
             <div className="panel">
@@ -236,22 +231,20 @@ const CompletedBookings: React.FC = () => {
                     <div className="flex-grow sm:w-auto w-full">
                         <input
                             type="text"
-                            placeholder="Search bookings..."
-                            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
-                            onChange={(e) => {
-                                setCurrentSearchTerm(e.target.value);
-                                fetchBookings(e.target.value);
-                            }}
+                            placeholder="Search file no., vehicle, driver, phone…"
+                            className="form-input w-full"
+                            value={sp.searchInput}
+                            onChange={(e) => sp.setSearchInput(e.target.value)}
                         />
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 mb-5">
                     {/* FeedBack & verify Completed */}
-                    <button className={`text-center px-3 py-1 rounded shadow ${activeTab === 'feedback' ? 'bg-green-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('feedback')}>
+                    <button className={`text-center px-3 py-1 rounded shadow ${activeTab === 'feedback' ? 'bg-green-500 text-white' : 'bg-gray-200'}`} onClick={() => { setActiveTab('feedback'); sp.setPage(1); }}>
                         FeedBack & Verify Completed
                     </button>
                     {/* Verify Completed*/}
-                    <button className={`text-center px-3 py-1 rounded shadow ${activeTab === 'verify' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => setActiveTab('verify')}>
+                    <button className={`text-center px-3 py-1 rounded shadow ${activeTab === 'verify' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} onClick={() => { setActiveTab('verify'); sp.setPage(1); }}>
                         Verify Completed
                     </button>{' '}
                 </div>
@@ -284,7 +277,7 @@ const CompletedBookings: React.FC = () => {
 
                                 return (
                                     <tr key={index}>
-                                        <td>{index + 1}</td> {/* Index column */}
+                                        <td>{sp.rowNumber(index)}</td>
                                         <td>{items.createdAt ? new Date(items.createdAt).toLocaleDateString('en-GB') : 'N/A'}</td>
                                         <td>
                                             <div style={{ background: fileNumberColor, padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px' }}>
@@ -354,71 +347,18 @@ const CompletedBookings: React.FC = () => {
                                     </tr>
                                 );
                             })}
+                            {bookings.length === 0 && (
+                                <tr>
+                                    <td colSpan={9} className="py-8 text-center text-white-dark">
+                                        {isLoading ? 'Loading…' : sp.search ? `No bookings match "${sp.search}".` : 'No bookings here.'}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
-            {/* Updated Pagination Controls */}
-            <div className="flex justify-between items-center mt-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {bookings.length} of {totalItems} bookings
-                </div>
-
-                <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                            disabled={showingAll}
-                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                showingAll ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-                        >
-                            <GrPrevious />
-                        </button>
-                    </li>
-
-                    {!showingAll &&
-                        Array.from({ length: totalPages }, (_, index) => (
-                            <li key={index}>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePageChange(index + 1)}
-                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                        currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                                    }`}
-                                >
-                                    {index + 1}
-                                </button>
-                            </li>
-                        ))}
-
-                    <li>
-                        <button
-                            type="button"
-                            onClick={toggleShowAll}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            }`}
-                        >
-                            {showingAll ? 'Pages' : 'All'}
-                        </button>
-                    </li>
-
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                            disabled={showingAll}
-                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                showingAll ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-                        >
-                            <GrNext />
-                        </button>
-                    </li>
-                </ul>
-            </div>
+            <Pager {...sp.pager} loading={isLoading} className="px-1" />
         </div>
     );
 };

@@ -12,6 +12,7 @@ import axios from 'axios';
 import styles from './petrolpump.module.css';
 import { MdLocalGasStation } from 'react-icons/md';
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 const style = {
     position: 'absolute' as 'absolute',
     top: '50%',
@@ -44,6 +45,11 @@ interface Errors {
 
 const PetrolPump: React.FC = () => {
     const [petrolPumps, setPetrolPumps] = useState<PetrolPump[]>([]);
+    const lc = useListControls(petrolPumps, {
+        search: (p) => [p.pumpName, p.location, p.address, p.contactNumber, p.fuelTypes],
+        filters: [{ key: 'fuel', label: 'Fuel type', get: (p) => p.fuelTypes }],
+        storageKey: 'petrol-pumps',
+    });
     const [uid, setUid] = useState<string>('');
     const [pumpName, setPumpName] = useState<string>('');
     const [location, setLocation] = useState<string>('');
@@ -316,6 +322,7 @@ const PetrolPump: React.FC = () => {
                 </div>
             </div>
             
+            <ListToolbar lc={lc} placeholder="Search pump, location, phone…" className="mt-2" />
             <table className={styles.tableContainer}>
                 <thead>
                     <tr>
@@ -328,7 +335,7 @@ const PetrolPump: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {petrolPumps.map((pump, index) => (
+                    {lc.pageRows.map((pump, index) => (
                         <tr key={index} className={styles.tableRow}>
                             <td className={styles.tableCell} data-label="Pump Name">
                                 <span>{pump?.pumpName ? pump.pumpName.charAt(0).toUpperCase() + pump.pumpName.slice(1) : 'Name not available'}</span>
@@ -357,8 +364,16 @@ const PetrolPump: React.FC = () => {
                             </td>
                         </tr>
                     ))}
+                    {lc.pageRows.length === 0 && (
+                        <tr>
+                            <td colSpan={6} className="py-8 text-center text-white-dark">
+                                {lc.rows.length ? 'Nothing matches your search or filters.' : 'Nothing to show yet.'}
+                            </td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
+            <Pager {...lc.pager} />
 
             {/* Add/Edit Modal */}
             <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">

@@ -16,36 +16,38 @@ import { SearchIcon } from 'lucide-react';
 import { showApiSuccessToast } from '../../utils/errorHandler';
 import { toast } from 'react-hot-toast';
 
+import { Pager, useServerPaging } from '../../components/ui/ListControls';
 export default function MarketingExecutives() {
 
     const [executives, setExecutives] = useState<IMarketingExecutives[]>([])
     const [selectedExecutive, setSelectedExecutive] = useState<number>(0)
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(0);
-    const [search, setSearch] = useState('');
+    const sp = useServerPaging({ storageKey: 'marketing-executives', pageSize: 10 });
+    const currentPage = sp.page;
+    const search = sp.search;
+    const [loading, setLoading] = useState(false);
+    const loadSeq = React.useRef(0);
     const [modal2, setModal2] = useState(false);
 
     const navigate = useNavigate()
 
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-        fetchExecutives(page);
-    };
-
-    const fetchExecutives = async (page = 1, searchText = '') => {
+    const fetchExecutives = async (page = sp.page, searchText = sp.search) => {
+        const seq = ++loadSeq.current;
+        setLoading(true);
         const result = await getAllExecutives(page, searchText);
-
+        if (seq !== loadSeq.current) return;
+        setLoading(false);
         if (result?.success) {
-            setExecutives(result.data);
-            setTotalPages(result.pagination.totalPages);
-            setCurrentPage(result.pagination.page);
+            setExecutives(Array.isArray(result.data) ? result.data : []);
+            sp.setTotal(Number(result.pagination?.total) || 0);
         } else {
-            setExecutives([]); // Optional: clear on failure
+            setExecutives([]);
+            sp.setTotal(0);
         }
     };
 
     useEffect(() => {
         fetchExecutives(currentPage, search);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentPage, search]);
 
     const deleteExecutive = async (id: string) => {
@@ -110,7 +112,7 @@ export default function MarketingExecutives() {
                             <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
                                 <SearchIcon size={18} className='text-gray-500' />
                             </div>
-                            <input value={search} onChange={(e) => setSearch(e.target.value || '')} type="search" id="default-search" className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search..." />
+                            <input value={sp.searchInput} onChange={(e) => sp.setSearchInput(e.target.value || '')} type="search" id="default-search" className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Search..." />
                         </div>
                         <Link to="/new-executive" className="font-semibold text-success hover:text-gray-400 dark:text-gray-500 dark:hover:text-gray-600">
                             <span className="flex items-center">
@@ -136,7 +138,7 @@ export default function MarketingExecutives() {
                             {
                                 executives?.map((executive, index) => (<>
                                     <tr>
-                                        <td>{index + 1}</td>
+                                        <td>{sp.rowNumber(index)}</td>
                                         <td>
                                             <img
                                                 src={`${executive.image}` || defaultImage}
@@ -179,38 +181,7 @@ export default function MarketingExecutives() {
                         </tbody>
                     </table>
                 </div>
-                <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                            className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                        >
-                            <GrPrevious />
-                        </button>
-                    </li>
-                    {Array.from({ length: totalPages }, (_, index) => (
-                        <li key={index}>
-                            <button
-                                type="button"
-                                onClick={() => handlePageChange(index + 1)}
-                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                                    }`}
-                            >
-                                {index + 1}
-                            </button>
-                        </li>
-                    ))}
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                            className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                        >
-                            <GrNext />
-                        </button>
-                    </li>
-                </ul>
+                <Pager {...sp.pager} onPageSize={undefined} loading={loading} />
             </div>
             {/* Enhanced Staff View Modal */}
             <Transition appear show={modal2} as={Fragment}>

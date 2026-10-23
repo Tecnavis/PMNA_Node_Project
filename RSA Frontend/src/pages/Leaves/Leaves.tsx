@@ -14,6 +14,7 @@ import 'react-calendar/dist/Calendar.css';
 import './customCalendar.css'; // Our custom styles
 import CalenderModal from './CalenderModal';
 import IconMenuCalendar from '../../components/Icon/Menu/IconMenuCalendar';
+import { useListControls, Pager } from '../../components/ui/ListControls';
 // ------------------------------------------
 const style = {
     position: 'absolute' as 'absolute',
@@ -50,6 +51,7 @@ const Leaves: React.FC = () => {
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const [drivers, setDrivers] = useState<{ _id: string; name: string }[]>([]);
     const [filteredLeaves, setFilteredLeaves] = useState<Leave[]>([]);
+    const leavePages = useListControls(filteredLeaves, { pageSize: 25 }); // paging only; search/filters above already narrow the list
     const [selectedYear, setSelectedYear] = useState<string>('');
     const [selectedMonth, setSelectedMonth] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
@@ -401,7 +403,7 @@ const Leaves: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredLeaves.map((leave, index) => (
+                    {leavePages.pageRows.map((leave, index) => (
                         <tr key={index} className={styles.tableRow}>
                             <td className={styles.tableCell} data-label="Leave Date">
                                 <span>
@@ -437,6 +439,7 @@ const Leaves: React.FC = () => {
                     ))}
                 </tbody>
             </table>
+            <Pager {...leavePages.pager} />
             <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
                 <Box sx={style}>
                     <div>

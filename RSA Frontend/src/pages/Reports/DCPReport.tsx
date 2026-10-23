@@ -29,6 +29,7 @@ import {
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { getImageUrl } from '../../utils/imageUrl';
+import { DebouncedSearch } from '../../components/ui/ListControls';
 // -----------------------------------------------------------
 interface Company {
     _id: string;
@@ -260,10 +261,20 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
 
     useEffect(() => {
         gettingToken();
+    }, []);
+    // each table reloads only for its own search box
+    useEffect(() => {
         fetchDrivers(searchDriver);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchDriver]);
+    useEffect(() => {
         fetchProviders(searchProviders);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchProviders]);
+    useEffect(() => {
         fetchCompanies(searchCompnies);
-    }, [searchDriver, searchProviders, searchCompnies]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchCompnies]);
     // ---------------------------------------
  const handleSettleClick = async (driver: Driver) => {
      const password = await Swal.fire({
@@ -374,7 +385,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                         <h5 className="font-semibold text-lg dark:text-white-light">PMNA Drivers</h5>
                         <TableExportButtons containerId="tbl-dcp-drivers" title="Drivers" />
 <div className="ltr:ml-auto rtl:mr-auto">
-                            <input type="text" className="form-input w-auto" placeholder="Search..." value={searchDriver} onChange={(e) => setSearchDriver(e.target.value)} />
+                            <DebouncedSearch className="form-input w-auto" value={searchDriver} placeholder="Search driver…" onSearch={setSearchDriver} />
                         </div>
                     </div>
                     <div className="datatables" id="tbl-dcp-drivers">
@@ -435,7 +446,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                         <h5 className="font-semibold text-lg dark:text-white-light">Providers</h5>
                         <TableExportButtons containerId="tbl-dcp-providers" title="Providers" />
 <div className="ltr:ml-auto rtl:mr-auto">
-                            <input type="text" className="form-input w-auto" placeholder="Search..." value={searchProviders} onChange={(e) => setSearchProviders(e.target.value)} />
+                            <DebouncedSearch className="form-input w-auto" value={searchProviders} placeholder="Search provider…" onSearch={setSearchProviders} />
                         </div>
                     </div>
                     <div className="datatables" id="tbl-dcp-providers">
@@ -493,7 +504,7 @@ const [processingSettlement, setProcessingSettlement] = useState(false);
                     <h5 className="font-semibold text-lg dark:text-white-light">Companies</h5>
                     <TableExportButtons containerId="tbl-dcp-companies" title="Companies" />
 <div className="ltr:ml-auto rtl:mr-auto">
-                        <input type="text" className="form-input w-auto" placeholder="Search..." value={searchCompnies} onChange={(e) => setSearchCompanies(e.target.value)} />
+                        <DebouncedSearch className="form-input w-auto" value={searchCompnies} placeholder="Search company…" onSearch={setSearchCompanies} />
                     </div>
                 </div>
                 <div className="datatables" id="tbl-dcp-companies">

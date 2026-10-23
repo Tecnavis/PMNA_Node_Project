@@ -8,7 +8,7 @@ import { isAxiosError } from 'axios';
 import { PaymentTransaction, Showroom } from './types'; // Import from types
 import { PaymentTransactionsColumns } from './constant';
 import TableExportButtons from '../../components/TableExportButtons';
-import { EmptyState, Field, PageHeader, SearchBox, Section, money, tableProps } from '../../components/ui/PageKit';
+import { EmptyState, Field, PageHeader, SearchBox, Section, money, tableProps, usePaged } from '../../components/ui/PageKit';
 
 const getColorForDateTime = (dateTimeString: string) => {
   let hash = 0;
@@ -246,6 +246,7 @@ const fetchPaymentTransactions = async () => {
 
   const [showroomFilter, setShowroomFilter] = useState('');
   const showroomData = showrooms.find((s) => s._id === selectedShowroom);
+  const { pageRows: payRows, paging: payPaging } = usePaged(paymentTransactions || [], 50);
   const withBalance = showrooms.filter((s) => (s.cashInHand || 0) > 0);
   const visibleShowrooms = (() => {
     const q = showroomFilter.trim().toLowerCase();
@@ -363,7 +364,7 @@ const fetchPaymentTransactions = async () => {
                   </div>
                 </div>
                 <div id="showroom-pay-table" className="datatables">
-                  <DataTable {...tableProps} columns={PaymentTransactionsColumns as any} records={paymentTransactions || []} idAccessor="_id" />
+                  <DataTable {...tableProps} columns={PaymentTransactionsColumns as any} records={payRows} {...payPaging} idAccessor="_id" />
                 </div>
               </>
             )}

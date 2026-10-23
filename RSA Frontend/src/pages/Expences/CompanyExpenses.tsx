@@ -21,6 +21,7 @@ import {
 import logo from '../../assets/images/RSALogo.png'
 import { getImageUrl as resolveImageUrl } from '../../utils/imageUrl';
 
+import { Pager } from '../../components/ui/ListControls';
 const CompanyExpenses = () => {
   const [expenses, setExpenses] = useState<ICompanyExpense[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -44,6 +45,8 @@ const CompanyExpenses = () => {
   const [showAll, setShowAll] = useState<boolean>(false);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
+  const [reloadKey, setReloadKey] = useState(0); // bump to reload with the current filters
+  const loadSeq = React.useRef(0);
 
   // NEW: Total amount state
   const [totalAmount, setTotalAmount] = useState<number>(0);
@@ -112,6 +115,7 @@ const CompanyExpenses = () => {
 
   // In your CompanyExpenses component
   const fetchCompanyExpenses = async () => {
+    const seq = ++loadSeq.current;
     try {
       setLoading(true);
       setFilterLoading(true);
@@ -130,7 +134,8 @@ const CompanyExpenses = () => {
       );
       console.log("response", response);
       
-      setExpenses(response.data);
+      if (seq !== loadSeq.current) return; // an older request answered late
+      setExpenses(Array.isArray(response.data) ? response.data : []);
       setTotalPages(response.totalPages);
       setTotalItems(response.total);
 
@@ -138,7 +143,7 @@ const CompanyExpenses = () => {
       const calculatedTotal = calculateTotalAmount(response.data);
       setTotalAmount(calculatedTotal);
 
-      response.data.forEach((expense: ICompanyExpense) => {
+      (Array.isArray(response.data) ? response.data : []).forEach((expense: ICompanyExpense) => {
         setAmountInputValues((prev) => ({ ...prev, [expense._id]: expense.amount }))
       });
 
@@ -178,8 +183,8 @@ const CompanyExpenses = () => {
 
   const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setCurrentPage(1); // Reset to first page when applying filters
-    fetchCompanyExpenses();
+    setCurrentPage(1);
+    setReloadKey((k) => k + 1); // loads after the new filter values are in place
   };
 
   const handleResetFilters = () => {
@@ -188,91 +193,29 @@ const CompanyExpenses = () => {
     setCategory('');
     setEmployee('');
     setCurrentPage(1);
-    fetchCompanyExpenses();
+    setReloadKey((k) => k + 1);
   };
 
   // Pagination controls
   const PaginationControls = () => (
-    <div className="flex items-center justify-between mt-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600">
-          Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-          {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
-        </span>
-        
-        <FormControl size="small" className="w-24">
-          <InputLabel>Per Page</InputLabel>
-          <Select
-            value={itemsPerPage}
-            onChange={(e) => {
-              setItemsPerPage(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            label="Per Page"
-          >
-            <MenuItem value={5}>5</MenuItem>
-            <MenuItem value={10}>10</MenuItem>
-            <MenuItem value={25}>25</MenuItem>
-            <MenuItem value={50}>50</MenuItem>
-          </Select>
-        </FormControl>
-        
-        <Button
-          onClick={() => setShowAll(!showAll)}
-          className={`px-3 py-1 rounded-md ${showAll ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
-        >
-          {showAll ? 'Show Paginated' : 'Show All'}
-        </Button>
-      </div>
-      
-      {!showAll && (
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="p-1 rounded-md disabled:opacity-50"
-          >
-            <ChevronLeft size={20} />
-          </Button>
-          
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
-            
-            return (
-              <Button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`w-8 h-8 rounded-md ${currentPage === pageNum ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
-              >
-                {pageNum}
-              </Button>
-            );
-          })}
-          
-          <Button
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="p-1 rounded-md disabled:opacity-50"
-          >
-            <ChevronRight size={20} />
-          </Button>
-        </div>
-      )}
-    </div>
+    <Pager
+      page={currentPage}
+      pageCount={Math.max(1, totalPages || 1)}
+      total={totalItems}
+      pageSize={itemsPerPage}
+      onPage={setCurrentPage}
+      onPageSize={(n) => {
+        setItemsPerPage(n);
+        setCurrentPage(1);
+      }}
+      sizes={[10, 25, 50, 100, 500]}
+      loading={loading}
+    />
   );
 
   useEffect(() => {
     fetchCompanyExpenses();
-  }, [currentPage, itemsPerPage, showAll]);
+  }, [currentPage, itemsPerPage, showAll, reloadKey]);
 
   // FIXED: Added proper type constraint for status
    const handleStatusUpdate = async (expenseId: string, status: 'Approved' | 'Rejected') => {

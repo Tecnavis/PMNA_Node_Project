@@ -15,6 +15,7 @@ import { CLOUD_IMAGE } from '../../constants/status'
 import { getImageUrl } from '../../utils/imageUrl';
 
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 export const REWAR_CATEGORYS = {
   Staff: "Staff",
   Showroom: "Showroom",
@@ -29,6 +30,7 @@ function RewardsItem() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [rewardCategory, setRewardCategory] = useState<string>('');
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const lc = useListControls(rewards, { search: (r: any) => [r.name, r.description, r.category], pageSize: 24, storageKey: 'reward-items' });
   const [rewardToEdit, setRewardToEdit] = useState<Reward | null>(null);
 
   const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl' ? true : false;
@@ -292,9 +294,10 @@ function RewardsItem() {
           </div>
         </div>
         <div className="mb-5 mt-5">
+          <ListToolbar lc={lc} placeholder="Search reward…" />
           <div className='grid gap-5 grid-cols-1 ms:grid-cols-2 place-items-center sm:place-items-center  md:grid-cols-3 mb-2'>
             {
-              rewards?.map((reward) => (
+              lc.pageRows.map((reward) => (
                 <div className="mb-5 flex items-center">
                   <div className="max-w-[22rem] w-full bg-white shadow-[4px_6px_10px_-3px_#bfc9d4] rounded border border-white-light dark:border-[#1b2e4b] dark:bg-[#191e3a] dark:shadow-none">
                     <div className="py-7 px-6">
@@ -335,6 +338,7 @@ function RewardsItem() {
               ))
             }
           </div>
+          <Pager {...lc.pager} sizes={[12, 24, 48, 96]} />
         </div>
       </div>
     </div>

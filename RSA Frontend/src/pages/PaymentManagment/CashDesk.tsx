@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { DataTable, DataTableColumn } from 'mantine-datatable';
 import TableExportButtons from '../../components/TableExportButtons';
-import { EmptyState, Field, PageHeader, SearchBox, Section, SegTabs, money, tableProps } from '../../components/ui/PageKit';
+import { EmptyState, Field, PageHeader, SearchBox, Section, SegTabs, money, tableProps, usePaged } from '../../components/ui/PageKit';
 
 /**
  * Shared layout for the Driver / Provider payment pages.
@@ -59,6 +59,7 @@ const CashDesk: React.FC<Props> = (p) => {
     const tab = p.tabs[p.tabIndex] || p.tabs[0];
     const tableId = `cashdesk-${p.partyLabel.toLowerCase()}-table`;
     const remaining = (Number(p.inHandAmount) || 0) - (Number(p.receivedAmount) || 0);
+    const { pageRows, paging } = usePaged(tab?.records || [], 50);
 
     return (
         <div>
@@ -196,7 +197,7 @@ const CashDesk: React.FC<Props> = (p) => {
                                     <SearchBox value={p.search} onChange={p.setSearch} placeholder="Search file number or name" className="w-full sm:w-64" />
                                 </div>
                                 <div id={tableId} className="datatables">
-                                    <DataTable {...tableProps} fetching={p.loading} columns={tab?.columns || []} records={tab?.records || []} idAccessor="_id" />
+                                    <DataTable {...tableProps} fetching={p.loading} columns={tab?.columns || []} records={pageRows} {...paging} idAccessor="_id" />
                                 </div>
                             </>
                         )}

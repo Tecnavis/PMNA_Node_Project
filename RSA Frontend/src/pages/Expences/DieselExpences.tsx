@@ -19,6 +19,7 @@ import DieselExpenseFormFormik from './AddDieselExpense';
 import { getPetrolPumps } from './expensesService';
 import { getImageUrl } from '../../utils/imageUrl';
 
+import { Pager } from '../../components/ui/ListControls';
 const DieselExpenses = () => {
   const [expenses, setExpenses] = useState<IDieselExpense[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -44,6 +45,8 @@ const DieselExpenses = () => {
   const [showAll, setShowAll] = useState<boolean>(false);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
+  const [reloadKey, setReloadKey] = useState(0); // bump to reload with the current filters
+  const loadSeq = React.useRef(0);
 const [petrolPump, setPetrolPump] = useState<string>('');
 const [petrolPumpsList, setPetrolPumpsList] = useState<any[]>([]);
 
@@ -83,6 +86,7 @@ const fetchPetrolPumpsList = async () => {
   }
 };
   const fetchDieselExpences = async () => {
+    const seq = ++loadSeq.current;
     try {
       setLoading(true);
       setFilterLoading(true);
@@ -97,11 +101,12 @@ const fetchPetrolPumpsList = async () => {
         showAll
       );
       
-      setExpenses(response.data);
+      if (seq !== loadSeq.current) return; // an older request answered late
+      setExpenses(Array.isArray(response.data) ? response.data : []);
       setTotalPages(response.totalPages);
       setTotalItems(response.total);
 
-       response.data.forEach((expense) => {
+       (Array.isArray(response.data) ? response.data : []).forEach((expense) => {
         setkmInputValues((prev) => ({ ...prev, [expense._id]: expense.expenceKm }));
         setAmountInputValues((prev) => ({ ...prev, [expense._id]: expense.amount })); // Initialize amount
       });
@@ -137,7 +142,8 @@ const fetchPetrolPumpsList = async () => {
 
   const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchDieselExpences();
+    setCurrentPage(1);
+    setReloadKey((k) => k + 1); // loads after the new filter values are in place
   };
 
   const handleResetFilters = () => {
@@ -145,93 +151,32 @@ const fetchPetrolPumpsList = async () => {
     setYear('');
     setVehicleNumber('');
       setPetrolPump('');
-    fetchDieselExpences();
+    setCurrentPage(1);
+    setReloadKey((k) => k + 1);
   };
 
   // Pagination controls
   const PaginationControls = () => (
-    <div className="flex items-center justify-between mt-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600">
-          Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
-          {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
-        </span>
-        
-        <FormControl size="small" className="w-24">
-          <InputLabel>Per Page</InputLabel>
-          <Select
-            value={itemsPerPage}
-            onChange={(e) => {
-              setItemsPerPage(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            label="Per Page"
-          >
-            <MenuItem value={5}>5</MenuItem>
-            <MenuItem value={10}>10</MenuItem>
-            <MenuItem value={25}>25</MenuItem>
-            <MenuItem value={50}>50</MenuItem>
-          </Select>
-        </FormControl>
-        
-        <Button
-          onClick={() => setShowAll(!showAll)}
-          className={`px-3 py-1 rounded-md ${showAll ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
-        >
-          {showAll ? 'Show Paginated' : 'Show All'}
-        </Button>
-      </div>
-      
-      {!showAll && (
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="p-1 rounded-md disabled:opacity-50"
-          >
-            <ChevronLeft size={20} />
-          </Button>
-          
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
-            
-            return (
-              <Button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`w-8 h-8 rounded-md ${currentPage === pageNum ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
-              >
-                {pageNum}
-              </Button>
-            );
-          })}
-          
-          <Button
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="p-1 rounded-md disabled:opacity-50"
-          >
-            <ChevronRight size={20} />
-          </Button>
-        </div>
-      )}
-    </div>
+    <Pager
+      page={currentPage}
+      pageCount={Math.max(1, totalPages || 1)}
+      total={totalItems}
+      pageSize={itemsPerPage}
+      onPage={setCurrentPage}
+      onPageSize={(n) => {
+        setItemsPerPage(n);
+        setCurrentPage(1);
+      }}
+      sizes={[10, 25, 50, 100, 500]}
+      loading={loading}
+    />
   );
 
   useEffect(() => {
     fetchDieselExpences();
     fetchVehiclesNamesList();
      fetchPetrolPumpsList();
-  }, [currentPage, itemsPerPage, showAll]);
+  }, [currentPage, itemsPerPage, showAll, reloadKey]);
 
   const handleStatusUpdate = async (expenseId: string, status: string) => {
     try {

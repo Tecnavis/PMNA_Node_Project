@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import styles from './feedback.module.css';
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 const style = {
     position: 'absolute' as 'absolute',
     top: '50%',
@@ -36,6 +37,10 @@ interface Errors {
 }
 const Feedbacks: React.FC = () => {
     const [feedbacks, setFeedbacks] = useState<Feedbacks[]>([]);
+    const lc = useListControls(feedbacks, {
+        search: (f) => [f.question],
+        storageKey: 'feedback-questions',
+    });
     const [uid, setUid] = useState<string>('');
     const [question, setQuestion] = useState<string>('');
    
@@ -261,6 +266,7 @@ const Feedbacks: React.FC = () => {
                     </div>
                 </div>
             </div>
+            <ListToolbar lc={lc} placeholder="Search question…" className="mt-2" />
             <table className={styles.tableContainer}>
                 <thead>
                     <tr>
@@ -271,7 +277,7 @@ const Feedbacks: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {feedbacks.map((feedback, index) => (
+                    {lc.pageRows.map((feedback, index) => (
                         <tr key={index} className={styles.tableRow}>
                             <td className={styles.tableCell} data-label="Service Name">
                                 <span>{feedback.question.charAt(0).toUpperCase() + feedback.question.slice(1)}</span>
@@ -295,8 +301,16 @@ const Feedbacks: React.FC = () => {
                             </td>
                         </tr>
                     ))}
+                    {lc.pageRows.length === 0 && (
+                        <tr>
+                            <td colSpan={4} className="py-8 text-center text-white-dark">
+                                {lc.rows.length ? 'Nothing matches your search or filters.' : 'Nothing to show yet.'}
+                            </td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
+            <Pager {...lc.pager} />
             <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
                 <Box sx={style}>
                     <div>

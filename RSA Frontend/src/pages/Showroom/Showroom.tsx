@@ -80,7 +80,10 @@ const Showroom: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
-    const [searchTerm, setSearchTerm] = useState('');
+    const sp = useServerPaging({ storageKey: 'showrooms', pageSize: 25 });
+    const searchTerm = sp.search;
+    const [listLoading, setListLoading] = useState(false);
+    const loadSeq = React.useRef(0);
     const [showAllMode, setShowAllMode] = useState(false);
     // per-showroom activity: bookings this month, last booking, points, executive visit
     const [insights, setInsights] = useState<Record<string, { bookingsThisMonth: number; bookingsTotal: number; openBookings: number; lastBookingAt: string | null; rewardPoints: number; executive: string; lastVisitAt: string | null; visitedThisMonth: boolean }>>({});
@@ -100,19 +103,26 @@ const Showroom: React.FC = () => {
     };
 
     // getting all showroom
-    const fetchShowroom = async (searchTerm = '', page = 1, limit = 10) => {
+    // args kept for old callers; the list always loads the current page / search
+    const fetchShowroom = async (..._ignored: unknown[]) => {
+        const seq = ++loadSeq.current;
+        setListLoading(true);
         try {
             const response = await axios.get(`${backendUrl}/showroom/all-showrooms`, {
-                params: { search: searchTerm, page, limit },
+                params: { search: sp.search, page: sp.page, limit: sp.pageSize },
             });
-
-            setShowrooms(response.data.data);
-            setFilteredShowrooms(response.data.data);
-            setTotalPages(response.data.totalPages);
-            setCurrentPage(response.data.page);
-            setTotalCount(response.data.totalCount);
+            if (seq !== loadSeq.current) return; // an older request answered late
+            const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+            setShowrooms(rows);
+            setFilteredShowrooms(rows);
+            setTotalPages(response.data?.totalPages || 0);
+            setCurrentPage(response.data?.page || sp.page);
+            setTotalCount(response.data?.totalCount || 0);
+            sp.setTotal(Number(response.data?.totalCount) || 0);
         } catch (error) {
-            console.error('Error fetching showroom staff:', error);
+            if (seq === loadSeq.current) console.error('Error fetching showrooms:', error);
+        } finally {
+            if (seq === loadSeq.current) setListLoading(false);
         }
     };
 
@@ -149,7 +159,6 @@ const Showroom: React.FC = () => {
 
     useEffect(() => {
         gettingToken();
-        fetchShowroom();
         axios.get(`${backendUrl}/reports/showrooms`).then((r) => setInsights(r.data?.data || {})).catch(() => setInsights({}));
     }, []);
 
@@ -157,10 +166,10 @@ const Showroom: React.FC = () => {
     const insightList = Object.values(insights);
     const quietCount = insightList.filter((x) => { const d = daysSince(x.lastBookingAt); return d === null || d > 30; }).length;
 
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-        fetchShowroom(searchTerm, page); // use current search term
-    };
+    useEffect(() => {
+        fetchShowroom();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sp.page, sp.pageSize, sp.search]);
     // Download excel sheet
     const handleDownloadExcel = () => {
         // Convert the data to JSON format suitable for Excel
@@ -194,12 +203,7 @@ const Showroom: React.FC = () => {
         // Write the Excel file
         XLSX.writeFile(workbook, 'showrooms.xlsx');
     };
-    const handleSearchChange = (e: any) => {
-        const value = e.target.value;
-        setSearchTerm(value);
-        setCurrentPage(1); // reset to first page on search
-        fetchShowroom(value, 1); // fetch results based on search
-    };
+
     // Print the table
     const handlePrint = () => {
         // Create a new window to hold the table for printing
@@ -340,7 +344,7 @@ const Showroom: React.FC = () => {
                             PRINT
                         </button>
                     </div>
-                    <input type="text" className="form-input w-auto" placeholder="Search..." onChange={handleSearchChange} />
+                    <input type="search" className="form-input w-full sm:w-72" placeholder="Search name, ID, location, phone…" value={sp.searchInput} onChange={(e) => sp.setSearchInput(e.target.value)} />
                 </div>
                 {insightList.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -369,7 +373,7 @@ const Showroom: React.FC = () => {
                         <tbody>
                             {filteredShowrooms?.map((items, index) => (
                                 <tr key={index}>
-                                    <td>{index + 1}</td>
+                                    <td>{sp.rowNumber(index)}</td>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
                                             <img
@@ -449,9 +453,17 @@ const Showroom: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
+                            {filteredShowrooms.length === 0 && (
+                                <tr>
+                                    <td colSpan={20} className="py-8 text-center text-white-dark">
+                                        {listLoading ? 'Loading…' : sp.search ? `No showrooms match "${sp.search}".` : 'No showrooms yet.'}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
+                <Pager {...sp.pager} loading={listLoading} sizes={[10, 25, 50, 100, 500]} />
             </div >
             <Transition appear show={modal5} as={Fragment}>
                 <Dialog as="div" open={modal5} onClose={() => setModal5(false)}>
@@ -631,121 +643,7 @@ const Showroom: React.FC = () => {
             </Transition>
             <ShowroomStaffModal modal={modal} setModal={setModal} shoroomId={showroomId} />
 
-            <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-                {/* Previous Button */}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                        disabled={currentPage === 1 || showAllMode}
-                    >
-                        <GrPrevious />
-                    </button>
-                </li>
 
-                {/* Page numbers - hide when in showAll mode */}
-                {!showAllMode && (
-                    <>
-                        {/* Always show first page */}
-                        <li>
-                            <button
-                                type="button"
-                                onClick={() => handlePageChange(1)}
-                                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                            >
-                                1
-                            </button>
-                        </li>
-
-                        {/* Show ellipsis if current page is far from start */}
-                        {currentPage > 4 && totalPages > 7 && (
-                            <li className="flex items-end">
-                                <span className="px-1">...</span>
-                            </li>
-                        )}
-
-                        {/* Middle pages - dynamic range */}
-                        {Array.from({ length: Math.min(5, totalPages - 2) }, (_, i) => {
-                            let pageNum;
-                            if (currentPage < 4) {
-                                pageNum = i + 2;
-                            } else if (currentPage > totalPages - 3) {
-                                pageNum = totalPages - 4 + i;
-                            } else {
-                                pageNum = currentPage - 2 + i;
-                            }
-
-                            if (pageNum > 1 && pageNum < totalPages) {
-                                return (
-                                    <li key={pageNum}>
-                                        <button
-                                            type="button"
-                                            onClick={() => handlePageChange(pageNum)}
-                                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                                        >
-                                            {pageNum}
-                                        </button>
-                                    </li>
-                                );
-                            }
-                            return null;
-                        })}
-
-                        {/* Show ellipsis if current page is far from end */}
-                        {currentPage < totalPages - 3 && totalPages > 7 && (
-                            <li className="flex items-end">
-                                <span className="px-1">...</span>
-                            </li>
-                        )}
-
-                        {/* Always show last page if there's more than 1 page */}
-                        {totalPages > 1 && (
-                            <li>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePageChange(totalPages)}
-                                    className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === totalPages ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                                >
-                                    {totalPages}
-                                </button>
-                            </li>
-                        )}
-                    </>
-                )}
-
-                {/* Show All / Paginated toggle button */}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (showAllMode) {
-                                // Return to paginated view (first page)
-                                fetchShowroom(searchTerm, 1, 10);
-                            } else {
-                                // Show all (using a reasonable large number)
-                                fetchShowroom(searchTerm, 1, totalCount);
-                            }
-                            setShowAllMode(!showAllMode);
-                        }}
-                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${showAllMode ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-                    >
-                        {showAllMode ? 'Show Paginated' : 'Show All'}
-                    </button>
-                </li>
-
-                {/* Next Button */}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary"
-                        disabled={currentPage === totalPages || showAllMode}
-                    >
-                        <GrNext />
-                    </button>
-                </li>
-            </ul>
             {/* Delete confirmation modal  */}
             <ConfirmationModal
                 isVisible={isModalVisible}
@@ -770,3 +668,4 @@ const Showroom: React.FC = () => {
 export default Showroom;
 
 import { getImageUrl } from '../../utils/imageUrl';
+import { Pager, useServerPaging } from '../../components/ui/ListControls';

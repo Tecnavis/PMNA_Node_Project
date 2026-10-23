@@ -15,6 +15,7 @@ import IconMenuDocumentation from '../../components/Icon/Menu/IconMenuDocumentat
 import { CLOUD_IMAGE } from '../../constants/status';
 import { getImageUrl } from '../../utils/imageUrl';
 
+import { Pager, useServerPaging } from '../../components/ui/ListControls';
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const columns = [
@@ -58,6 +59,9 @@ const VehicleCompliance: React.FC = () => {
     const [openModal, setOpenModal] = useState<boolean>(false)
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [totalPages, setTotalPages] = useState<number>(0);
+    const sp = useServerPaging({ storageKey: 'vehicle-compliance', pageSize: 25 });
+    const [listLoading, setListLoading] = useState(false);
+    const loadSeq = React.useRef(0);
     const [isEditMode, setIsEditMode] = useState<boolean>(false);
     const [isModalVisible, setModalVisible] = useState<boolean>(false);
     const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -81,25 +85,30 @@ const VehicleCompliance: React.FC = () => {
         }
     };
 
-    const fetchComplianceDetails = async (searchTerm = '', page = 1, limit = 10) => {
+    // args kept for old callers; always loads the current page / search
+    const fetchComplianceDetails = async (..._ignored: unknown[]) => {
+        const seq = ++loadSeq.current;
+        setListLoading(true);
         try {
             const response = await axios.get(`${backendUrl}/vehicle/compliance-record`, {
-                params: { search: searchTerm, page, limit }
+                params: { search: sp.search, page: sp.page, limit: sp.pageSize },
             });
-            setRecords(response.data.data);
-            setTotalPages(Math.ceil(response.data.total / limit));
-            setCurrentPage(response.data.page);
+            if (seq !== loadSeq.current) return;
+            setRecords(Array.isArray(response.data?.data) ? response.data.data : []);
+            sp.setTotal(Number(response.data?.total) || 0);
+            setTotalPages(Math.ceil((Number(response.data?.total) || 0) / sp.pageSize));
+            setCurrentPage(response.data?.page || sp.page);
         } catch (error) {
-            console.error('Error fetching service types:', error);
+            if (seq === loadSeq.current) console.error('Error fetching list:', error);
+        } finally {
+            if (seq === loadSeq.current) setListLoading(false);
         }
-    }
-
-    const debouncedFfetchComplianceDetails = useCallback(debounce(fetchComplianceDetails, 500), []);
-
-    const handlePageChange = (page: any) => {
-        setCurrentPage(page);
-        fetchComplianceDetails('', page);
     };
+
+    useEffect(() => {
+        fetchComplianceDetails();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sp.page, sp.pageSize, sp.search]);
 
     const handleDelete = async (id: string) => {
         try {
@@ -145,7 +154,6 @@ const VehicleCompliance: React.FC = () => {
     const today = new Date()
 
     useEffect(() => {
-        fetchComplianceDetails()
         gettingToken()
     }, [])
 
@@ -161,7 +169,8 @@ const VehicleCompliance: React.FC = () => {
                             <input
                                 type="text"
                                 placeholder="Search records..."
-                                onChange={(e) => debouncedFfetchComplianceDetails(e.target.value)}
+                                value={sp.searchInput}
+                                onChange={(e) => sp.setSearchInput(e.target.value)}
                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
                             />
                         </div>
@@ -285,42 +294,7 @@ const VehicleCompliance: React.FC = () => {
                 }}
                 onCancel={closeModal}
             />
-            <ul className="flex justify-center items-center space-x-2 mt-4">
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-gray-300 text-gray-700 hover:bg-gray-400 disabled:opacity-50"
-                        disabled={currentPage === 1}
-                    >
-                        <GrPrevious />
-                    </button>
-                </li>
-                {Array.from({ length: totalPages }, (_, index) => (
-                    <li key={index}>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(index + 1)}
-                            className={`px-4 py-2 rounded-full transition ${currentPage === index + 1
-                                ? "bg-blue-500 text-white"
-                                : "bg-gray-200 text-gray-700 hover:bg-blue-300"
-                                }`}
-                        >
-                            {index + 1}
-                        </button>
-                    </li>
-                ))}
-                <li>
-                    <button
-                        type="button"
-                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                        className="flex justify-center font-semibold p-2 rounded-full transition bg-gray-300 text-gray-700 hover:bg-gray-400 disabled:opacity-50"
-                        disabled={currentPage === totalPages}
-                    >
-                        <GrNext />
-                    </button>
-                </li>
-            </ul>
+            <Pager {...sp.pager} loading={listLoading} />
         </div>
     )
 }

@@ -12,7 +12,7 @@ import Loader from '../../components/loader';
 import { executeWithRetry, handleNetworkError, offlineQueue } from '../../utils/networkUtils';
 import { isAxiosError } from 'axios';
 import TableExportButtons from '../../components/TableExportButtons';
-import { EmptyState, Field, PageHeader, SearchBox, Section, money, tableProps } from '../../components/ui/PageKit';
+import { EmptyState, Field, PageHeader, SearchBox, Section, money, tableProps, usePaged } from '../../components/ui/PageKit';
 
 const getColorForDateTime = (dateTimeString: string) => {
     let hash = 0;
@@ -254,6 +254,7 @@ console.log("requestData.................................",requestData)
     }, [search]);
 
     const staffData = staffs.find((s) => s._id === selectedStaff);
+    const { pageRows: staffRows, paging: staffPaging } = usePaged(receivedDetailsStaff || [], 50);
     const withCash = staffs.filter((s) => (s.cashInHand || 0) > 0);
     const afterThis = (Number(inHandAmount) || 0) - (Number(receivedAmount) || 0);
 
@@ -333,7 +334,7 @@ console.log("requestData.................................",requestData)
                                     <SearchBox value={search} onChange={setSearch} placeholder="Search records" className="w-full sm:w-72" />
                                 </div>
                                 <div id="staff-pay-table" className="datatables">
-                                    <DataTable {...tableProps} columns={colsForReceivedDetailsStaff as any} records={receivedDetailsStaff || []} idAccessor="_id" />
+                                    <DataTable {...tableProps} columns={colsForReceivedDetailsStaff as any} records={staffRows} {...staffPaging} idAccessor="_id" />
                                 </div>
                             </>
                         )}

@@ -28,6 +28,7 @@ import { toast } from 'react-hot-toast';
 import ImageGallery from './ImageGallery';
 import OneYearStrip from './OneYearStrip';
 
+import { Pager } from '../../components/ui/ListControls';
 // Define interfaces
 interface Filters {
     startDate: string | null;
@@ -162,7 +163,7 @@ const OldBookings: React.FC = () => {
     // Initial fetch
     useEffect(() => {
         fetchArchivedBookings();
-    }, [pagination.page, sortConfig]);
+    }, [pagination.page, pagination.limit, sortConfig]);
 
     // Handle search with debounce
     useEffect(() => {
@@ -638,59 +639,17 @@ const getDriverPhone = (booking: Booking): string => {
                         </div>
 
                         {/* Pagination */}
-                        <div className="px-6 py-4 border-t border-gray-200">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-700">
-                                    Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
-                                    <span className="font-medium">
-                                        {Math.min(pagination.page * pagination.limit, pagination.total)}
-                                    </span>{' '}
-                                    of <span className="font-medium">{pagination.total}</span> archived bookings
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <button
-                                        onClick={() => handlePageChange(pagination.page - 1)}
-                                        disabled={pagination.page === 1}
-                                        className={`px-3 py-2 border rounded-lg flex items-center gap-1 ${pagination.page === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}
-                                    >
-                                        <ChevronLeftIcon className="h-4 w-4" />
-                                        Previous
-                                    </button>
-                                    
-                                    {/* Page Numbers */}
-                                    {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                                        let pageNum;
-                                        if (pagination.totalPages <= 5) {
-                                            pageNum = i + 1;
-                                        } else if (pagination.page <= 3) {
-                                            pageNum = i + 1;
-                                        } else if (pagination.page >= pagination.totalPages - 2) {
-                                            pageNum = pagination.totalPages - 4 + i;
-                                        } else {
-                                            pageNum = pagination.page - 2 + i;
-                                        }
-                                        
-                                        return (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => handlePageChange(pageNum)}
-                                                className={`px-3 py-2 border rounded-lg ${pagination.page === pageNum ? 'bg-indigo-600 text-white border-indigo-600' : 'text-gray-700 hover:bg-gray-50'}`}
-                                            >
-                                                {pageNum}
-                                            </button>
-                                        );
-                                    })}
-                                    
-                                    <button
-                                        onClick={() => handlePageChange(pagination.page + 1)}
-                                        disabled={pagination.page === pagination.totalPages}
-                                        className={`px-3 py-2 border rounded-lg flex items-center gap-1 ${pagination.page === pagination.totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}
-                                    >
-                                        Next
-                                        <ChevronRightIcon className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
+                        <div className="px-6 pb-4">
+                            <Pager
+                                page={pagination.page}
+                                pageCount={Math.max(1, pagination.totalPages || 1)}
+                                total={pagination.total || 0}
+                                pageSize={pagination.limit || 20}
+                                onPage={handlePageChange}
+                                onPageSize={(n) => setPagination((prev) => ({ ...prev, limit: n, page: 1 }))}
+                                sizes={[20, 50, 100]}
+                                loading={loading}
+                            />
                         </div>
                     </>
                 )}

@@ -21,6 +21,7 @@ import RSALogo from '../../../assets/images/RSALogo.png';
 import { getImageUrl } from '../../../utils/imageUrl';
 
 
+import { DebouncedSearch } from '../../../components/ui/ListControls';
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 type Showroom = {
@@ -47,6 +48,7 @@ const ShowroomCashCollectionsReport = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
   const [search, setSearch] = useState('');
+  const [totalBookings, setTotalBookings] = useState(0);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [payableAmounts, setPayableAmounts] = useState<Record<string, number>>({})
@@ -318,7 +320,7 @@ const fetchBookings = async () => {
     });
     
     // Map bookings to include totalAmountShowroom
-       const updatedBookings = response.data.bookings.map((booking: Booking) => ({
+       const updatedBookings = (Array.isArray(response.data?.bookings) ? response.data.bookings : []).map((booking: Booking) => ({
       ...booking,
       totalAmountShowroom: (booking?.insuranceAmount || 0) + (booking?.showroomAmount || 0),
       receivedAmountShowroom: booking?.receivedAmountShowroom || 0,
@@ -327,6 +329,7 @@ const fetchBookings = async () => {
     }));
     
     setBookings(updatedBookings);
+    setTotalBookings(Number(response.data?.total) || updatedBookings.length);
     calculateFinacials(updatedBookings);
   } catch (error) {
     console.error("Error fetching bookings:", error);
@@ -341,13 +344,8 @@ useEffect(() => {
   if (showroom?._id) {
     fetchBookings();
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [showroom, startDate, endingDate, search, page, pageSize]);
-
-  useEffect(() => {
-    if (showroom) {
-      fetchBookings();
-    }
-  }, [showroom, startDate, endingDate, page, search, pageSize]);
 
   useEffect(() => {
     dispatch(setPageTitle('Showroom Cash Collection Report'));
@@ -841,12 +839,13 @@ const calculateBalance = (amount: string | number | undefined, receivedAmountSho
           <div className="flex flex-col md:flex-row items-center justify-between mb-5">
             <button className="btn btn-primary" onClick={handleNavigateInvoicePage}>Generate Invoice</button>
             <div className="mt-3 md:mt-0">
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Search..."
+              <DebouncedSearch
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search file no., vehicle, customer…"
+                onSearch={(v) => {
+                  setPage(1);
+                  setSearch(v);
+                }}
               />
             </div>
           </div>
@@ -856,12 +855,15 @@ const calculateBalance = (amount: string | number | undefined, receivedAmountSho
               records={bookings.map((item) => ({ ...item, id: item._id }))}
               columns={cols}
               highlightOnHover
-              totalRecords={bookings.length}
-              recordsPerPage={10}
+              totalRecords={totalBookings}
+              recordsPerPage={pageSize}
               page={page}
               onPageChange={setPage}
               recordsPerPageOptions={[10, 20, 50,100,200,500]}
-              onRecordsPerPageChange={setPageSize}
+              onRecordsPerPageChange={(n) => {
+                setPageSize(n);
+                setPage(1);
+              }}
               minHeight={400}
             />
           </div>

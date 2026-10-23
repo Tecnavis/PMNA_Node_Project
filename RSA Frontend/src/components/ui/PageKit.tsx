@@ -175,7 +175,7 @@ export function usePaged<T>(rows: T[], initialSize = 50) {
                       setPageSize(n);
                       setPage(1);
                   },
-                  recordsPerPageOptions: [25, 50, 100, 250],
+                  recordsPerPageOptions: [25, 50, 100, 250, 500],
                   paginationText: ({ from, to, totalRecords }: { from: number; to: number; totalRecords: number }) => `${from}–${to} of ${totalRecords}`,
               }
             : {};

@@ -27,6 +27,7 @@ import toast from 'react-hot-toast';
 import { getImageUrl } from '../../utils/imageUrl';
 
 
+import { Pager, useServerPaging } from '../../components/ui/ListControls';
 interface Company {
     _id: string;
     name: string;
@@ -181,7 +182,8 @@ const Bookings: React.FC = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [company, setCompany] = useState<Company | null>(null);
     const [modal5, setModal5] = useState<boolean>(false);
-    const [search, setSearch] = useState<string>('');
+    const sp = useServerPaging({ storageKey: 'new-bookings', pageSize: 25 });
+    const search = sp.search;
     const [isVisible, setIsVisible] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
@@ -205,10 +207,7 @@ const Bookings: React.FC = () => {
     
 
 
-  const handlePageChange = (page: any) => {
-    setCurrentPage(page);
-    fetchBookings(page, 10, false); // Explicitly set showAll to false
-};
+
 
     const navigate = useNavigate();
 
@@ -225,61 +224,40 @@ const Bookings: React.FC = () => {
     };
 // -------------------------------------------------------------------------------------------------------------------------------------------------------------
     // getting all bookings
-const fetchBookings = async (page = 1, limit = 10, showAll = false) => {
-        try {
-                    setIsLoading(true);
-
-                 const params: any = { 
-            search, 
-            status: 'Order Completed',
-            ...(showAll ? { all: true } : { page, limit })
-        };
-
-        const response = await axios.get(`${backendUrl}/booking`, { params });
-
-
-            setBookings(response.data.bookings);
-            setTotalPages(response.data.totalPages);
-            setCurrentPage(response.data.page);
-          } catch (error) {
-        console.error('Error fetching bookings:', error);
-    } finally {
-        setIsLoading(false);
-    }
-    };
-
-    // fetch all schedules bookings
-    const fetchScheduledBookings = async (page = 1, limit = 10, showAll = false) => {
+// One loader for both views (new bookings / scheduled today). Callers just call fetchBookings() to refresh.
+    const loadSeq = React.useRef(0);
+    const fetchBookings = async (..._ignored: unknown[]) => {
+        const seq = ++loadSeq.current;
         try {
             setIsLoading(true);
-            const params: any = { 
-                search, 
-                scheduledToday : true,
-                ...(showAll ? { all: true } : { page, limit })
+            const params: any = {
+                search,
+                page: sp.page,
+                limit: sp.pageSize,
+                ...(showScheduledBookings ? { scheduledToday: true } : { status: 'Order Completed' }),
             };
-    
             const response = await axios.get(`${backendUrl}/booking`, { params });
-    
-            setScheduledBookings(response.data.bookings);
-            setTotalPages(response.data.totalPages);
-            setCurrentPage(response.data.page);
-        } catch {
-            
-        }finally {
-            setIsLoading(false);
+            if (seq !== loadSeq.current) return; // a newer request already answered
+            const rows = Array.isArray(response.data?.bookings) ? response.data.bookings : [];
+            if (showScheduledBookings) setScheduledBookings(rows);
+            else setBookings(rows);
+            sp.setTotal(Number(response.data?.total) || 0);
+            setTotalPages(response.data?.totalPages || 0);
+            setCurrentPage(response.data?.page || sp.page);
+            // the page asked for no longer exists (e.g. after deleting): go to the last one
+            if (!rows.length && sp.page > 1 && response.data?.totalPages && sp.page > response.data.totalPages) sp.setPage(response.data.totalPages);
+        } catch (error) {
+            if (seq === loadSeq.current) console.error('Error fetching bookings:', error);
+        } finally {
+            if (seq === loadSeq.current) setIsLoading(false);
         }
-    }
+    };
+    const fetchScheduledBookings = fetchBookings;
 
     const toggleScheduledBookingHandler = () => {
         const nextState = !showScheduledBookings;
         setShowScheduledBookings(nextState);
-        setSearch('')
-
-        if (nextState) {
-            fetchScheduledBookings();
-        } else {
-            fetchBookings();
-        }
+        sp.resetSearch();
     }
 
     // getting all company
@@ -318,8 +296,13 @@ const fetchBookings = async (page = 1, limit = 10, showAll = false) => {
     useEffect(() => {
         gettingToken();
         fetchCompanies();
-        fetchBookings();
     }, []);
+
+    // load whenever the view, page, rows per page or search changes
+    useEffect(() => {
+        fetchBookings();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showScheduledBookings, sp.page, sp.pageSize, sp.search]);
 
     const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -464,16 +447,10 @@ cashPending:false,
                     <div className="flex-grow sm:w-auto w-full">
                         <input
                             type="text"
-                            placeholder="Search bookings..."
-                            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
-                            onChange={(e) => {
-                                setSearch(e.target.value)
-                                if(showScheduledBookings){
-                                    fetchScheduledBookings()
-                                    return
-                                }
-                                fetchBookings()
-                            }} // Trigger search on input change
+                            placeholder="Search file no., vehicle, customer, phone…"
+                            className="form-input w-full"
+                            value={sp.searchInput}
+                            onChange={(e) => sp.setSearchInput(e.target.value)}
                         />
                     </div>
 
@@ -547,9 +524,9 @@ cashPending:false,
 
                                 if (items.bookedByModel === 'Showroom') {
                                     fileNumberColor = isToday ? '#3b82f6' : '#f97316'; // Showroom today = blue, past = orange
-                                } else if (items.bookedBy?.startsWith('RSA')) {
+                                } else if (String(items.bookedBy ?? '').startsWith('RSA')) {
                                     fileNumberColor = isToday ? '#22c55e' : '#eab308'; // RSA today = green, past = yellow
-                                } else if (items.bookedBy?.startsWith('SHM')) {
+                                } else if (String(items.bookedBy ?? '').startsWith('SHM')) {
                                     fileNumberColor = isToday ? '#3b82f6' : '#f97316'; // SHM today = blue, past = orange
                                 }
                                 if (items.status === 'Rejected') {
@@ -681,63 +658,18 @@ cashPending:false,
                                     </tr>
                                 );
                             })}
+                            {(showScheduledBookings ? scheduledBookings : bookings).length === 0 && (
+                                <tr>
+                                    <td colSpan={9} className="py-8 text-center text-white-dark">
+                                        {isLoading ? 'Loading…' : sp.search ? `No bookings match "${sp.search}".` : 'No bookings here.'}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
             </div>
-          <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-    <li>
-        <button
-            type="button"
-            onClick={() => {
-                if (!showingAll) {
-                    handlePageChange(Math.max(1, currentPage - 1));
-                }
-            }}
-            disabled={showingAll}
-            className={`flex justify-center font-semibold p-2 rounded-full transition ${showingAll ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'} dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-        >
-            <GrPrevious />
-        </button>
-    </li>
-    
-    {!showingAll && Array.from({ length: totalPages }, (_, index) => (
-        <li key={index}>
-            <button
-                type="button"
-                onClick={() => handlePageChange(index + 1)}
-                className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${currentPage === index + 1 ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-            >
-                {index + 1}
-            </button>
-        </li>
-    ))}
-    
-    <li>
-        <button
-            type="button"
-            onClick={() => fetchBookings(1, 10, !showingAll)}
-            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'}`}
-        >
-            {showingAll ? 'Show Pages' : 'All'}
-        </button>
-    </li>
-    
-    <li>
-        <button
-            type="button"
-            onClick={() => {
-                if (!showingAll) {
-                    handlePageChange(Math.min(totalPages, currentPage + 1));
-                }
-            }}
-            disabled={showingAll}
-            className={`flex justify-center font-semibold p-2 rounded-full transition ${showingAll ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'} dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-        >
-            <GrNext />
-        </button>
-    </li>
-</ul>
+            <Pager {...sp.pager} loading={isLoading} className="px-1" />
 
             <Transition appear show={modal5} as={Fragment}>
                 <Dialog as="div" open={modal5} onClose={() => setModal5(false)}>

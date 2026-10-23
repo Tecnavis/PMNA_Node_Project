@@ -25,6 +25,7 @@ import { ROLES } from '../../../constants/roles';
 import { CLOUD_IMAGE, NON_COMPLETED_STATUS } from '../../../constants/status';
 import { getImageUrl } from '../../../utils/imageUrl';
 
+import { DebouncedSearch } from '../../../components/ui/ListControls';
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 interface FilterData {
@@ -717,7 +718,7 @@ const ProviderReport = () => {
                         </div>
                         <div className="flex items-center gap-5 ltr:ml-auto rtl:mr-auto">
                             <div className="text-right">
-                                <input type="text" className="form-input" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                                <DebouncedSearch value={search} placeholder="Search file no., vehicle, customer…" onSearch={(v) => { setPage(1); setSearch(v); }} />
                             </div>
                         </div>
                     </div>

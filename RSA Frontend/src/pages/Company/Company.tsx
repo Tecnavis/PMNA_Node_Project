@@ -15,6 +15,7 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { getImageUrl } from '../../utils/imageUrl';
 
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 interface Company {
     _id: string;
     name: string;
@@ -45,6 +46,10 @@ interface Company {
 const company: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [companies, setCompanies] = useState<Company[]>([]);
+    const lc = useListControls(companies, {
+        search: (c) => [c.name, c.idNumber, c.phone, c.personalPhoneNumber],
+        storageKey: 'company-list',
+    });
     const [company, setCompany] = useState<Company | null>(null);
     const [modal5, setModal5] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
@@ -88,9 +93,13 @@ const company: React.FC = () => {
             confirmButtonText: 'Yes, delete it!',
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.delete(`${backendUrl}/company/${itemId}`);
-                setCompanies((prev) => prev.filter((item) => item._id !== itemId));
-                Swal.fire('Deleted!', 'The company has been deleted.', 'success');
+                axios
+                    .delete(`${backendUrl}/company/${itemId}`)
+                    .then(() => {
+                        setCompanies((prev) => prev.filter((item) => item._id !== itemId));
+                        Swal.fire('Deleted!', 'The company has been deleted.', 'success');
+                    })
+                    .catch((e) => Swal.fire('Not deleted', e?.response?.data?.message || 'Could not delete. Please try again.', 'error'));
             }
         });
     };
@@ -122,6 +131,7 @@ const company: React.FC = () => {
                         </span>
                     </Link>
                 </div>
+                <ListToolbar lc={lc} placeholder="Search company, ID, phone…" />
                 <div className="table-responsive mb-5">
                     <table>
                         <thead>
@@ -134,7 +144,7 @@ const company: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {companies.map((items, index) => (
+                            {lc.pageRows.map((items, index) => (
                                 <tr key={index}>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
@@ -176,9 +186,17 @@ const company: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
+                            {lc.pageRows.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="py-8 text-center text-white-dark">
+                                        {lc.rows.length ? 'Nothing matches your search or filters.' : 'Nothing to show yet.'}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
+                <Pager {...lc.pager} />
             </div>
             <Transition appear show={modal5} as={Fragment}>
                 <Dialog as="div" open={modal5} onClose={() => setModal5(false)}>

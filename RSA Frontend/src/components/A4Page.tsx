@@ -1,11 +1,36 @@
-import React, { useRef } from "react";
-import { QRCodeSVG as QRCode } from 'qrcode.react'
-import rsaIcon from '../../public/assets/rsaqr.jpg'
-import domtoimage from 'dom-to-image';
+import React, { useEffect, useRef, useState } from 'react';
+import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
-import { Showroom } from "../pages/Showroom/Showroom";
+import templateUrl from '../../public/assets/rsaqr.jpg';
+import { Showroom } from '../pages/Showroom/Showroom';
 
-// Main Modal Component
+/**
+ * Showroom QR sticker sheet: the RSA A4 template with the showroom's QR printed inside both white squares.
+ *
+ * The template image (public/assets/rsaqr.jpg) is 1002 x 1280 px. The two squares were measured on it:
+ *   top    x 393-607, y 197-411
+ *   bottom x 395-609, y 844-1058
+ * Everything (preview and PDF) is placed from these numbers, so the QR always lands in the squares.
+ * If the template image is ever replaced, measure the squares again and update TEMPLATE below.
+ */
+const TEMPLATE = {
+    width: 1002,
+    height: 1280,
+    boxes: [
+        { x: 393, y: 197, size: 214 },
+        { x: 395, y: 844, size: 214 },
+    ],
+    /** small gap between the square's border and the QR (template px) */
+    inset: 9,
+};
+
+// A4 portrait in mm; the template is scaled to the full page width and centred vertically.
+const PAGE = { w: 210, h: 297 };
+const SCALE = PAGE.w / TEMPLATE.width; // mm per template px
+const TOP = (PAGE.h - TEMPLATE.height * SCALE) / 2; // vertical offset of the template on the page (mm)
+
+const pct = (v: number, of: number) => `${(v / of) * 100}%`;
+
 interface A4ModalProps {
     modalOpen: boolean;
     setModalOpen: (open: boolean) => void;
@@ -13,148 +38,155 @@ interface A4ModalProps {
     backendUrl: string;
 }
 
+const loadImage = (src: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Could not load the QR template image'));
+        img.src = src;
+    });
+
 const A4Page: React.FC<A4ModalProps> = ({ modalOpen, setModalOpen, showroom, backendUrl }) => {
-    const generateUniversalLink = (): string => {
-        if (!showroom) return '';
-        // Point QR code to the download flow
-        return `${backendUrl}/app/download-flow/${showroom._id}`;
-    };
-    
-    const handlePrintA4 = () => {
-        const modalContent = document.getElementById("modal-content");
+    const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
 
-        if (!modalContent) return;
-
-        domtoimage.toPng(modalContent, {
-            width: modalContent.scrollWidth,
-            height: modalContent.scrollHeight,
-            style: { overflow: 'visible' },
-        }).then((dataUrl: string) => {
-            const pdf = new jsPDF("p", "mm", "a4");
-            const imgWidth = 185;
-            const imgHeight = (modalContent.scrollHeight * imgWidth) / modalContent.scrollWidth;
-            pdf.addImage(dataUrl, "PNG", 10, 10, imgWidth, imgHeight);
-            pdf.save(`showroom-${showroom?.showroomId || showroom?._id}-qr.pdf`);
-        }).catch((error: any) => {
-            console.error("Error generating PDF:", error);
-        });
-    };
-
-    const modalContentRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!modalOpen) return;
+        const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setModalOpen(false);
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [modalOpen, setModalOpen]);
 
     if (!modalOpen || !showroom) return null;
 
-    const universalLink = generateUniversalLink();
+    // The QR opens the app download flow for this showroom (unchanged from before).
+    const link = `${String(backendUrl || '').replace(/\/+$/, '')}/app/download-flow/${showroom._id}`;
     const showroomId = showroom.showroomId || showroom._id;
-    
+    const label = `ID: ${showroomId}`;
+    const title = [showroom.name, showroom.location].filter(Boolean).join(' - ');
+
+    const buildPdf = async () => {
+        const canvas = qrCanvasRef.current;
+        if (!canvas) throw new Error('QR code is not ready yet');
+        const template = await loadImage(templateUrl);
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        pdf.addImage(template, 'JPEG', 0, TOP, PAGE.w, TEMPLATE.height * SCALE);
+        const qrPng = canvas.toDataURL('image/png');
+
+        TEMPLATE.boxes.forEach((b) => {
+            const x = (b.x + TEMPLATE.inset) * SCALE;
+            const y = TOP + (b.y + TEMPLATE.inset) * SCALE;
+            const size = (b.size - TEMPLATE.inset * 2) * SCALE;
+            pdf.addImage(qrPng, 'PNG', x, y, size, size);
+            // showroom ID just under each square, so cut stickers can still be told apart
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(7);
+            pdf.setTextColor(60);
+            pdf.text(label, (b.x + b.size / 2) * SCALE, TOP + (b.y + b.size + 13) * SCALE, { align: 'center', baseline: 'middle' });
+        });
+
+        // who the sheet is for, in the top margin (outside the stickers)
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(110);
+        pdf.text(`${label}  ${title}`.slice(0, 120), PAGE.w / 2, Math.max(5, TOP - 3), { align: 'center' });
+        return pdf;
+    };
+
+    const fileName = `showroom-${showroomId}-qr.pdf`;
+
+    const download = async () => {
+        setBusy(true);
+        setError('');
+        try {
+            (await buildPdf()).save(fileName);
+        } catch (e: any) {
+            console.error('Error generating PDF:', e);
+            setError(e?.message || 'Could not create the PDF');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const print = async () => {
+        setBusy(true);
+        setError('');
+        try {
+            const pdf = await buildPdf();
+            pdf.autoPrint();
+            const url = pdf.output('bloburl');
+            const w = window.open(url as unknown as string, '_blank');
+            if (!w) pdf.save(fileName); // pop-ups blocked: fall back to download
+        } catch (e: any) {
+            console.error('Error printing PDF:', e);
+            setError(e?.message || 'Could not print');
+        } finally {
+            setBusy(false);
+        }
+    };
+
     return (
-        <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1000,
-            }}
-            onClick={() => setModalOpen(false)}
-        >
-            <div
-                style={{
-                    position: "relative",
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "21.4px",
-                }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* QR Code Column */}
-                <div
-                    ref={modalContentRef}
-                    id='modal-content'
-                    style={{
-                        padding: "35px",
-                        overflowY: "auto",
-                        width: "774px",
-                        position: "relative",
-                        backgroundColor: "white",
-                    }}
-                >
-                    {/* Simple Showroom ID Header */}
-                    <div style={{
-                        textAlign: "center",
-                        marginBottom: "11px",
-                    }}>
-                        <h2 style={{
-                            fontSize: "20px",
-                            fontWeight: "bold",
-                            color: "#333",
-                                                    borderBottom: "2px solid #e0e0e0"
-
-                        }}>
-                            Showroom ID: <span style={{ color: "#007bff" }}>{showroomId} :                             {showroom.name} - {showroom.location}
-</span>
-                        </h2>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-3" onClick={() => setModalOpen(false)} role="dialog" aria-modal="true" aria-label="Showroom QR sheet">
+            <div className="flex max-h-full w-full max-w-[560px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-[#0e1726]" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start justify-between gap-3 border-b border-white-light px-4 py-3 dark:border-[#1b2e4b]">
+                    <div className="min-w-0">
+                        <div className="font-semibold">QR sticker sheet (A4)</div>
+                        <div className="truncate text-xs text-white-dark">
+                            {label} · {title}
+                        </div>
                     </div>
+                    <button type="button" className="text-2xl leading-none text-white-dark hover:text-danger" onClick={() => setModalOpen(false)} aria-label="Close">
+                        ×
+                    </button>
+                </div>
 
-                    {/* Image */}
-                    <img src={rsaIcon} alt="RSA Icon" style={{ width: "100%" }} />
-
-                    {/* First QR Code */}
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: "45%", // Adjusted for header
-                            left: "50%",
-                            transform: "translate(-50%, -50%)",
-                        }}
-                    >
-                        <QRCode value={universalLink} size={160} />
-                    </div>
-
-                    {/* Second QR Code */}
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: "114%", // Adjusted for header
-                            left: "50%",
-                            transform: "translate(-50%, -50%)",
-                        }}
-                    >
-                        <QRCode value={universalLink} size={160} />
+                {/* Preview: an A4-shaped sheet; the QR positions use the same measurements as the PDF */}
+                <div className="overflow-auto bg-[#e5e7eb] p-4 dark:bg-black">
+                    <div className="relative mx-auto w-full max-w-[420px] bg-white shadow" style={{ aspectRatio: `${PAGE.w} / ${PAGE.h}` }}>
+                        <div className="absolute left-0 w-full" style={{ top: pct(TOP, PAGE.h), aspectRatio: `${TEMPLATE.width} / ${TEMPLATE.height}` }}>
+                            <img src={templateUrl} alt="" className="absolute inset-0 h-full w-full" draggable={false} />
+                            {TEMPLATE.boxes.map((b, i) => (
+                                <React.Fragment key={i}>
+                                    <div
+                                        className="absolute"
+                                        style={{
+                                            left: pct(b.x + TEMPLATE.inset, TEMPLATE.width),
+                                            top: pct(b.y + TEMPLATE.inset, TEMPLATE.height),
+                                            width: pct(b.size - TEMPLATE.inset * 2, TEMPLATE.width),
+                                            aspectRatio: '1 / 1',
+                                        }}
+                                    >
+                                        <QRCodeSVG value={link} level="M" marginSize={0} style={{ width: '100%', height: '100%' }} />
+                                    </div>
+                                    <div
+                                        className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-bold text-[#3c3c3c]"
+                                        style={{ left: pct(b.x + b.size / 2, TEMPLATE.width), top: pct(b.y + b.size + 13, TEMPLATE.height), fontSize: 'clamp(6px, 1.4vw, 9px)' }}
+                                    >
+                                        {label}
+                                    </div>
+                                </React.Fragment>
+                            ))}
+                        </div>
                     </div>
                 </div>
-                
-                {/* Action Buttons */}
-                <div className='w-[700px] bg-white p-3 border-t border-black'>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <div>
-                            <span style={{ fontWeight: 'bold', marginRight: '10px' }}>
-                                ID: {showroomId}
-                            </span>
-                        </div>
-                        <div>
-                            <button
-                                onClick={() => setModalOpen(false)}
-                                className='bg-red-500 text-white py-2 px-3 rounded-md hover:bg-red-600 mr-3'
-                            >
-                                Close
-                            </button>
-                            <button
-                                onClick={handlePrintA4}
-                                className='bg-blue-500 text-white py-2 px-3 rounded-md hover:bg-blue-600'
-                            >
-                                Print PDF
-                            </button>
-                        </div>
+
+                {/* high-resolution QR used for the PDF (not shown) */}
+                <QRCodeCanvas ref={qrCanvasRef} value={link} size={1024} level="M" marginSize={0} style={{ display: 'none' }} />
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white-light px-4 py-3 dark:border-[#1b2e4b]">
+                    <div className="min-w-0 text-xs text-white-dark">
+                        2 stickers per A4 page. Print at <b>100% / Actual size</b> (not "fit to page").
+                        {error && <div className="mt-1 text-danger">{error}</div>}
+                    </div>
+                    <div className="flex gap-2">
+                        <button type="button" className="btn btn-outline-primary btn-sm" onClick={download} disabled={busy}>
+                            {busy ? '…' : 'Download PDF'}
+                        </button>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={print} disabled={busy}>
+                            {busy ? '…' : 'Print'}
+                        </button>
                     </div>
                 </div>
             </div>

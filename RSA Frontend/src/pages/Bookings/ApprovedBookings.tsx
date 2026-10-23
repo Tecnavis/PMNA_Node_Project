@@ -13,6 +13,7 @@ import { MdOutlineBookmarkAdd } from 'react-icons/md';
 import IconEye from '../../components/Icon/IconEye';
 import IconMapPin from '../../components/Icon/IconMapPin';
 
+import { useServerPaging, Pager } from '../../components/ui/ListControls';
 interface Booking {
     _id: string;
     workType: string;
@@ -99,11 +100,10 @@ interface Booking {
 const ApprovedBookings: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [bookings, setBookings] = useState<Booking[]>([]);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [totalRecords, setTotalRecords] = useState(0);
+    const sp = useServerPaging({ storageKey: 'approved-bookings', pageSize: 25 });
+    const { page, setPage, pageSize, setPageSize, total: totalRecords } = sp;
     const [isLoading, setIsLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
+    const loadSeq = React.useRef(0);
     const navigate = useNavigate();
 
     // Check token
@@ -117,19 +117,15 @@ const ApprovedBookings: React.FC = () => {
     };
 
     // Fetch bookings
-    const fetchBookings = async (search = '', pageNum = page, limit = pageSize) => {
+    const fetchBookings = async () => {
+        const seq = ++loadSeq.current;
         setIsLoading(true);
         try {
-            const params: any = { 
-                search, 
-                page: pageNum,
-                limit,
-            };
-            
+            const params: any = { search: sp.search, page, limit: pageSize };
             const response = await axios.get(`${backendUrl}/booking/approvedbookings`, { params });
-            
+            if (seq !== loadSeq.current) return;
             // Ensure serviceType exists to prevent undefined errors
-            const safeBookings = response.data.bookings.map((booking: Booking) => ({
+            const safeBookings = (Array.isArray(response.data?.bookings) ? response.data.bookings : []).map((booking: Booking) => ({
                 ...booking,
                 serviceType: booking.serviceType || {
                     serviceName: 'N/A',
@@ -137,44 +133,28 @@ const ApprovedBookings: React.FC = () => {
                     expensePerKm: 0,
                     firstKilometer: 0,
                     firstKilometerAmount: 0,
-                    _id: 'default'
-                }
+                    _id: 'default',
+                },
             }));
-            
             setBookings(safeBookings);
-            setTotalRecords(response.data.total);
-            setPage(response.data.page);
-            
-            // Reset to page 1 if search changed
-            if (search !== searchTerm) {
-                setPage(1);
-            }
-            setSearchTerm(search);
-            
+            sp.setTotal(Number(response.data?.total) || 0);
         } catch (error) {
+            if (seq !== loadSeq.current) return;
             console.error('Error fetching bookings:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Failed to load bookings. Please try again.',
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load bookings. Please try again.' });
         } finally {
-            setIsLoading(false);
+            if (seq === loadSeq.current) setIsLoading(false);
         }
     };
 
     useEffect(() => {
         gettingToken();
-        fetchBookings();
-    }, [page, pageSize]);
+    }, []);
 
-    // Handle search with debounce
-    const handleSearch = (value: string) => {
-        const timer = setTimeout(() => {
-            fetchBookings(value, 1, pageSize);
-        }, 500);
-        return () => clearTimeout(timer);
-    };
+    useEffect(() => {
+        fetchBookings();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, pageSize, sp.search]);
 
     // Define columns for DataTable
     const columns = [
@@ -296,11 +276,8 @@ const ApprovedBookings: React.FC = () => {
                             type="text"
                             placeholder="Search bookings..."
                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white-light"
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                handleSearch(e.target.value);
-                            }}
-                            value={searchTerm}
+                            onChange={(e) => sp.setSearchInput(e.target.value)}
+                            value={sp.searchInput}
                         />
                     </div>
                 </div>
@@ -309,15 +286,6 @@ const ApprovedBookings: React.FC = () => {
                 <div className="datatables">
                     <DataTable
                         fetching={isLoading}
-                        totalRecords={totalRecords}
-                        recordsPerPage={pageSize}
-                        page={page}
-                        onPageChange={setPage}
-                        recordsPerPageOptions={[10, 20, 50, 100, 200, 500]}
-                        onRecordsPerPageChange={(newPageSize) => {
-                            setPageSize(newPageSize);
-                            setPage(1);
-                        }}
                         withColumnBorders
                         highlightOnHover
                         striped
@@ -333,10 +301,6 @@ const ApprovedBookings: React.FC = () => {
                             return '';
                         }}
                         records={bookings.map(item => ({ ...item, id: item._id }))}
-                        // Add pagination text customization
-                        paginationText={({ from, to, totalRecords }) => 
-                            `Showing ${from} to ${to} of ${totalRecords} entries`
-                        }
                         // Add empty state
                         emptyState={
                             <div className="text-center py-10">
@@ -345,6 +309,7 @@ const ApprovedBookings: React.FC = () => {
                             </div>
                         }
                     />
+                    <Pager {...sp.pager} sizes={[10, 25, 50, 100, 200, 500]} loading={isLoading} />
                 </div>
             </div>
         </div>

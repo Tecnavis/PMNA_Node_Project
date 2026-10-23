@@ -15,6 +15,7 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { getImageUrl } from '../../utils/imageUrl';
 
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 export interface Provider {
     _id: string;
     name: string;
@@ -51,6 +52,11 @@ export interface Provider {
 const Provider: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [providers, setProviders] = useState<Provider[]>([]);
+    const lc = useListControls(providers, {
+        search: (p) => [p.name, p.companyName, p.idNumber, p.phone, p.personalPhoneNumber, p.baseLocation?.baseLocation],
+        filters: [{ key: 'base', label: 'Base location', get: (p) => p.baseLocation?.baseLocation }],
+        storageKey: 'provider-list',
+    });
     const [provider, setProvider] = useState<Provider | null>(null);
     const [modal5, setModal5] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
@@ -94,10 +100,13 @@ const Provider: React.FC = () => {
             confirmButtonText: 'Yes, delete it!',
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.delete(`${backendUrl}/provider/${itemId}`);
-                // Remove role logic
-                setProviders((prev) => prev.filter((role) => role._id !== itemId));
-                Swal.fire('Deleted!', 'The provider has been deleted.', 'success');
+                axios
+                    .delete(`${backendUrl}/provider/${itemId}`)
+                    .then(() => {
+                        setProviders((prev) => prev.filter((role) => role._id !== itemId));
+                        Swal.fire('Deleted!', 'The provider has been deleted.', 'success');
+                    })
+                    .catch((e) => Swal.fire('Not deleted', e?.response?.data?.message || 'Could not delete. Please try again.', 'error'));
             }
         });
     };
@@ -129,6 +138,7 @@ const Provider: React.FC = () => {
                         </span>
                     </Link>
                 </div>
+                <ListToolbar lc={lc} placeholder="Search name, company, ID, phone…" />
                 <div className="table-responsive mb-5">
                     <table>
                         <thead>
@@ -144,7 +154,7 @@ const Provider: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {providers.map((items, index) => (
+                            {lc.pageRows.map((items, index) => (
                                 <tr key={index}>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
@@ -189,9 +199,17 @@ const Provider: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
+                            {lc.pageRows.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="py-8 text-center text-white-dark">
+                                        {lc.rows.length ? 'Nothing matches your search or filters.' : 'Nothing to show yet.'}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
+                <Pager {...lc.pager} />
             </div>
             <Transition appear show={modal5} as={Fragment}>
                 <Dialog as="div" open={modal5} onClose={() => setModal5(false)}>

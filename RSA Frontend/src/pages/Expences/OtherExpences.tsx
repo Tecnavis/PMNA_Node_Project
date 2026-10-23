@@ -40,7 +40,11 @@ const ExpenseApproveUI = () => {
     const { enqueueSnackbar } = useSnackbar();
     const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    const sp = useServerPaging({ storageKey: 'other-expenses', pageSize: 25 });
+    const searchQuery = sp.searchInput;
+    const setSearchQuery = sp.setSearchInput;
+    const [listLoading, setListLoading] = useState(false);
+    const loadSeq = React.useRef(0);
     const [isSearching, setIsSearching] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -136,7 +140,7 @@ const fetchDrivers = async () => {
 
         // FIXED: Call the imported function directly, not via expenseService
         const response: Expense[] = (await fetchPendingExpenses()) as unknown as Expense[];
-        setExpenses(response);
+        setExpenses(Array.isArray(response) ? response : []);
         setNewRequestsCount(0);
     } catch (error) {
         enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
@@ -147,39 +151,28 @@ const fetchDrivers = async () => {
 };
 
 // Update your fetchExpense function to handle pagination properly
-const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: number | 'all' = 10) => {
+// args kept for old callers; always loads the current page / search
+const fetchExpense = async (..._ignored: unknown[]) => {
+    const seq = ++loadSeq.current;
+    setListLoading(true);
     try {
-        // FIXED: Call the imported function directly
-        const response = await fetchExpenses(searchTerm, page, limit);
-        setAllExpenses(response.data);
-
-        // Update pagination state
+        const response = await fetchExpenses(sp.search, sp.page, sp.pageSize);
+        if (seq !== loadSeq.current) return;
+        setAllExpenses(Array.isArray(response.data) ? response.data : []);
         if (response.pagination) {
             setTotalPages(response.pagination.totalPages);
             setTotalItems(response.pagination.totalItems);
-            setCurrentPage(page); // Update current page
+            sp.setTotal(Number(response.pagination.totalItems) || 0);
         }
     } catch (error) {
+        if (seq !== loadSeq.current) return;
         enqueueSnackbar('Failed to fetch expenses', { variant: 'error' });
         console.error('Error fetching expenses:', error);
+    } finally {
+        if (seq === loadSeq.current) setListLoading(false);
     }
 };
-    // Update your search handler
-    const handleSearch = (searchTerm: string) => {
-        setCurrentSearchTerm(searchTerm);
-        setCurrentPage(1); // Reset to first page when searching
-        fetchExpense(searchTerm, 1, showingAll ? 'all' : 10);
-    };
-    // Update your page change handler
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-        fetchExpense(currentSearchTerm, page, showingAll ? 'all' : 10);
-    };
-    const toggleShowAll = () => {
-        const newShowingAll = !showingAll;
-        setShowingAll(newShowingAll);
-        fetchExpense(currentSearchTerm, 1, newShowingAll ? 'all' : 10);
-    };
+
   
 // CRUD Functions
     const handleCreateExpense = async () => {
@@ -453,10 +446,6 @@ const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: nu
         }
     };
  
-
-    useEffect(() => {
-        fetchExpense();
-    }, [searchQuery]);
     const getDownloadableUrl = (url: string) => {
         return url.replace('/upload/', '/upload/fl_attachment/');
     };
@@ -510,13 +499,13 @@ const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: nu
     // Initialize
     useEffect(() => {
         fetchPendingExpense();
-        fetchExpense();
         fetchDrivers();
     }, []);
 
     useEffect(() => {
         fetchExpense();
-    }, [searchQuery]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sp.page, sp.pageSize, sp.search]);
 
     const currentExpense = expenses[currentExpenseIndex];
     const updatedCash = currentExpense?.driver.cashInHand - (currentExpense?.amount || 0);
@@ -924,81 +913,7 @@ const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: nu
                     </div>
                 </>
             )}
-            {/* Pagination Controls */}
-            <div className="flex justify-between items-center mt-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {allExpenses.length} of {totalItems} expenses
-                </div>
-
-                <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto">
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                            disabled={showingAll || currentPage === 1}
-                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                showingAll || currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-                        >
-                            <GrPrevious />
-                        </button>
-                    </li>
-
-                    {!showingAll &&
-                        Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
-                            // Show limited page numbers (max 5)
-                            let pageNum;
-                            if (totalPages <= 5) {
-                                pageNum = index + 1;
-                            } else if (currentPage <= 3) {
-                                pageNum = index + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                                pageNum = totalPages - 4 + index;
-                            } else {
-                                pageNum = currentPage - 2 + index;
-                            }
-
-                            return (
-                                <li key={pageNum}>
-                                    <button
-                                        type="button"
-                                        onClick={() => handlePageChange(pageNum)}
-                                        className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                            currentPage === pageNum ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                                        }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                </li>
-                            );
-                        })}
-
-                    <li>
-                        <button
-                            type="button"
-                            onClick={toggleShowAll}
-                            className={`flex justify-center font-semibold px-3.5 py-2 rounded-full transition ${
-                                showingAll ? 'bg-primary text-white' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            }`}
-                        >
-                            {showingAll ? 'Show Pages' : 'Show All'}
-                        </button>
-                    </li>
-
-                    <li>
-                        <button
-                            type="button"
-                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                            disabled={showingAll || currentPage === totalPages}
-                            className={`flex justify-center font-semibold p-2 rounded-full transition ${
-                                showingAll || currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'bg-white-light text-dark hover:text-white hover:bg-primary'
-                            } dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary`}
-                        >
-                            <GrNext />
-                        </button>
-                    </li>
-                </ul>
-            </div>
+            <Pager {...sp.pager} loading={listLoading} />
         </div>
     );
 };
@@ -1006,3 +921,4 @@ const fetchExpense = async (searchTerm: string = '', page: number = 1, limit: nu
 export default ExpenseApproveUI;
 // ----------------------------------------------------
 import { getImageUrl } from '../../utils/imageUrl';
+import { Pager, useServerPaging } from '../../components/ui/ListControls';

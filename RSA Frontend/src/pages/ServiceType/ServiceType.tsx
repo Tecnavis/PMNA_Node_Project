@@ -11,6 +11,7 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import styles from './serviceType.module.css';
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 const style = {
     position: 'absolute' as 'absolute',
     top: '50%',
@@ -39,6 +40,10 @@ interface Errors {
 }
 const ServiceType: React.FC = () => {
     const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
+    const lc = useListControls(serviceTypes, {
+        search: (t) => [t.serviceName],
+        storageKey: 'service-types',
+    });
     const [uid, setUid] = useState<string>('');
     const [serviceName, setServiceName] = useState<string>('');
     const [firstKilometerAmount, setFirstKilometerAmount] = useState<string>('');
@@ -284,6 +289,7 @@ const ServiceType: React.FC = () => {
                     </div>
                 </div>
             </div>
+            <ListToolbar lc={lc} placeholder="Search service type…" className="mt-2" />
             <table className={styles.tableContainer}>
                 <thead>
                     <tr>
@@ -296,7 +302,7 @@ const ServiceType: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {serviceTypes.map((service, index) => (
+                    {lc.pageRows.map((service, index) => (
                         <tr key={index} className={styles.tableRow}>
                             <td className={styles.tableCell} data-label="Service Name">
                                 <span>{service.serviceName.charAt(0).toUpperCase() + service.serviceName.slice(1)}</span>
@@ -325,8 +331,16 @@ const ServiceType: React.FC = () => {
                             </td>
                         </tr>
                     ))}
+                    {lc.pageRows.length === 0 && (
+                        <tr>
+                            <td colSpan={6} className="py-8 text-center text-white-dark">
+                                {lc.rows.length ? 'Nothing matches your search or filters.' : 'Nothing to show yet.'}
+                            </td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
+            <Pager {...lc.pager} />
             <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
                 <Box sx={style}>
                     <div>

@@ -12,6 +12,7 @@ import axios from 'axios';
 import styles from './baselocation.module.css';
 import { MdShareLocation } from 'react-icons/md';
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 const style = {
     position: 'absolute' as 'absolute',
     top: '50%',
@@ -34,6 +35,10 @@ interface Errors {
 }
 const Baselocation: React.FC = () => {
     const [baselocations, setBaselocations] = useState<Baselocation[]>([]);
+    const lc = useListControls(baselocations, {
+        search: (b) => [b.baseLocation, (b as any).latitudeAndLongitude],
+        storageKey: 'baselocations',
+    });
     const [uid, setUid] = useState<string>('');
     const [baseLocation, setBaseLocation] = useState<string>('');
     const [latitudeAndLongitude, setLatitudeAndLongitude] = useState<string>('');
@@ -245,6 +250,7 @@ const Baselocation: React.FC = () => {
                     </div>
                 </div>
             </div>
+            <ListToolbar lc={lc} placeholder="Search location…" className="mt-2" />
             <table className={styles.tableContainer}>
                 <thead>
                     <tr>
@@ -254,7 +260,7 @@ const Baselocation: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {baselocations.map((base, index) => (
+                    {lc.pageRows.map((base, index) => (
                         <tr key={index} className={styles.tableRow}>
                             <td className={styles.tableCell} data-label="Base location">
                                 <span>{base?.baseLocation ? base.baseLocation.charAt(0).toUpperCase() + base.baseLocation.slice(1) : 'Location not available'}</span>
@@ -274,8 +280,16 @@ const Baselocation: React.FC = () => {
                             </td>
                         </tr>
                     ))}
+                    {lc.pageRows.length === 0 && (
+                        <tr>
+                            <td colSpan={3} className="py-8 text-center text-white-dark">
+                                {lc.rows.length ? 'Nothing matches your search or filters.' : 'Nothing to show yet.'}
+                            </td>
+                        </tr>
+                    )}
                 </tbody>
             </table>
+            <Pager {...lc.pager} />
             <Modal open={open} onClose={handleClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
                 <Box sx={style}>
                     <div style={{ position: 'relative', marginBottom: '1rem' }}>

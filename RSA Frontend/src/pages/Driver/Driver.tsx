@@ -15,6 +15,7 @@ import { CLOUD_IMAGE } from '../../constants/status';
 import { getImageUrl } from '../../utils/imageUrl';
 
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 interface Driver {
     _id: string;
     name: string;
@@ -47,6 +48,10 @@ interface Driver {
 const Driver: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [drivers, setDrivers] = useState<Driver[]>([]);
+    const lc = useListControls(drivers, {
+        search: (d) => [d.name, d.idNumber, d.phone, d.personalPhoneNumber, d.vehicle?.map((v) => v.vehicleNumber)],
+        storageKey: 'driver-list',
+    });
     const [driver, serDriver] = useState<Driver | null>(null);
     const [modal5, setModal5] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
@@ -90,10 +95,13 @@ const Driver: React.FC = () => {
             confirmButtonText: 'Yes, delete it!',
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.delete(`${backendUrl}/driver/${itemId}`);
-                // Remove role logic
-                setDrivers((prev) => prev.filter((item) => item._id !== itemId));
-                Swal.fire('Deleted!', 'The driver has been deleted.', 'success');
+                axios
+                    .delete(`${backendUrl}/driver/${itemId}`)
+                    .then(() => {
+                        setDrivers((prev) => prev.filter((item) => item._id !== itemId));
+                        Swal.fire('Deleted!', 'The driver has been deleted.', 'success');
+                    })
+                    .catch((e) => Swal.fire('Not deleted', e?.response?.data?.message || 'Could not delete. Please try again.', 'error'));
             }
         });
     };
@@ -125,6 +133,7 @@ const Driver: React.FC = () => {
                         </span>
                     </Link>
                 </div>
+                <ListToolbar lc={lc} placeholder="Search name, ID, phone, vehicle no…" />
                 <div className="table-responsive mb-5">
                     <table>
                         <thead>
@@ -140,7 +149,7 @@ const Driver: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {drivers.map((items, index) => (
+                            {lc.pageRows.map((items, index) => (
                                 <tr key={index}>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
@@ -183,9 +192,17 @@ const Driver: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
+                            {lc.pageRows.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="py-8 text-center text-white-dark">
+                                        {lc.rows.length ? 'Nothing matches your search or filters.' : 'Nothing to show yet.'}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
+                <Pager {...lc.pager} />
             </div>
             <Transition appear show={modal5} as={Fragment}>
                 <Dialog as="div" open={modal5} onClose={() => setModal5(false)}>

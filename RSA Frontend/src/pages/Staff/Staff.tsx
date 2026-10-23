@@ -13,6 +13,7 @@ import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import { CLOUD_IMAGE } from '../../constants/status';
 import { getImageUrl } from '../../utils/imageUrl';
 
+import { useListControls, ListToolbar, Pager } from '../../components/ui/ListControls';
 export interface User {
     _id: string;
     name: string;
@@ -45,6 +46,11 @@ interface Staff {
 const Staff: React.FC = () => {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [items, setItems] = useState<User[]>([]);
+    const lc = useListControls(items, {
+        search: (u) => [u.name, u.email, u.phone, u.userName, u.role?.name],
+        filters: [{ key: 'role', label: 'Role', get: (u) => u.role?.name }],
+        storageKey: 'staff-list',
+    });
     const [modal2, setModal2] = useState(false);
     const [staff, setStaff] = useState<Staff | null>(null);
     const navigate = useNavigate();
@@ -91,10 +97,13 @@ const Staff: React.FC = () => {
             confirmButtonText: 'Yes, delete it!',
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.delete(`${backendUrl}/staff/${itemId}`);
-                // Remove role logic
-                setItems((prev) => prev.filter((role) => role._id !== itemId));
-                Swal.fire('Deleted!', 'The staff has been deleted.', 'success');
+                axios
+                    .delete(`${backendUrl}/staff/${itemId}`)
+                    .then(() => {
+                        setItems((prev) => prev.filter((role) => role._id !== itemId));
+                        Swal.fire('Deleted!', 'The staff has been deleted.', 'success');
+                    })
+                    .catch((e) => Swal.fire('Not deleted', e?.response?.data?.message || 'Could not delete. Please try again.', 'error'));
             }
         });
     };
@@ -123,6 +132,7 @@ const Staff: React.FC = () => {
                         </span>
                     </Link>
                 </div>
+                <ListToolbar lc={lc} placeholder="Search name, email, phone…" />
                 <div className="table-responsive mb-5">
                     <table>
                         <thead>
@@ -138,7 +148,7 @@ const Staff: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item) => (
+                            {lc.pageRows.map((item) => (
                                 <tr key={item._id}>
                                     <td>
                                         <div className="w-14 h-14 rounded-full overflow-hidden">
@@ -183,9 +193,17 @@ const Staff: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
+                            {lc.pageRows.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="py-8 text-center text-white-dark">
+                                        {lc.rows.length ? 'Nothing matches your search or filters.' : 'Nothing to show yet.'}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
+                <Pager {...lc.pager} />
             </div>
 
             {/* modal for staff view  */}

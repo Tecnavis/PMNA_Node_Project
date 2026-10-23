@@ -13,6 +13,7 @@ import { IconInfoCircle, IconX } from '@tabler/icons-react';
 import { Modal } from '@mui/material';
 import './StaffReport.css';
 import { getImageUrl } from '../../utils/imageUrl';
+import { DebouncedSearch } from '../../components/ui/ListControls';
 // Update your interface
 interface CashCollectionDetail {
     _id: string;
@@ -238,7 +239,7 @@ const calculateClientSideTotals = (details: CashCollectionDetail[]) => {
                     <h5 className="font-semibold text-lg dark:text-white-light">Staff Report</h5>
                     <TableExportButtons containerId="tbl-staff-report" title="Staff report" />
 <div className="ltr:ml-auto rtl:mr-auto">
-                        <input type="text" className="form-input w-auto" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                        <DebouncedSearch className="form-input w-auto" value={search} placeholder="Search staff…" onSearch={setSearch} />
                     </div>
                 </div>
                 {/* Data Table */}
