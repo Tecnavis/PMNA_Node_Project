@@ -5,7 +5,8 @@
  *   node scripts/migrateCloudinaryToStackcp.js inventory            # what's on Cloudinary, per folder
  *   node scripts/migrateCloudinaryToStackcp.js copy                 # copy every image to StackCP (safe to re-run)
  *   node scripts/migrateCloudinaryToStackcp.js copy-from-db         # same, but finds images via MongoDB (when Cloudinary's API is blocked)
- *   node scripts/migrateCloudinaryToStackcp.js verify               # every image referenced in MongoDB loads from StackCP?
+ *   node scripts/migrateCloudinaryToStackcp.js verify               # every image referenced in MongoDB loads from StackCP? (explains any that don't)
+ *   node scripts/migrateCloudinaryToStackcp.js copy-from-db --from=migration-logs/verify-....csv   # copy just the ones verify found missing
  *   node scripts/migrateCloudinaryToStackcp.js rewrite-db           # DRY RUN: show full Cloudinary URLs that would change
  *   node scripts/migrateCloudinaryToStackcp.js rewrite-db --apply   # write the changes (saves a rollback file)
  *   node scripts/migrateCloudinaryToStackcp.js rollback --file=migration-logs/rewrite-....json
@@ -407,6 +408,17 @@ async function copyFromDb() {
         });
     }
     let list = [...targets.values()];
+    const fromFile = option('from');
+    if (fromFile) {
+        // only the references a verify run reported as missing (column 1 = StackCP url)
+        if (!fs.existsSync(fromFile)) { console.error(`--from file not found: ${fromFile}`); process.exit(1); }
+        const wanted = new Set(fs.readFileSync(fromFile, 'utf8').split(/\r?\n/).slice(1)
+            .map(line => (line.match(/^"((?:[^"]|"")*)"/) || [])[1]).filter(Boolean).map(u => u.replace(/""/g, '"')));
+        const base = process.env.MEDIA_PUBLIC_URL.replace(/\/+$/, '');
+        const noExt = new Set([...wanted].map(u => u.replace(/\.(jpe?g|png|webp)$/i, '')));
+        list = list.filter(t => noExt.has(`${base}/${t.folder}/${t.name}`));
+        console.log(`--from: ${wanted.size} missing references listed, ${list.length} of them can be fetched from Cloudinary.`);
+    }
     const limit = Number(option('limit', 0));
     if (limit) list = list.slice(0, limit);
     console.log(`Found ${targets.size} Cloudinary images referenced in the database${limit ? ` (doing ${list.length})` : ''}.`);
@@ -458,28 +470,78 @@ async function copyFromDb() {
 async function verify() {
     requireEnv('MEDIA_PUBLIC_URL');
     const db = await connectMongo();
-    const refs = new Map(); // url -> first place it was seen
+    const refs = new Map(); // url -> { where, value }
     for await (const { collection, doc } of everyDocument(db)) {
         walkStrings(doc, (value, p) => {
             const url = mediaUrlForStoredValue(value);
-            if (url && !refs.has(url)) refs.set(url, `${collection}/${doc._id}/${p}`);
+            if (url && !refs.has(url)) refs.set(url, { where: `${collection}/${doc._id}/${p}`, value });
         });
     }
     console.log(`Checking ${refs.size} distinct image references against StackCP...`);
-    const log = openLog('verify', 'url,status,first_seen_at');
-    let missing = 0, done = 0;
-    await pool([...refs.entries()], async ([url, where]) => {
+    const missingList = [];
+    let done = 0;
+    await pool([...refs.entries()], async ([url, ref]) => {
         let status;
         try {
             const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(20000) });
             status = res.status;
         } catch (err) { status = `error: ${err.message}`; }
-        if (status !== 200) { missing++; log.row(url, status, where); }
-        progress(++done, refs.size, `missing ${missing}`);
+        if (status !== 200) missingList.push({ url, status, ...ref });
+        progress(++done, refs.size, `missing ${missingList.length}`);
     }, Math.max(CONCURRENCY, 8));
-    console.log(missing ? `${missing} references do NOT load — see ${log.file}` : 'All referenced images load from StackCP ✔');
+
+    if (!missingList.length) {
+        console.log('All referenced images load from StackCP ✔');
+        await mongoose.disconnect();
+        return;
+    }
+
+    // Why is each one missing? Check whether Cloudinary still has it.
+    console.log(`\n${missingList.length} references do not load from StackCP. Checking why...`);
+    const log = openLog('verify', 'url,status,reason,stored_value,cloudinary_source,first_seen_at');
+    const reasons = {};   // reason -> count
+    const byPlace = {};   // "collection field" -> { reason: count }
+    done = 0;
+    await pool(missingList, async (m) => {
+        let reason;
+        const src = process.env.CLOUD_NAME ? cloudinarySourceFor(m.value) : null;
+        if (typeof m.status === 'string') reason = 'check-failed';              // timeout / network: re-run verify
+        else if (!src) reason = 'never-uploaded';                                // new-style key, file never reached StackCP
+        else {
+            let cs;
+            try {
+                const res = await fetch(src.source, { method: 'HEAD', signal: AbortSignal.timeout(20000) });
+                cs = res.status;
+            } catch { cs = 0; }
+            reason = cs === 200 ? 'on-cloudinary-not-copied' : cs === 404 ? 'missing-on-cloudinary-too' : cs === 401 || cs === 403 ? 'cloudinary-refused' : 'check-failed';
+        }
+        m.reason = reason;
+        reasons[reason] = (reasons[reason] || 0) + 1;
+        const [collection, , ...field] = m.where.split('/');
+        const place = `${collection} ${field.join('/').replace(/\.\d+(?=\.|$)/g, '[]')}`;
+        (byPlace[place] = byPlace[place] || {})[reason] = (byPlace[place][reason] || 0) + 1;
+        log.row(m.url, m.status, reason, m.value, src ? src.source : '', m.where);
+        progress(++done, missingList.length, 'checked');
+    }, Math.max(CONCURRENCY, 8));
+
+    const explain = {
+        'on-cloudinary-not-copied': 'still on Cloudinary → fix: copy-from-db --from=<this log>',
+        'missing-on-cloudinary-too': 'not on Cloudinary either → was already broken before the move (nothing lost)',
+        'never-uploaded': 'new-style upload whose file never reached StackCP (upload failed in the app)',
+        'cloudinary-refused': 'Cloudinary refused (401/403) → cannot tell; check the Cloudinary account',
+        'check-failed': 'network/timeout while checking → just run verify again',
+    };
+    console.log('\nWhy they are missing:');
+    for (const [r, n] of Object.entries(reasons).sort((a, b) => b[1] - a[1])) console.log(`  ${String(n).padStart(6)}  ${r.padEnd(26)} ${explain[r]}`);
+    console.log('\nWhere they are used (top 15):');
+    Object.entries(byPlace)
+        .map(([place, r]) => [place, Object.values(r).reduce((a, b) => a + b, 0), r])
+        .sort((a, b) => b[1] - a[1]).slice(0, 15)
+        .forEach(([place, n, r]) => console.log(`  ${String(n).padStart(6)}  ${place}  ${JSON.stringify(r)}`));
+    console.log(`\nDetails: ${log.file}`);
+    if (reasons['on-cloudinary-not-copied']) console.log(`Next: node scripts/migrateCloudinaryToStackcp.js copy-from-db --from="${log.file}"`);
     await mongoose.disconnect();
-    process.exitCode = missing ? 2 : 0;
+    process.exitCode = 2;
 }
 
 async function rewriteDb() {

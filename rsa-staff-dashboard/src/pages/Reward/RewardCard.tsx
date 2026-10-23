@@ -1,7 +1,7 @@
 // @ts-ignore
 import { Card, Text, Badge, Group } from '@mantine/core';
 import { IReward } from '../../interface/reward';
-import { IMAGE_URL } from '../../config/axiosConfig';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface Props {
     reward: IReward;
@@ -18,7 +18,7 @@ const RewardCard: React.FC<Props> = ({ reward, userPoints, onSelect }) => {
         <Card shadow="md" radius="lg" p="lg" className="hover:shadow-xl hover:scale-[1.02]" onClick={() => canRedeem && onSelect(reward)} withBorder>
             <Card.Section style={{
                 height: 160,
-                background: `url(${IMAGE_URL}${reward.image}) center/cover no-repeat`
+                background: `url(${getImageUrl(reward.image)}) center/cover no-repeat`
             }} />
             <Group position="apart" mt="md">
                 <Text weight={600}>{reward.name}</Text>

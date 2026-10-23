@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { BASE_URL, axiosInstance } from '../../config/axiosConfig';
 import IconUser from '../../components/Icon/IconUser';
-import { CLOUD_IMAGE } from '../../constants/status';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface ShowRoomDetailsType {
     id: string;
@@ -272,7 +272,7 @@ const RegisterCover = () => {
                                 <div className="mt-5 w-full max-w-[445px] max-h-64">
                                     {!imageError && showRoomDetails.image ? (
                                         <img
-                                            src={`${CLOUD_IMAGE}${showRoomDetails.image}`}
+                                            src={getImageUrl(showRoomDetails.image)}
                                             alt="Showroom-Image"
                                             onError={() => setImageError(true)}
                                             className="w-full rounded-md shadow-lg border-4 max-h-64 object-contain"

@@ -1,7 +1,7 @@
 // @ts-ignore
 import { Card, Text, Grid, Group, Badge, LoadingOverlay } from '@mantine/core';
 import { IRedemption, IReward } from '../../interface/reward';
-import { IMAGE_URL } from '../../config/axiosConfig';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface Props {
     redemptions: IRedemption[];
@@ -21,7 +21,7 @@ const RedemptionHistory: React.FC<Props> = ({ redemptions, loading }) => {
                         <Card shadow="md" radius="lg" p="lg" withBorder>
                             <Card.Section style={{
                                 height: 160,
-                                background: `url(${IMAGE_URL}${reward.image}) center/cover no-repeat`
+                                background: `url(${getImageUrl(reward.image)}) center/cover no-repeat`
                             }} />
                             <Group position="apart" mt="md">
                                 <Text weight={600}>{reward.name}</Text>

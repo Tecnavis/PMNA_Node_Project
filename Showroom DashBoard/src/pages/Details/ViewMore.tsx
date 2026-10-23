@@ -9,7 +9,7 @@ import Button from '@mui/material/Button';
 import { FaCloudUploadAlt } from 'react-icons/fa';
 import { styled } from '@mui/material/styles';
 import { dateFormate, formattedTime } from '../../utils/dateUtils';
-import { CLOUD_IMAGE } from '../../constants/status';
+import { getImageUrl } from '../../utils/imageUrl';
 
 
 export interface Booking {
@@ -205,14 +205,14 @@ const Preview = () => {
                 return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
             });
 
-            const urls = files?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
+            const urls = (Array.isArray(response.data.pickupImages) ? response.data.pickupImages : []).map((v: string) => getImageUrl(v));
 
             const dropoffFiles = response.data.dropoffImages?.map((filename: any) => {
                 const blob = new Blob(); // Simulate a file blob (replace this if you receive actual blobs)
                 return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
             });
 
-            const dropoffUrls = dropoffFiles?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
+            const dropoffUrls = (Array.isArray(response.data.dropoffImages) ? response.data.dropoffImages : []).map((v: string) => getImageUrl(v));
             setDropoffImageUrls(dropoffUrls);
             setPickuptImageUrls(urls);
         } catch (error) {
@@ -226,7 +226,7 @@ const Preview = () => {
             return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
         });
 
-        const urls = files?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
+        const urls = (Array.isArray(pickupImages) ? pickupImages : []).map((v: any) => getImageUrl(v));
         setPickuptImageUrls(urls);
 
         const dropoffFiles = dropoffImages?.map((filename: any) => {
@@ -234,7 +234,7 @@ const Preview = () => {
             return new File([blob], filename, { type: 'image/jpeg' }); // Adjust the type as needed
         });
 
-        const dropoffUrls = dropoffFiles?.map((file: any) => `${CLOUD_IMAGE}${file.name}`);
+        const dropoffUrls = (Array.isArray(dropoffImages) ? dropoffImages : []).map((v: any) => getImageUrl(v));
         setDropoffImageUrls(dropoffUrls);
     }, []);
 

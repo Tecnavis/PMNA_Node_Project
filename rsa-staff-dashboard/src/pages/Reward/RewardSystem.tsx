@@ -11,8 +11,8 @@ import RewardList from './RewardList';
 import RedemptionHistory from './RedemptionHistory';
 import { MdOutlineRedeem } from 'react-icons/md';
 import IconClock from '../../components/Icon/IconClock';
-import { CLOUD_IMAGE } from '../../constants/status';
 import AddressForm from '../Components/AddressForm';
+import { getImageUrl } from '../../utils/imageUrl';
 
 const RewardSystem: React.FC = () => {
     const [rewards, setRewards] = useState<IReward[]>([]);
@@ -148,7 +148,7 @@ const RewardSystem: React.FC = () => {
                 {selectedReward && (
                     <div>
                         <Group mb="md">
-                            <img src={`${CLOUD_IMAGE}${selectedReward.image}`} className="rounded-md max-h-64 w-full object-contain" />
+                            <img src={getImageUrl(selectedReward.image)} className="rounded-md max-h-64 w-full object-contain" />
                             <div>
                                 <span className='text-lg text-gray-800 font-semibold'>{selectedReward.name}</span>
                                 <Text size="sm" color="dimmed">{selectedReward.description}</Text>
