@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LiveData, OpsPerson, STATUS_COLORS } from './opsApi';
+import { addBaseLayer } from '../../utils/mapTiles';
 
 /** Small read-only map for the dashboard: every driver/provider with a GPS position. */
 const KERALA_CENTER: L.LatLngExpression = [10.35, 76.3];
@@ -28,11 +29,13 @@ const MiniMap: React.FC<{ data: LiveData | null; height?: number }> = ({ data, h
 
     useEffect(() => {
         if (!el.current || map.current) return;
-        map.current = L.map(el.current, { zoomControl: false, attributionControl: false, scrollWheelZoom: false }).setView(KERALA_CENTER, 7);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map.current);
+        map.current = L.map(el.current, { zoomControl: false, scrollWheelZoom: false }).setView(KERALA_CENTER, 7);
+        map.current.attributionControl.setPrefix(false);
+        const removeBase = addBaseLayer(map.current);
         L.control.zoom({ position: 'topright' }).addTo(map.current);
         layer.current = L.layerGroup().addTo(map.current);
         return () => {
+            removeBase();
             map.current?.remove();
             map.current = null;
         };

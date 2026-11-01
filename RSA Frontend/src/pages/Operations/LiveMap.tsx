@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Link } from 'react-router-dom';
 import { LiveData, OpsCase, OpsPerson, STATUS_COLORS, formatMinutes } from './opsApi';
+import { addBaseLayer } from '../../utils/mapTiles';
 
 type Filter = 'all' | 'busy' | 'free' | 'stale' | 'drivers' | 'providers';
 
@@ -80,12 +81,11 @@ const LiveMap: React.FC<{ data: LiveData | null; liveTick: number }> = ({ data, 
         if (!mapEl.current || map.current) return;
         map.current = L.map(mapEl.current, { zoomControl: false }).setView(KERALA_CENTER, 8);
         L.control.zoom({ position: 'topright' }).addTo(map.current);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            maxZoom: 19,
-        }).addTo(map.current);
+        map.current.attributionControl.setPrefix(false);
+        const removeBase = addBaseLayer(map.current);
         caseLayer.current = L.layerGroup().addTo(map.current);
         return () => {
+            removeBase();
             map.current?.remove();
             map.current = null;
             markers.current.clear();
