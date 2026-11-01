@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Track your vehicle · RSA Kerala</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --bg:#eef0f3; --card:#fff; --ink:#111318; --muted:#8a90a2; --line:#e3e6ec; --red:#d7141a; --red-soft:#fdeced; --violet:#5b4cf0; --green:#16a34a; }
+        * { box-sizing: border-box; }
+        body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+        .wrap { max-width:560px; margin:0 auto; padding:16px 16px 40px; }
+        header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+        header img { height:40px; }
+        .live { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--green); background:#fff; border:1px solid var(--line); border-radius:999px; padding:6px 10px; }
+        .dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 0 rgba(22,163,74,.5); animation:pulse 2s infinite; }
+        @keyframes pulse { 70% { box-shadow:0 0 0 8px rgba(22,163,74,0); } 100% { box-shadow:0 0 0 0 rgba(22,163,74,0); } }
+        .card { background:var(--card); border:1px solid #e8eaef; border-radius:18px; padding:16px; margin-bottom:12px; }
+        .eyebrow { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+        h1 { font-size:26px; font-weight:400; letter-spacing:-.02em; margin:4px 0 2px; }
+        .sub { color:#5d6375; font-size:13px; }
+        .eta { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-top:14px; padding:14px; border-radius:14px; background:var(--red-soft); }
+        .eta b { font-size:34px; font-weight:300; letter-spacing:-.02em; color:var(--red); line-height:1; }
+        .eta small { display:block; color:#5d6375; font-size:12px; margin-top:4px; }
+        #map { height:300px; border-radius:18px; overflow:hidden; border:1px solid #e8eaef; margin-bottom:12px; background:#e5e7eb; }
+        ol { list-style:none; margin:8px 0 0; padding:0; }
+        li { position:relative; display:flex; gap:12px; padding:0 0 16px 0; }
+        li:last-child { padding-bottom:0; }
+        li::before { content:''; position:absolute; left:11px; top:24px; bottom:-2px; width:2px; background:var(--line); }
+        li:last-child::before { display:none; }
+        li.done::before { background:var(--ink); }
+        .mark { flex:none; width:24px; height:24px; border-radius:50%; border:2px solid #cfd3dc; background:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff; z-index:1; }
+        li.done .mark { background:var(--ink); border-color:var(--ink); }
+        li.current .mark { background:var(--red); border-color:var(--red); box-shadow:0 0 0 5px rgba(215,20,26,.15); }
+        li .t { font-weight:500; }
+        li.current .t { font-weight:700; color:var(--red); }
+        li .w { color:var(--muted); font-size:12px; }
+        .row { display:flex; gap:10px; align-items:flex-start; font-size:14px; margin-top:8px; }
+        .pin { flex:none; width:10px; height:10px; border-radius:50%; margin-top:5px; background:var(--ink); }
+        .pin.drop { background:#fff; border:2px solid var(--red); }
+        .driver { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .btn { display:inline-flex; align-items:center; gap:6px; background:var(--ink); color:#fff; text-decoration:none; border-radius:999px; padding:9px 14px; font-weight:600; font-size:14px; }
+        .closed { text-align:center; padding:48px 16px; }
+        .closed h1 { font-size:22px; }
+        footer { text-align:center; color:var(--muted); font-size:12px; margin-top:16px; }
+        footer a { color:var(--red); font-weight:600; text-decoration:none; }
+        .hidden { display:none !important; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <img src="/images/RSALogo.png" alt="RSA Kerala" />
+            <span class="live" id="live"><span class="dot"></span> Live</span>
+        </header>
+
+        <div id="closed" class="card closed hidden">
+            <h1 id="closedTitle">This tracking link has ended</h1>
+            <p class="sub" id="closedText">Please contact RSA Kerala if you still need help.</p>
+        </div>
+
+        <div id="content" class="hidden">
+            <div class="card">
+                <div class="eyebrow" id="caseLine">Case</div>
+                <h1 id="status">Loading…</h1>
+                <div class="sub" id="vehicle"></div>
+                <div class="eta hidden" id="eta">
+                    <div>
+                        <div class="eyebrow" id="etaLabel">Arriving in about</div>
+                        <b id="etaMin">–</b>
+                        <small id="etaAt"></small>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="eyebrow">Distance</div>
+                        <div style="font-size:20px;font-weight:500" id="etaKm">–</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="map" class="hidden"></div>
+
+            <div class="card driver hidden" id="driverCard">
+                <div>
+                    <div class="eyebrow">Your driver</div>
+                    <div style="font-weight:600;font-size:16px" id="driverName"></div>
+                </div>
+                <a class="btn" id="driverCall" href="#">📞 Call</a>
+            </div>
+
+            <div class="card">
+                <div class="eyebrow">Progress</div>
+                <ol id="steps"></ol>
+            </div>
+
+            <div class="card">
+                <div class="eyebrow">Route</div>
+                <div class="row"><span class="pin"></span><span id="from"></span></div>
+                <div class="row"><span class="pin drop"></span><span id="to"></span></div>
+            </div>
+        </div>
+
+        <footer>Updated <span id="updated">–</span> · Help: <a href="tel:7780080077">77 800 800 77</a></footer>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        (function () {
+            var token = location.pathname.replace(/\/+$/, '').split('/').pop();
+            var $ = function (id) { return document.getElementById(id); };
+            var map, truck, pickup, drop, fitted = false;
+            var fmtTime = function (d) { return new Date(d).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }); };
+            var fmtDay = function (d) {
+                var x = new Date(d), t = new Date();
+                return (x.toDateString() === t.toDateString() ? 'Today' : x.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })) + ', ' + fmtTime(d);
+            };
+            var text = function (id, v) { $(id).textContent = v == null ? '' : String(v); };
+            var dotIcon = function (bg, border) {
+                return L.divIcon({ className: '', iconSize: [18, 18], iconAnchor: [9, 9], html: '<div style="width:18px;height:18px;border-radius:50%;background:' + bg + ';border:3px solid ' + border + ';box-shadow:0 2px 6px rgba(0,0,0,.25)"></div>' });
+            };
+            var truckIcon = function () {
+                return L.divIcon({ className: '', iconSize: [36, 36], iconAnchor: [18, 18], html: '<div style="width:36px;height:36px;border-radius:50%;background:#111318;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 0 0 6px rgba(215,20,26,.18),0 4px 10px rgba(0,0,0,.3)">🚚</div>' });
+            };
+
+            function showClosed(kind) {
+                $('content').classList.add('hidden');
+                $('live').classList.add('hidden');
+                $('closed').classList.remove('hidden');
+                if (kind === 'not-found') { text('closedTitle', 'Tracking link not found'); text('closedText', 'Please check the link you received, or contact RSA Kerala.'); }
+                if (kind === 'revoked') { text('closedTitle', 'This tracking link was switched off'); }
+            }
+
+            function render(d) {
+                $('content').classList.remove('hidden');
+                text('caseLine', 'Case ' + (d.fileNumber || ''));
+                text('status', d.status);
+                text('vehicle', d.vehicleNumber ? 'Vehicle ' + d.vehicleNumber : '');
+                if (d.completed || d.cancelled) $('live').classList.add('hidden');
+
+                if (d.eta) {
+                    $('eta').classList.remove('hidden');
+                    text('etaLabel', d.eta.to === 'pickup' ? 'Driver reaches you in about' : 'Reaches drop-off in about');
+                    text('etaMin', d.eta.minutes < 60 ? d.eta.minutes + ' min' : Math.floor(d.eta.minutes / 60) + ' h ' + (d.eta.minutes % 60) + ' min');
+                    text('etaAt', 'around ' + fmtTime(d.eta.at) + ' (estimate)');
+                    text('etaKm', d.eta.km + ' km');
+                } else $('eta').classList.add('hidden');
+
+                if (d.driver && d.driver.name) {
+                    $('driverCard').classList.remove('hidden');
+                    text('driverName', d.driver.name);
+                    if (d.driver.phone) $('driverCall').href = 'tel:' + d.driver.phone; else $('driverCall').classList.add('hidden');
+                }
+
+                var ol = $('steps'); ol.innerHTML = '';
+                d.steps.forEach(function (s) {
+                    var li = document.createElement('li');
+                    li.className = s.done ? 'done' : s.current ? 'current' : '';
+                    var mark = document.createElement('span'); mark.className = 'mark'; mark.textContent = s.done ? '✓' : '';
+                    var body = document.createElement('div');
+                    var t = document.createElement('div'); t.className = 't'; t.textContent = s.label;
+                    var w = document.createElement('div'); w.className = 'w'; w.textContent = s.at && (s.done || s.current) ? fmtDay(s.at) : s.current ? 'Now' : '';
+                    body.appendChild(t); body.appendChild(w); li.appendChild(mark); li.appendChild(body); ol.appendChild(li);
+                });
+                text('from', d.pickup.address || 'Pickup');
+                text('to', d.drop.address || 'Drop-off');
+
+                var pts = [];
+                if (d.pickup.point || d.drop.point || d.vehicle) {
+                    $('map').classList.remove('hidden');
+                    if (!map && window.L) {
+                        map = L.map('map', { zoomControl: false, attributionControl: false });
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+                    }
+                    if (map) {
+                        if (d.pickup.point) { pts.push([d.pickup.point.lat, d.pickup.point.lng]); pickup = pickup || L.marker(pts[pts.length - 1], { icon: dotIcon('#111318', '#fff') }).addTo(map); }
+                        if (d.drop.point) { pts.push([d.drop.point.lat, d.drop.point.lng]); drop = drop || L.marker(pts[pts.length - 1], { icon: dotIcon('#fff', '#d7141a') }).addTo(map); }
+                        if (d.vehicle) {
+                            var v = [d.vehicle.point.lat, d.vehicle.point.lng]; pts.push(v);
+                            if (truck) truck.setLatLng(v); else truck = L.marker(v, { icon: truckIcon(), zIndexOffset: 1000 }).addTo(map);
+                        } else if (truck) { truck.remove(); truck = null; }
+                        if (!fitted && pts.length) { pts.length > 1 ? map.fitBounds(pts, { padding: [36, 36], maxZoom: 14 }) : map.setView(pts[0], 13); fitted = true; }
+                    }
+                }
+                text('updated', fmtTime(d.updatedAt));
+            }
+
+            function load() {
+                fetch('/t/' + encodeURIComponent(token) + '/data', { cache: 'no-store' })
+                    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+                    .then(function (x) {
+                        if (!x.ok || x.j.closed) { showClosed(x.j.closed || 'not-found'); clearInterval(timer); return; }
+                        render(x.j);
+                    })
+                    .catch(function () { /* keep the last view, retry on the next tick */ });
+            }
+            var timer = setInterval(function () { if (!document.hidden) load(); }, 60000);
+            document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
+            load();
+        })();
+    </script>
+</body>
+</html>

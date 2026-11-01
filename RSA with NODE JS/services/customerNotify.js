@@ -24,6 +24,18 @@ exports.statusChanged = (bookingId) => {
             if (who && ['Order Received', 'On the way to pickup location'].includes(b.status)) {
                 msg += `\nDriver: ${who.name || ''}${who.phone ? ` (${who.phone})` : ''}`;
             }
+            // live tracking link once a driver is coming (one link per case, reused)
+            if (['Order Received', 'On the way to pickup location', 'Vehicle Picked', 'On the way to dropoff location'].includes(b.status)) {
+                try {
+                    const tracking = require('./tracking');
+                    const TrackingLink = require('../Model/trackingLink');
+                    let link = await TrackingLink.findOne({ booking: b._id, revokedAt: { $exists: false }, 'createdBy.role': 'system' }).lean();
+                    if (!link) link = await tracking.createLink(b._id, { showDriver: true }, { role: 'system', name: 'Customer updates' });
+                    if (link) msg += `\nTrack live: ${tracking.urlFor(link.token)}`;
+                } catch (e) {
+                    console.error('[customerNotify] tracking link', e.message);
+                }
+            }
             msg += `\nBooking ID: ${b.fileNumber}`;
             await wa.text(`91${b.mob1}`, msg);
             await Booking.collection.updateOne({ _id: b._id }, { $set: { customerNotifiedStatus: b.status } });

@@ -11,5 +11,7 @@ router.get('/board', adminSite, ops.board);
 router.get('/approvals', adminSite, ops.approvals);
 router.get('/summary', adminSite, ops.summary);
 router.get('/trend', adminSite, ops.trend);
+router.get('/recommendations', adminSite, ops.recommendations);
+router.get('/driver-day', adminSite, ops.driverDay);
 
 module.exports = router;

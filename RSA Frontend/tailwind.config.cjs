@@ -16,10 +16,15 @@ module.exports = {
         },
         extend: {
             colors: {
+                brand: {
+                    DEFAULT: '#d7141a',
+                    light: '#fdeced',
+                    soft: '#fff5f5',
+                },
                 primary: {
-                    DEFAULT: '#4361ee',
-                    light: '#eaf1ff',
-                    'dark-light': 'rgba(67,97,238,.15)',
+                    DEFAULT: '#5b4cf0',
+                    light: '#efedff',
+                    'dark-light': 'rgba(91,76,240,.15)',
                 },
                 secondary: {
                     DEFAULT: '#805dca',
@@ -63,7 +68,7 @@ module.exports = {
                 },
             },
             fontFamily: {
-                nunito: ['Nunito', 'sans-serif'],
+                nunito: ['Inter', 'Nunito', 'system-ui', 'sans-serif'],
             },
             spacing: {
                 4.5: '18px',

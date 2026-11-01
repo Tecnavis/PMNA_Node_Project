@@ -54,6 +54,8 @@ const petrolPumpRoutes = require('./routes/petrol.js');
 const workRoutes = require('./routes/workRoutes.js');
 const mediaRoutes = require('./routes/media.js');
 const opsRoutes = require('./routes/ops.js');
+const bookingToolsRoutes = require('./routes/bookingTools.js');
+const trackingRoutes = require('./routes/tracking.js');
 const execAppRoutes = require('./routes/execApp.js');
 const reportsRoutes = require('./routes/reports.js');
 const reminderRoutes = require('./routes/reminders.js');
@@ -271,6 +273,8 @@ app.use('/petrol-pumps', petrolPumpRoutes);
 app.use('/work', workRoutes);
 app.use('/media', mediaRoutes);
 app.use('/ops', opsRoutes);
+app.use('/booking-tools', bookingToolsRoutes);
+app.use('/t', trackingRoutes); // public customer tracking page
 app.use('/exec', execAppRoutes);
 app.use('/reports', reportsRoutes);
 app.use('/reminders', reminderRoutes.reminders);

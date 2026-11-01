@@ -285,7 +285,7 @@ const Header = () => {
                     <div className="min-w-0 sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                         {/* shortcut icons scroll sideways on phones instead of pushing the page wider */}
                         <div className="min-w-0 overflow-x-auto sm:ltr:mr-auto sm:rtl:ml-auto flex justify-start sm:justify-center items-center gap-2 [&>*]:shrink-0">
-                            <span className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                            <span className="hover:cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-[#e3e6ec] bg-white text-[#3b4153] hover:border-[#c9cdd8] dark:border-[#253b5c] dark:bg-black dark:text-white-dark">
                                 <HiOutlineCalculator
                                     onClick={() => {
                                         setSelectedService(null);
@@ -297,19 +297,19 @@ const Header = () => {
                                     className=" hover:cursor-pointer size-5 text-gray-900 font-bold"
                                 />
                             </span>
-                            <span onClick={() => navigate('/attendance')} className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                            <span onClick={() => navigate('/attendance')} className="hover:cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-[#e3e6ec] bg-white text-[#3b4153] hover:border-[#c9cdd8] dark:border-[#253b5c] dark:bg-black dark:text-white-dark">
                                 <IoCalendarOutline className="size-5" />
                             </span>
-                            <span onClick={() => navigate('/status')} className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                            <span onClick={() => navigate('/status')} className="hover:cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-[#e3e6ec] bg-white text-[#3b4153] hover:border-[#c9cdd8] dark:border-[#253b5c] dark:bg-black dark:text-white-dark">
                                 <CheckCircleIcon className="size-5" />
                             </span>
-                             <span onClick={() => navigate('/oldBookings')} className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                             <span onClick={() => navigate('/oldBookings')} className="hover:cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-[#e3e6ec] bg-white text-[#3b4153] hover:border-[#c9cdd8] dark:border-[#253b5c] dark:bg-black dark:text-white-dark">
                                 <CalendarClock className="size-5" />
                             </span>
-                            <span onClick={() => navigate('/bookingDashBoard')} className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                            <span onClick={() => navigate('/bookingDashBoard')} className="hover:cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-[#e3e6ec] bg-white text-[#3b4153] hover:border-[#c9cdd8] dark:border-[#253b5c] dark:bg-black dark:text-white-dark">
                                 <BarChart3 className="size-5" />
                             </span>
-                            <span className="hover:cursor-pointer p-2 bg-gray-200 rounded-full">
+                            <span className="hover:cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-[#e3e6ec] bg-white text-[#3b4153] hover:border-[#c9cdd8] dark:border-[#253b5c] dark:bg-black dark:text-white-dark">
                                 {isLoadingQr ? (
                                     <div className="size-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
                                 ) : (
@@ -318,6 +318,9 @@ const Header = () => {
                                 <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleQrFileChange} />
                             </span>
                         </div>
+                        <Link to="/add-booking" className="hidden md:flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(91,76,240,.8)] hover:bg-primary/90">
+                            <span className="text-base leading-none">+</span> New booking
+                        </Link>
                         <div>
                             {themeConfig.theme === 'light' ? (
                                 <button

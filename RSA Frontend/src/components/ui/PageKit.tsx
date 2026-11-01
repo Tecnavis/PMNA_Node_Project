@@ -79,7 +79,7 @@ export type TabItem<K extends string | number> = { key: K; label: string; count?
 
 export function SegTabs<K extends string | number>({ tabs, value, onChange, className = '' }: { tabs: TabItem<K>[]; value: K; onChange: (k: K) => void; className?: string }) {
     return (
-        <div className={`flex gap-1 overflow-x-auto rounded-lg bg-white-light/60 p-1 dark:bg-[#1b2e4b]/60 ${className}`} role="tablist">
+        <div className={`flex gap-1 overflow-x-auto rounded-full border border-[#e3e6ec] bg-white p-1 dark:border-[#253b5c] dark:bg-black ${className}`} role="tablist">
             {tabs.map((t) => {
                 const on = t.key === value;
                 return (
@@ -89,14 +89,14 @@ export function SegTabs<K extends string | number>({ tabs, value, onChange, clas
                         role="tab"
                         aria-selected={on}
                         onClick={() => onChange(t.key)}
-                        className={`flex min-w-max flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition ${
-                            on ? 'bg-white text-primary shadow dark:bg-[#0e1726]' : 'text-white-dark hover:text-primary'
+                        className={`flex min-w-max flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+                            on ? 'ui-tab-active' : 'text-white-dark hover:text-brand'
                         }`}
                     >
                         {t.icon}
                         {t.label}
                         {t.count !== undefined && t.count !== null && (
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${on ? 'bg-primary text-white' : 'bg-white-light text-black dark:bg-[#0e1726] dark:text-white-light'}`}>
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${on ? 'bg-brand text-white' : 'bg-white-light text-black dark:bg-[#0e1726] dark:text-white-light'}`}>
                                 {t.count}
                             </span>
                         )}

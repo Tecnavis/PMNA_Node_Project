@@ -49,7 +49,7 @@ const CaseCard: React.FC<{ c: OpsCase; onChanged: () => void }> = ({ c, onChange
     };
 
     return (
-        <div className={`rounded-md border bg-white p-3 text-sm shadow-sm dark:bg-[#1b2e4b] ${c.delayed ? 'border-danger' : 'border-white-light dark:border-[#253b5c]'}`}>
+        <div className={`rounded-2xl border p-3 text-sm dark:bg-[#1b2e4b] ${c.delayed ? 'border-danger/40 bg-brand-soft' : c.atRisk ? 'border-warning/50 bg-white' : 'border-[#eceef2] bg-white dark:border-[#253b5c]'}`}>
             <div className="flex items-start justify-between gap-2">
                 <Link to={`/openbooking/${c._id}`} className="font-semibold text-primary hover:underline">
                     {c.fileNumber || 'No case ID'}
@@ -68,6 +68,8 @@ const CaseCard: React.FC<{ c: OpsCase; onChanged: () => void }> = ({ c, onChange
                 ) : (
                     <span className="badge bg-danger">Unassigned</span>
                 )}
+                {c.atRisk && <span className="badge bg-warning/15 text-warning" title="Estimated from the driver's GPS">At risk · ETA {c.eta?.minutes} min</span>}
+                {!c.atRisk && c.eta && <span className="badge bg-[#eef0f3] text-[#4b5165]" title="Estimated from the driver's GPS">ETA {c.eta.minutes} min · {c.eta.km} km</span>}
                 {c.cashPending && <span className="badge badge-outline-warning">Cash pending</span>}
                 {(c.showroom || c.company) && <span className="badge badge-outline-secondary">{c.showroom || c.company}</span>}
             </div>

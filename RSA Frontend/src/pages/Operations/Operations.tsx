@@ -8,15 +8,19 @@ import StatusBoard from './StatusBoard';
 import Approvals from './Approvals';
 import TodaySummary from './TodaySummary';
 import TvSettings from '../TV/TvSettings';
+import DriverDayTimeline from './DriverDayTimeline';
+import SuggestionsPanel from './SuggestionsPanel';
+import RecommendationDialog from './RecommendationDialog';
 import {
-    ApprovalsData, BoardData, LiveData, SummaryData,
-    fetchApprovals, fetchBoard, fetchLive, fetchSummary,
+    ApprovalsData, BoardData, LiveData, SummaryData, Recommendation,
+    fetchApprovals, fetchBoard, fetchLive, fetchSummary, fetchRecommendations,
 } from './opsApi';
 
-type Tab = 'map' | 'board' | 'approvals' | 'today';
+type Tab = 'map' | 'board' | 'day' | 'approvals' | 'today';
 const TABS: { key: Tab; label: string }[] = [
     { key: 'map', label: 'Live map' },
     { key: 'board', label: 'Status board' },
+    { key: 'day', label: 'Driver day' },
     { key: 'approvals', label: 'Approvals' },
     { key: 'today', label: 'Today' },
 ];
@@ -32,7 +36,7 @@ const readTab = (): Tab => {
 };
 
 const Chip: React.FC<{ tone: string; label: string; value: number | undefined; onClick?: () => void }> = ({ tone, label, value, onClick }) => (
-    <button type="button" onClick={onClick} className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${value ? tone : 'border-white-light text-white-dark dark:border-[#253b5c]'}`}>
+    <button type="button" onClick={onClick} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${value ? tone : 'border-[#e3e6ec] bg-white text-[#8a90a2] dark:border-[#253b5c] dark:bg-black'}`}>
         <span className="text-base leading-none">{value ?? '–'}</span> {label}
     </button>
 );
@@ -49,6 +53,8 @@ const Operations: React.FC = () => {
     const [error, setError] = useState('');
     const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
     const [liveTick, setLiveTick] = useState(0);
+    const [recs, setRecs] = useState<Recommendation[] | null>(null);
+    const [openRec, setOpenRec] = useState<Recommendation | null>(null);
     const socketRef = useRef<Socket | null>(null);
     const boardTimer = useRef<number | undefined>();
 
@@ -64,6 +70,7 @@ const Operations: React.FC = () => {
     const load = useCallback(async () => {
         try {
             const [l, b, a] = await Promise.all([fetchLive(), fetchBoard(), fetchApprovals()]);
+            fetchRecommendations().then(setRecs).catch(() => setRecs((x) => x || []));
             setLive(l);
             setBoard(b);
             setApprovals(a);
@@ -128,44 +135,61 @@ const Operations: React.FC = () => {
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-                <h5 className="text-lg font-semibold dark:text-white-light">Operations</h5>
-                <div className="flex flex-wrap gap-2">
-                    <Chip tone="border-danger text-danger" label="delayed" value={board?.totals.delayed} onClick={() => chooseTab('board')} />
-                    <Chip tone="border-danger text-danger" label="unassigned" value={board?.totals.unassigned} onClick={() => chooseTab('board')} />
-                    <Chip tone="border-warning text-warning" label="GPS not updating" value={live?.counts.gpsStale} onClick={() => chooseTab('map')} />
-                    <Chip tone="border-primary text-primary" label="awaiting approval" value={approvals?.total} onClick={() => chooseTab('approvals')} />
-                    <Chip tone="border-success text-success" label="on a case" value={live?.counts.busy} onClick={() => chooseTab('map')} />
+            <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <div className="ui-eyebrow">Operations / Live</div>
+                    <h1 className="mt-1 text-[34px] font-normal leading-tight tracking-tight text-[#111318] dark:text-white">Live operations</h1>
                 </div>
-                <div className="ml-auto flex items-center gap-2 text-xs text-white-dark">
-                    {updatedAt && <span>Updated {updatedAt.toLocaleTimeString()}</span>}
-                    <button type="button" className="btn btn-sm btn-outline-primary" onClick={load}>Refresh</button>
-                    <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setTvOpen(true)}>📺 TV screen</button>
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="flex items-center gap-2 rounded-full bg-primary-light px-3 py-2 text-sm font-semibold dark:bg-primary/15">
+                        <span className="h-2.5 w-2.5 rounded-full bg-success" /> Monitoring {board?.totals.open ?? '–'}
+                        <span className="text-[#b9bdc9]">|</span>
+                        <button type="button" className="text-primary" onClick={() => chooseTab('approvals')}>{approvals?.total ?? 0} approvals</button>
+                    </span>
+                    <button type="button" className="btn btn-outline-dark btn-sm" onClick={load} title={updatedAt ? `Updated ${updatedAt.toLocaleTimeString()}` : ''}>↻ Refresh</button>
+                    <button type="button" className="btn btn-outline-dark btn-sm" onClick={() => setTvOpen(true)}>📺 TV screen</button>
                 </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                <Chip tone="border-danger/40 bg-danger/5 text-danger" label="delayed" value={board?.totals.delayed} onClick={() => chooseTab('board')} />
+                <Chip tone="border-warning/40 bg-warning/5 text-warning" label="at risk" value={board?.totals.atRisk} onClick={() => chooseTab('board')} />
+                <Chip tone="border-primary/40 bg-primary/5 text-primary" label="unassigned" value={board?.totals.unassigned} onClick={() => chooseTab('board')} />
+                <Chip tone="border-warning/40 bg-warning/5 text-warning" label="GPS not updating" value={live?.counts.gpsStale} onClick={() => chooseTab('map')} />
+                <Chip tone="border-[#111318]/20 bg-white text-[#111318]" label="awaiting approval" value={approvals?.total} onClick={() => chooseTab('approvals')} />
+                <Chip tone="border-success/40 bg-success/5 text-success" label="on a case" value={live?.counts.busy} onClick={() => chooseTab('map')} />
             </div>
             <TvSettings open={tvOpen} onClose={() => setTvOpen(false)} />
 
             {error && <div className="rounded-md border border-danger bg-danger/10 px-4 py-2 text-sm text-danger">{error}</div>}
 
-            <div className="flex gap-1 overflow-x-auto whitespace-nowrap border-b border-white-light dark:border-[#253b5c]">
+            <div className="inline-flex max-w-full gap-1 overflow-x-auto whitespace-nowrap rounded-full border border-[#e3e6ec] bg-white p-1 dark:border-[#253b5c] dark:bg-black">
                 {TABS.map((t) => (
                     <button
                         key={t.key}
                         type="button"
                         onClick={() => chooseTab(t.key)}
-                        className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold ${tab === t.key ? 'border-primary text-primary' : 'border-transparent text-white-dark hover:text-primary'}`}
+                        className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${tab === t.key ? 'ui-tab-active' : 'text-[#5d6375] hover:text-brand'}`}
                     >
                         {t.label}
-                        {t.key === 'approvals' && approvals?.total ? <span className="badge ml-2 bg-warning">{approvals.total}</span> : null}
+                        {t.key === 'approvals' && approvals?.total ? <span className="ml-2 rounded-full bg-warning px-1.5 text-[11px] text-white">{approvals.total}</span> : null}
                     </button>
                 ))}
             </div>
+
+            {(tab === 'map' || tab === 'board') && recs && recs.length > 0 && <SuggestionsPanel items={recs} onOpen={setOpenRec} />}
+            <RecommendationDialog rec={openRec} onClose={() => setOpenRec(null)} onDone={load} />
 
             {/* keep the map mounted so markers persist while switching tabs */}
             <div className={tab === 'map' ? '' : 'hidden'}>
                 <LiveMap data={live} liveTick={liveTick} />
             </div>
             {tab === 'board' && <StatusBoard data={board} onChanged={load} />}
+            {tab === 'day' && (
+                <>
+                    <DriverDayTimeline recommendations={recs || []} onSuggestion={setOpenRec} />
+                    <SuggestionsPanel items={recs} onOpen={setOpenRec} />
+                </>
+            )}
             {tab === 'approvals' && <Approvals data={approvals} />}
             {tab === 'today' && <TodaySummary data={summary} date={summary?.date || summaryDate} onDate={setSummaryDate} isToday={isToday} />}
         </div>

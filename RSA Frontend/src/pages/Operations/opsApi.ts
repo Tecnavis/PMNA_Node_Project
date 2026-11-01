@@ -10,6 +10,8 @@ export type OpsCase = {
     minutesInStatus: number | null;
     statusSince: string;
     delayed: boolean;
+    atRisk?: boolean;
+    eta?: { to: 'pickup' | 'drop'; km: number; minutes: number; at: string; predictedInStatus: number; gpsMinutesAgo: number } | null;
     delayLimit: number | null;
     unassigned: boolean;
     scheduledFor: string | null;
@@ -55,7 +57,7 @@ export type LiveData = {
 export type BoardData = {
     generatedAt: string;
     statuses: string[];
-    totals: { open: number; scheduled: number; delayed: number; unassigned: number };
+    totals: { open: number; scheduled: number; delayed: number; unassigned: number; atRisk?: number };
     columns: { status: string; delayLimit: number | null; cases: OpsCase[] }[];
 };
 
@@ -89,6 +91,26 @@ export const fetchApprovals = async (): Promise<ApprovalsData> => {
 export const fetchSummary = async (date?: string): Promise<SummaryData> => {
     const d = (await axios.get(`${BASE_URL}/ops/summary${date ? `?date=${date}` : ''}`, auth())).data;
     return expect(d, !!d?.totals && Array.isArray(d?.perPerson), 'summary');
+};
+
+export type Candidate = { _id: string; kind: 'driver' | 'provider'; name: string; phone: string; km: number; minutes: number; gpsMinutesAgo: number; busy: boolean };
+export type Recommendation = {
+    kind: 'assign' | 'reassign';
+    case: OpsCase;
+    proposed: Candidate;
+    current?: { _id: string; name: string; km: number; minutes: number };
+    savesMinutes?: number;
+    alternatives?: Candidate[];
+};
+export const fetchRecommendations = async (): Promise<Recommendation[]> => {
+    const d = (await axios.get(`${BASE_URL}/ops/recommendations`, auth())).data;
+    return Array.isArray(d?.items) ? d.items : [];
+};
+export type DriverDayCase = { _id: string; fileNumber: string; status: string; from: string; to: string; open: boolean; delayed: boolean; route: string };
+export type DriverDay = { date: string; start: string; end: string; now: string; people: { _id: string; name: string; type: 'driver' | 'provider'; cases: DriverDayCase[] }[] };
+export const fetchDriverDay = async (date?: string): Promise<DriverDay> => {
+    const d = (await axios.get(`${BASE_URL}/ops/driver-day${date ? `?date=${date}` : ''}`, auth())).data;
+    return expect(d, Array.isArray(d?.people), 'driver day');
 };
 
 /** Same endpoint the driver app uses to change a case's status */

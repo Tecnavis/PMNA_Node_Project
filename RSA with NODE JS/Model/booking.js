@@ -194,6 +194,56 @@ bookingSchema.post(['findOneAndUpdate', 'updateOne'], function () {
     if (q._id) require('../services/customerNotify').statusChanged(q._id);
 });
 
+// ---- Case activity log (Model/bookingEvent.js): who changed the status / driver, and when.
+// Runs after the change and never blocks or fails the booking update.
+const EVENT_FIELDS = ['status', 'driver', 'provider'];
+const hasOwn = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+const touchedEventFields = (u) => EVENT_FIELDS.filter((k) => hasOwn(u, k) || hasOwn(u.$set, k));
+bookingSchema.post('init', function (doc) {
+    doc.$locals.eventOrig = { status: doc.status, driver: doc.driver, provider: doc.provider };
+});
+bookingSchema.pre('save', function (next) {
+    this.$locals.eventIsNew = this.isNew;
+    next();
+});
+bookingSchema.post('save', function (doc) {
+    try {
+        const events = require('../services/bookingEvents');
+        if (doc.$locals.eventIsNew) events.record(doc._id, 'created', { to: doc.status || '' });
+        else events.recordChanges(doc._id, doc.$locals.eventOrig, { status: doc.status, driver: doc.driver, provider: doc.provider });
+        doc.$locals.eventOrig = { status: doc.status, driver: doc.driver, provider: doc.provider };
+    } catch (e) {
+        console.error('[bookingEvents]', e.message);
+    }
+});
+bookingSchema.pre(['findOneAndUpdate', 'updateOne'], async function () {
+    this._eventsBefore = undefined;
+    try {
+        const u = this.getUpdate() || {};
+        if (Array.isArray(u) || !touchedEventFields(u).length) return;
+        // same visibility rules as the update itself: findOneAndUpdate is filtered by visibleFilter, updateOne is not
+        const q = { ...this.getQuery() };
+        if (this.op === 'updateOne') q._includeHidden = true;
+        this._eventsBefore = await this.model.findOne(q).select('status driver provider').lean();
+    } catch (e) {
+        this._eventsBefore = undefined;
+    }
+});
+bookingSchema.post(['findOneAndUpdate', 'updateOne'], function () {
+    try {
+        const before = this._eventsBefore;
+        if (!before) return;
+        const u = this.getUpdate() || {};
+        const set = { ...u, ...(u.$set || {}) };
+        const after = { status: hasOwn(set, 'status') ? set.status : before.status };
+        if (hasOwn(set, 'driver')) after.driver = set.driver;
+        if (hasOwn(set, 'provider')) after.provider = set.provider;
+        require('../services/bookingEvents').recordChanges(before._id, before, after);
+    } catch (e) {
+        console.error('[bookingEvents]', e.message);
+    }
+});
+
 bookingSchema.plugin(visibleFilter);
 
 module.exports = mongoose.model('Booking', bookingSchema);

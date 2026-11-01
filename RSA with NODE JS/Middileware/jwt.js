@@ -20,6 +20,7 @@ module.exports = function (req, res, next) {
       return res.status(403).json({ message: 'Not allowed' });
     }
     req.user = decoded;
+    require('../utils/requestContext').setUser(decoded); // lets the case activity log record who did what
     next();
   } catch (error) {
     // never log the token itself

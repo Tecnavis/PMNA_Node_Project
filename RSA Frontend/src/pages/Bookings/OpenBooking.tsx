@@ -1,6 +1,8 @@
 import { useEffect, useState, Fragment, useRef } from 'react';
 import React, { ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import ShareTrackingModal from '../../components/booking/ShareTrackingModal';
+import CaseTimeline from '../../components/booking/CaseTimeline';
 import axios, { AxiosError } from 'axios';
 import { Dialog, DialogPanel, Transition, TransitionChild, Tab } from '@headlessui/react';
 import { IoIosCloseCircleOutline } from 'react-icons/io';
@@ -153,6 +155,8 @@ const Preview = () => {
 
     const navigate = useNavigate();
     const { id } = useParams();
+    const [shareOpen, setShareOpen] = useState(false);
+    const [timelineKey, setTimelineKey] = useState(0);
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [booking, setBooking] = useState<Booking | null>(null);
     const [modal5, setModal5] = useState(false);
@@ -955,6 +959,11 @@ const Preview = () => {
                             </div>
                         </div>
                     )}
+                    {id && (
+                        <button type="button" className="btn btn-outline-dark btn-sm self-center" onClick={() => setShareOpen(true)}>
+                            ↗ Share tracking
+                        </button>
+                    )}
                     <div className="shrink-0">
                         <img src="/assets/images/RSALogo.png" alt="img" className="w-14 ltr:ml-auto rtl:mr-auto" style={{ width: '183px', height: '50px', objectFit: 'cover' }} />
                     </div>
@@ -973,7 +982,7 @@ const Preview = () => {
                                     <button
                                         type="button"
                                         className={`${
-                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                            selected ? '!border-brand/20 !border-b-transparent rounded-t-lg bg-brand-light text-brand dark:bg-brand/15 !outline-none ' : ''
                                         } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Pickup Details
@@ -985,7 +994,7 @@ const Preview = () => {
                                     <button
                                         type="button"
                                         className={`${
-                                            selected ? '!border-white-light !border-b-white  text-primary dark:!border-[#191e3a] dark:!border-b-black !outline-none ' : ''
+                                            selected ? '!border-brand/20 !border-b-transparent rounded-t-lg bg-brand-light text-brand dark:bg-brand/15 !outline-none ' : ''
                                         } p-3.5 py-2 -mb-[1px] block border border-transparent hover:text-primary dark:hover:border-b-black`}
                                     >
                                         Dropoff Details
@@ -1483,6 +1492,13 @@ const Preview = () => {
                     </div>
                 </div>
             </div>
+
+            {id && (
+                <div className="mt-5">
+                    <CaseTimeline bookingId={id} refreshKey={timelineKey} />
+                </div>
+            )}
+            {id && <ShareTrackingModal bookingId={id} open={shareOpen} onClose={() => setShareOpen(false)} onShared={() => setTimelineKey((k) => k + 1)} />}
 
             {/* modal for the order Complete  */}
 

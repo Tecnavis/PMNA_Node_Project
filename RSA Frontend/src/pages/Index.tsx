@@ -12,6 +12,10 @@ import { BASE_URL } from '../config/axiosConfig';
 import { ROLES } from '../constants/roles';
 import AddVehicleCompliance from './VehicleDetails/addVehicleCompliance';
 import MyDayPanel from './Reminders/MyDayPanel';
+import MiniMap from './Operations/MiniMap';
+import SuggestionsPanel from './Operations/SuggestionsPanel';
+import RecommendationDialog from './Operations/RecommendationDialog';
+import { Recommendation, fetchRecommendations } from './Operations/opsApi';
 import { ApprovalsData, BoardData, LiveData, STATUS_COLORS, SummaryData, fetchApprovals, fetchBoard, fetchLive, fetchSummary, formatMinutes } from './Operations/opsApi';
 
 interface ComplianceRecord {
@@ -27,11 +31,24 @@ const REFRESH_MS = 30000;
 const inr = (n: number) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
 const ALERT_SOUND = '/mixkit-signal-alert-771.wav';
 
-const Kpi: React.FC<{ label: string; value: React.ReactNode; to?: string; tone?: string; pulse?: boolean; hint?: string }> = ({ label, value, to, tone = '', pulse, hint }) => {
+const greeting = () => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+};
+const pctChange = (now: number, before: number) => (before > 0 ? Math.round(((now - before) / before) * 100) : null);
+
+/** One cell of the top figures row (reference style: label, big light number, small pill, one line under it). */
+const Stat: React.FC<{ label: string; value: React.ReactNode; pill?: React.ReactNode; pillTone?: string; sub?: React.ReactNode; to?: string; pulse?: boolean }> = ({ label, value, pill, pillTone = 'bg-[#eef0f3] text-[#4b5165]', sub, to, pulse }) => {
     const body = (
-        <div className={`panel !p-3 h-full transition hover:shadow-md ${pulse ? 'ring-2 ring-offset-1 ring-primary animate-pulse' : ''}`} title={hint}>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-white-dark truncate">{label}</div>
-            <div className={`mt-1 text-2xl font-bold leading-none ${tone}`}>{value}</div>
+        <div className={`h-full px-4 py-3 rounded-2xl transition ${to ? 'hover:bg-[#f5f6f8] dark:hover:bg-[#1a2941]/50' : ''}`}>
+            <div className="ui-eyebrow truncate">{label}</div>
+            <div className="mt-2 flex items-center gap-2">
+                <span className="ui-num text-[40px] leading-none text-[#111318] dark:text-white">{value}</span>
+                {pill !== undefined && pill !== null && pill !== '' && (
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${pillTone} ${pulse ? 'animate-pulse' : ''}`}>{pill}</span>
+                )}
+            </div>
+            {sub && <div className="mt-2 truncate text-xs text-[#8a90a2]">{sub}</div>}
         </div>
     );
     return to ? <Link to={to} className="block h-full">{body}</Link> : body;
@@ -54,6 +71,8 @@ const Index = () => {
     const [trend, setTrend] = useState<TrendPoint[]>([]);
     const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
     const [opsError, setOpsError] = useState('');
+    const [recs, setRecs] = useState<Recommendation[] | null>(null);
+    const [openRec, setOpenRec] = useState<Recommendation | null>(null);
 
     // compliance renewal modal
     const [recordId, setRecordId] = useState('');
@@ -136,6 +155,7 @@ const Index = () => {
             axios.get(`${BASE_URL}/ops/trend`, { params: { days: 14 } }).then((r) => (Array.isArray(r.data?.series) ? (r.data.series as TrendPoint[]) : [])),
         ]);
         const [b, a, l, s, t] = results;
+        fetchRecommendations().then(setRecs).catch(() => setRecs((x) => x || []));
         if (b.status === 'fulfilled') setBoard(b.value);
         if (a.status === 'fulfilled') setApprovals(a.value);
         if (l.status === 'fulfilled') setLive(l.value);
@@ -185,7 +205,7 @@ const Index = () => {
 
     // ---------------- derived
     const delayedCases = useMemo(() => (board?.columns || []).flatMap((c) => c.cases).filter((c) => c.delayed).sort((a, b) => (b.minutesInStatus || 0) - (a.minutesInStatus || 0)), [board]);
-    const unassigned = useMemo(() => (board?.columns || []).flatMap((c) => c.cases).filter((c) => c.unassigned), [board]);
+    const unassigned = useMemo(() => (board?.columns || []).flatMap((c) => c.cases).filter((c) => c.unassigned && c.status !== 'Scheduled'), [board]);
     const pipeline = board?.columns.filter((c) => c.status !== 'Scheduled') || [];
     const pipelineMax = Math.max(1, ...pipeline.map((c) => c.cases.length));
     const alertsCount = expiredRecords.length + exceededRecords.length;
@@ -197,9 +217,9 @@ const Index = () => {
         ],
         options: {
             chart: { toolbar: { show: false }, fontFamily: 'inherit', zoom: { enabled: false } },
-            colors: ['#D7141A', '#00ab55'],
+            colors: ['#5b4cf0', '#111318'],
             stroke: { width: [0, 2], curve: 'smooth' as const },
-            plotOptions: { bar: { borderRadius: 3, columnWidth: '55%' } },
+            plotOptions: { bar: { borderRadius: 4, columnWidth: '50%' } },
             dataLabels: { enabled: false },
             legend: { position: 'top' as const, horizontalAlign: 'right' as const, fontSize: '11px', labels: { colors: isDark ? '#bfc9d4' : undefined } },
             grid: { borderColor: isDark ? '#191e3a' : '#e0e6ed', padding: { left: 4, right: 4 } },
@@ -210,203 +230,379 @@ const Index = () => {
     }), [trend, isDark]);
 
     const totalToday = trend.length ? trend[trend.length - 1] : null;
+    const yesterday = trend.length > 1 ? trend[trend.length - 2] : null;
+    const doneDelta = today && yesterday ? pctChange(today.totals.completed, yesterday.completed) : null;
+    const newTotal = counts ? counts.showroom + counts.whatsapp + counts.other : null;
+    const name = (localStorage.getItem('name') || '').split(' ')[0];
+    const now = updatedAt || new Date();
+
+    // the case that most needs a look: longest delayed, else longest open
+    const allOpen = useMemo(() => (board?.columns || []).filter((c) => c.status !== 'Scheduled').flatMap((c) => c.cases), [board]);
+    const focusCase = delayedCases[0] || [...allOpen].sort((a, b) => (b.minutesInStatus || 0) - (a.minutesInStatus || 0))[0] || null;
+    const steps = (board?.statuses || []).filter((st) => st !== 'Scheduled');
+    const stepIndex = focusCase ? steps.indexOf(focusCase.status) : -1;
+    const delayedByStatus = pipeline.map((c) => ({ status: c.status, late: c.cases.filter((x) => x.delayed).length })).filter((x) => x.late > 0).sort((a, b) => b.late - a.late);
+    const lateMax = Math.max(1, ...delayedByStatus.map((x) => x.late));
+    const openQueues = (approvals?.queues || []).filter((q) => q.count > 0);
 
     return (
-        <div className="space-y-4">
-            {/* Title row */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                    <h2 className="text-xl font-semibold dark:text-white-light">Dashboard</h2>
-                    <p className="text-[11px] text-white-dark">
-                        {updatedAt ? `Live · updated ${updatedAt.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}` : 'Loading…'}
-                        {opsError && <span className="text-danger ltr:ml-2">{opsError}</span>}
-                    </p>
+        <div className="space-y-5">
+            {/* Greeting row */}
+            <div className="flex flex-wrap items-end justify-between gap-4">
+                <div className="min-w-0">
+                    <div className="ui-eyebrow">
+                        {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} · {now.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}
+                        {opsError && <span className="normal-case tracking-normal text-danger ltr:ml-2">{opsError}</span>}
+                    </div>
+                    <h1 className="mt-1 text-[34px] font-normal leading-tight tracking-tight text-[#111318] dark:text-white">
+                        {greeting()}
+                        {name ? `, ${name}` : ''}
+                    </h1>
+                    <p className="text-sm text-[#5d6375] dark:text-white-dark">Here's what needs your attention across today's operation.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                    <Link to="/add-booking" className="btn btn-primary btn-sm">+ New booking</Link>
-                    <Link to="/operations" className="btn btn-outline-primary btn-sm">Operations</Link>
-                    <Link to="/reports" className="btn btn-outline-primary btn-sm">Reports</Link>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Link to="/operations" className="flex items-center gap-2 rounded-full bg-primary-light px-3 py-2 text-sm font-semibold text-[#111318] dark:bg-primary/15 dark:text-white">
+                        <span className="relative flex h-2.5 w-2.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
+                        </span>
+                        Monitoring {board?.totals.open ?? '–'}
+                        <span className="text-[#b9bdc9]">|</span>
+                        <span className="text-primary">{approvals?.total ?? 0} approvals</span>
+                    </Link>
+                    <Link to="/add-booking" className="btn btn-primary md:hidden">+ New booking</Link>
                 </div>
             </div>
 
-
-            {/* KPI strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-                <Kpi label="Showroom new" value={counts?.showroom ?? '–'} to="/bookings" tone="text-success" pulse={!!counts?.showroom} hint="Showroom bookings waiting to be taken" />
-                <Kpi label="WhatsApp new" value={counts?.whatsapp ?? '–'} to="/bookings" tone="text-[#25D366]" pulse={!!counts?.whatsapp} hint="WhatsApp bookings waiting to be taken" />
-                <Kpi label="Other new" value={counts?.other ?? '–'} to="/bookings" tone="text-primary" />
-                <Kpi label="In progress" value={board?.totals.open ?? counts?.inProgress ?? '–'} to="/operations" tone="text-info" />
-                <Kpi label="Delayed" value={board?.totals.delayed ?? '–'} to="/operations" tone={board?.totals.delayed ? 'text-danger' : ''} pulse={!!board?.totals.delayed} hint="Cases stuck in a status longer than allowed" />
-                <Kpi label="Not assigned" value={board?.totals.unassigned ?? '–'} to="/operations" tone={board?.totals.unassigned ? 'text-warning' : ''} />
-                <Kpi label="Done today" value={today?.totals.completed ?? '–'} tone="text-success" hint={`${today?.totals.created ?? 0} created today`} />
-                <Kpi label="Approvals" value={approvals?.total ?? '–'} to="/operations" tone={approvals?.total ? 'text-warning' : ''} hint="Expenses, redemptions, verifications and cash waiting" />
+            {/* Top figures */}
+            <div className="panel !p-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 xl:divide-x divide-[#eceef2] dark:divide-[#1b2e4b]">
+                    <Stat label="Open cases" value={board?.totals.open ?? counts?.inProgress ?? '–'} to="/operations" pill={board ? `${board.totals.scheduled} later` : undefined} sub={`${live?.counts.busy ?? '–'} drivers on a job`} />
+                    <Stat
+                        label="New bookings"
+                        value={newTotal ?? '–'}
+                        to="/bookings"
+                        pill={newTotal ? 'waiting' : undefined}
+                        pillTone="bg-success text-white"
+                        pulse={!!(counts?.showroom || counts?.whatsapp)}
+                        sub={counts ? `Showroom ${counts.showroom} · WhatsApp ${counts.whatsapp} · Other ${counts.other}` : 'Loading…'}
+                    />
+                    <Stat
+                        label="Done today"
+                        value={today?.totals.completed ?? '–'}
+                        to="/completedbookings"
+                        pill={doneDelta === null ? undefined : `${doneDelta >= 0 ? '+' : ''}${doneDelta}%`}
+                        pillTone={doneDelta !== null && doneDelta >= 0 ? 'bg-[#d9f99d] text-[#365314]' : 'bg-danger/10 text-danger'}
+                        sub={`${today?.totals.created ?? '–'} created · ${today?.totals.cancelled ?? 0} cancelled`}
+                    />
+                    <Stat label="Delayed" value={board?.totals.delayed ?? '–'} to="/operations" pill={board?.totals.delayed ? 'late' : undefined} pillTone="bg-brand-light text-brand" pulse={!!board?.totals.delayed} sub="Too long in one status" />
+                    <Stat label="Not assigned" value={board?.totals.unassigned ?? '–'} to="/operations" pill={board?.totals.unassigned ? 'no driver' : undefined} pillTone="bg-primary text-white" sub="Waiting for a driver" />
+                    <Stat label="Approvals" value={approvals?.total ?? '–'} to="/operations" pill={approvals?.total ? `${openQueues.length} queues` : undefined} pillTone="bg-warning/15 text-warning" sub="Expenses, cash, verifications" />
+                </div>
             </div>
 
-            {/* Row: pipeline | today | fleet */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="panel !p-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-semibold text-base">Live status</h5>
-                        <Link to="/operations" className="text-xs text-primary">Board →</Link>
-                    </div>
-                    {!board ? <p className="text-sm text-white-dark">Loading…</p> : pipeline.length === 0 ? <p className="text-sm text-white-dark">No open cases.</p> : (
-                        <ul className="space-y-1.5">
-                            {pipeline.map((c) => {
-                                const late = c.cases.filter((x) => x.delayed).length;
-                                return (
-                                    <li key={c.status} className="text-xs">
-                                        <div className="flex justify-between mb-0.5">
-                                            <span className="truncate">{c.status}</span>
-                                            <span className="font-semibold">{c.cases.length}{late ? <span className="text-danger"> · {late} late</span> : null}</span>
-                                        </div>
-                                        <div className="h-1.5 rounded-full bg-white-light dark:bg-[#1b2e4b] overflow-hidden">
-                                            <div className="h-full rounded-full" style={{ width: `${(c.cases.length / pipelineMax) * 100}%`, background: STATUS_COLORS[c.status] || '#4361ee' }} />
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                            {!!board.totals.scheduled && <li className="text-xs text-white-dark pt-1">+ {board.totals.scheduled} scheduled for later</li>}
-                        </ul>
-                    )}
-                </div>
-
-                <div className="panel !p-4">
-                    <h5 className="font-semibold text-base mb-2">Today</h5>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                        {[
-                            ['Created', today?.totals.created, ''],
-                            ['Completed', today?.totals.completed, 'text-success'],
-                            ['Cancelled', today?.totals.cancelled, 'text-danger'],
-                        ].map(([l, v, tone]) => (
-                            <div key={l as string} className="rounded-md bg-white-light/40 dark:bg-[#1b2e4b] py-2">
-                                <div className={`text-xl font-bold ${tone}`}>{v ?? '–'}</div>
-                                <div className="text-[11px] text-white-dark">{l}</div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="mt-3 space-y-1 text-sm">
-                        <div className="flex justify-between"><span className="text-white-dark">Booked value today</span><b>{inr(totalToday?.amount || 0)}</b></div>
-                        <div className="flex justify-between"><span className="text-white-dark">Cash pending (all)</span><Link to="/reports" className="font-semibold text-danger">{today?.totals.cashPending ?? '–'} cases</Link></div>
-                        <div className="flex justify-between"><span className="text-white-dark">Scheduled ahead</span><b>{today?.totals.scheduledUpcoming ?? '–'}</b></div>
-                    </div>
-                    {!!today?.perPerson.length && (
-                        <div className="mt-3">
-                            <div className="text-[11px] font-semibold text-white-dark mb-1">BUSIEST TODAY</div>
-                            <ul className="space-y-0.5 text-xs">
-                                {today.perPerson.slice(0, 4).map((p) => (
-                                    <li key={p._id} className="flex justify-between"><span className="truncate">{p.name}</span><span className="text-white-dark">{p.completed}/{p.cases} done</span></li>
-                                ))}
-                            </ul>
+            {/* Focus case | Operations brief */}
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.45fr_1fr]">
+                <div className={`panel dark:!bg-[#0e1726] ${focusCase?.delayed ? '!border-brand/20 !bg-brand-soft' : '!bg-[#f5f6f8]'}`}>
+                    {!board ? (
+                        <p className="py-16 text-center text-sm text-white-dark">Loading…</p>
+                    ) : !focusCase ? (
+                        <div className="py-16 text-center">
+                            <div className="text-2xl font-light">All on plan</div>
+                            <p className="mt-1 text-sm text-white-dark">No open cases right now.</p>
                         </div>
-                    )}
-                </div>
-
-                <div className="panel !p-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <h5 className="font-semibold text-base">Drivers & providers</h5>
-                        <Link to="/operations" className="text-xs text-primary">Map →</Link>
-                    </div>
-                    {!live ? <p className="text-sm text-white-dark">Loading…</p> : (
+                    ) : (
                         <>
-                            <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="rounded-md bg-success/10 py-2"><div className="text-xl font-bold text-success">{live.counts.online}</div><div className="text-[11px] text-white-dark">Online</div></div>
-                                <div className="rounded-md bg-info/10 py-2"><div className="text-xl font-bold text-info">{live.counts.busy}</div><div className="text-[11px] text-white-dark">On a job</div></div>
-                                <div className="rounded-md bg-warning/10 py-2"><div className="text-xl font-bold text-warning">{live.counts.gpsStale}</div><div className="text-[11px] text-white-dark">GPS old</div></div>
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <span className={`inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide dark:bg-black ${focusCase.delayed ? 'text-danger' : 'text-primary'}`}>
+                                        <span className={`h-1.5 w-1.5 rounded-full ${focusCase.delayed ? 'bg-danger' : 'bg-primary'}`} />
+                                        {focusCase.delayed ? 'Needs attention' : 'Longest open'} · {formatMinutes(focusCase.minutesInStatus)} in status
+                                    </span>
+                                    <h3 className="mt-3 flex flex-wrap items-center gap-2 text-2xl font-normal tracking-tight">
+                                        <span className="truncate">{(focusCase.pickup.address || 'Pickup').split(',')[0]}</span>
+                                        <span className="text-[#8a90a2]">→</span>
+                                        <span className="truncate">{(focusCase.dropoff.address || 'Drop').split(',')[0]}</span>
+                                        {focusCase.delayed && <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">⚠ Delayed</span>}
+                                    </h3>
+                                    <p className="mt-1 text-sm text-[#5d6375]">
+                                        <Link to={`/openbooking/${focusCase._id}`} className="font-semibold text-primary">{focusCase.fileNumber || 'No file no.'}</Link>
+                                        {focusCase.company ? ` · ${focusCase.company}` : focusCase.showroom ? ` · ${focusCase.showroom}` : ''}
+                                        {focusCase.serviceType ? ` · ${focusCase.serviceType}` : ''}
+                                        {focusCase.vehicleNumber ? ` · ${focusCase.vehicleNumber}` : ''}
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-6 text-right">
+                                    <div>
+                                        <div className="ui-eyebrow">Status</div>
+                                        <div className="mt-1 text-lg font-medium" style={{ color: STATUS_COLORS[focusCase.status] }}>{focusCase.status}</div>
+                                        <div className="text-xs text-[#8a90a2]">since {new Date(focusCase.statusSince).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</div>
+                                    </div>
+                                    <div>
+                                        <div className="ui-eyebrow">Allowed</div>
+                                        <div className={`ui-num mt-1 text-3xl ${focusCase.delayed ? 'text-danger' : ''}`}>{focusCase.delayLimit ? formatMinutes(focusCase.delayLimit) : '—'}</div>
+                                        <div className={`text-xs ${focusCase.delayed ? 'text-danger' : 'text-[#8a90a2]'}`}>
+                                            {focusCase.delayed && focusCase.delayLimit && focusCase.minutesInStatus ? `+${formatMinutes(focusCase.minutesInStatus - focusCase.delayLimit)} over` : 'in this status'}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-[11px] text-white-dark mt-2">{live.counts.drivers} drivers · {live.counts.providers} providers · {live.counts.withLocation} with location</p>
-                            {unassigned.length > 0 && (
-                                <div className="mt-3">
-                                    <div className="text-[11px] font-semibold text-warning mb-1">WAITING FOR A DRIVER</div>
-                                    <ul className="space-y-0.5 text-xs">
-                                        {unassigned.slice(0, 4).map((c) => (
-                                            <li key={c._id} className="flex justify-between gap-2">
-                                                <Link to={`/add-booking/${c._id}`} className="text-primary truncate">{c.fileNumber || 'No file no.'}</Link>
-                                                <span className="text-white-dark whitespace-nowrap">{formatMinutes(c.minutesInStatus)}</span>
-                                            </li>
+
+                            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <div className="rounded-2xl bg-white p-3 dark:bg-black">
+                                    <div className="ui-eyebrow">{focusCase.provider ? 'Provider' : 'Driver'}</div>
+                                    {focusCase.driver || focusCase.provider ? (
+                                        <>
+                                            <div className="mt-1 truncate font-semibold">{(focusCase.driver || focusCase.provider)!.name}</div>
+                                            <a href={`tel:${(focusCase.driver || focusCase.provider)!.phone}`} className="text-xs text-primary">{(focusCase.driver || focusCase.provider)!.phone}</a>
+                                        </>
+                                    ) : (
+                                        <Link to={`/add-booking/${focusCase._id}`} className="mt-1 block font-semibold text-primary">Assign a driver →</Link>
+                                    )}
+                                </div>
+                                <div className="rounded-2xl bg-white p-3 dark:bg-black">
+                                    <div className="ui-eyebrow">Customer</div>
+                                    <div className="mt-1 truncate font-semibold">{focusCase.customerName || '—'}</div>
+                                    {focusCase.customerPhone && <a href={`tel:${focusCase.customerPhone}`} className="text-xs text-primary">{focusCase.customerPhone}</a>}
+                                </div>
+                                <div className="rounded-2xl bg-white p-3 dark:bg-black">
+                                    <div className="ui-eyebrow">Payment</div>
+                                    <div className={`mt-1 font-semibold ${focusCase.cashPending ? 'text-danger' : 'text-success'}`}>{focusCase.cashPending ? 'Cash pending' : 'No cash due'}</div>
+                                    <div className="text-xs text-[#8a90a2]">Booked {new Date(focusCase.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
+                                </div>
+                            </div>
+
+                            {/* status line, like the route timeline in the reference */}
+                            {steps.length > 0 && (
+                                <div className="mt-6 overflow-x-auto pb-1">
+                                    <div className="relative min-w-[560px] px-2">
+                                        <div className="absolute left-4 right-4 top-[11px] h-[3px] rounded-full bg-[#dfe2e8] dark:bg-[#253b5c]" />
+                                        <div
+                                            className={`absolute left-4 top-[11px] h-[3px] rounded-full ${focusCase.delayed ? 'bg-danger' : 'bg-[#111318] dark:bg-white'}`}
+                                            style={{ width: `calc(${(Math.max(0, stepIndex) / Math.max(1, steps.length - 1)) * 100}% - ${(Math.max(0, stepIndex) / Math.max(1, steps.length - 1)) * 32}px)` }}
+                                        />
+                                        <ol className="relative flex justify-between">
+                                            {steps.map((st, i) => {
+                                                const done = i < stepIndex;
+                                                const current = i === stepIndex;
+                                                return (
+                                                    <li key={st} className="flex w-0 flex-1 flex-col items-center text-center">
+                                                        <span
+                                                            className={`flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold ${
+                                                                current
+                                                                    ? focusCase.delayed
+                                                                        ? 'border-danger bg-danger text-white ring-4 ring-danger/15'
+                                                                        : 'border-[#111318] bg-[#111318] text-white ring-4 ring-black/10'
+                                                                    : done
+                                                                    ? 'border-[#111318] bg-[#111318] text-white dark:border-white dark:bg-white dark:text-black'
+                                                                    : 'border-[#cfd3dc] bg-white dark:bg-black'
+                                                            }`}
+                                                        >
+                                                            {done ? '✓' : ''}
+                                                        </span>
+                                                        <span className={`mt-2 px-1 text-[11px] leading-tight ${current ? 'font-semibold text-[#111318] dark:text-white' : 'text-[#8a90a2]'}`}>{st}</span>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ol>
+                                    </div>
+                                </div>
+                            )}
+
+                            {delayedCases.length > 1 && (
+                                <div className="mt-5 border-t border-[#e3e6ec] pt-3 dark:border-[#253b5c]">
+                                    <div className="ui-eyebrow mb-2">Also delayed</div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {delayedCases.slice(1, 9).map((c) => (
+                                            <Link key={c._id} to={`/openbooking/${c._id}`} className="ui-chip">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-danger" />
+                                                {c.fileNumber || 'Case'} <span className="font-normal text-[#8a90a2]">{formatMinutes(c.minutesInStatus)}</span>
+                                            </Link>
                                         ))}
-                                    </ul>
+                                        {delayedCases.length > 9 && <Link to="/operations" className="ui-chip">+{delayedCases.length - 9} more</Link>}
+                                    </div>
                                 </div>
                             )}
                         </>
                     )}
                 </div>
+
+                {/* Operations brief */}
+                <div className="panel !border-primary/20 !bg-[#f4f2ff] dark:!bg-primary/10">
+                    <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#111318] text-white">
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h4l3-8 4 16 3-8h4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        </span>
+                        <div>
+                            <div className="font-semibold">Operations brief</div>
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                                Live · updated {now.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}
+                            </div>
+                        </div>
+                    </div>
+                    <p className="mt-4 text-[22px] font-normal leading-snug tracking-tight">
+                        {!board
+                            ? 'Loading the live picture…'
+                            : board.totals.delayed
+                            ? `${board.totals.delayed} case${board.totals.delayed === 1 ? ' is' : 's are'} running late${board.totals.unassigned ? ` and ${board.totals.unassigned} ${board.totals.unassigned === 1 ? 'has' : 'have'} no driver` : ''}. The rest of the network is on plan.`
+                            : board.totals.atRisk
+                            ? `${board.totals.atRisk} case${board.totals.atRisk === 1 ? ' looks' : 's look'} likely to run late based on driver GPS. Nothing is late yet.`
+                            : board.totals.unassigned
+                            ? `${board.totals.unassigned} case${board.totals.unassigned === 1 ? '' : 's'} waiting for a driver. Nothing is running late.`
+                            : 'Everything is on plan. No delayed or unassigned cases.'}
+                    </p>
+
+                    {delayedByStatus.length > 0 && (
+                        <>
+                            <div className="ui-eyebrow mt-5 mb-2">Where they are stuck</div>
+                            <ul className="space-y-2">
+                                {delayedByStatus.slice(0, 5).map((x) => (
+                                    <li key={x.status} className="flex items-center gap-3 text-sm">
+                                        <span className="w-6 text-right font-semibold tabular-nums text-primary">{String(x.late).padStart(2, '0')}</span>
+                                        <span className="flex-1 truncate">{x.status}</span>
+                                        <span className="h-1 w-20 overflow-hidden rounded-full bg-white dark:bg-black">
+                                            <span className="block h-full rounded-full bg-primary" style={{ width: `${(x.late / lateMax) * 100}%` }} />
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
+                    )}
+
+                    {recs && recs.length > 0 && (
+                        <>
+                            <div className="ui-eyebrow mt-5 mb-2">Proposed · needs your approval</div>
+                            <SuggestionsPanel items={recs} onOpen={setOpenRec} compact />
+                        </>
+                    )}
+                    <div className="ui-eyebrow mt-5 mb-2">Waiting for you</div>
+                    <div className="space-y-2">
+                        {unassigned.length > 0 && (
+                            <Link to="/operations" className="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-sm hover:shadow-sm dark:bg-black">
+                                <b>Assign {unassigned.length} case{unassigned.length === 1 ? '' : 's'}</b>
+                                <span className="truncate text-xs text-[#8a90a2]">{unassigned.slice(0, 3).map((c) => c.fileNumber).join(', ')}</span>
+                                <span className="ml-auto text-[#8a90a2]">›</span>
+                            </Link>
+                        )}
+                        {openQueues.map((q) => (
+                            <Link key={q.key} to={q.link || '/operations'} className="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-sm hover:shadow-sm dark:bg-black">
+                                <b>{q.label}</b>
+                                <span className="text-xs text-[#8a90a2]">{q.count} waiting</span>
+                                <span className="ml-auto text-[#8a90a2]">›</span>
+                            </Link>
+                        ))}
+                        {!unassigned.length && !openQueues.length && <p className="text-sm text-[#5d6375]">Nothing waiting. 👍</p>}
+                    </div>
+                    <Link to="/operations" className="btn btn-primary mt-4 w-full sm:w-auto">✓ Open operations</Link>
+                </div>
             </div>
 
-            {/* Row: trend | my day */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                <div className="xl:col-span-2 space-y-4">
-                    <div className="panel !p-4">
-                        <div className="flex items-center justify-between">
-                            <h5 className="font-semibold text-base">Last 14 days</h5>
-                            <span className="text-xs text-white-dark">{trend.reduce((a, d) => a + d.count, 0)} bookings · {inr(trend.reduce((a, d) => a + d.amount, 0))}</span>
-                        </div>
-                        {trend.length ? <ReactApexChart type="line" height={220} series={chart.series} options={chart.options as any} /> : <p className="text-sm text-white-dark py-10 text-center">Loading…</p>}
+            {/* Live network | Today's people | trend */}
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.45fr]">
+                <div className="panel relative overflow-hidden !p-0">
+                    <MiniMap data={live} height={300} />
+                    <div className="pointer-events-none absolute left-3 top-3 z-[500] flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold shadow-sm dark:bg-black">
+                        <span className="h-2 w-2 rounded-full bg-success" /> Live network
+                        <span className="font-normal text-[#8a90a2]">{live ? `${live.counts.withLocation} on map · ${live.counts.online} online` : '…'}</span>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Needs attention */}
-                        <div className="panel !p-4">
-                            <div className="flex items-center justify-between mb-2">
-                                <h5 className="font-semibold text-base">Needs attention</h5>
-                                <span className="badge bg-danger/10 text-danger rounded-full">{delayedCases.length}</span>
-                            </div>
-                            {delayedCases.length === 0 ? <p className="text-sm text-white-dark">No delayed cases. 👍</p> : (
-                                <ul className="space-y-1.5 max-h-64 overflow-auto pr-1">
-                                    {delayedCases.slice(0, 10).map((c) => (
-                                        <li key={c._id} className="rounded border border-danger/30 px-2 py-1 text-xs">
-                                            <div className="flex justify-between gap-2">
-                                                <Link to={`/add-booking/${c._id}`} className="font-semibold text-primary truncate">{c.fileNumber || 'No file no.'}</Link>
-                                                <span className="text-danger whitespace-nowrap">{formatMinutes(c.minutesInStatus)}</span>
-                                            </div>
-                                            <div className="text-white-dark truncate">{c.status} · {c.driver?.name || c.provider?.name || 'not assigned'}{c.customerName ? ` · ${c.customerName}` : ''}</div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-
-                        {/* Approvals */}
-                        <div className="panel !p-4">
-                            <div className="flex items-center justify-between mb-2">
-                                <h5 className="font-semibold text-base">Waiting for approval</h5>
-                                <Link to="/operations" className="text-xs text-primary">Open →</Link>
-                            </div>
-                            {!approvals ? <p className="text-sm text-white-dark">Loading…</p> : approvals.total === 0 ? <p className="text-sm text-white-dark">Nothing waiting. 👍</p> : (
-                                <ul className="space-y-1 text-sm">
-                                    {approvals.queues.filter((q) => q.count > 0).map((q) => (
-                                        <li key={q.key}>
-                                            <Link to={q.link || '/operations'} className="flex justify-between rounded px-2 py-1 hover:bg-white-light/40 dark:hover:bg-[#1b2e4b]">
-                                                <span>{q.label}</span><b className="text-warning">{q.count}</b>
-                                            </Link>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    </div>
+                    <Link to="/operations" className="absolute bottom-3 left-3 z-[500] rounded-full bg-[#111318] px-3 py-1.5 text-xs font-semibold text-white">Open live map →</Link>
                 </div>
 
-                <div className="space-y-4">
+                <div className="panel">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h5 className="text-base font-semibold">Last 14 days</h5>
+                            <p className="text-xs text-[#8a90a2]">{trend.reduce((a, d) => a + d.count, 0)} bookings · {inr(trend.reduce((a, d) => a + d.amount, 0))} · today {inr(totalToday?.amount || 0)}</p>
+                        </div>
+                        <Link to="/reports" className="ui-chip">Reports</Link>
+                    </div>
+                    {trend.length ? <ReactApexChart type="line" height={230} series={chart.series} options={chart.options as any} /> : <p className="py-10 text-center text-sm text-white-dark">Loading…</p>}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+                {/* Today's drivers, like the dispatch timeline */}
+                <div className="panel xl:col-span-2">
+                    <div className="mb-3 flex items-center justify-between">
+                        <div>
+                            <h5 className="text-base font-semibold">Today by driver</h5>
+                            <p className="text-xs text-[#8a90a2]">
+                                {today?.perPerson.length ?? 0} working · cash pending on {today?.totals.cashPending ?? '–'} cases · {today?.totals.scheduledUpcoming ?? 0} scheduled ahead
+                            </p>
+                        </div>
+                        <Link to="/operations" className="ui-chip">All drivers</Link>
+                    </div>
+                    {!today ? (
+                        <p className="text-sm text-white-dark">Loading…</p>
+                    ) : today.perPerson.length === 0 ? (
+                        <p className="text-sm text-white-dark">No cases handled yet today.</p>
+                    ) : (
+                        <ul className="divide-y divide-[#eceef2] dark:divide-[#1b2e4b]">
+                            {today.perPerson.slice(0, 8).map((p) => (
+                                <li key={p._id} className="flex items-center gap-3 py-2.5">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eef0f3] text-[11px] font-semibold dark:bg-[#1a2941]">
+                                        {(p.name || '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
+                                    </span>
+                                    <div className="w-40 min-w-0">
+                                        <div className="truncate text-sm font-semibold">{p.name}</div>
+                                        <div className="text-[11px] text-[#8a90a2]">{p.type === 'provider' ? 'Provider' : 'Driver'}</div>
+                                    </div>
+                                    <div className="flex h-6 flex-1 overflow-hidden rounded-lg bg-[#f1f2f5] dark:bg-[#1a2941]">
+                                        <div className="flex items-center bg-[#111318] px-2 text-[11px] font-semibold text-white dark:bg-white dark:text-black" style={{ width: `${p.cases ? (p.completed / p.cases) * 100 : 0}%`, minWidth: p.completed ? 28 : 0 }}>
+                                            {p.completed || ''}
+                                        </div>
+                                        {p.open > 0 && (
+                                            <div className="flex items-center bg-primary px-2 text-[11px] font-semibold text-white" style={{ width: `${(p.open / Math.max(1, p.cases)) * 100}%`, minWidth: 28 }}>
+                                                {p.open}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="w-20 text-right text-xs tabular-nums text-[#5d6375]">{inr(p.amount)}</div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    {!!today?.perPerson.length && (
+                        <div className="mt-3 flex gap-4 text-[11px] text-[#8a90a2]">
+                            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-[#111318] dark:bg-white" /> Completed</span>
+                            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-primary" /> Open</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-5">
                     <MyDayPanel />
 
                     {/* Vehicle alerts */}
-                    <div className="panel !p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <h5 className="font-semibold text-base">Vehicle alerts</h5>
-                            <span className={`badge rounded-full ${alertsCount ? 'bg-warning/15 text-warning' : 'bg-success/10 text-success'}`}>{alertsCount}</span>
+                    <div className="panel">
+                        <div className="mb-2 flex items-center justify-between">
+                            <h5 className="text-base font-semibold">Vehicle alerts</h5>
+                            <span className={`badge ${alertsCount ? 'bg-warning/15 text-warning' : 'bg-success/10 text-success'}`}>{alertsCount}</span>
                         </div>
-                        {alertsCount === 0 ? <p className="text-sm text-white-dark">No renewals or services due.</p> : (
-                            <ul className="space-y-1.5 max-h-72 overflow-auto pr-1">
+                        {alertsCount === 0 ? (
+                            <p className="text-sm text-white-dark">No renewals or services due.</p>
+                        ) : (
+                            <ul className="max-h-72 space-y-1.5 overflow-auto pr-1">
                                 {expiredRecords.map((r, i) => (
-                                    <li key={`${r._id}-${r.type}-${i}`} className="flex items-center justify-between gap-2 rounded border border-white-light dark:border-[#1b2e4b] px-2 py-1 text-xs">
-                                        <span><b>{r.vehicleNumber}</b> · {r.type} <span className={new Date(r.expiryDate) < new Date() ? 'text-danger' : 'text-warning'}>{expiryText(r)}</span></span>
-                                        {canRenew && <button type="button" className="btn btn-primary btn-sm !py-0.5 !px-2 text-[11px]" onClick={() => handleRenewal(r._id)}>Renew</button>}
+                                    <li key={`${r._id}-${r.type}-${i}`} className="flex items-center justify-between gap-2 rounded-xl bg-[#f5f6f8] px-3 py-2 text-xs dark:bg-[#1a2941]/50">
+                                        <span>
+                                            <b>{r.vehicleNumber}</b> · {r.type} <span className={new Date(r.expiryDate) < new Date() ? 'text-danger' : 'text-warning'}>{expiryText(r)}</span>
+                                        </span>
+                                        {canRenew && (
+                                            <button type="button" className="btn btn-dark btn-sm !px-3 !py-0.5 text-[11px]" onClick={() => handleRenewal(r._id)}>
+                                                Renew
+                                            </button>
+                                        )}
                                     </li>
                                 ))}
                                 {exceededRecords.map((v, i) => (
-                                    <li key={`km-${i}`} className="flex items-center justify-between gap-2 rounded border border-white-light dark:border-[#1b2e4b] px-2 py-1 text-xs">
-                                        <span><b>{v.serviceVehicle}</b> · service due <span className="text-danger">({v.serviceKM} km)</span></span>
-                                        <button type="button" className="btn btn-outline-danger btn-sm !py-0.5 !px-2 text-[11px]" onClick={() => handleDismissVehicleServiceKm(v)}>Serviced</button>
+                                    <li key={`km-${i}`} className="flex items-center justify-between gap-2 rounded-xl bg-[#f5f6f8] px-3 py-2 text-xs dark:bg-[#1a2941]/50">
+                                        <span>
+                                            <b>{v.serviceVehicle}</b> · service due <span className="text-danger">({v.serviceKM} km)</span>
+                                        </span>
+                                        <button type="button" className="btn btn-outline-danger btn-sm !px-3 !py-0.5 text-[11px]" onClick={() => handleDismissVehicleServiceKm(v)}>
+                                            Serviced
+                                        </button>
                                     </li>
                                 ))}
                             </ul>
@@ -415,6 +611,7 @@ const Index = () => {
                 </div>
             </div>
 
+            <RecommendationDialog rec={openRec} onClose={() => setOpenRec(null)} onDone={loadAll} />
             <AddVehicleCompliance
                 isEditingForDissmissBtn={dismissMode}
                 open={openRenewal}

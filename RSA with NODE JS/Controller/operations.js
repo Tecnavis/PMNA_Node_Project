@@ -17,6 +17,8 @@ const DieselExpense = require('../Model/dieselExpense');
 const CompanyExpense = require('../Model/companyExpense');
 const Redemption = require('../Model/redemption');
 const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
+const { roadEstimate, legFor } = require('../utils/eta');
+const BookingEvent = require('../Model/bookingEvent');
 
 // Workflow order (as used by the driver app and admin site)
 const OPEN_STATUSES = [
@@ -72,13 +74,38 @@ function shapeCase(b, limits) {
     const mins = minutesSince(since);
     const limit = limits[b.status];
     const unassigned = !b.driver && !b.provider;
+    // Estimated arrival from the driver's last GPS (straight-line × road factor, average speed)
+    let eta = null;
+    const who = b.driver || b.provider;
+    const leg = legFor(b.status);
+    if (who && leg && who.currentLocation) {
+        const from = parseLatLng(who.currentLocation);
+        const target = parseLatLng(leg === 'pickup' ? b.latitudeAndLongitude : b.dropoffLatitudeAndLongitude);
+        const gpsAge = minutesSince(who.locationUpdatedAt);
+        if (from && target && gpsAge !== null && gpsAge <= GPS_STALE_MINUTES) {
+            const est = roadEstimate(from, target);
+            const predicted = (mins || 0) + est.minutes;
+            eta = {
+                to: leg,
+                km: est.km,
+                minutes: est.minutes,
+                at: new Date(Date.now() + est.minutes * 60000),
+                predictedInStatus: predicted,
+                gpsMinutesAgo: gpsAge,
+            };
+        }
+    }
+    const delayed = Boolean(limit && mins !== null && mins > limit);
+    const atRisk = Boolean(!delayed && limit && eta && eta.predictedInStatus > limit);
     return {
         _id: b._id,
         fileNumber: b.fileNumber || '',
         status: b.status,
         minutesInStatus: mins,
         statusSince: since,
-        delayed: Boolean(limit && mins !== null && mins > limit),
+        delayed,
+        atRisk,
+        eta,
         delayLimit: limit || null,
         unassigned,
         scheduledFor: b.status === 'Scheduled' || (b.pickupDate && new Date(b.pickupDate) > new Date()) ? b.pickupDate : null,
@@ -100,8 +127,8 @@ function shapeCase(b, limits) {
 async function loadOpenCases() {
     return Booking.find({ status: { $in: OPEN_STATUSES }, _includeHidden: true })
         .select(CASE_FIELDS)
-        .populate('driver', 'name phone')
-        .populate('provider', 'name phone')
+        .populate('driver', 'name phone currentLocation locationUpdatedAt')
+        .populate('provider', 'name phone currentLocation locationUpdatedAt')
         .populate('showroom', 'name')
         .populate('company', 'name')
         .populate('serviceType', 'serviceName name')
@@ -183,6 +210,7 @@ exports.board = asyncErrorHandler(async (req, res) => {
             open: cases.filter((c) => c.status !== 'Scheduled').length,
             scheduled: cases.filter((c) => c.status === 'Scheduled').length,
             delayed: cases.filter((c) => c.delayed).length,
+            atRisk: cases.filter((c) => c.atRisk).length,
             unassigned: cases.filter((c) => c.unassigned && c.status !== 'Scheduled').length,
         },
         columns,
@@ -288,6 +316,95 @@ exports.trend = asyncErrorHandler(async (req, res) => {
         series.push({ day: d, count: r.count || 0, completed: r.completed || 0, cancelled: r.cancelled || 0, amount: r.amount || 0 });
     }
     res.json({ success: true, days, series });
+});
+
+/**
+ * GET /ops/recommendations — suggested actions for the dispatcher (nothing is changed here):
+ *   assign    an unassigned case → nearest free driver/provider with a vehicle for the service
+ *   reassign  a late / at-risk case still heading to the customer → a free driver who is clearly closer
+ */
+exports.recommendations = asyncErrorHandler(async (req, res) => {
+    const limits = delayLimits();
+    const { suggestFor, busyIds, loadPeople } = require('./bookingTools');
+    const [open, busy, people] = await Promise.all([loadOpenCases(), busyIds(), loadPeople()]);
+    const shaped = open.map((b) => ({ raw: b, c: shapeCase(b, limits) }));
+    const minSaving = Number(process.env.OPS_REASSIGN_MIN_SAVING || 15);
+    const out = [];
+    const candidates = shaped.filter(({ c }) => c.status !== 'Scheduled' && (c.unassigned || ((c.delayed || c.atRisk) && c.eta?.to === 'pickup')));
+    for (const { raw, c } of candidates.slice(0, Number(process.env.OPS_MAX_RECOMMENDATIONS || 15))) {
+        const { suggestions } = await suggestFor(raw, { limit: 3, busy, people });
+        const best = suggestions.find((x) => !x.busy && String(x._id) !== String(c.driver?._id || c.provider?._id || ''));
+        if (!best) continue;
+        if (c.unassigned) {
+            out.push({ kind: 'assign', case: c, proposed: best, alternatives: suggestions.filter((x) => x !== best && !x.busy) });
+        } else if (c.eta && c.eta.minutes - best.minutes >= minSaving) {
+            out.push({
+                kind: 'reassign',
+                case: c,
+                current: { _id: c.driver?._id || c.provider?._id, name: c.driver?.name || c.provider?.name, km: c.eta.km, minutes: c.eta.minutes },
+                proposed: best,
+                savesMinutes: c.eta.minutes - best.minutes,
+            });
+        }
+    }
+    res.json({ success: true, generatedAt: new Date(), items: out });
+});
+
+/** GET /ops/driver-day?date=YYYY-MM-DD — each driver's cases on one day, for the timeline view */
+exports.driverDay = asyncErrorHandler(async (req, res) => {
+    const { date, start, end } = istDay(req.query.date);
+    const limits = delayLimits();
+    const rows = await Booking.find({
+        _includeHidden: true,
+        $and: [
+            { $or: [{ driver: { $ne: null } }, { provider: { $ne: null } }] },
+            { $or: [{ createdAt: { $gte: start, $lt: end } }, { statusChangedAt: { $gte: start, $lt: end } }, { status: { $in: OPEN_STATUSES.filter((x) => x !== 'Scheduled') }, createdAt: { $lt: end } }] },
+        ],
+    })
+        .select('fileNumber status statusChangedAt createdAt pickupTime dropoffTime driver provider location dropoffLocation')
+        .populate('driver', 'name')
+        .populate('provider', 'name')
+        .limit(1500)
+        .lean();
+    const evs = rows.length
+        ? await BookingEvent.find({ booking: { $in: rows.map((r) => r._id) }, type: { $in: ['assigned', 'status'] } }).select('booking type to at').sort({ at: 1 }).lean()
+        : [];
+    const byBooking = {};
+    for (const e of evs) (byBooking[String(e.booking)] = byBooking[String(e.booking)] || []).push(e);
+
+    const people = {};
+    const now = new Date();
+    for (const b of rows) {
+        const who = b.driver || b.provider;
+        if (!who) continue;
+        const list = byBooking[String(b._id)] || [];
+        const assignedAt = list.find((e) => e.type === 'assigned')?.at || list.find((e) => e.type === 'status' && e.to === 'Order Received')?.at;
+        const doneAt = list.find((e) => e.type === 'status' && ['Vehicle Dropped', 'Order Completed'].includes(e.to))?.at || b.dropoffTime;
+        const isOpen = !FINAL_STATUSES.includes(b.status) && b.status !== 'Vehicle Dropped';
+        let from = new Date(assignedAt || b.createdAt);
+        let to = new Date(doneAt || (isOpen ? now : b.statusChangedAt || b.createdAt));
+        if (to < from) to = from;
+        if (to < start || from >= end) continue;
+        if (from < start) from = start;
+        if (to > end) to = end;
+        const key = String(who._id);
+        people[key] = people[key] || { _id: who._id, name: who.name || '—', type: b.driver ? 'driver' : 'provider', cases: [] };
+        const mins = minutesSince(b.statusChangedAt || b.createdAt);
+        people[key].cases.push({
+            _id: b._id,
+            fileNumber: b.fileNumber || '',
+            status: b.status,
+            from,
+            to,
+            open: isOpen,
+            delayed: Boolean(isOpen && limits[b.status] && mins > limits[b.status]),
+            route: [b.location, b.dropoffLocation].filter(Boolean).map((x) => String(x).split(',')[0]).join(' → '),
+        });
+    }
+    const list = Object.values(people)
+        .map((p) => ({ ...p, cases: p.cases.sort((a, z) => a.from - z.from) }))
+        .sort((a, z) => Number(z.cases.some((c) => c.open)) - Number(a.cases.some((c) => c.open)) || z.cases.length - a.cases.length);
+    res.json({ success: true, date, start, end, now, people: list });
 });
 
 exports._internals = { shapeCase, parseLatLng, istDay, OPEN_STATUSES, DEFAULT_DELAY_MINUTES };
