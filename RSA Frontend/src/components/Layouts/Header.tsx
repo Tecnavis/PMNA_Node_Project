@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { can, canPage } from '../../utils/access';
 import { IRootState } from '../../store';
 import { toggleRTL, toggleTheme, toggleSidebar } from '../../store/themeConfigSlice';
 import { useTranslation } from 'react-i18next';
@@ -318,9 +319,9 @@ const Header = () => {
                                 <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleQrFileChange} />
                             </span>
                         </div>
-                        <Link to="/add-booking" className="hidden md:flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(91,76,240,.8)] hover:bg-primary/90">
+                        {canPage('/add-booking') && can('booking.create') && <Link to="/add-booking" className="hidden md:flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(91,76,240,.8)] hover:bg-primary/90">
                             <span className="text-base leading-none">+</span> New booking
-                        </Link>
+                        </Link>}
                         <div>
                             {themeConfig.theme === 'light' ? (
                                 <button

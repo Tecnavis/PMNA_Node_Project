@@ -18,6 +18,7 @@ import InvoiceReport from '../pages/Report/InvoiceReport';
 import Staff from '../pages/Staffs/Staff';
 import ViewMore from '../pages/Details/ViewMore';
 import ReportIndex from '../pages/Report/ReportIndex';
+import MonthlyStatement from '../pages/Statement/MonthlyStatement';
 import Home from '../pages/Home/Home';
 
 const Index = lazy(() => import('../pages/Index'));
@@ -101,6 +102,10 @@ const routes = [
     {
         path: '/report',
         element: <ReportIndex />,
+    },
+    {
+        path: '/statement',
+        element: <MonthlyStatement />,
     },
     {
         path: '/showrm/qr',

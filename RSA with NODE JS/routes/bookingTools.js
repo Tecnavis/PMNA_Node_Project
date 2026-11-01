@@ -11,5 +11,7 @@ router.post('/:id/tracking-links', adminSite, tools.createLink);
 router.delete('/:id/tracking-links/:lid', adminSite, tools.revokeLink);
 router.get('/:id/suggest-drivers', adminSite, tools.suggestDrivers);
 router.post('/:id/reassign-approval', adminSite, tools.reassignApproval);
+router.get('/:id/rating', adminSite, tools.rating);
+router.post('/:id/rating-reviewed', adminSite, tools.ratingReviewed);
 
 module.exports = router;

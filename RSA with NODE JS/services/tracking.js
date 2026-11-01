@@ -130,7 +130,11 @@ async function publicView(token) {
         }
     }
 
+    const canRate = ['Vehicle Dropped', 'Order Completed'].includes(b.status);
+    const myRating = canRate ? await ratingFor(b._id) : null;
     return {
+        canRate,
+        rating: myRating ? { stars: myRating.rating, comment: myRating.comment || '' } : null,
         fileNumber: b.fileNumber || '',
         status: STEP_LABEL[b.status] || b.status,
         completed: b.status === 'Order Completed',
@@ -146,4 +150,34 @@ async function publicView(token) {
     };
 }
 
-module.exports = { createLink, closedReason, publicView, shapeLink, urlFor, newToken, STEP_LABEL };
+/** Customer rates the service from the tracking link (only after drop-off). */
+async function rate(token, { rating, comment } = {}) {
+    const r = Math.round(Number(rating));
+    if (!(r >= 1 && r <= 5)) return { error: 'Choose 1 to 5 stars' };
+    if (!token || typeof token !== 'string' || token.length > 64) return { error: 'not-found', status: 404 };
+    const link = await TrackingLink.findOne({ token }).lean();
+    if (!link) return { error: 'not-found', status: 404 };
+    const b = await Booking.findOne({ _id: link.booking, _includeHidden: true }).select('status statusChangedAt updatedAt driver provider showroom fileNumber').lean();
+    if (!b) return { error: 'not-found', status: 404 };
+    if (link.revokedAt) return { error: 'This link was switched off', status: 410 };
+    if (!['Vehicle Dropped', 'Order Completed'].includes(b.status)) return { error: 'You can rate once the vehicle is dropped', status: 409 };
+    const doneAt = new Date(b.statusChangedAt || b.updatedAt || Date.now()).getTime();
+    if (Date.now() - doneAt > 7 * 86400000) return { error: 'Rating closed for this case', status: 410 };
+    const CustomerRating = require('../Model/customerRating');
+    const existing = await CustomerRating.findOne({ booking: b._id }).lean();
+    if (existing && Date.now() - new Date(existing.at).getTime() > 24 * 3600000) return { error: 'Thanks — this case is already rated', status: 409 };
+    const doc = await CustomerRating.findOneAndUpdate(
+        { booking: b._id },
+        { $set: { rating: r, comment: String(comment || '').trim().slice(0, 600), driver: b.driver || undefined, provider: b.provider || undefined, showroom: b.showroom || undefined, at: new Date() }, $unset: { reviewedAt: '', reviewedBy: '' } },
+        { upsert: true, new: true }
+    ).lean();
+    require('./bookingEvents').record(b._id, 'rated', { to: String(r), meta: { comment: doc.comment || '' }, by: { role: 'customer', name: 'Customer' } });
+    return { ok: true, rating: r };
+}
+
+async function ratingFor(bookingId) {
+    const CustomerRating = require('../Model/customerRating');
+    return CustomerRating.findOne({ booking: bookingId }).select('rating comment at').lean();
+}
+
+module.exports = { createLink, closedReason, publicView, shapeLink, urlFor, newToken, STEP_LABEL, rate, ratingFor };

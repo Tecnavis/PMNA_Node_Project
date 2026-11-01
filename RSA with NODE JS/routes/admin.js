@@ -11,6 +11,7 @@ router.post('/register', controller.registerAdmin);
 
 // Route to login an admin
 router.post('/login', controller.loginAdmin);
+router.post('/login/verify', controller.verifyAdminLogin);
 
 // Add/Update Admin QR
 // Payment QR shown in the driver & provider apps — any logged-in user (older provider tokens carry no role)

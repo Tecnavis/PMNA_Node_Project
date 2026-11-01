@@ -26,5 +26,6 @@ router.delete('/:id',jwt, controller.deleteStaff);
 
 //Staff log-in
 router.post('/login',controller.loginStaff)
+router.post('/login/verify', controller.verifyStaffLogin)
 
 module.exports = router;

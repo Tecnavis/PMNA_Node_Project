@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, CalendarPlus, Users, QrCode, Wallet, CheckCircle2, LogOut, Menu, X, Phone } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, CalendarPlus, Users, QrCode, Wallet, CheckCircle2, LogOut, Menu, X, Phone, FileText } from 'lucide-react';
 import { getShowroomById } from '../../service/showroom';
 import { getImageUrl } from '../../utils/imageUrl';
 
@@ -12,6 +12,7 @@ const NAV = [
     { to: '/staff', label: 'Staff', icon: Users },
     { to: '/showrm/qr', label: 'Staff QR', icon: QrCode },
     { to: '/report', label: 'Cash report', icon: Wallet },
+    { to: '/statement', label: 'Monthly statement', icon: FileText },
 ];
 
 const Header: React.FC = () => {

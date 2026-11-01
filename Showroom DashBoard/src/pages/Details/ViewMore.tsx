@@ -1,6 +1,7 @@
 import { useEffect, useState, Fragment, useRef } from 'react';
 import React, { ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import TrackLiveButton from '../../components/TrackLiveButton';
 import axios, { AxiosError } from 'axios';
 import { Dialog, Transition, Tab } from '@headlessui/react';
 import { IoIosCloseCircleOutline } from 'react-icons/io';
@@ -550,7 +551,7 @@ const Preview = () => {
             <div className="panel">
                 <div className="flex justify-between flex-wrap gap-4 px-4">
                     <div className="text-2xl font-semibold uppercase">Booking</div>
-                  
+                    {id && <TrackLiveButton bookingId={id} />}
                 </div>
                 <div className="ltr:text-right rtl:text-left px-4">
                     <div className="space-y-1 mt-6 text-white-dark"></div>

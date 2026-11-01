@@ -169,6 +169,11 @@ const CasePhotos = lazy(() => import('../pages/CasePhotos/CasePhotos'));
 const Operations = lazy(() => import('../pages/Operations/Operations'));
 const ReportsCenter = lazy(() => import('../pages/Reports/ReportsCenter'));
 const RemindersPage = lazy(() => import('../pages/Reminders/RemindersPage'));
+const StaffPermissions = lazy(() => import('../pages/Permissions/StaffPermissions'));
+const ActivityLog = lazy(() => import('../pages/Admin/ActivityLog'));
+const DailySummary = lazy(() => import('../pages/Admin/DailySummary'));
+const Backups = lazy(() => import('../pages/Admin/Backups'));
+const DriverScorecard = lazy(() => import('../pages/Reports/DriverScorecard'));
 const TvScreen = lazy(() => import('../pages/TV/TvScreen'));
 
 const BookingDashboard = lazy(() => import('../pages/Bookings/BookingChart'))
@@ -444,6 +449,14 @@ const routes = [
         path: '/reminders',
         element: <RemindersPage />,
     },
+    {
+        path: '/staff-permissions',
+        element: <StaffPermissions />,
+    },
+    { path: '/activity-log', element: <ActivityLog /> },
+    { path: '/daily-summary', element: <DailySummary /> },
+    { path: '/backups', element: <Backups /> },
+    { path: '/driver-scorecard', element: <DriverScorecard /> },
     {
         path: '/reports',
         element: <ReportsCenter />,

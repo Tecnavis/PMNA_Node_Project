@@ -28,6 +28,11 @@ const clip = (s, n) => String(s || '').slice(0, n);
 module.exports = {
     enabled,
     text: (to, body) => send(to, { type: 'text', text: { preview_url: false, body: clip(body, 4000) } }),
+    /** an approved template (needed for messages we start, outside the 24-hour reply window) */
+    template: (to, name, lang, params = []) => send(to, {
+        type: 'template',
+        template: { name, language: { code: lang || 'en' }, components: params.length ? [{ type: 'body', parameters: params.map((p) => ({ type: 'text', text: clip(String(p).replace(/[\n\t]+/g, ' · ').replace(/ {4,}/g, ' '), 1000) })) }] : [] },
+    }),
     /** up to 3 quick-reply buttons: [{ id, title }] */
     buttons: (to, body, buttons) => send(to, {
         type: 'interactive',

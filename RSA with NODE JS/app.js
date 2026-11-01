@@ -56,6 +56,13 @@ const mediaRoutes = require('./routes/media.js');
 const opsRoutes = require('./routes/ops.js');
 const bookingToolsRoutes = require('./routes/bookingTools.js');
 const trackingRoutes = require('./routes/tracking.js');
+const permissionsRoutes = require('./routes/permissions.js');
+const auditRoutes = require('./routes/audit.js');
+const insightsRoutes = require('./routes/insights.js');
+const backupsRoutes = require('./routes/backups.js');
+const showroomPortalRoutes = require('./routes/showroomPortal.js');
+const { activityLogger } = require('./services/audit');
+const { staffPermissions } = require('./Middileware/staffPermissions');
 const execAppRoutes = require('./routes/execApp.js');
 const reportsRoutes = require('./routes/reports.js');
 const reminderRoutes = require('./routes/reminders.js');
@@ -232,6 +239,10 @@ if (!fs.existsSync(downloadsDir)) {
 
 // Who may call admin-only actions (see Middileware/accessPolicy.js)
 app.use(accessPolicy);
+// Staff permissions switched off by an admin (Settings → Staff permissions)
+app.use(staffPermissions);
+// Staff activity log: who changed what on the admin website (Settings → Activity log)
+app.use(activityLogger);
 
 // Apply stricter rate limiting to booking routes
 app.use('/booking', bookingLimiter, bookingRouter);
@@ -275,6 +286,11 @@ app.use('/media', mediaRoutes);
 app.use('/ops', opsRoutes);
 app.use('/booking-tools', bookingToolsRoutes);
 app.use('/t', trackingRoutes); // public customer tracking page
+app.use('/permissions', permissionsRoutes);
+app.use('/audit', auditRoutes);
+app.use('/insights', insightsRoutes);
+app.use('/backups', backupsRoutes);
+app.use('/showroom-portal', showroomPortalRoutes);
 app.use('/exec', execAppRoutes);
 app.use('/reports', reportsRoutes);
 app.use('/reminders', reminderRoutes.reminders);

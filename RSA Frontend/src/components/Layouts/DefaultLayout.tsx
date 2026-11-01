@@ -9,6 +9,7 @@ import Setting from './Setting';
 import Sidebar from './Sidebar';
 import Portals from '../../components/Portals';
 import ReminderNotifier from '../../pages/Reminders/ReminderNotifier';
+import PageGuard from '../PageGuard';
 
 const DefaultLayout = ({ children }: PropsWithChildren) => {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
@@ -91,7 +92,7 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
 
                         {/* BEGIN CONTENT AREA */}
                         <Suspense>
-                            <div className={`${themeConfig.animation} p-6 animate__animated`}>{children}</div>
+                            <div className={`${themeConfig.animation} p-6 animate__animated`}><PageGuard>{children}</PageGuard></div>
                         </Suspense>
                         {/* END CONTENT AREA */}
 

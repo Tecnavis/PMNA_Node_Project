@@ -47,6 +47,28 @@ agenda.define('archive and move old bookings', async () => {
 
 await agenda.every('30 2 * * *', 'archive and move old bookings', {}, { timezone: 'Asia/Kolkata' });
     console.log('📅 Old-booking archive scheduled daily at 2:30 AM India time');
+
+    // Owner's evening summary on WhatsApp (only sends when OWNER_WHATSAPP and WhatsApp are set up)
+    agenda.define('daily owner summary', async () => {
+        try {
+            const r = await require('../services/dailySummary').send();
+            console.log(r.ok ? '✅ Daily summary sent' : `ℹ️ Daily summary not sent: ${r.reason || 'delivery failed'}`);
+        } catch (error) {
+            console.error('❌ Daily summary failed:', error.message);
+        }
+    });
+    await agenda.every(process.env.SUMMARY_CRON || '0 21 * * *', 'daily owner summary', {}, { timezone: 'Asia/Kolkata' });
+
+    // Monthly data backup to the media server (1st of every month, 3:15 AM)
+    agenda.define('monthly data backup', async () => {
+        try {
+            const r = await require('../services/backup').run({ reason: 'monthly' });
+            console.log(r.ok ? `✅ Monthly backup saved: ${r.name}` : `❌ Monthly backup failed: ${r.error}`);
+        } catch (error) {
+            console.error('❌ Monthly backup failed:', error.message);
+        }
+    });
+    await agenda.every(process.env.BACKUP_CRON || '15 3 1 * *', 'monthly data backup', {}, { timezone: 'Asia/Kolkata' });
     
     return agenda;
 };

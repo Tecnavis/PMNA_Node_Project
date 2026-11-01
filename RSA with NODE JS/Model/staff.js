@@ -51,6 +51,8 @@ const staffSchema = new mongoose.Schema({
     default: 0, 
   },
   
+  // Per-person changes on top of the role's permissions: { '<permission key>': true | false }
+  permissions: { type: mongoose.Schema.Types.Mixed, default: undefined },
 }, { timestamps: true });
 
 // Never send passwords in API responses (login reads the document directly, so it still works)

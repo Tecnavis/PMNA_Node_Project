@@ -19,3 +19,10 @@ exports.data = asyncErrorHandler(async (req, res) => {
     if (view.closed) return res.status(view.closed === 'not-found' ? 404 : 410).json({ closed: view.closed });
     res.json(view);
 });
+
+exports.rate = asyncErrorHandler(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const r = await tracking.rate(req.params.token, req.body || {});
+    if (r.error) return res.status(r.status || 400).json({ message: r.error });
+    res.json({ success: true, rating: r.rating });
+});

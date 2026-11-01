@@ -52,6 +52,34 @@ const LoginBoxed = () => {
         setErrorMessage(''); // Clear error message when role changes
     };
 
+    // second login step: the 6-digit code; returns the verify response, or null if cancelled
+    const askLoginCode = async (verifyUrl: string, challenge: string, phoneHint: string, channel?: string) => {
+        const result = await Swal.fire({
+            title: 'Enter your login code',
+            html: `We sent a 6-digit code to <b>${String(phoneHint || '').replace(/[<>]/g, '')}</b>${channel === 'whatsapp' ? ' on WhatsApp' : ' by SMS'}.`,
+            input: 'text',
+            inputAttributes: { inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6', 'aria-label': 'Login code' },
+            inputPlaceholder: '6-digit code',
+            showCancelButton: true,
+            confirmButtonText: 'Verify',
+            showLoaderOnConfirm: true,
+            allowOutsideClick: () => !Swal.isLoading(),
+            preConfirm: async (code: string) => {
+                if (!/^\d{6}$/.test(String(code || '').trim())) {
+                    Swal.showValidationMessage('Enter the 6 digits');
+                    return false;
+                }
+                try {
+                    return await axios.post(verifyUrl, { challenge, otp: String(code).trim() });
+                } catch (err: any) {
+                    Swal.showValidationMessage(err?.response?.data?.message || 'Could not verify the code');
+                    return false;
+                }
+            },
+        });
+        return result.isConfirmed && result.value ? result.value : null;
+    };
+
     // submitting form for the log-in 
 
     const submitForm = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -75,7 +103,13 @@ const LoginBoxed = () => {
         const payload = role === 'admin' ? { email: credentials.email, password: credentials.password } : { userName: credentials.userName, password: credentials.password };
 
         try {
-            const response = await axios.post(endpoint, payload);
+            let response = await axios.post(endpoint, payload);
+            // Two-step login (when switched on by the server): ask for the code sent to the phone
+            if (response.data?.otpRequired) {
+                const verified = await askLoginCode(`${endpoint}/verify`, response.data.challenge, response.data.phoneHint, response.data.channel);
+                if (!verified) return; // cancelled
+                response = verified;
+            }
             const { token, message } = response.data;
             if (role === 'admin') {
                 // Save role, token, and user info in local storage

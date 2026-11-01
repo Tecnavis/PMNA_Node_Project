@@ -188,3 +188,21 @@ exports.reassignApproval = asyncErrorHandler(async (req, res) => {
     });
     res.status(201).json({ success: true });
 });
+
+// ---------------------------------------------------------------- customer rating
+exports.rating = asyncErrorHandler(async (req, res) => {
+    if (!validId(req.params.id)) return res.status(404).json({ message: 'Booking not found' });
+    const CustomerRating = require('../Model/customerRating');
+    const r = await CustomerRating.findOne({ booking: req.params.id }).lean();
+    res.json({ success: true, rating: r ? { stars: r.rating, comment: r.comment || '', at: r.at, reviewedAt: r.reviewedAt || null, reviewedBy: r.reviewedBy || null } : null });
+});
+
+exports.ratingReviewed = asyncErrorHandler(async (req, res) => {
+    if (!validId(req.params.id)) return res.status(404).json({ message: 'Booking not found' });
+    const CustomerRating = require('../Model/customerRating');
+    const who = actor(req);
+    const r = await CustomerRating.findOneAndUpdate({ booking: req.params.id }, { $set: { reviewedAt: new Date(), reviewedBy: who?.name || who?.role || 'admin' } }, { new: true }).lean();
+    if (!r) return res.status(404).json({ message: 'No rating for this case' });
+    events.record(req.params.id, 'rating-reviewed', { to: String(r.rating), meta: { note: String(req.body?.note || '').slice(0, 300) }, by: who });
+    res.json({ success: true });
+});

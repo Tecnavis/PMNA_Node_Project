@@ -25,13 +25,13 @@ exports.statusChanged = (bookingId) => {
                 msg += `\nDriver: ${who.name || ''}${who.phone ? ` (${who.phone})` : ''}`;
             }
             // live tracking link once a driver is coming (one link per case, reused)
-            if (['Order Received', 'On the way to pickup location', 'Vehicle Picked', 'On the way to dropoff location'].includes(b.status)) {
+            if (['Order Received', 'On the way to pickup location', 'Vehicle Picked', 'On the way to dropoff location', 'Vehicle Dropped', 'Order Completed'].includes(b.status)) {
                 try {
                     const tracking = require('./tracking');
                     const TrackingLink = require('../Model/trackingLink');
                     let link = await TrackingLink.findOne({ booking: b._id, revokedAt: { $exists: false }, 'createdBy.role': 'system' }).lean();
                     if (!link) link = await tracking.createLink(b._id, { showDriver: true }, { role: 'system', name: 'Customer updates' });
-                    if (link) msg += `\nTrack live: ${tracking.urlFor(link.token)}`;
+                    if (link) msg += ['Vehicle Dropped', 'Order Completed'].includes(b.status) ? `\nHow did we do? Rate us (1 tap): ${tracking.urlFor(link.token)}` : `\nTrack live: ${tracking.urlFor(link.token)}`;
                 } catch (e) {
                     console.error('[customerNotify] tracking link', e.message);
                 }

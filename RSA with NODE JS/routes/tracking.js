@@ -5,5 +5,6 @@ const tracking = require('../Controller/tracking');
 // Public: anyone with the (unguessable) link. Shows one case only, never amounts.
 router.get('/:token', tracking.page);
 router.get('/:token/data', tracking.data);
+router.post('/:token/rate', tracking.rate);
 
 module.exports = router;

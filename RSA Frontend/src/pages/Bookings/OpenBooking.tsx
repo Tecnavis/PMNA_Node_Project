@@ -3,6 +3,8 @@ import React, { ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ShareTrackingModal from '../../components/booking/ShareTrackingModal';
 import CaseTimeline from '../../components/booking/CaseTimeline';
+import CustomerRatingCard from '../../components/booking/CustomerRatingCard';
+import { can } from '../../utils/access';
 import axios, { AxiosError } from 'axios';
 import { Dialog, DialogPanel, Transition, TransitionChild, Tab } from '@headlessui/react';
 import { IoIosCloseCircleOutline } from 'react-icons/io';
@@ -959,7 +961,7 @@ const Preview = () => {
                             </div>
                         </div>
                     )}
-                    {id && (
+                    {id && can('tracking.share') && (
                         <button type="button" className="btn btn-outline-dark btn-sm self-center" onClick={() => setShareOpen(true)}>
                             ↗ Share tracking
                         </button>
@@ -1494,7 +1496,8 @@ const Preview = () => {
             </div>
 
             {id && (
-                <div className="mt-5">
+                <div className="mt-5 space-y-5">
+                    <CustomerRatingCard bookingId={id} onChanged={() => setTimelineKey((k) => k + 1)} />
                     <CaseTimeline bookingId={id} refreshKey={timelineKey} />
                 </div>
             )}

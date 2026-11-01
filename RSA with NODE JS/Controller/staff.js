@@ -142,13 +142,22 @@ exports.deleteStaff = async (req, res) => {
 };
 
 // log-in for staff 
+const issueStaffLogin = (staff) => {
+    // Admin-website sessions expire (WEB_TOKEN_EXPIRES, default 7 days). Older tokens without expiry keep working.
+    const token = jwt.sign({ id: staff._id, role: "Staff", name: `${staff.name}` }, process.env.JWT_SECRET, { expiresIn: process.env.WEB_TOKEN_EXPIRES || '7d' });
+    // Include role and name in the response
+    return { token, role: staff.role?._id || staff.role, name: staff.name, message: "Staff logged in successfully" };
+};
+
 exports.loginStaff = async (req, res) => {
+  const { recordLogin } = require('../services/audit');
   try {
     const { userName, password } = req.body;
 
     // Check if staff exists
     const staff = await Staff.findOne({ userName });
     if (!staff) {
+      recordLogin(req, { kind: 'staff', login: userName, success: false, reason: 'unknown-user' });
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
@@ -162,21 +171,46 @@ exports.loginStaff = async (req, res) => {
       await Staff.updateOne({ _id: staff._id }, { $set: { password: await hashPassword(password) } });
     }
     if (!valid) {
+      recordLogin(req, { kind: 'staff', userId: String(staff._id), name: staff.name, login: userName, success: false, reason: 'wrong-password' });
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Admin-website sessions expire (WEB_TOKEN_EXPIRES, default 7 days). Older tokens without expiry keep working.
-    const token = jwt.sign({ id: staff._id, role: "Staff", name: `${staff.name}` }, process.env.JWT_SECRET, { expiresIn: process.env.WEB_TOKEN_EXPIRES || '7d' });
+    // Two-step login (only when TWO_STEP_LOGIN=on and the role is listed in TWO_STEP_ROLES)
+    const twoStep = require('../services/twoStep');
+    if (twoStep.on()) {
+      const Role = require('../Model/role');
+      const role = staff.role ? await Role.findById(staff.role).select('name').lean() : null;
+      if (twoStep.required('staff', role?.name)) {
+        const r = await twoStep.start({ kind: 'staff', id: staff._id, phone: staff.phone });
+        recordLogin(req, { kind: 'staff', userId: String(staff._id), name: staff.name, login: userName, success: false, reason: r.error ? 'otp-not-sent' : 'otp-sent' });
+        if (r.error) return res.status(503).json({ message: r.error });
+        return res.status(200).json({ otpRequired: true, challenge: r.challenge, phoneHint: r.phoneHint, channel: r.channel, message: `Enter the code sent to ${r.phoneHint}` });
+      }
+    }
 
-    // Include role and name in the response
-    res.status(200).json({
-      token,
-      role: staff.role,
-      name: staff.name,
-      message: "Staff logged in successfully"
-    });
+    recordLogin(req, { kind: 'staff', userId: String(staff._id), name: staff.name, login: userName, success: true, reason: 'ok' });
+    res.status(200).json(issueStaffLogin(staff));
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+/** Second step of the staff login: { challenge, otp } → same reply as a normal login */
+exports.verifyStaffLogin = async (req, res) => {
+  const { recordLogin } = require('../services/audit');
+  try {
+    const r = await require('../services/twoStep').verify(req.body?.challenge, req.body?.otp);
+    if (r.error || r.kind !== 'staff') {
+      recordLogin(req, { kind: 'staff', userId: r.id || '', success: false, reason: 'otp-wrong' });
+      return res.status(400).json({ message: r.error || 'Invalid code' });
+    }
+    const staff = await Staff.findById(r.id);
+    if (!staff) return res.status(400).json({ message: 'Invalid code' });
+    recordLogin(req, { kind: 'staff', userId: String(staff._id), name: staff.name, login: staff.userName, success: true, reason: 'ok-2fa' });
+    res.status(200).json(issueStaffLogin(staff));
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ message: 'Server error' });
   }
 };

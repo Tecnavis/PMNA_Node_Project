@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Recommendation, formatMinutes } from './opsApi';
+import { can } from '../../utils/access';
 
 const DISMISS_KEY = 'ops-dismissed-suggestions';
 const readDismissed = (): string[] => {
@@ -62,7 +63,7 @@ const SuggestionsPanel: React.FC<{ items: Recommendation[] | null; onOpen: (r: R
                                 {r.kind === 'reassign' ? `Saves ~${r.savesMinutes} min` : `${r.proposed.km} km · ~${r.proposed.minutes} min away`}
                             </span>
                             <div className="mt-3 flex items-center gap-2">
-                                <button type="button" className="btn btn-dark btn-sm" onClick={() => onOpen(r)}>Approve</button>
+                                {can('dispatch.approve') && <button type="button" className="btn btn-dark btn-sm" onClick={() => onOpen(r)}>Approve</button>}
                                 <Link to={`/openbooking/${r.case._id}`} className="btn btn-outline-dark btn-sm">Review</Link>
                                 <button type="button" className="ml-auto text-xs font-semibold text-[#8a90a2] hover:text-brand" onClick={() => dismiss(r)}>Dismiss</button>
                             </div>

@@ -43,6 +43,12 @@ const handleAuthError = (error: AxiosError<any>) => {
         window.location.hash = LOGIN_ROUTE;
         setTimeout(() => { redirecting = false; }, 2000);
     }
+    // A staff permission switched off by the admin: say so clearly, whatever page made the call
+    if (status === 403 && code === 'NO_PERMISSION') {
+        import('sweetalert2').then(({ default: Swal }) =>
+            Swal.fire({ icon: 'info', title: 'Not allowed for your account', text: error.response?.data?.message || 'Ask an admin to change your permissions.', confirmButtonText: 'OK' })
+        );
+    }
     return Promise.reject(error);
 };
 

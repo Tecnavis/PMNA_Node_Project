@@ -37,6 +37,10 @@ const describe = (i: TimelineItem): { title: string; detail?: string; tone: stri
             return { title: 'Booking verified', tone: 'bg-success' };
         case 'upi-verified':
             return { title: 'UPI payment verified', tone: 'bg-success' };
+        case 'rated':
+            return { title: `Customer rated ${'★'.repeat(Number(i.to) || 0)} (${i.to}/5)`, detail: i.meta?.comment ? `“${i.meta.comment}”` : undefined, tone: Number(i.to) <= 2 ? 'bg-brand' : 'bg-warning' };
+        case 'rating-reviewed':
+            return { title: 'Low rating followed up', detail: i.meta?.note, tone: 'bg-success' };
         case 'photos-deleted':
             return { title: 'Photos removed', detail: i.to, tone: 'bg-[#8a90a2]' };
         default:
