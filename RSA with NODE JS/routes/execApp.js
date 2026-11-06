@@ -9,5 +9,7 @@ const execOnly = [jwt, roleAuth('executive')];
 router.get('/me', execOnly, ctl.me);
 router.get('/showrooms', execOnly, ctl.showrooms);
 router.get('/showrooms/:id', execOnly, ctl.showroom);
+router.get('/tasks', execOnly, ctl.tasks);
+router.post('/tasks/:id/done', execOnly, ctl.taskDone);
 
 module.exports = router;

@@ -14,6 +14,8 @@ const Verification = require('../Model/verification');
 const asyncErrorHandler = require('../Middileware/asyncErrorHandler');
 const { NotFoundError } = require('../Middileware/errorHandler');
 const { generateShowRoomLink } = require('../utils/generateLink');
+const ExecTask = require('../Model/execTask');
+const { ownerFilter } = require('../services/execWork');
 
 const monthStart = () => {
     // Calendar month in India time
@@ -51,7 +53,7 @@ async function statsFor(showroomIds) {
     };
 }
 
-const SHOWROOM_FIELDS = 'name showroomId location latitudeAndLongitude phone mobile helpline state district image bookingPoints rewardPoints services createdAt';
+const SHOWROOM_FIELDS = 'name showroomId location latitudeAndLongitude phone mobile helpline state district image bookingPoints rewardPoints services createdAt addedBy assignedExecutive';
 
 function shape(s, stats) {
     const id = String(s._id);
@@ -72,6 +74,8 @@ function shape(s, stats) {
         lastBookingAt: stats.lastBooking[id] || null,
         lastVisitAt: stats.lastVisit[id] || null,
         visitedThisMonth: stats.visitedThisMonth.has(id),
+        // given to me by the office (not one I added myself)
+        assignedToMe: !!s.assignedExecutive,
     };
 }
 
@@ -79,7 +83,7 @@ function shape(s, stats) {
 exports.me = asyncErrorHandler(async (req, res) => {
     const exec = await Executive.findById(myId(req)).select('-password').lean();
     if (!exec) throw new NotFoundError('Executive not found');
-    const showrooms = await Showroom.find({ addedBy: exec._id }).select('_id').lean();
+    const showrooms = await Showroom.find(ownerFilter(exec._id)).select('_id').lean();
     const ids = showrooms.map((s) => s._id);
     const stats = ids.length ? await statsFor(ids) : { month: {}, visitedThisMonth: new Set() };
     res.json({
@@ -97,6 +101,8 @@ exports.me = asyncErrorHandler(async (req, res) => {
                 visitedThisMonth: stats.visitedThisMonth.size,
                 visitsDue: ids.length - stats.visitedThisMonth.size,
                 bookingsThisMonth: Object.values(stats.month).reduce((a, b) => a + b, 0),
+                openTasks: await ExecTask.countDocuments({ executive: exec._id, status: 'open' }),
+                overdueTasks: await ExecTask.countDocuments({ executive: exec._id, status: 'open', dueDate: { $lt: new Date() } }),
             },
         },
     });
@@ -104,11 +110,11 @@ exports.me = asyncErrorHandler(async (req, res) => {
 
 // GET /exec/showrooms?search=
 exports.showrooms = asyncErrorHandler(async (req, res) => {
-    const filter = { addedBy: myId(req) };
+    const filter = { $and: [ownerFilter(myId(req))] };
     const q = String(req.query.search || '').trim();
     if (q) {
         const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-        filter.$or = [{ name: rx }, { location: rx }, { district: rx }, { showroomId: rx }, { phone: rx }];
+        filter.$and.push({ $or: [{ name: rx }, { location: rx }, { district: rx }, { showroomId: rx }, { phone: rx }] });
     }
     const list = await Showroom.find(filter).select(SHOWROOM_FIELDS).sort({ createdAt: -1 }).lean();
     const stats = list.length ? await statsFor(list.map((s) => s._id)) : null;
@@ -118,7 +124,9 @@ exports.showrooms = asyncErrorHandler(async (req, res) => {
 // GET /exec/showrooms/:id
 exports.showroom = asyncErrorHandler(async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) throw new NotFoundError('Showroom not found');
-    const s = await Showroom.findOne({ _id: req.params.id, addedBy: myId(req) }).select(SHOWROOM_FIELDS + ' description').lean();
+    // mine, or one I have an open task for
+    const hasTask = await ExecTask.exists({ executive: myId(req), showroom: req.params.id, status: 'open' });
+    const s = await Showroom.findOne(hasTask ? { _id: req.params.id } : { $and: [{ _id: req.params.id }, ownerFilter(myId(req))] }).select(SHOWROOM_FIELDS + ' description').lean();
     if (!s) throw new NotFoundError('Showroom not found');
     const [stats, recent, visits] = await Promise.all([
         statsFor([s._id]),
@@ -135,4 +143,77 @@ exports.showroom = asyncErrorHandler(async (req, res) => {
             visits: visits.map((v) => ({ _id: v._id, at: v.verificationDate, image: v.image, accuracy: v.accuracy, point: v.geoTag?.coordinates ? { lng: v.geoTag.coordinates[0], lat: v.geoTag.coordinates[1] } : null })),
         },
     });
+});
+
+
+// ---- tasks given by the office -------------------------------------------------
+
+const TASK_SHOWROOM_FIELDS = 'name showroomId location district phone latitudeAndLongitude';
+
+function shapeTask(t) {
+    const now = Date.now();
+    return {
+        _id: t._id,
+        type: t.type,
+        title: t.title || defaultTitle(t),
+        notes: t.notes || '',
+        area: t.area || '',
+        target: t.target || 1,
+        progress: (t.addedShowrooms || []).length,
+        dueDate: t.dueDate,
+        overdue: t.status === 'open' && !!t.dueDate && new Date(t.dueDate).getTime() < now,
+        priority: t.priority,
+        status: t.status,
+        assignedBy: t.assignedBy?.name || '',
+        createdAt: t.createdAt,
+        completedAt: t.completedAt,
+        completedBy: t.completedBy,
+        completionNote: t.completionNote || '',
+        showroom: t.showroom && t.showroom._id
+            ? { _id: t.showroom._id, name: t.showroom.name, code: t.showroom.showroomId, location: t.showroom.location, district: t.showroom.district || '', phone: t.showroom.phone || '', latitudeAndLongitude: t.showroom.latitudeAndLongitude || '' }
+            : null,
+    };
+}
+
+function defaultTitle(t) {
+    if (t.type === 'visit') return `Visit ${t.showroom?.name || 'showroom'}`;
+    if (t.type === 'onboard') return `Add ${t.target || 1} new showroom${(t.target || 1) === 1 ? '' : 's'}${t.area ? ` in ${t.area}` : ''}`;
+    if (t.type === 'follow-up') return `Follow up ${t.showroom?.name || ''}`.trim();
+    return 'Task';
+}
+exports.defaultTitle = defaultTitle;
+exports.shapeTask = shapeTask;
+
+// GET /exec/tasks?status=open|done|all
+exports.tasks = asyncErrorHandler(async (req, res) => {
+    const status = String(req.query.status || 'open');
+    const filter = { executive: myId(req), status: { $ne: 'cancelled' } };
+    if (status === 'open') filter.status = 'open';
+    else if (status === 'done') filter.status = 'done';
+    const list = await ExecTask.find(filter)
+        .populate('showroom', TASK_SHOWROOM_FIELDS)
+        .sort(status === 'open' ? { dueDate: 1, createdAt: 1 } : { completedAt: -1 })
+        .limit(status === 'open' ? 300 : 100)
+        .lean();
+    // open tasks without a due date go last
+    if (status === 'open') list.sort((a, b) => (a.dueDate ? new Date(a.dueDate).getTime() : Infinity) - (b.dueDate ? new Date(b.dueDate).getTime() : Infinity));
+    res.json({ success: true, data: list.map(shapeTask) });
+});
+
+// POST /exec/tasks/:id/done { note }  — for follow-up / other tasks (visits and new showrooms close by themselves)
+exports.taskDone = asyncErrorHandler(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) throw new NotFoundError('Task not found');
+    const t = await ExecTask.findOne({ _id: req.params.id, executive: myId(req) });
+    if (!t) throw new NotFoundError('Task not found');
+    if (t.status !== 'open') return res.status(400).json({ success: false, message: 'This task is already closed.' });
+    if (t.type === 'visit') return res.status(400).json({ success: false, message: 'Record the visit from the showroom page (photo + location) to finish this task.' });
+    const note = String(req.body?.note || '').trim().slice(0, 2000);
+    if (!note) return res.status(400).json({ success: false, message: 'Please write what was done.' });
+    t.status = 'done';
+    t.completedAt = new Date();
+    t.completedBy = 'executive';
+    t.completionNote = note;
+    await t.save();
+    await t.populate('showroom', TASK_SHOWROOM_FIELDS);
+    res.json({ success: true, data: shapeTask(t.toObject()) });
 });

@@ -1,3 +1,4 @@
+const execWork = require('../services/execWork');
 const Showroom = require('../Model/showroom');
 const Verification = require('../Model/verification');
 const Executive = require('../Model/executive');
@@ -85,13 +86,21 @@ exports.verifyMonthlyVerification = asyncErrorHandler(async (req, res) => {
         throw new NotFoundError('Showroom Not found')
     };
 
-    // An executive may only verify their own showrooms (admin / staff may verify any).
+    // An executive may only verify the showrooms they look after, or one they have an open task for
+    // (admin / staff may verify any). The visit is credited to the executive who looks after it.
     const role = String(req.user?.role || '').toLowerCase();
-    if (role === 'executive' && String(showroom.addedBy || '') !== String(req.user?.id || req.user?._id || '')) {
-        return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'This showroom is not assigned to you.' });
+    const me = String(req.user?.id || req.user?._id || '');
+    let creditTo = execWork.responsibleId(showroom);
+    if (role === 'executive' && String(creditTo || '') !== me) {
+        const ExecTask = require('../Model/execTask');
+        const hasTask = await ExecTask.exists({ executive: me, showroom: showroom._id, status: 'open' });
+        if (!hasTask) {
+            return res.status(StatusCodes.FORBIDDEN).json({ success: false, message: 'This showroom is not assigned to you.' });
+        }
+        creditTo = me;
     }
 
-    const executive = await Executive.findById(showroom.addedBy);
+    const executive = await Executive.findById(creditTo);
     if (!executive) {
         throw new NotFoundError('Executive Not found')
     };
@@ -135,6 +144,7 @@ exports.verifyMonthlyVerification = asyncErrorHandler(async (req, res) => {
     })
 
     await newVerification.save();
+    await execWork.onVisitRecorded(newVerification); // closes open "visit" tasks
 
     // monthly visit points for the executive (Rewards page setting)
     try {

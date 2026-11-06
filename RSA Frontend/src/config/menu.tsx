@@ -61,6 +61,8 @@ export const MENU: MenuEntry[] = [
         children: [
             { path: '/marketing-executives', label: 'Executives', def: except(ROLES.VERIFIER) },
             { path: '/marketing-executives/showroom', label: 'Executive Showroom', def: all },
+            { path: '/marketing-executives/tasks', label: 'Tasks & assignment', def: except(ROLES.VERIFIER) },
+            { path: '/marketing-executives/report', label: 'Executive report', def: all },
         ],
     },
     {

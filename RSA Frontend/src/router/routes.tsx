@@ -13,6 +13,8 @@ const ProviderSalaryReport = lazy(() => import('../pages/Reports/ProviderReport/
 const RewardDetails = lazy(() => import('../pages/Rewards/RewardDetails'))
 const ShowroomInvoice = lazy(() => import('../pages/Reports/DriverReport/ShowroomInvoice'))
 const MarketingExecutives = lazy(() => import('../pages/MarketingExecutive/MarketingExecutives'))
+const ExecTasks = lazy(() => import('../pages/MarketingExecutive/ExecTasks'));
+const ExecReport = lazy(() => import('../pages/MarketingExecutive/ExecReport'));
 const StatusTable = lazy(() => import('../pages/Screen/StatusTable'));
 const PaymentWorkReport = lazy(() => import('../pages/PaymentManagment/PaymentWorkReport'))
 const PaymentReportStaff = lazy(() => import('../pages/PaymentManagment/PaymentReportStaff'))
@@ -519,6 +521,8 @@ const routes = [
         path: '/marketing-executives/showroom',
         element: <ExecutiveShowroomsTable />,
     },
+    { path: '/marketing-executives/tasks', element: <ExecTasks /> },
+    { path: '/marketing-executives/report', element: <ExecReport /> },
     {
         path: '/transations/salary-transaction',
         element: <TransactionList />,

@@ -29,6 +29,7 @@ const RULES = [
     [['POST', 'PUT', 'PATCH', 'DELETE'], any('company', 'showroom', 'servicetype', 'serviceType', 'baselocation', 'petrol-pumps', 'vehicle', 'reward'), 'masterdata.manage'],
     [['POST', 'DELETE'], /^\/booking-tools\/[^/]+\/tracking-links(\/[^/]+)?\/?$/, 'tracking.share'],
     [['POST'], /^\/booking-tools\/[^/]+\/reassign-approval\/?$/, 'dispatch.approve'],
+    [['POST', 'PATCH', 'DELETE'], /^\/exec-tasks(\/.*)?$/, 'executives.assign'],
 ];
 // paths that must never be blocked (logins)
 const NEVER = [/^\/staff\/login\/?$/, /^\/admin\/login\/?$/, /^\/showroom\/(login|staff-login|verify-otp|send-otp)/];

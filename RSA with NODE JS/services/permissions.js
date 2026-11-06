@@ -23,6 +23,7 @@ const ACTIONS = {
     'masterdata.manage': 'Edit companies, showrooms, service types, base locations, petrol pumps, vehicles, rewards',
     'tracking.share': 'Share live tracking links with customers',
     'dispatch.approve': 'Approve dispatch suggestions',
+    'executives.assign': 'Give showrooms and tasks to marketing executives',
 };
 
 const isKey = (k) => typeof k === 'string' && k.length <= 120 && (Object.prototype.hasOwnProperty.call(ACTIONS, k) || /^page:\/[A-Za-z0-9/_-]*$/.test(k));

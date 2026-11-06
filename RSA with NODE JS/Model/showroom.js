@@ -44,6 +44,19 @@ const showroomSchema = new mongoose.Schema({
     ref: 'MarketingExecutive',
     default: null
   },
+  // Executive who looks after this showroom now, set by admin / staff (empty = the executive who added it)
+  assignedExecutive: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Executive',
+    default: null,
+    index: true
+  },
+  assignedAt: { type: Date, default: null },
+  assignedBy: {
+    id: { type: mongoose.Schema.Types.ObjectId, default: null },
+    role: { type: String, default: '' },
+    name: { type: String, default: '' }
+  },
    // FIXED: Change links to Mixed type or a proper schema
   links: {
     type: mongoose.Schema.Types.Mixed,

@@ -139,6 +139,7 @@ exports.createShowroom = async (req, res) => {
     });
 
     const savedShowroom = await showroom.save();
+    require('../services/execWork').onShowroomAdded(savedShowroom); // counts towards "add showrooms" tasks
 
     routeLogger.info({
       showroomName: savedShowroom.name,
@@ -706,58 +707,97 @@ exports.sendOtpForShowroomStaff = async (req, res) => {
 };
 
 // verify otp and login 
+// Find the staff record for a phone and the showroom they log in to.
+// Returns { error: [status, message] } or { staff, showroom }.
+async function findStaffForLogin(phoneInput, showroomAsked) {
+  const digits = String(phoneInput || '').replace(/\D/g, '').slice(-10);
+  if (digits.length !== 10) return { error: [400, "Enter a valid 10-digit mobile number"] };
+
+  // Staff numbers are stored as numbers; one person may be staff at more than one showroom
+  const staffList = await ShowroomStaff.find({ phoneNumber: Number(digits) }).lean();
+  if (!staffList.length) {
+    return { error: [400, "This number is not registered as showroom staff. Please sign up with your showroom's link."] };
+  }
+
+  // Use the showroom the app asked for when this person belongs to it, otherwise the staff member's own showroom.
+  // (Older app builds always send one fixed showroom id, so it must not decide the showroom on its own.)
+  const asked = mongoose.isValidObjectId(showroomAsked) ? String(showroomAsked) : '';
+  const staff = staffList.find((st) => String(st.showroomId) === asked) || staffList[0];
+  const showroom = await Showroom.findById(staff.showroomId).select('_id name').lean();
+  if (!showroom) return { error: [404, "Your showroom was not found. Please contact RSA Kerala."] };
+  return { staff, showroom, digits };
+}
+
+function staffLoginReply(res, staff, showroom) {
+  // Generate JWT token with staff ID included
+  const token = jwt.sign({
+    id: staff._id,
+    staffId: staff._id,  // Explicitly include staffId
+    role: "ShowroomStaff",
+    name: `${staff.name}`,
+    showroomId: showroom._id
+  }, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+  return res.status(200).json({
+    token,
+    staffId: staff._id.toString(),
+    role: "Staff",
+    name: staff.name,
+    showroomId: String(showroom._id),
+    showroomName: showroom.name || '',
+    success: true,
+    message: "Successfully logged in"
+  });
+}
+
+// Old one-step login (phone only). Kept so older app builds keep working until
+// SHOWROOM_STAFF_OTP_ONLY=true is set on the server; new builds use send-otp + verify.
 exports.staffLogin = async (req, res) => {
   try {
-    // Accept both 'phone' and 'phoneNumber' for flexibility
+    if (String(process.env.SHOWROOM_STAFF_OTP_ONLY || '').toLowerCase() === 'true') {
+      return res.status(426).json({ success: false, message: "Please update the RSA Showroom app. Sign in now needs an OTP." });
+    }
     const { phoneNumber, phone, showroom } = req.body;
-    const digits = String(phoneNumber || phone || '').replace(/\D/g, '').slice(-10);
-
-    if (digits.length !== 10) {
-      return res.status(400).json({ message: "Enter a valid 10-digit mobile number", success: false });
-    }
-
-    // Staff numbers are stored as numbers; one person may be staff at more than one showroom
-    const staffList = await ShowroomStaff.find({ phoneNumber: Number(digits) }).lean();
-    if (!staffList.length) {
-      return res.status(400).json({ message: "This number is not registered as showroom staff. Please sign up with your showroom's link.", success: false });
-    }
-
-    // Use the showroom the app asked for when this person belongs to it, otherwise the staff member's own showroom.
-    // (Older app builds always send one fixed showroom id, so it must not decide the showroom on its own.)
-    const asked = mongoose.isValidObjectId(showroom) ? String(showroom) : '';
-    const showroomStaff = staffList.find((st) => String(st.showroomId) === asked) || staffList[0];
-    const showroomId = showroomStaff.showroomId;
-
-    const IsShowroomExist = await Showroom.findById(showroomId).select('_id name').lean();
-    if (!IsShowroomExist) {
-      return res.status(404).json({ message: "Your showroom was not found. Please contact RSA Kerala.", success: false });
-    }
-
-    // Generate JWT token with staff ID included
-    const token = jwt.sign({
-      id: showroomStaff._id,
-      staffId: showroomStaff._id,  // Explicitly include staffId
-      role: "ShowroomStaff",
-      name: `${showroomStaff.name}`,
-      showroomId: showroomId
-    }, process.env.JWT_SECRET, { expiresIn: '24h' });
-
-    res.status(200).json({
-      token,
-      staffId: showroomStaff._id.toString(),
-      role: "Staff",
-      name: showroomStaff.name,
-      showroomId: String(showroomId),
-      showroomName: IsShowroomExist.name || '',
-      success: true,
-      message: "Successfully logged in"
-    });
+    const found = await findStaffForLogin(phoneNumber || phone, showroom);
+    if (found.error) return res.status(found.error[0]).json({ success: false, message: found.error[1] });
+    return staffLoginReply(res, found.staff, found.showroom);
   } catch (err) {
     console.error(err.message);
     res.status(500).json({
       message: "Server error",
       success: false
     });
+  }
+};
+
+// POST /showroom/staff-signin/send-otp { phoneNumber }
+exports.staffSendOtp = async (req, res) => {
+  try {
+    const { phoneNumber, phone, showroom } = req.body || {};
+    const found = await findStaffForLogin(phoneNumber || phone, showroom);
+    if (found.error) return res.status(found.error[0]).json({ success: false, message: found.error[1] });
+    const sent = await sendOtp('+91', found.digits);
+    if (!sent.success) return res.status(400).json({ success: false, message: sent.message });
+    res.json({ success: true, message: sent.message || 'OTP sent' });
+  } catch (err) {
+    console.error('[staff otp]', err.message);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// POST /showroom/staff-signin/verify { phoneNumber, otp, showroom? }
+exports.staffVerifyOtp = async (req, res) => {
+  try {
+    const { phoneNumber, phone, showroom, otp } = req.body || {};
+    if (!String(otp || '').trim()) return res.status(400).json({ success: false, message: "OTP is not filled" });
+    const found = await findStaffForLogin(phoneNumber || phone, showroom);
+    if (found.error) return res.status(found.error[0]).json({ success: false, message: found.error[1] });
+    const ok = await verifyOtp('+91', found.digits, otp);
+    if (!ok.success) return res.status(400).json({ success: false, message: ok.message });
+    return staffLoginReply(res, found.staff, found.showroom);
+  } catch (err) {
+    console.error('[staff otp verify]', err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 

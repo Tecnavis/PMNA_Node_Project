@@ -278,6 +278,7 @@ app.use('/pmnr', pmnrRouter);
 app.use('/expense', expenseRouter);
 app.use('/diesel-expenses', dieselExpensesRouter);
 app.use('/marketing-executives', executivesRouter);
+app.use('/exec-tasks', require('./routes/execTasks'));
 app.use('/transactions', transactionsRouter);
 app.use('/company-expenses', companyExpenseRoutes);
 app.use('/petrol-pumps', petrolPumpRoutes);
