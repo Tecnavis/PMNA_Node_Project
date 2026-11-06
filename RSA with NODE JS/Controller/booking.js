@@ -222,6 +222,12 @@ exports.addBookingForShowroom = async (req, res) => {
             handler: 'addBookingForShowroom',
         });
 
+        // Showroom staff always book for their own showroom (older app builds send one fixed showroom id)
+        if (req.user?.role === 'ShowroomStaff') {
+            const own = req.user.showroomId || (await ShowroomStaff.findById(req.user.id).select('showroomId').lean())?.showroomId;
+            if (own) bookingData = { ...bookingData, showroom: own };
+        }
+
         const showroomData = await Showroom.findById(bookingData.showroom).lean();
 
         if (!showroomData) {

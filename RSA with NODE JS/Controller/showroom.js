@@ -710,84 +710,75 @@ exports.staffLogin = async (req, res) => {
   try {
     // Accept both 'phone' and 'phoneNumber' for flexibility
     const { phoneNumber, phone, showroom } = req.body;
-    
-    // Use phone if phoneNumber is not provided
-    const staffPhoneNumber = phoneNumber || phone;
+    const digits = String(phoneNumber || phone || '').replace(/\D/g, '').slice(-10);
 
-    if (!staffPhoneNumber) {
-      return res.status(400).json({ 
-        message: "Phone number is required", 
-        success: false 
-      });
+    if (digits.length !== 10) {
+      return res.status(400).json({ message: "Enter a valid 10-digit mobile number", success: false });
     }
 
-    const showroomId = new mongoose.Types.ObjectId(showroom)
-
-    // Check if staff exists using the phone number
-    const showroomStaff = await ShowroomStaff.findOne({ 
-      phoneNumber: staffPhoneNumber 
-    });
-    
-    if (!showroomStaff) {
-      return res.status(400).json({ 
-        message: "Invalid credentials", 
-        success: false 
-      });
+    // Staff numbers are stored as numbers; one person may be staff at more than one showroom
+    const staffList = await ShowroomStaff.find({ phoneNumber: Number(digits) }).lean();
+    if (!staffList.length) {
+      return res.status(400).json({ message: "This number is not registered as showroom staff. Please sign up with your showroom's link.", success: false });
     }
 
-    if (!showroom) {
-      return res.status(400).json({ 
-        message: "Showroom details is required", 
-        success: false 
-      });
-    }
+    // Use the showroom the app asked for when this person belongs to it, otherwise the staff member's own showroom.
+    // (Older app builds always send one fixed showroom id, so it must not decide the showroom on its own.)
+    const asked = mongoose.isValidObjectId(showroom) ? String(showroom) : '';
+    const showroomStaff = staffList.find((st) => String(st.showroomId) === asked) || staffList[0];
+    const showroomId = showroomStaff.showroomId;
 
-    const IsShowroomExist = await Showroom.findById(showroomId);
-
+    const IsShowroomExist = await Showroom.findById(showroomId).select('_id name').lean();
     if (!IsShowroomExist) {
-      return res.status(404).json({ 
-        message: "Showroom not found", 
-        success: false 
-      });
+      return res.status(404).json({ message: "Your showroom was not found. Please contact RSA Kerala.", success: false });
     }
 
     // Generate JWT token with staff ID included
-    const token = jwt.sign({ 
-      id: showroomStaff._id, 
+    const token = jwt.sign({
+      id: showroomStaff._id,
       staffId: showroomStaff._id,  // Explicitly include staffId
-      role: "ShowroomStaff", 
+      role: "ShowroomStaff",
       name: `${showroomStaff.name}`,
       showroomId: showroomId
     }, process.env.JWT_SECRET, { expiresIn: '24h' });
 
-   // Include staffId in the response - Convert to string explicitly
-res.status(200).json({
-  token,
-  staffId: showroomStaff._id.toString(),  // Convert ObjectId to string
-  role: "Staff",
-  name: showroomStaff.name,
-  success: true,
-  message: "Successfully logged in"
-});
+    res.status(200).json({
+      token,
+      staffId: showroomStaff._id.toString(),
+      role: "Staff",
+      name: showroomStaff.name,
+      showroomId: String(showroomId),
+      showroomName: IsShowroomExist.name || '',
+      success: true,
+      message: "Successfully logged in"
+    });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ 
-      message: "Server error", 
-      success: false 
+    res.status(500).json({
+      message: "Server error",
+      success: false
     });
   }
 };
 
 exports.showroomStaffSignup = async (req, res) => {
   try {
-    const { name, phone: phoneNumber, whatsappNumber, designation, showroomId } = req.body;
+    const { name, designation, showroomId } = req.body;
+    const phoneNumber = String(req.body.phone || '').replace(/\D/g, '').slice(-10);
+    const whatsappNumber = String(req.body.whatsappNumber || '').replace(/\D/g, '').slice(-10) || phoneNumber; // WhatsApp is required in the record
 
     if (!name || !phoneNumber || !designation || !showroomId) {
       return res.status(400).json({ message: "All required fields must be provided." });
     }
+    if (phoneNumber.length !== 10) {
+      return res.status(400).json({ message: "Enter a valid 10-digit mobile number" });
+    }
+    if (!mongoose.isValidObjectId(showroomId) || !(await Showroom.exists({ _id: showroomId }))) {
+      return res.status(400).json({ message: "Showroom not found. Please open the sign-up link your showroom shared." });
+    }
 
-    // Check if user already exists
-    const existingUser = await ShowroomStaff.findOne({ phoneNumber });
+    // Check if user already exists at this showroom
+    const existingUser = await ShowroomStaff.findOne({ phoneNumber: Number(phoneNumber), showroomId });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }

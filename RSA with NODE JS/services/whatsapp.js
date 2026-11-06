@@ -27,6 +27,7 @@ const clip = (s, n) => String(s || '').slice(0, n);
 
 module.exports = {
     enabled,
+    send,
     text: (to, body) => send(to, { type: 'text', text: { preview_url: false, body: clip(body, 4000) } }),
     /** an approved template (needed for messages we start, outside the 24-hour reply window) */
     template: (to, name, lang, params = []) => send(to, {

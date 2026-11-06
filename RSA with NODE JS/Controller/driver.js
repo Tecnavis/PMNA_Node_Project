@@ -2,6 +2,7 @@ const { emitOps } = require('../config/socket');
 // controllers/driver.controller.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { phoneVariants } = require('../utils/phone');
 const Driver = require('../Model/driver');
 const Leaves = require('../Model/leaves');
 const Booking = require('../Model/booking');
@@ -421,15 +422,19 @@ exports.deleteDriver = async (req, res) => {
 exports.sendOtp = async (req, res) => {
   try {
     const { phone } = req.body;
+    const digits = String(phone ?? '').replace(/\D/g, '').slice(-10);
+    if (digits.length !== 10) {
+      return res.status(400).json({ message: "Enter a valid 10-digit mobile number", success: false });
+    }
 
-    // Check if driver exists
-    const driver = await Driver.findOne({ phone });
+    // Check if driver exists (numbers may be saved with or without +91)
+    const driver = await Driver.findOne({ phone: { $in: phoneVariants(phone) } }).select('_id');
     if (!driver) {
-      return res.status(400).json({ message: "Invalid credentials", success: false });
+      return res.status(400).json({ message: "This number is not registered as a driver", success: false });
     }
 
     // generate OTP
-    const otpRespose = await sendOtp('+91', phone)
+    const otpRespose = await sendOtp('+91', digits)
     if (!otpRespose.success) {
       return res.status(400).json({
         success: false,
@@ -437,12 +442,12 @@ exports.sendOtp = async (req, res) => {
       })
     }
     // Generate JWT token
+    // Keep the old "tokens" field up to date without re-validating the whole driver record
     const token = jwt.sign({ id: driver._id }, process.env.JWT_SECRET);
-    driver.tokens = token; // If you want to store the token, you can update the driver schema to include a `tokens` field
-    await driver.save();
+    await Driver.updateOne({ _id: driver._id }, { $set: { tokens: token } }).catch((e) => console.error('[driver login] token save', e.message));
 
     res.status(200).json({
-      message: "OTP sended successfully",
+      message: otpRespose.message || "OTP sended successfully",
       success: true
     });
   } catch (err) {
@@ -456,7 +461,7 @@ exports.verifyOTP = async (req, res) => {
     const { phone, otp } = req.body;
 
     // Check if driver exists
-    const driver = await Driver.findOne({ phone });
+    const driver = await Driver.findOne({ phone: { $in: phoneVariants(phone) } });
     if (!driver) {
       return res.status(400).json({ message: "Invalid credentials", success: false, });
     }

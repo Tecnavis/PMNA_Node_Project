@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Booking = require('../Model/booking');
 const { sendOtp, verifyOtp } = require('../services/otpService');
 const jwt = require('jsonwebtoken');
+const { phoneVariants } = require('../utils/phone');
 const { updateProviderFinancials } = require('../services/providerService');
 const ReceivedDetails = require('../Model/ReceivedDetails'); // Make sure you have this model
 const SettlementTransaction = require('../Model/settlementTransaction'); // Create this if needed
@@ -217,16 +218,19 @@ exports.deleteProvider = async (req, res) => {
 // Provider Log-in
 exports.loginProvider = async (req, res) => {
   try {
-    const { phone } = req.body;
+    const digits = String(req.body?.phone ?? '').replace(/\D/g, '').slice(-10);
+    if (digits.length !== 10) {
+      return res.status(400).json({ success: false, message: "Enter a valid 10-digit mobile number" });
+    }
 
-    // Check if driver exists
-    const provider = await Provider.findOne({ phone });
+    // Check if provider exists (numbers may be saved with or without +91)
+    const provider = await Provider.findOne({ phone: { $in: phoneVariants(req.body.phone) } }).select('_id name');
     if (!provider) {
-      return res.status(400).json({ message: "Invalid Phone Number" });
+      return res.status(400).json({ success: false, message: "This number is not registered as a provider" });
     }
 
     // generate OTP
-    const otpRespose = await sendOtp('+91', phone)
+    const otpRespose = await sendOtp('+91', digits)
     if (!otpRespose.success) {
       return res.status(400).json({
         success: false,
@@ -234,18 +238,17 @@ exports.loginProvider = async (req, res) => {
       })
     }
 
-    // Generate JWT token
+    // Keep the old "tokens" field up to date without re-validating the whole provider record
     const token = jwt.sign({ id: provider._id, role: "Provider", name: `${provider.name}` }, process.env.JWT_SECRET);
-    provider.tokens = token; // If you want to store the token, you can update the provider schema to include a `tokens` field
-    await provider.save();
+    await Provider.updateOne({ _id: provider._id }, { $set: { tokens: token } }).catch((e) => console.error('[provider login] token save', e.message));
 
     res.status(200).json({
-      message: "OTP sended successfully",
+      message: otpRespose.message || "OTP sended successfully",
       success: true
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -254,10 +257,10 @@ exports.verifyOTP = async (req, res) => {
   try {
     const { phone, otp } = req.body;
 
-    // Check if driver exists
-    const provider = await Provider.findOne({ phone });
+    // Check if provider exists (numbers may be saved with or without +91)
+    const provider = await Provider.findOne({ phone: { $in: phoneVariants(phone) } });
     if (!provider) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 
     // Verify OTP
