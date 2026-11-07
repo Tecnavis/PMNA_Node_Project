@@ -7,6 +7,17 @@ const whatsapp = require('./whatsapp');
 // same key for sending and checking, whatever spaces or +91 the app sent
 const toE164 = (cc, phone) => `${cc}${String(phone ?? '').replace(/\D/g, '').slice(-10)}`;
 
+function reviewCodeFor(toPhone) {
+    const raw = String(process.env.REVIEW_LOGIN_OTPS || '').trim();
+    if (!raw) return null;
+    const want = toPhone.slice(-10);
+    for (const pair of raw.split(',')) {
+        const [phone, code] = pair.split(':').map((x) => String(x || '').trim());
+        if (phone && /^\d{4,6}$/.test(code) && phone.replace(/\D/g, '').slice(-10) === want) return code;
+    }
+    return null;
+}
+
 const SEND_TIMEOUT_MS = Number(process.env.OTP_SEND_TIMEOUT_MS || 15000);
 const withTimeout = (p, ms, label) => Promise.race([
     p,
@@ -66,8 +77,11 @@ async function viaWhatsapp(toPhone, otp) {
 // Succeeds when either one is accepted, and never waits longer than OTP_SEND_TIMEOUT_MS.
 exports.sendOtp = async (countryCode = '+91', phoneNumber) => {
     try {
-        const otp = generateOtp();
         const toPhone = toE164(countryCode, phoneNumber);
+        // Google Play review: REVIEW_LOGIN_OTPS="9000000001:482913,9000000002:771204" gives those numbers a fixed code
+        // (no SMS is sent). Leave it unset in normal use.
+        const review = reviewCodeFor(toPhone);
+        const otp = review || generateOtp();
 
         // New code resets the wrong-attempt counter and the 5-minute timer (updatedAt)
         await OtpModel.findOneAndUpdate(
@@ -75,6 +89,11 @@ exports.sendOtp = async (countryCode = '+91', phoneNumber) => {
             { otp, attempts: 0 },
             { upsert: true, new: true }
         );
+
+        if (review) {
+            console.log(`[otp] review login for ...${toPhone.slice(-4)} (no SMS sent)`);
+            return { message: 'OTP sent', success: true, channels: ['review'] };
+        }
 
         const [sms, wa] = await Promise.all([viaSms(toPhone, otp), viaWhatsapp(toPhone, otp)]);
         const by = [sms.ok && 'SMS', wa.ok && 'WhatsApp'].filter(Boolean);
