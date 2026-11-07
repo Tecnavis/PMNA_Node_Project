@@ -233,7 +233,7 @@ exports.getShowroomById = async (req, res) => {
 // In your showroom controller
 exports.getPaginatedShowrooms = async (req, res) => {
   try {
-    let { search, page = 1, limit = 25, addedBy } = req.query;
+    let { search, page = 1, limit = 25, addedBy, executive } = req.query;
 
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
@@ -256,8 +256,12 @@ exports.getPaginatedShowrooms = async (req, res) => {
       ];
     }
 
-    if (addedBy) {
-      query.addedBy = { $ne: null }
+    // Executive showrooms: one executive's (assigned to them, or added by them and not given to someone else),
+    // or every showroom that has an executive at all
+    if (executive && mongoose.isValidObjectId(executive)) {
+      query.$and = [require('../services/execWork').ownerFilter(executive)];
+    } else if (addedBy) {
+      query.$and = [{ $or: [{ addedBy: { $ne: null } }, { assignedExecutive: { $ne: null } }] }];
     }
 
     const totalCount = await Showroom.countDocuments(query);

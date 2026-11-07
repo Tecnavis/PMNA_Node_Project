@@ -30,6 +30,7 @@ import VerificationModal from './VerificationModal';
 import { getImageUrl } from '../../utils/imageUrl';
 
 import { Pager, useServerPaging } from '../../components/ui/ListControls';
+import { ExecRow, getExecutives } from './execTasksApi';
 function ExecutiveShowroomsTable() {
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     const [showrooms, setShowrooms] = useState<Showroom[]>([]);
@@ -47,6 +48,14 @@ function ExecutiveShowroomsTable() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const sp = useServerPaging({ storageKey: 'exec-showrooms', pageSize: 25 });
+    // filter: one executive's showrooms, or all executives
+    const [execs, setExecs] = useState<ExecRow[]>([]);
+    const [execFilter, setExecFilter] = useState('');
+    useEffect(() => {
+        getExecutives()
+            .then((r) => setExecs(r.list))
+            .catch(() => setExecs([]));
+    }, []);
     const searchTerm = sp.search;
     const [listLoading, setListLoading] = useState(false);
     const loadSeq = useRef(0);
@@ -80,7 +89,7 @@ function ExecutiveShowroomsTable() {
         setListLoading(true);
         try {
             const response = await axios.get(`${backendUrl}/showroom/all-showrooms`, {
-                params: { search: sp.search, page: sp.page, limit: sp.pageSize, addedBy: true },
+                params: { search: sp.search, page: sp.page, limit: sp.pageSize, addedBy: true, executive: execFilter || undefined },
             });
             if (seq !== loadSeq.current) return;
             const rows = Array.isArray(response.data?.data) ? response.data.data : [];
@@ -132,7 +141,7 @@ function ExecutiveShowroomsTable() {
     useEffect(() => {
         fetchShowroom();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sp.page, sp.pageSize, sp.search]);
+    }, [sp.page, sp.pageSize, sp.search, execFilter]);
 
     // Download excel sheet
     const handleDownloadExcel = () => {
@@ -371,13 +380,21 @@ function ExecutiveShowroomsTable() {
                         </button>
                     </div>
                     <div className='flex items-center justify-center gap-2'>
-                        <select name="" id="" className='form-select py-1.5 px-20'>
-                            <option disabled defaultChecked>Select Executive</option>
-                            <option value="Hadhi">Hadhi Hassan</option>
-                            <option value="Hadhi">Hadhi Hassan</option>
-                            <option value="Hadhi">Hadhi Hassan</option>
-                            <option value="Hadhi">Hadhi Hassan</option>
-                            <option value="Hadhi">Hadhi Hassan</option>
+                        <select
+                            className="form-select w-full sm:w-64"
+                            value={execFilter}
+                            onChange={(e) => {
+                                setExecFilter(e.target.value);
+                                sp.setPage(1);
+                            }}
+                            aria-label="Filter by executive"
+                        >
+                            <option value="">All executives</option>
+                            {execs.map((e) => (
+                                <option key={e._id} value={e._id}>
+                                    {e.name} ({e.showrooms})
+                                </option>
+                            ))}
                         </select>
                         <input type="search" className="form-input w-full sm:w-72" placeholder="Search name, ID, location, phone…" value={sp.searchInput} onChange={(e) => sp.setSearchInput(e.target.value)} />
                     </div>
