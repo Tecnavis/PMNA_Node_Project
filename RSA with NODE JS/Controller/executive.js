@@ -53,8 +53,13 @@ exports.loginExecutive = asyncErrorHandler(async (req, res) => {
         });
     }
 
-    // 2. Find executive - explicitly select password field
-    const executive = await Executive.findOne({ userName }).select('+password');
+    // 2. Find executive by username, email or phone (any capitals, extra spaces ignored)
+    const id = String(userName).trim();
+    const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const digits = id.replace(/\D/g, '').slice(-10);
+    const or = [{ userName: id }, { userName: new RegExp(`^${esc}$`, 'i') }, { email: new RegExp(`^${esc}$`, 'i') }];
+    if (digits.length === 10 && /^[+\d\s-]+$/.test(id)) or.push({ phone: { $in: [digits, `+91${digits}`, `91${digits}`, Number(digits)] } });
+    const executive = await Executive.findOne({ $or: or }).select('+password');
 
     if (!executive) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -65,7 +70,8 @@ exports.loginExecutive = asyncErrorHandler(async (req, res) => {
 
 
     // 4. Check if password matches
-    const isPasswordMatched = await executive.comparePassword(password);
+    const isPasswordMatched = (await executive.comparePassword(String(password))) ||
+        (String(password).trim() !== String(password) && (await executive.comparePassword(String(password).trim())));
 
     if (!isPasswordMatched) {
         return res.status(StatusCodes.UNAUTHORIZED).json({
