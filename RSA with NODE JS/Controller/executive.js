@@ -90,6 +90,11 @@ exports.loginExecutive = asyncErrorHandler(async (req, res) => {
         { expiresIn: process.env.EXEC_TOKEN_EXPIRES || '7d' } // app logins last a week (was 24h)
     );
 
+    // Old plain-text password matched: store it hashed from now on.
+    if (!String(executive.password || '').startsWith('$2')) {
+        try { await executive.save(); } catch (e) { console.error('exec password upgrade failed', e.message); }
+    }
+
     // 6. Remove password from output
     executive.password = undefined;
 
@@ -179,10 +184,11 @@ exports.udpateExecutiveDetails = asyncErrorHandler(async (req, res) => {
     data.userName = updateData.userName || data.userName;
     data.image = req.file?.path || data.image;
 
-    // 🔥 Hash password if provided
-    if (updateData.password) {
-        const salt = await bcrypt.genSalt(10);
-        data.password = await bcrypt.hash(updateData.password, salt);
+    // New password: set the plain value; the model's save hook hashes it once.
+    // (Hashing here too made the stored password match nothing.)
+    // A hash sent back by the edit form is ignored so the password stays unchanged.
+    if (updateData.password && !String(updateData.password).startsWith('$2')) {
+        data.password = String(updateData.password);
     }
 
     await data.save()

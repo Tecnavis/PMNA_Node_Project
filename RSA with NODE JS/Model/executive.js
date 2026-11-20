@@ -73,6 +73,8 @@ marketingExecutiveSchema.index({
 marketingExecutiveSchema.pre('save', async function(next) {
     // Only hash the password if it's modified (or new)
     if (!this.isModified('password')) return next();
+    // Already a bcrypt hash? Keep it as is, so it is never hashed twice.
+    if (/^\$2[aby]\$\d{2}\$.{53}$/.test(String(this.password))) return next();
     
     try {
         const salt = await bcrypt.genSalt(10);
@@ -84,7 +86,9 @@ marketingExecutiveSchema.pre('save', async function(next) {
 });
 // Password comparison method
 marketingExecutiveSchema.methods.comparePassword = async function (candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.password); // Fixed: was using accountInfo.password
+    const stored = String(this.password || '');
+    if (!stored.startsWith('$2')) return stored.length > 0 && stored === String(candidatePassword); // legacy plain-text value
+    return await bcrypt.compare(String(candidatePassword), stored);
 };
 
 module.exports = mongoose.model('Executive', marketingExecutiveSchema);
