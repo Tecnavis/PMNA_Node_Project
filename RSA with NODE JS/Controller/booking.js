@@ -883,6 +883,21 @@ exports.getAllBookings = async (req, res) => {
         financialQuery.isHidden = { $ne: true };
 
         // Pagination and sorting by createdAt in descending order
+        // Company report quick filters (list only; the totals above stay for the whole period)
+        const { companyPaid, invoiceMissing } = req.query;
+        const extraFilters = [];
+        if (companyPaid === 'zero') {
+            extraFilters.push({ receivedAmountByCompany: { $in: [0, null] } });
+        } else if (companyPaid === 'received') {
+            extraFilters.push({ receivedAmountByCompany: { $gt: 0 } });
+        }
+        if (invoiceMissing === 'true') {
+            extraFilters.push({ $or: [{ invoiceNumber: { $in: [null, ''] } }, { invoiceNumber: { $regex: '^\\s*$' } }] });
+        }
+        if (extraFilters.length) {
+            query.$and = [...(query.$and || []), ...extraFilters];
+        }
+
         const total = await Booking.countDocuments(query);
         let bookings = await Booking.find(query)
             .populate('baselocation')

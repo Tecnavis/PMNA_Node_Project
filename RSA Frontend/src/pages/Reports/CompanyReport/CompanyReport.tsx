@@ -25,9 +25,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { dateFormate } from '../../../utils/dateUtils';
 import { IconFileSpreadsheet } from '@tabler/icons-react';
 import * as XLSX from 'xlsx';
-import { getImageUrl } from '../../../utils/imageUrl';
 
-import { DebouncedSearch } from '../../../components/ui/ListControls';
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 interface FilterData {
@@ -65,6 +63,11 @@ const CompanyReport = () => {
     const [invoiceValues, setInvoiceValues] = useState<Record<string, number>>({});
     const [totalBalance, setTotalBalance] = useState<string, number>(0);
     const [search, setSearch] = useState('');
+    // Quick filters: amount received from company, and missing invoice number
+    const [paidFilter, setPaidFilter] = useState<'all' | 'zero' | 'received'>('all');
+    const [invoiceMissing, setInvoiceMissing] = useState(false);
+    const [bulkInvoice, setBulkInvoice] = useState('');
+    const [bulkSaving, setBulkSaving] = useState(false);
     const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());
     const [modal2, setModal2] = useState(false);
     const [totalSelectedBalance, setTotalSelectedBalance] = useState<string>('0.00');
@@ -182,10 +185,12 @@ const CompanyReport = () => {
                     page,
                     limit: pageSize,
                     forCompanyReport,
-                    status: NON_COMPLETED_STATUS
+                    status: NON_COMPLETED_STATUS,
+                    ...(paidFilter !== 'all' && { companyPaid: paidFilter }),
+                    ...(invoiceMissing && { invoiceMissing: true })
                 }
             });
-            const data = response.data;
+            const data = { ...response.data, bookings: (response.data.bookings || []).filter(matchesQuickFilter) };
             const totalBalanceCalculated = (data.bookings || []).reduce(
                 (total, booking) => total + (booking.totalAmount - booking.receivedAmountByCompany),
                 0
@@ -205,6 +210,61 @@ const CompanyReport = () => {
             setIsLoading(false);
         }
     }
+
+    // Same rule as the server filter, so the page is right even before the server is updated
+    function matchesQuickFilter(b: Booking) {
+        const received = Number(b.receivedAmountByCompany) || 0;
+        if (paidFilter === 'zero' && received !== 0) return false;
+        if (paidFilter === 'received' && received <= 0) return false;
+        if (invoiceMissing && String(b.invoiceNumber || '').trim() !== '') return false;
+        return true;
+    }
+
+    // Save one invoice number on every selected (not approved) booking
+    const applyBulkInvoice = async () => {
+        const invoiceNumber = bulkInvoice.trim();
+        const targets = Array.from(selectedBookings.values()).filter((b: Booking) => b && !b.approve);
+        if (!invoiceNumber) {
+            Swal.fire({ icon: 'warning', title: 'Invoice number is not filled', toast: true, position: 'top', showConfirmButton: false, timer: 3000 });
+            return;
+        }
+        if (targets.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'Please select any booking', toast: true, position: 'top', showConfirmButton: false, timer: 3000 });
+            return;
+        }
+        const ok = await Swal.fire({
+            title: 'Set invoice number?',
+            text: `Invoice number "${invoiceNumber}" will be saved on ${targets.length} booking(s).`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, save',
+        });
+        if (!ok.isConfirmed) return;
+        setBulkSaving(true);
+        let failed = 0;
+        for (let i = 0; i < targets.length; i += 10) {
+            const results = await Promise.allSettled(
+                targets.slice(i, i + 10).map((b: Booking) => axios.put(`${BASE_URL}/booking/${b._id}`, { invoiceNumber }))
+            );
+            failed += results.filter((r) => r.status === 'rejected').length;
+        }
+        setBulkSaving(false);
+        setBulkInvoice('');
+        setSelectedBookings(new Map());
+        fetchBookings();
+        if (failed) Swal.fire('Partly done', `${targets.length - failed} saved, ${failed} failed. Please try the failed ones again.`, 'warning');
+        else Swal.fire('Invoice!', `Invoice number saved on ${targets.length} booking(s).`, 'success');
+    };
+
+    const selectableBookings = () => (bookings || []).filter((b: Booking) => !b.approve);
+
+    const openApplyAmount = () => {
+        if (selectedBookings.size === 0) {
+            Swal.fire({ icon: 'warning', title: 'Please select any booking', toast: true, position: 'top', showConfirmButton: false, timer: 3000 });
+            return;
+        }
+        setModal2(true);
+    };
 
     const updateInputValues = (bookingId: string, value: number) => {
         setInputValues((prev) => ({
@@ -267,16 +327,13 @@ const CompanyReport = () => {
     };
 
     const handleSelectAll = () => {
-        if (selectedBookings.size === bookings.length) {
+        const rows = selectableBookings();
+        if (rows.length > 0 && selectedBookings.size === rows.length) {
             // Deselect all
             setSelectedBookings(new Map());
         } else {
-            // Select all
-            const allIds = new Map(bookings.map((booking) => [booking._id, booking]));
-            setSelectedBookings(allIds);
-            if (![ROLES.VERIFIER].includes(role)) {
-                setModal2(true)
-            }
+            // Select all rows on this page that are not approved yet
+            setSelectedBookings(new Map(rows.map((booking) => [booking._id, booking])));
         }
     };
 
@@ -448,6 +505,7 @@ const CompanyReport = () => {
                         type="checkbox"
                         name="selectAll"
                         className="mr-2"
+                        checked={selectableBookings().length > 0 && selectedBookings.size === selectableBookings().length}
                         onChange={handleSelectAll}
                     />
                     <span>Select All</span>
@@ -461,11 +519,11 @@ const CompanyReport = () => {
                     onChange={() => {
                         if (record.approve) return; // Prevent state update if disabled
                         setSelectedBookings((prevSelected) => {
-                            const updatedSelection = new Set(prevSelected);
+                            const updatedSelection = new Map(prevSelected);
                             if (updatedSelection.has(record._id)) {
                                 updatedSelection.delete(record._id);
                             } else {
-                                updatedSelection.add(record._id);
+                                updatedSelection.set(record._id, record);
                             }
                             return updatedSelection;
                         });
@@ -768,7 +826,15 @@ const CompanyReport = () => {
 
     useEffect(() => {
         fetchBookings();
-    }, [page, pageSize, id, startDate, endingDate, search]);
+    }, [page, pageSize, id, startDate, endingDate, search, paidFilter, invoiceMissing]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [paidFilter, invoiceMissing]);
+
+    useEffect(() => {
+        setSelectedBookings(new Map());
+    }, [page, pageSize, id, startDate, endingDate, search, paidFilter, invoiceMissing]);
 
     // Calculate the total selected bookings
     const calculateTotalSelectedBalance = () => {
@@ -806,7 +872,7 @@ const CompanyReport = () => {
                         </div>
                         <div className="mb-5">
                             <div className="flex flex-col justify-center items-center">
-                                <img src={getImageUrl(company?.image)} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
+                                <img src={`${CLOUD_IMAGE}${company?.image}`} alt="img" className="w-24 h-24 rounded-full object-cover mb-5 border-2" />
                                 <p className="font-semibold text-primary text-xl">{company?.name}</p>
                                 <span className="whitespace-nowrap" dir="ltr">
                                     {company?.idNumber}
@@ -940,10 +1006,20 @@ const CompanyReport = () => {
                             <button className='btn btn-primary' onClick={handleGenerateInvoices}>Generate Invoice</button>
                             <button
                                 className='btn btn-primary'
-                                onClick={() => handlePrint(printRef, selectedYear, selectedMonth, role, company?.name, bookings, filterData.totalCollectedAmount, filterData.balanceAmountToCollect)}
+                                onClick={() => {
+                                    const toPrint = selectedBookings.size > 0
+                                        ? bookings.filter((b) => selectedBookings.has(b._id))
+                                        : bookings;
+                                    handlePrint(printRef, selectedYear, selectedMonth, role, company?.name, toPrint, filterData.totalCollectedAmount, filterData.balanceAmountToCollect);
+                                }}
                             ><IconPrinter />
-                                Print
+                                {selectedBookings.size > 0 ? `Print selected (${selectedBookings.size})` : 'Print'}
                             </button>
+                            {![ROLES.VERIFIER].includes(role) && (
+                                <button className="btn btn-outline-primary" onClick={openApplyAmount}>
+                                    Apply received amount
+                                </button>
+                            )}
                             <button
         className="btn btn-primary flex items-center gap-2"
         onClick={() => setExcelModalOpen(true)}
@@ -1029,12 +1105,51 @@ const CompanyReport = () => {
         </Dialog>
       </Transition>
                         </div>
-                        <div className="flex items-center gap-5 ltr:ml-auto rtl:mr-auto">
+                        <div className="flex flex-wrap items-center gap-3 ltr:ml-auto rtl:mr-auto mt-3 md:mt-0">
+                            <div className="flex rounded-md border border-[#e0e6ed] dark:border-[#253b5c] overflow-hidden">
+                                {[
+                                    { key: 'all', label: 'All' },
+                                    { key: 'zero', label: 'Received = 0' },
+                                    { key: 'received', label: 'Received' },
+                                ].map((f) => (
+                                    <button
+                                        key={f.key}
+                                        type="button"
+                                        className={`px-3 py-2 text-sm font-semibold ${paidFilter === f.key ? 'bg-primary text-white' : 'bg-white dark:bg-[#1b2e4b] text-[#515365] dark:text-white-dark'}`}
+                                        onClick={() => setPaidFilter(f.key as 'all' | 'zero' | 'received')}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <label className="flex items-center gap-2 mb-0 cursor-pointer text-sm font-semibold">
+                                <input type="checkbox" className="form-checkbox" checked={invoiceMissing} onChange={(e) => setInvoiceMissing(e.target.checked)} />
+                                No invoice number
+                            </label>
                             <div className="text-right">
-                                <DebouncedSearch value={search} placeholder="Search file no., vehicle, customer…" onSearch={(v) => { setPage(1); setSearch(v); }} />
+                                <input type="text" className="form-input" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                             </div>
                         </div>
                     </div>
+                    {selectedBookings.size > 0 && (
+                        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 rounded-md bg-primary-light dark:bg-[#1b2e4b]">
+                            <span className="font-semibold">{selectedBookings.size} selected</span>
+                            <input
+                                type="text"
+                                className="form-input w-56"
+                                placeholder="Invoice number e.g. PMNA/26-27/314"
+                                value={bulkInvoice}
+                                onChange={(e) => setBulkInvoice(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') applyBulkInvoice(); }}
+                            />
+                            <button type="button" className="btn btn-success" disabled={bulkSaving} onClick={applyBulkInvoice}>
+                                {bulkSaving ? 'Saving...' : 'Set invoice number for selected'}
+                            </button>
+                            <button type="button" className="btn btn-outline-dark" onClick={() => setSelectedBookings(new Map())}>
+                                Clear selection
+                            </button>
+                        </div>
+                    )}
                     <div className="datatables">
                         <DataTable
                             fetching={isLoading}
@@ -1065,10 +1180,7 @@ const CompanyReport = () => {
                         {/* Modal for balance applay  */}
                         <div className="mb-5">
                             <Transition appear show={modal2} as={Fragment}>
-                                <Dialog as="div" open={modal2} onClose={() => {
-                                    setModal2(false)
-                                    setSelectedBookings(new Map());
-                                }}>
+                                <Dialog as="div" open={modal2} onClose={() => setModal2(false)}>
                                     <Transition.Child
                                         as={Fragment}
                                         enter="ease-out duration-300"
