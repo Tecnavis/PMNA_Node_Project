@@ -15,10 +15,6 @@
 // router.get('/debug', jwt, controller.debugArchiveQuery);
 // router.get('/verify', jwt, controller.verifyArchiveStatus);
 // router.get('/bookings', jwt, controller.getArchivedBookings);
-
-// Unpaid company bookings hidden by the archive job: preview, then restore
-router.get('/company-unpaid', jwt, controller.previewCompanyUnpaid);
-router.post('/company-unpaid/restore', jwt, controller.restoreCompanyUnpaid);
 // router.post('/force-batch', jwt, controller.forceArchiveBatch);
 // router.post('/move-archived', jwt, controller.moveArchivedBookings);
 // router.post('/archive-and-move', jwt, controller.archiveAndMove);
