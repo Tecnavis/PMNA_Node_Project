@@ -1135,7 +1135,7 @@ const CompanyReport = () => {
                             </div>
                         </div>
                     </div>
-                    {selectedBookings.size > 0 && (
+                    {selectedBookings.size > 0 && [ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER, ROLES.accountant, ROLES.Manager].includes(role) && (
                         <div className="flex flex-wrap items-center gap-3 mb-4 p-3 rounded-md bg-primary-light dark:bg-[#1b2e4b]">
                             <span className="font-semibold">{selectedBookings.size} selected</span>
                             <input
