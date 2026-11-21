@@ -1,0 +1,17 @@
+Two small additions (paste, do not replace these files):
+
+1) RSA Frontend/src/router/routes.tsx
+   a) Near the other "const ... = lazy(...)" lines at the top, add:
+const UnpaidCompanyCases = lazy(() => import('../pages/Reports/CompanyReport/UnpaidCompanyCases'))
+
+   b) In the routes list, right after the  path: '/company-report/:id'  block, add:
+    {
+        path: '/unpaid-company-cases',
+        element: <UnpaidCompanyCases />,
+    },
+
+2) RSA Frontend/src/components/Layouts/Sidebar.tsx
+   Under Reports, right after the line with  'Driver/Company/Provider Report'  and its closing </li>, add:
+                                            <li>
+                                                <NavLink to="/unpaid-company-cases">{t('Unpaid company cases')}</NavLink>
+                                            </li>

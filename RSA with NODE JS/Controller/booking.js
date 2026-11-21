@@ -884,8 +884,13 @@ exports.getAllBookings = async (req, res) => {
 
         // Pagination and sorting by createdAt in descending order
         // Company report quick filters (list only; the totals above stay for the whole period)
-        const { companyPaid, invoiceMissing } = req.query;
+        const { companyPaid, invoiceMissing, companyOnly } = req.query;
         const extraFilters = [];
+        // Unpaid company cases page: company (RSAWork) bookings of every company
+        if (companyOnly === 'true') {
+            query.workType = 'RSAWork';
+            if (!query.company) extraFilters.push({ company: { $ne: null } });
+        }
         if (companyPaid === 'zero') {
             extraFilters.push({ receivedAmountByCompany: { $in: [0, null] } });
         } else if (companyPaid === 'received') {
