@@ -1001,31 +1001,31 @@ const CompanyReport = () => {
                 </div>
                 {/* Report Table */}
                 <div className="panel mt-6">
-                    <div className="flex md:items-center md:flex-row flex-col mb-5 ">
-                        <div className='flex gap-1'>
-                            <button className='btn btn-primary' onClick={handleGenerateInvoices}>Generate Invoice</button>
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 mb-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button className="btn btn-sm whitespace-nowrap flex items-center gap-1.5 h-9 btn-primary" onClick={handleGenerateInvoices}>Generate Invoice</button>
                             <button
-                                className='btn btn-primary'
+                                className="btn btn-sm whitespace-nowrap flex items-center gap-1.5 h-9 btn-primary"
                                 onClick={() => {
                                     const toPrint = selectedBookings.size > 0
                                         ? bookings.filter((b) => selectedBookings.has(b._id))
                                         : bookings;
                                     handlePrint(printRef, selectedYear, selectedMonth, role, company?.name, toPrint, filterData.totalCollectedAmount, filterData.balanceAmountToCollect);
                                 }}
-                            ><IconPrinter />
+                            ><IconPrinter className="w-4 h-4" />
                                 {selectedBookings.size > 0 ? `Print selected (${selectedBookings.size})` : 'Print'}
                             </button>
                             {![ROLES.VERIFIER].includes(role) && (
-                                <button className="btn btn-outline-primary" onClick={openApplyAmount}>
-                                    Apply received amount
+                                <button className="btn btn-sm whitespace-nowrap flex items-center gap-1.5 h-9 btn-outline-primary" onClick={openApplyAmount}>
+                                    Apply Amount
                                 </button>
                             )}
                             <button
-        className="btn btn-primary flex items-center gap-2"
+        className="btn btn-sm whitespace-nowrap flex items-center gap-1.5 h-9 btn-outline-success"
         onClick={() => setExcelModalOpen(true)}
       >
-        <IconFileSpreadsheet className="w-5 h-5" />
-        Export to Excel
+        <IconFileSpreadsheet className="w-4 h-4" />
+        Export Excel
       </button>
 
       {/* Excel Export Modal */}
@@ -1105,8 +1105,8 @@ const CompanyReport = () => {
         </Dialog>
       </Transition>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 ltr:ml-auto rtl:mr-auto mt-3 md:mt-0">
-                            <div className="flex rounded-md border border-[#e0e6ed] dark:border-[#253b5c] overflow-hidden">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex h-9 rounded-full border border-[#e0e6ed] dark:border-[#253b5c] overflow-hidden">
                                 {[
                                     { key: 'all', label: 'All' },
                                     { key: 'zero', label: 'Received = 0' },
@@ -1115,19 +1115,19 @@ const CompanyReport = () => {
                                     <button
                                         key={f.key}
                                         type="button"
-                                        className={`px-3 py-2 text-sm font-semibold ${paidFilter === f.key ? 'bg-primary text-white' : 'bg-white dark:bg-[#1b2e4b] text-[#515365] dark:text-white-dark'}`}
+                                        className={`px-3 text-xs font-semibold whitespace-nowrap transition-colors ${paidFilter === f.key ? 'bg-primary text-white' : 'bg-white dark:bg-[#1b2e4b] text-[#515365] dark:text-white-dark'}`}
                                         onClick={() => setPaidFilter(f.key as 'all' | 'zero' | 'received')}
                                     >
                                         {f.label}
                                     </button>
                                 ))}
                             </div>
-                            <label className="flex items-center gap-2 mb-0 cursor-pointer text-sm font-semibold">
+                            <label className="flex items-center gap-2 h-9 px-3 mb-0 rounded-full border border-[#e0e6ed] dark:border-[#253b5c] cursor-pointer text-xs font-semibold whitespace-nowrap">
                                 <input type="checkbox" className="form-checkbox" checked={invoiceMissing} onChange={(e) => setInvoiceMissing(e.target.checked)} />
                                 No invoice number
                             </label>
-                            <div className="text-right">
-                                <input type="text" className="form-input" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                            <div>
+                                <input type="text" className="form-input h-9 py-0 rounded-full w-52" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
                             </div>
                         </div>
                     </div>
