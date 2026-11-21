@@ -15,6 +15,10 @@
 // router.get('/debug', jwt, controller.debugArchiveQuery);
 // router.get('/verify', jwt, controller.verifyArchiveStatus);
 // router.get('/bookings', jwt, controller.getArchivedBookings);
+
+// Unpaid company bookings hidden by the archive job: preview, then restore
+router.get('/company-unpaid', jwt, controller.previewCompanyUnpaid);
+router.post('/company-unpaid/restore', jwt, controller.restoreCompanyUnpaid);
 // router.post('/force-batch', jwt, controller.forceArchiveBatch);
 // router.post('/move-archived', jwt, controller.moveArchivedBookings);
 // router.post('/archive-and-move', jwt, controller.archiveAndMove);
@@ -44,9 +48,8 @@ router.post('/restore-nonpaymentwork', jwt, controller.restoreNonPaymentWorkBook
 router.get('/stats', jwt, controller.getArchiveStats);
 router.get('/bookings', jwt, controller.getArchivedBookings);
 
-// Closed bookings older than a year → Old Bookings
-const roleAuth = require('../Middileware/roleAuth');
-router.get('/one-year/preview', jwt, roleAuth('Admin', 'Staff'), controller.oneYearPreview);
-router.post('/one-year/run', jwt, roleAuth('Admin'), controller.oneYearRun);
+// Unpaid company bookings hidden by the archive job: preview, then restore
+router.get('/company-unpaid', jwt, controller.previewCompanyUnpaid);
+router.post('/company-unpaid/restore', jwt, controller.restoreCompanyUnpaid);
 
 module.exports = router;

@@ -804,80 +804,174 @@ exports.getArchiveStats = asyncErrorHandler(async (req, res) => {
  */
 exports.getArchivedBookings = asyncErrorHandler(async (req, res) => {
     try {
-        const { page = 1, limit = 20, workType, search = '', status, serviceType, startDate, endDate, company, sortBy, sortOrder } = req.query;
-        const pageNum = Math.max(parseInt(page) || 1, 1);
-        const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 200);
+        const { page = 1, limit = 20, workType, search = '' } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
-        const mongoose = require('mongoose');
-        const isId = (v) => mongoose.Types.ObjectId.isValid(String(v || ''));
 
-        const query = {};
-        if (workType) query.workType = workType;
-        if (status) query.status = status;
-        if (isId(serviceType)) query.serviceType = new mongoose.Types.ObjectId(String(serviceType));
-        if (isId(company)) query.company = new mongoose.Types.ObjectId(String(company));
-        // date range = when the booking was made
-        if (startDate || endDate) {
-            query.createdAt = {};
-            const day = /^\d{4}-\d{2}-\d{2}$/;
-            const at = (v) => (day.test(String(v)) ? new Date(`${v}T00:00:00+05:30`) : new Date(v)); // plain dates = India time
-            if (startDate && !isNaN(at(startDate))) query.createdAt.$gte = at(startDate);
-            if (endDate && !isNaN(at(endDate))) {
-                const e = at(endDate);
-                if (day.test(String(endDate))) e.setTime(e.getTime() + 86400000 - 1); // whole "to" day
-                query.createdAt.$lte = e;
-            }
-            if (!Object.keys(query.createdAt).length) delete query.createdAt;
+        let query = {};
+        
+        if (workType) {
+            query.workType = workType;
         }
-        const text = String(search || '').trim();
-        if (text) {
-            const rx = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        
+        if (search) {
+            const searchRegex = new RegExp(search, 'i');
             query.$or = [
-                { fileNumber: rx }, { customerName: rx }, { customerVehicleNumber: rx },
-                { mob1: rx }, { mob2: rx }, { location: rx }, { dropoffLocation: rx }, { invoiceNumber: rx },
+                { fileNumber: searchRegex },
+                { customerName: searchRegex },
+                { customerVehicleNumber: searchRegex }
             ];
         }
 
-        const SORTABLE = ['createdAt', 'archiveDate', 'fileNumber', 'totalAmount', 'customerName', 'status'];
-        const sortKey = SORTABLE.includes(sortBy) ? sortBy : 'createdAt';
-        const sort = { [sortKey]: sortOrder === 'asc' ? 1 : -1 };
+        const total = await BookingArchive.countDocuments(query);
+        
+        const bookings = await BookingArchive.find(query)
+            .sort({ archiveDate: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .lean();
 
-        const [total, bookings] = await Promise.all([
-            BookingArchive.countDocuments(query),
-            BookingArchive.find(query)
-                .sort(sort)
-                .skip(skip)
-                .limit(limitNum)
-                .populate([
-                    { path: 'company', select: 'name' },
-                    { path: 'driver', select: 'name phone' },
-                    { path: 'provider', select: 'name phone' },
-                    { path: 'showroom', select: 'name' },
-                    { path: 'serviceType', select: 'serviceName' },
-                ])
-                .lean(),
-        ]);
-
+        const totalPages = Math.ceil(total / limitNum);
+        
         res.status(200).json({
             success: true,
             data: {
                 bookings,
-                pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
-            },
+                pagination: {
+                    total,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages
+                }
+            }
         });
+
     } catch (error) {
         console.error('Error fetching archived bookings:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch archived bookings', error: error.message });
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch archived bookings',
+            error: error.message
+        });
     }
 });
+// ---------------------------------------------------------------------------
+// Bring back UNPAID company (non-PaymentWork) bookings hidden by the archive job.
+// Nothing is deleted or overwritten:
+//  - a booking still in the main list but flagged archived is just un-flagged;
+//  - a booking that exists only in the archive is copied back with its original id;
+//  - archive copies stay where they are (Old Bookings page keeps working).
+// GET  /archive/company-unpaid?companyId=   -> preview only
+// POST /archive/company-unpaid/restore { confirm: true, companyId? } -> do it
+// ---------------------------------------------------------------------------
+const mongoose = require('mongoose');
+const unpaidExpr = {
+    $expr: {
+        $and: [
+            { $gt: [{ $ifNull: ['$totalAmount', 0] }, 0] },
+            { $lt: [{ $ifNull: ['$receivedAmountByCompany', 0] }, { $ifNull: ['$totalAmount', 0] }] }
+        ]
+    }
+};
 
-/** GET /archive/one-year/preview — how many closed bookings older than a year are waiting to move */
-exports.oneYearPreview = asyncErrorHandler(async (req, res) => {
-    res.json({ success: true, ...(await require('../services/oneYearArchive').preview()) });
+function unpaidCompanyFilter(companyId) {
+    const f = { workType: { $ne: 'PaymentWork' }, company: { $ne: null }, ...unpaidExpr };
+    if (companyId) f.company = new mongoose.Types.ObjectId(companyId);
+    return f;
+}
+
+// Archive copies made with timestamps can carry a 2026 createdAt; use the real job date instead
+function realCreatedAt(doc) {
+    const c = doc.createdAt ? new Date(doc.createdAt) : null;
+    const archived = doc.archiveDate ? new Date(doc.archiveDate) : null;
+    const looksReset = !c || (archived && Math.abs(c - archived) < 60 * 1000) || c.getFullYear() >= 2026;
+    if (!looksReset) return c;
+    for (const k of ['pickupTime', 'dropoffTime', 'verifiedAt', 'updatedAt']) {
+        if (doc[k]) {
+            const d = new Date(doc[k]);
+            if (!isNaN(d) && (!archived || d < archived)) return d;
+        }
+    }
+    return c || new Date();
+}
+
+async function collectCompanyUnpaid(companyId) {
+    const Booking = require('../Model/booking');
+    const BookingArchive = require('../Model/bookingArchive');
+    const filter = unpaidCompanyFilter(companyId);
+
+    const flagged = await Booking.collection
+        .find({ ...filter, archived: true }, { projection: { _id: 1, fileNumber: 1, createdAt: 1, totalAmount: 1, receivedAmountByCompany: 1 } })
+        .toArray();
+
+    const archived = await BookingArchive.collection.find(filter).toArray();
+    const ids = archived.map((a) => a.originalId).filter(Boolean);
+    const existing = new Set(
+        (await Booking.collection.find({ _id: { $in: ids } }, { projection: { _id: 1 } }).toArray()).map((b) => String(b._id))
+    );
+    const flaggedIds = new Set(flagged.map((b) => String(b._id)));
+    const onlyInArchive = archived.filter((a) => a.originalId && !existing.has(String(a.originalId)));
+    const inBothNotFlagged = archived.filter((a) => a.originalId && existing.has(String(a.originalId)) && !flaggedIds.has(String(a.originalId)));
+
+    return { Booking, flagged, onlyInArchive, inBothNotFlagged };
+}
+
+const sum = (list) => list.reduce((t, b) => t + ((b.totalAmount || 0) - (b.receivedAmountByCompany || 0)), 0);
+
+exports.previewCompanyUnpaid = asyncErrorHandler(async (req, res) => {
+    const { companyId } = req.query;
+    const { flagged, onlyInArchive, inBothNotFlagged } = await collectCompanyUnpaid(companyId);
+    const sample = [...flagged, ...onlyInArchive].slice(0, 10).map((b) => ({
+        fileNumber: b.fileNumber, createdAt: b.createdAt, totalAmount: b.totalAmount, receivedAmountByCompany: b.receivedAmountByCompany || 0
+    }));
+    res.json({
+        success: true,
+        hiddenInMainList: flagged.length,
+        onlyInArchive: onlyInArchive.length,
+        alreadyVisible: inBothNotFlagged.length,
+        willBeShownAgain: flagged.length + onlyInArchive.length,
+        unpaidBalance: sum(flagged) + sum(onlyInArchive),
+        sample,
+        next: 'POST /archive/company-unpaid/restore with {"confirm":true} to show these in the company report'
+    });
 });
 
-/** POST /archive/one-year/run — move them now (Admin). Also runs every night at 2:30 AM. */
-exports.oneYearRun = asyncErrorHandler(async (req, res) => {
-    const result = await require('../services/oneYearArchive').run();
-    res.status(result.success ? 200 : 409).json(result);
+exports.restoreCompanyUnpaid = asyncErrorHandler(async (req, res) => {
+    const { confirm, companyId } = req.body || {};
+    if (confirm !== true) {
+        return res.status(400).json({ success: false, message: 'Run the preview first, then send {"confirm":true}' });
+    }
+    const { Booking, flagged, onlyInArchive } = await collectCompanyUnpaid(companyId);
+
+    // 1. Un-flag bookings that never left the main list (all other fields untouched)
+    let unflagged = 0;
+    if (flagged.length) {
+        const r = await Booking.collection.updateMany(
+            { _id: { $in: flagged.map((b) => b._id) } },
+            { $set: { archived: false }, $unset: { archivedAt: '' } }
+        );
+        unflagged = r.modifiedCount;
+    }
+
+    // 2. Copy back bookings that exist only in the archive, under their original id
+    let copied = 0;
+    const failed = [];
+    for (const a of onlyInArchive) {
+        const doc = { ...a, _id: a.originalId, createdAt: realCreatedAt(a), archived: false, restoredFromArchiveAt: new Date() };
+        delete doc.originalId;
+        delete doc.archiveDate;
+        delete doc.archivedAt;
+        const id = doc._id;
+        delete doc._id; // the filter supplies the id on insert
+        try {
+            // insert only if still absent: never overwrites a newer booking
+            const r = await Booking.collection.updateOne({ _id: id }, { $setOnInsert: doc }, { upsert: true });
+            if (r.upsertedCount) copied++;
+        } catch (e) {
+            failed.push({ fileNumber: a.fileNumber, error: e.message });
+        }
+    }
+
+    res.json({ success: true, unflagged, copiedBackFromArchive: copied, failed });
 });

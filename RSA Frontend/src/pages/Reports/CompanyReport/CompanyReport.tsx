@@ -66,6 +66,7 @@ const CompanyReport = () => {
     // Quick filters: amount received from company, and missing invoice number
     const [paidFilter, setPaidFilter] = useState<'all' | 'zero' | 'received'>('all');
     const [invoiceMissing, setInvoiceMissing] = useState(false);
+    const [allDates, setAllDates] = useState(false); // ignore the month: show older pending bookings too
     const [bulkInvoice, setBulkInvoice] = useState('');
     const [bulkSaving, setBulkSaving] = useState(false);
     const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());
@@ -179,8 +180,7 @@ const CompanyReport = () => {
             const response = await axiosInstance.get(`${backendUrl}/booking`, {
                 params: {
                     companyId: id,
-                    startDate,
-                    endingDate,
+                    ...(!allDates && { startDate, endingDate }),
                     search,
                     page,
                     limit: pageSize,
@@ -826,15 +826,15 @@ const CompanyReport = () => {
 
     useEffect(() => {
         fetchBookings();
-    }, [page, pageSize, id, startDate, endingDate, search, paidFilter, invoiceMissing]);
+    }, [page, pageSize, id, startDate, endingDate, search, paidFilter, invoiceMissing, allDates]);
 
     useEffect(() => {
         setPage(1);
-    }, [paidFilter, invoiceMissing]);
+    }, [paidFilter, invoiceMissing, allDates]);
 
     useEffect(() => {
         setSelectedBookings(new Map());
-    }, [page, pageSize, id, startDate, endingDate, search, paidFilter, invoiceMissing]);
+    }, [page, pageSize, id, startDate, endingDate, search, paidFilter, invoiceMissing, allDates]);
 
     // Calculate the total selected bookings
     const calculateTotalSelectedBalance = () => {
@@ -1125,6 +1125,10 @@ const CompanyReport = () => {
                             <label className="flex items-center gap-2 h-9 px-3 mb-0 rounded-full border border-[#e0e6ed] dark:border-[#253b5c] cursor-pointer text-xs font-semibold whitespace-nowrap">
                                 <input type="checkbox" className="form-checkbox" checked={invoiceMissing} onChange={(e) => setInvoiceMissing(e.target.checked)} />
                                 No invoice number
+                            </label>
+                            <label className="flex items-center gap-2 h-9 px-3 mb-0 rounded-full border border-[#e0e6ed] dark:border-[#253b5c] cursor-pointer text-xs font-semibold whitespace-nowrap" title="Show bookings from every month, including old pending ones">
+                                <input type="checkbox" className="form-checkbox" checked={allDates} onChange={(e) => setAllDates(e.target.checked)} />
+                                All dates
                             </label>
                             <div>
                                 <input type="text" className="form-input h-9 py-0 rounded-full w-52" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
