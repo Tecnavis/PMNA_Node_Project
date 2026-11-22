@@ -36,12 +36,25 @@ async function preview() {
     return { count, cutoff: cutoff(), days: DAYS(), oldest: oldest?.createdAt || null };
 }
 
+// Company bookings still owed money (unpaid or part-paid) must be in the live lists.
+// Un-hides any that an earlier archive run hid. Only the archived flag changes; the
+// Old Bookings copy stays as it is. Safe to run any number of times.
+async function keepUnpaidCompanyBookingsVisible() {
+    const r = await Booking.collection.updateMany(
+        { archived: true, ...companyStillOwes },
+        { $set: { archived: false }, $unset: { archivedAt: '' } }
+    );
+    return r.modifiedCount || 0;
+}
+
 let running = false;
 async function run({ batchSize = 500, max = 50000 } = {}) {
     if (running) return { success: false, message: 'Already running' };
     running = true;
     let moved = 0;
     try {
+        const shown = await keepUnpaidCompanyBookingsVisible();
+        if (shown) console.log(`↩️  ${shown} unpaid / part-paid company bookings brought back to the live lists`);
         while (moved < max) {
             const batch = await Booking.find(query()).sort({ createdAt: 1 }).limit(batchSize).setOptions({ _includeHidden: true }).lean();
             if (!batch.length) break;
@@ -68,4 +81,4 @@ async function run({ batchSize = 500, max = 50000 } = {}) {
     }
 }
 
-module.exports = { preview, run, CLOSED };
+module.exports = { preview, run, keepUnpaidCompanyBookingsVisible, CLOSED };

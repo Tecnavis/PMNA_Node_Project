@@ -46,6 +46,12 @@ agenda.define('archive and move old bookings', async () => {
 });
 
 await agenda.every('30 2 * * *', 'archive and move old bookings', {}, { timezone: 'Asia/Kolkata' });
+
+// On every server start: unpaid / part-paid company bookings hidden earlier come back to the reports
+require('../services/oneYearArchive')
+    .keepUnpaidCompanyBookingsVisible()
+    .then((n) => console.log(`↩️  Startup check: ${n} unpaid / part-paid company bookings brought back to the live lists`))
+    .catch((e) => console.error('❌ Startup unpaid check failed:', e.message));
     console.log('📅 Old-booking archive scheduled daily at 2:30 AM India time');
 
     // Owner's evening summary on WhatsApp (only sends when OWNER_WHATSAPP and WhatsApp are set up)
