@@ -816,12 +816,8 @@ exports.getArchivedBookings = asyncErrorHandler(async (req, res) => {
         }
         
         if (search) {
-            const searchRegex = new RegExp(search, 'i');
-            query.$or = [
-                { fileNumber: searchRegex },
-                { customerName: searchRegex },
-                { customerVehicleNumber: searchRegex }
-            ];
+            // same rule as every other booking search (ids on any date, separators ignored)
+            query.$or = require('../utils/bookingSearch').bookingFieldConditions(search);
         }
 
         const total = await BookingArchive.countDocuments(query);

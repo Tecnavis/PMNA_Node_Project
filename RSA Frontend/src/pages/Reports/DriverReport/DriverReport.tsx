@@ -1,5 +1,6 @@
 // @ts-nocheck
 import TableExportButtons from '../../../components/TableExportButtons';
+import { useUrlParam } from '../../../utils/urlSearch';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -64,6 +65,8 @@ const DriverCashCollectionsReport = () => {
     const [totalBalance, setTotalBalance] = useState<string, number>(0);
     const [balanceForApplay, setBalanceForApplay] = useState<string | null>(null);
     const [search, setSearch] = useState('');
+    // opened from the header search: ?search=FILE-NUMBER
+    useUrlParam('search', setSearch);
     const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());
     const [modal2, setModal2] = useState(false);
     const [totalSelectedBalance, setTotalSelectedBalance] = useState<string>('0.00');

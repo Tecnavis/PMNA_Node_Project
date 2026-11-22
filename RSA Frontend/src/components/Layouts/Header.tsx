@@ -32,6 +32,7 @@ import toast from 'react-hot-toast';
 import { getAdminQrApi, updateQrApi } from '../../services/adminService';
 import ReusableModal from '../modal';
 import { getImageUrl } from '../../utils/imageUrl';
+import GlobalSearch from '../GlobalSearch';
 
 interface ServiceData {
     serviceName: string;
@@ -319,6 +320,7 @@ const Header = () => {
                                 <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleQrFileChange} />
                             </span>
                         </div>
+                        <GlobalSearch />
                         {canPage('/add-booking') && can('booking.create') && <Link to="/add-booking" className="hidden md:flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_-10px_rgba(91,76,240,.8)] hover:bg-primary/90">
                             <span className="text-base leading-none">+</span> New booking
                         </Link>}

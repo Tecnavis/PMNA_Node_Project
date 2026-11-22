@@ -1,3 +1,4 @@
+const { plainRegex, isIdentifierSearch, bookingFieldConditions } = require('../utils/bookingSearch');
 const Booking = require('../Model/booking');
 const Driver = require('../Model/driver');
 const Provider = require('../Model/provider');
@@ -624,25 +625,22 @@ exports.getOrderCompletedBookings = async (req, res) => {
                     $lte: endOfDay,
                 };
             } else {
-                const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
+                const searchRegex = plainRegex(search);
                 const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ name: searchRegex }).select('_id');
                 const matchingCompanies = await Company.find({ name: searchRegex }).select('_id'); // Add this line
-                query.$or = [
-                    { fileNumber: searchRegex },
-                    { mob1: searchRegex },
-                    { customerVehicleNumber: searchRegex },
+                query.$and = [...(query.$and || []), { $or: [
+                    ...bookingFieldConditions(search),
                     { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
                     { provider: { $in: matchingProviders.map(p => p._id) } },
-                    { company: { $in: matchingCompanies.map(c => c._id) } }, // Add this line
-
-                ];
+                    { company: { $in: matchingCompanies.map(c => c._id) } },
+                ] }];
             }
         }
 
         // Handle date range filter
-        if (startDate || endDate) {
+        if ((startDate || endDate) && !(search && isIdentifierSearch(search))) {
             query.createdAt = query.createdAt || {};
             if (startDate) {
                 query.createdAt.$gte = new Date(startDate);
@@ -821,14 +819,10 @@ exports.getAllBookings = async (req, res) => {
                 const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
                 query.createdAt = { $gte: startOfDay, $lte: endOfDay };
             } else {
-                const regex = new RegExp(searchQuery, 'i');
+                const regex = plainRegex(searchQuery);
 
                 // Search conditions array
-                const searchConditions = [
-                    { fileNumber: regex },
-                    { mob1: regex },
-                    { customerVehicleNumber: regex },
-                ];
+                const searchConditions = bookingFieldConditions(searchQuery);
 
                 const [matchingDrivers, matchingProviders, matchingCompanies, matchingShowrooms] = await Promise.all([
                     Driver.find({ name: regex }).select('_id').lean(),
@@ -850,7 +844,7 @@ exports.getAllBookings = async (req, res) => {
                     searchConditions.push({ showroom: { $in: matchingShowrooms.map(c => c._id) } });
                 }
 
-                query.$or = searchConditions;
+                query.$and = [...(query.$and || []), { $or: searchConditions }];
             }
         }
 
@@ -866,7 +860,7 @@ exports.getAllBookings = async (req, res) => {
             }
         }
 
-        if (startDate && endingDate) {
+        if (startDate && endingDate && !(search && isIdentifierSearch(search))) {
             const startOfDay = new Date(`${startDate}T00:00:00.000Z`);
             const endOfDay = new Date(`${endingDate}T23:59:59.999Z`);
 
@@ -1312,14 +1306,9 @@ exports.pendingPaymentBooking = async (req, res) => {
         const endOfDay = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
         query.createdAt = { $gte: startOfDay, $lte: endOfDay };
       } else {
-        const regex = new RegExp(searchQuery, 'i');
+        const regex = plainRegex(searchQuery);
         
-        const searchConditions = [
-          { fileNumber: regex },
-          { mob1: regex },
-          { customerVehicleNumber: regex },
-          { customerName: regex }
-        ];
+        const searchConditions = bookingFieldConditions(searchQuery);
 
         // Search in related collections
         const [matchingDrivers, matchingProviders, matchingCompanies, matchingShowrooms] = await Promise.all([
@@ -1478,13 +1467,9 @@ exports.getScheduledBookings = async (req, res) => {
         if (search) {
             query._includeHidden = true;
             const searchQuery = search.trim();
-            const regex = new RegExp(searchQuery, 'i');
+            const regex = plainRegex(searchQuery);
             
-            const searchConditions = [
-                { fileNumber: regex },
-                { mob1: regex },
-                { customerVehicleNumber: regex },
-            ];
+            const searchConditions = bookingFieldConditions(searchQuery);
 
             const [matchingDrivers, matchingProviders, matchingCompanies, matchingShowrooms] = await Promise.all([
                 Driver.find({ name: regex }).select('_id').lean(),
@@ -1506,7 +1491,7 @@ exports.getScheduledBookings = async (req, res) => {
                 searchConditions.push({ showroom: { $in: matchingShowrooms.map(c => c._id) } });
             }
 
-            query.$or = searchConditions;
+            query.$and = [...(query.$and || []), { $or: searchConditions }];
         }
 
         // Pagination and sorting
@@ -3024,7 +3009,7 @@ exports.getApprovedBookings = async (req, res) => {
                     $lte: endOfDay,
                 };
             } else {
-                const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
+                const searchRegex = plainRegex(search);
                 const matchingDrivers = await Driver.find({ phone: searchRegex }).select('_id');
                 const matchingProviders = await Provider.find({ phone: searchRegex }).select('_id');
  // Search in company names
@@ -3035,21 +3020,17 @@ exports.getApprovedBookings = async (req, res) => {
                     ]
                 }).select('_id');
                 query.$or = [
-                    { customerName: searchRegex }, // Replaced fileNumber with customerName
-                    { mob1: searchRegex },
-                    { fileNumber: searchRegex },
-                    { customerVehicleNumber: searchRegex },
+                    ...bookingFieldConditions(search),
                     { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
                     { provider: { $in: matchingProviders.map(p => p._id) } },
-                                        { company: { $in: matchingCompanies.map(c => c._id) } }, // Added company search
-
+                    { company: { $in: matchingCompanies.map(c => c._id) } },
                 ];
             }
         }
 
         // Handle date range filter
-        if (startDate || endDate) {
+        if ((startDate || endDate) && !(search && isIdentifierSearch(search))) {
             query.createdAt = query.createdAt || {};
             if (startDate) {
                 query.createdAt.$gte = new Date(startDate);
@@ -3164,15 +3145,12 @@ exports.getAllBookingsBasedOnStatus = async (req, res) => {
         if (search) {
             query._includeHidden = true;
             search = search.trim();
-            const searchRegex = new RegExp(search.replace(/\s+/g, ''), 'i');
+            const searchRegex = plainRegex(search);
             const matchingDrivers = await Driver.find({ name: searchRegex }).select('_id');
 
             const searchConditions = {
                 $or: [
-                    { fileNumber: searchRegex },
-                    { mob1: searchRegex },
-                    { customerVehicleNumber: searchRegex },
-                    { customerName: searchRegex },
+                    ...bookingFieldConditions(search),
                     { bookedByModel: searchRegex },
                     { driver: { $in: matchingDrivers.map(d => d._id) } },
                                         { whatsappId: searchRegex },
@@ -4295,3 +4273,56 @@ exports.uploadPaymentQrCode = asyncErrorHandler(async (req, res)=>{
         },
     });
 })
+
+// ---------------------------------------------------------------------------
+// Global search (search box in the admin header):
+// find bookings by case id / file number, vehicle number, mobile, invoice number or customer
+// on ANY date, including bookings moved to Old Bookings, so staff can jump to the right page.
+// GET /booking/lookup?q=...
+// ---------------------------------------------------------------------------
+exports.lookupBookings = async (req, res) => {
+    try {
+        const q = String(req.query.q || '').trim();
+        if (q.length < 3) return res.json({ success: true, results: [] });
+        const conds = bookingFieldConditions(q);
+        const fields = 'fileNumber customerVehicleNumber customerName mob1 status workType company driver provider showroom totalAmount receivedAmount receivedAmountByCompany invoiceNumber approve verified accountantVerified cashPending archived createdAt pickupTime';
+
+        const found = await Booking.find({ $or: conds, _includeHidden: true })
+            .select(fields)
+            .populate('company', 'name')
+            .populate('driver', 'name')
+            .populate('provider', 'name')
+            .populate('showroom', 'name')
+            .sort({ createdAt: -1 })
+            .limit(15)
+            .lean();
+
+        let fromArchive = [];
+        if (found.length < 15) {
+            try {
+                const BookingArchive = require('../Model/bookingArchive');
+                const seen = found.map((b) => b._id);
+                fromArchive = await BookingArchive.find({ $or: conds, originalId: { $nin: seen } })
+                    .select(fields + ' originalId archiveDate')
+                    .populate('company', 'name')
+                    .populate('driver', 'name')
+                    .populate('provider', 'name')
+                    .populate('showroom', 'name')
+                    .sort({ createdAt: -1 })
+                    .limit(15 - found.length)
+                    .lean();
+            } catch (e) {
+                fromArchive = [];
+            }
+        }
+
+        const results = [
+            ...found.map((b) => ({ ...b, source: b.archived ? 'archived' : 'live' })),
+            ...fromArchive.map((b) => ({ ...b, _id: b.originalId || b._id, source: 'oldBookings' })),
+        ];
+        res.json({ success: true, results });
+    } catch (error) {
+        console.error('lookupBookings error:', error);
+        res.status(500).json({ success: false, message: 'Search failed' });
+    }
+};

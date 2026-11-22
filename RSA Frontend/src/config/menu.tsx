@@ -100,6 +100,7 @@ export const MENU: MenuEntry[] = [
         children: [
             { path: '/reports', label: 'Reports Centre (filter & export)', def: all },
             { path: '/dcpreport', label: 'Driver/Company/Provider Report', def: all },
+            { path: '/unpaid-company-cases', label: 'Unpaid company cases', def: all },
             { path: '/showroomreport', label: 'ShowRoom Report', def: except(ROLES.VERIFIER, ROLES.CASHIER) },
             { path: '/staffreport', label: 'Staff Report', def: all },
             { path: '/driver-scorecard', label: 'Driver scorecard', def: all },

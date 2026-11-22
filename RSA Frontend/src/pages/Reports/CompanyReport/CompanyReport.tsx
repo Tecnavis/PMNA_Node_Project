@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { useUrlParam } from '../../../utils/urlSearch';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
@@ -63,10 +64,13 @@ const CompanyReport = () => {
     const [invoiceValues, setInvoiceValues] = useState<Record<string, number>>({});
     const [totalBalance, setTotalBalance] = useState<string, number>(0);
     const [search, setSearch] = useState('');
+    // opened from the header search: ?search=FILE-NUMBER
+    useUrlParam('search', setSearch);
     // Quick filters: amount received from company, and missing invoice number
     const [paidFilter, setPaidFilter] = useState<'all' | 'zero' | 'received'>('all');
     const [invoiceMissing, setInvoiceMissing] = useState(false);
     const [allDates, setAllDates] = useState(false); // ignore the month: show older pending bookings too
+    useUrlParam('allDates', (v) => setAllDates(v === '1' || v === 'true'));
     const [bulkInvoice, setBulkInvoice] = useState('');
     const [bulkSaving, setBulkSaving] = useState(false);
     const [selectedBookings, setSelectedBookings] = useState<Map>(new Map());

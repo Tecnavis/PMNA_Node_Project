@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useUrlParam } from '../../../utils/urlSearch';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
@@ -48,6 +49,8 @@ const ShowroomCashCollectionsReport = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
   const [search, setSearch] = useState('');
+  // opened from the header search: ?search=FILE-NUMBER
+  useUrlParam('search', setSearch);
   const [totalBookings, setTotalBookings] = useState(0);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});

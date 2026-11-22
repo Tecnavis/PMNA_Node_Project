@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useUrlParam } from '../../utils/urlSearch';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -93,6 +94,8 @@ const OldBookings: React.FC = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    // opened from the header search: ?search=FILE-NUMBER
+    useUrlParam('search', setSearchTerm);
     const [filters, setFilters] = useState<Filters>({
         startDate: null,
         endDate: null,

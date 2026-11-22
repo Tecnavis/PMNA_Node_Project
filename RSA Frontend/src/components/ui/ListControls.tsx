@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useUrlParam } from '../../utils/urlSearch';
 
 /**
  * One way to search, filter and page through any list on the admin site.
@@ -323,6 +324,13 @@ export function useServerPaging({ storageKey, pageSize: initialSize = 25, delay 
     const [searchInput, setSearchInput] = useState<string>(saved?.query || '');
     const [search, setSearch] = useState<string>(saved?.query || '');
     const [total, setTotal] = useState<number>(0);
+
+    // opened from the header search: ?search=FILE-NUMBER fills the box straight away
+    useUrlParam('search', (v) => {
+        setSearchInput(v);
+        setSearch(v);
+        setPageState(1);
+    });
 
     useEffect(() => {
         if (searchInput === search) return;
