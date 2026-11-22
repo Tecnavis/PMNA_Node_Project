@@ -2,7 +2,7 @@
  * Moves closed bookings (Completed / Cancelled / Rejected) older than one year to "Old Bookings".
  * Same method the system already uses: a full copy goes to the archive collection and the original
  * is only flagged archived:true (hidden from the live lists). Nothing is deleted.
- * Bookings with cash still pending are left alone.
+ * Bookings with cash still pending, and company bookings not fully paid by the company, are left alone.
  */
 const Booking = require('../Model/booking');
 const BookingArchive = require('../Model/bookingArchive');
@@ -11,11 +11,20 @@ const CLOSED = ['Order Completed', 'Cancelled', 'Rejected'];
 const DAYS = () => Number(process.env.ARCHIVE_AFTER_DAYS) || 365;
 
 const cutoff = () => new Date(Date.now() - DAYS() * 86400000);
+// Company bookings the company has not paid in full stay in the live lists
+// (company report, Unpaid company cases) until the money is received.
+const companyStillOwes = {
+    company: { $ne: null },
+    workType: { $ne: 'PaymentWork' },
+    $expr: { $lt: [{ $ifNull: ['$receivedAmountByCompany', 0] }, { $ifNull: ['$totalAmount', 0] }] },
+};
+
 const query = () => ({
     status: { $in: CLOSED },
     createdAt: { $lt: cutoff() },
     archived: { $ne: true },
     cashPending: { $ne: true },
+    $nor: [companyStillOwes],
 });
 
 async function preview() {
