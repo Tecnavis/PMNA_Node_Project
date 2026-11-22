@@ -887,6 +887,10 @@ exports.getAllBookings = async (req, res) => {
         }
         if (companyPaid === 'zero') {
             extraFilters.push({ receivedAmountByCompany: { $in: [0, null] } });
+        } else if (companyPaid === 'partial') {
+            // something received, but less than the payable amount
+            extraFilters.push({ receivedAmountByCompany: { $gt: 0 } });
+            extraFilters.push({ $expr: { $lt: [{ $ifNull: ['$receivedAmountByCompany', 0] }, { $ifNull: ['$totalAmount', 0] }] } });
         } else if (companyPaid === 'received') {
             extraFilters.push({ receivedAmountByCompany: { $gt: 0 } });
         }

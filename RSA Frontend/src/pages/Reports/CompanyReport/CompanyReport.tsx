@@ -67,7 +67,7 @@ const CompanyReport = () => {
     // opened from the header search: ?search=FILE-NUMBER
     useUrlParam('search', setSearch);
     // Quick filters: amount received from company, and missing invoice number
-    const [paidFilter, setPaidFilter] = useState<'all' | 'zero' | 'received'>('all');
+    const [paidFilter, setPaidFilter] = useState<'all' | 'zero' | 'partial' | 'received'>('all');
     const [invoiceMissing, setInvoiceMissing] = useState(false);
     const [allDates, setAllDates] = useState(false); // ignore the month: show older pending bookings too
     useUrlParam('allDates', (v) => setAllDates(v === '1' || v === 'true'));
@@ -220,6 +220,7 @@ const CompanyReport = () => {
         const received = Number(b.receivedAmountByCompany) || 0;
         if (paidFilter === 'zero' && received !== 0) return false;
         if (paidFilter === 'received' && received <= 0) return false;
+        if (paidFilter === 'partial' && !(received > 0 && received < (Number(b.totalAmount) || 0))) return false;
         if (invoiceMissing && String(b.invoiceNumber || '').trim() !== '') return false;
         return true;
     }
@@ -268,6 +269,50 @@ const CompanyReport = () => {
             return;
         }
         setModal2(true);
+    };
+
+    // ---- Part-paid: mark the remaining balance as received ----
+    const isPartPaid = (b: Booking) => {
+        const r = Number(b.receivedAmountByCompany) || 0;
+        const t = Number(b.totalAmount) || 0;
+        return r > 0 && r < t;
+    };
+    // same people who may type the received amount; approved rows only by admins
+    const canMarkPaid = (b: Booking) =>
+        isPartPaid(b) && [ROLES.ADMIN, ROLES.SECONDARY_ADMIN, ROLES.VERIFIER].includes(role) && (!b.approve || [ROLES.ADMIN, ROLES.SECONDARY_ADMIN].includes(role));
+
+    const markBalancePaid = async (list: Booking[]) => {
+        const targets = list.filter(canMarkPaid);
+        if (!targets.length) {
+            Swal.fire({ icon: 'info', title: 'No part-paid bookings selected', toast: true, position: 'top', showConfirmButton: false, timer: 3000 });
+            return;
+        }
+        const balance = targets.reduce((t, b) => t + ((Number(b.totalAmount) || 0) - (Number(b.receivedAmountByCompany) || 0)), 0);
+        const ok = await Swal.fire({
+            title: 'Mark balance as paid?',
+            html: targets.length === 1
+                ? `<b>${targets[0].fileNumber || ''}</b><br/>Received will be set to the full payable amount ₹${(Number(targets[0].totalAmount) || 0).toLocaleString('en-IN')} (balance ₹${balance.toLocaleString('en-IN')}).`
+                : `${targets.length} part-paid bookings.<br/>Received will be set to the full payable amount on each (total balance ₹${balance.toLocaleString('en-IN')}).`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, mark paid',
+        });
+        if (!ok.isConfirmed) return;
+        setBulkSaving(true);
+        let failed = 0;
+        for (let i = 0; i < targets.length; i += 10) {
+            const results = await Promise.allSettled(
+                targets.slice(i, i + 10).map((b) =>
+                    axios.patch(`${BASE_URL}/booking/settle-amount-company/${b._id}`, { receivedAmountByCompany: Number(b.totalAmount) || 0 }, { headers: { 'Content-Type': 'application/json' } })
+                )
+            );
+            failed += results.filter((r) => r.status === 'rejected').length;
+        }
+        setBulkSaving(false);
+        setSelectedBookings(new Map());
+        fetchBookings();
+        if (failed) Swal.fire('Partly done', `${targets.length - failed} marked paid, ${failed} failed. Please try the failed ones again.`, 'warning');
+        else Swal.fire('Done', `${targets.length} booking(s) marked as fully paid.`, 'success');
     };
 
     const updateInputValues = (bookingId: string, value: number) => {
@@ -615,12 +660,20 @@ const CompanyReport = () => {
                     );
                 }
                 return (
-                    <span className={`text-red-500`}>
-                        {
-                        console.log(booking.totalAmount ,booking.receivedAmountByCompany )    
-                        }
-                        {booking.totalAmount  - booking.receivedAmountByCompany }
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-red-500">{(Number(booking.totalAmount) || 0) - (Number(booking.receivedAmountByCompany) || 0)}</span>
+                        {canMarkPaid(booking) && (
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-outline-success whitespace-nowrap px-2 py-1 text-xs"
+                                disabled={bulkSaving}
+                                onClick={() => markBalancePaid([booking])}
+                                title="Set received to the full payable amount"
+                            >
+                                Mark paid
+                            </button>
+                        )}
+                    </div>
                 );
             },
         },
@@ -1114,13 +1167,14 @@ const CompanyReport = () => {
                                 {[
                                     { key: 'all', label: 'All' },
                                     { key: 'zero', label: 'Received = 0' },
+                                    { key: 'partial', label: 'Part-paid' },
                                     { key: 'received', label: 'Received' },
                                 ].map((f) => (
                                     <button
                                         key={f.key}
                                         type="button"
                                         className={`px-3 text-xs font-semibold whitespace-nowrap transition-colors ${paidFilter === f.key ? 'bg-primary text-white' : 'bg-white dark:bg-[#1b2e4b] text-[#515365] dark:text-white-dark'}`}
-                                        onClick={() => setPaidFilter(f.key as 'all' | 'zero' | 'received')}
+                                        onClick={() => setPaidFilter(f.key as 'all' | 'zero' | 'partial' | 'received')}
                                     >
                                         {f.label}
                                     </button>
@@ -1153,6 +1207,11 @@ const CompanyReport = () => {
                             <button type="button" className="btn btn-success" disabled={bulkSaving} onClick={applyBulkInvoice}>
                                 {bulkSaving ? 'Saving...' : 'Set invoice number for selected'}
                             </button>
+                            {Array.from(selectedBookings.values()).some((b: Booking) => b && canMarkPaid(b)) && (
+                                <button type="button" className="btn btn-outline-success" disabled={bulkSaving} onClick={() => markBalancePaid(Array.from(selectedBookings.values()))}>
+                                    Mark balance paid ({Array.from(selectedBookings.values()).filter((b: Booking) => b && canMarkPaid(b)).length} part-paid)
+                                </button>
+                            )}
                             <button type="button" className="btn btn-outline-dark" onClick={() => setSelectedBookings(new Map())}>
                                 Clear selection
                             </button>
