@@ -83,22 +83,6 @@ async function calculateTotalAmount(staffId) {
 async function calculateReceivedTotalAmount(staffId) {
     console.log("calculateReceivedTotalAmount staffId:", staffId);
     try {
-        // First verify the fields exist and are numbers
-        const sampleDoc = await ReceivedDetails.findOne({
-            receivedUserId: staffId,
-            // receivedUser: { $in: ['Staff', 'Admin'] },
-            fileNumber: 'Advance Deduction'
-        });
-
-        if (sampleDoc) {
-            console.log('Sample document fields:', {
-                receivedAmount: sampleDoc.receivedAmount,
-                givenAmountByStaff: sampleDoc.givenAmountByStaff,
-                receivedAmountType: typeof sampleDoc.receivedAmount,
-                givenAmountByStaffType: typeof sampleDoc.givenAmountByStaff
-            });
-        }
-
         const result = await ReceivedDetails.aggregate([
             {
                 $match: {
@@ -129,7 +113,6 @@ async function calculateReceivedTotalAmount(staffId) {
         ]);
 
         console.log('--- Received Details Aggregation Results ---');
-        console.log('Full aggregation result:', JSON.stringify(result, null, 2));
         
         const total = result[0]?.netTotalAmount || 0;
         console.log('Calculated netTotalAmount:', total);

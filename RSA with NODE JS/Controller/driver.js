@@ -7,7 +7,7 @@ const Driver = require('../Model/driver');
 const Leaves = require('../Model/leaves');
 const Booking = require('../Model/booking');
 const { sendOtp, verifyOtp } = require('../services/otpService');
-const { updateDriverFinancials, updateScheduledBookingsForDriver } = require('../services/driverService');
+const { updateDriverFinancials, updateScheduledBookingsForDriver, updateScheduledBookingsForDrivers } = require('../services/driverService');
 const Expense = require('../Model/expense'); // Adjust path as needed
 const Advance = require('../Model/advance'); // If you use advances
 const { default: mongoose } = require('mongoose');
@@ -71,9 +71,8 @@ exports.getDrivers = async (req, res) => {
     const drivers = await Driver.find(query).populate('vehicle.serviceType').lean();
     const driverIds = drivers.map(driver => driver._id);
 
-    await Promise.all(
-      driverIds.map(driverId => updateScheduledBookingsForDriver(driverId))
-    );
+    // one update for all drivers (was one full scan per driver)
+    await updateScheduledBookingsForDrivers(driverIds);
 
     // Update financials as before
     await Promise.all(
@@ -98,6 +97,7 @@ exports.getDrivers = async (req, res) => {
     // Fetch the last booking data with service name only
     const lastBookings = await Booking.aggregate([
       { $match: { driver: { $in: driverIds } } },
+      { $project: { driver: 1, status: 1, vehicleNumber: 1, serviceType: 1, updatedAt: 1 } },
       { $sort: { updatedAt: -1 } },
       {
         $group: {
@@ -198,9 +198,8 @@ exports.getDriversBooking = async (req, res) => {
     const drivers = await Driver.find(query).populate('vehicle.serviceType').lean();
     const driverIds = drivers.map(driver => driver._id);
 
-    await Promise.all(
-      driverIds.map(driverId => updateScheduledBookingsForDriver(driverId))
-    );
+    // one update for all drivers (was one full scan per driver)
+    await updateScheduledBookingsForDrivers(driverIds);
 
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -215,6 +214,7 @@ exports.getDriversBooking = async (req, res) => {
     // Fetch the last booking data with service name only
     const lastBookings = await Booking.aggregate([
       { $match: { driver: { $in: driverIds } } },
+      { $project: { driver: 1, status: 1, vehicleNumber: 1, serviceType: 1, updatedAt: 1 } },
       { $sort: { updatedAt: -1 } },
       {
         $group: {
@@ -327,9 +327,7 @@ exports.filtergetDrivers = async (req, res) => {
 
     const drivers = await Driver.find(filter).populate('vehicle.serviceType');
       // FIRST: Check and update scheduled bookings for filtered drivers
-    await Promise.all(
-      drivers.map(driver => updateScheduledBookingsForDriver(driver._id))
-    );
+    await updateScheduledBookingsForDrivers(drivers.map(driver => driver._id));
     // Update all drivers' financials and get the updated documents
     const updatedDrivers = await Promise.all(
       drivers.map(async (driver) => {

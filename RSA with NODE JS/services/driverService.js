@@ -476,6 +476,28 @@ async function updateScheduledBookingsForDriver(driverId) {
     }
 }
 
+// Same as updateScheduledBookingsForDriver, for many drivers in ONE database update
+// (the old way ran one full scan per driver, all at once).
+async function updateScheduledBookingsForDrivers(driverIds = []) {
+    try {
+        if (!driverIds.length) return 0;
+        const now = new Date();
+        const result = await Booking.updateMany(
+            {
+                driver: { $in: driverIds.map((id) => new mongoose.Types.ObjectId(String(id))) },
+                status: 'Scheduled',
+                pickupDate: { $lte: now }
+            },
+            { $set: { status: 'Booking Added', activatedAt: now } }
+        );
+        if (result.modifiedCount) console.log(`Updated ${result.modifiedCount} scheduled bookings to Booking Added`);
+        return result.modifiedCount;
+    } catch (error) {
+        console.error('Error updating scheduled bookings for drivers:', error);
+        return 0;
+    }
+}
+
 // Update financial values in driver side
 async function updateDriverFinancials(driverId, advance = 0) {
     try {
@@ -672,5 +694,6 @@ async function calculateMonthlySalary(driverId) {
 module.exports = {
     calculateNetTotalAmountInHand,
     updateDriverFinancials,
-    updateScheduledBookingsForDriver // Export the new function if needed elsewhere
+    updateScheduledBookingsForDriver, // Export the new function if needed elsewhere
+    updateScheduledBookingsForDrivers
 };

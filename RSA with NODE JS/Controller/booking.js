@@ -939,58 +939,7 @@ exports.getAllBookings = async (req, res) => {
 
         financialQuery.workType = { $ne: 'RSAWork' };
 
-        const debugAggregation = await Booking.aggregate([
-            {
-                $match: {
-                    ...financialQuery, // Use financialQuery here
-                    ...(forDriverReport && { cashPending: false }),
-                    $or: [
-                        { receivedUser: "Driver" },
-                        {
-                            $and: [
-                                { receivedUser: "Staff" },
-                                { multipleReceivedUser: true },
-                                { previousReceivedUser: "Driver" }
-                            ]
-                        }
-                    ]
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    fileNumber: 1,
-                    receivedUser: 1,
-                    previousReceivedUser: 1,
-                    multipleReceivedUser: 1,
-                    totalAmount: 1,
-                    receivedAmountDriver: 1,
-                    receivedAmount: 1,
-                    amountType: {
-                        $cond: [
-                            { $eq: ["$receivedUser", "Driver"] },
-                            "DIRECT_DRIVER_RECEIPT",
-                            {
-                                $cond: [
-                                    {
-                                        $and: [
-                                            { $eq: ["$receivedUser", "Staff"] },
-                                            { $eq: ["$multipleReceivedUser", true] },
-                                            { $eq: ["$previousReceivedUser", "Driver"] }
-                                        ]
-                                    },
-                                    "STAFF_RECEIVED_AFTER_DRIVER",
-                                    "OTHER"
-                                ]
-                            }
-                        ]
-                    }
-                }
-            }
-        ]);
-
-        console.log('Documents being processed in aggregation:');
-        console.log(JSON.stringify(debugAggregation, null, 2));
+        // (removed a debug-only query that printed every matching booking to the log on each request)
 
         // Now run your original aggregation with the corrected totalOverall
         const aggregationResult = await Booking.aggregate([

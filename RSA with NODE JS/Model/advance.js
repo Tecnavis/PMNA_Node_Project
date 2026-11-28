@@ -50,4 +50,8 @@ const AdvanceSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+
+// Indexes for per-person totals (avoid reading the whole collection on every list load)
+AdvanceSchema.index({ driver: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Advance', AdvanceSchema);

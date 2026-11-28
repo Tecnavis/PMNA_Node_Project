@@ -151,6 +151,16 @@ bookingSchema.index({ createdAt: -1 });
 bookingSchema.index({ status: 1, createdAt: -1 });
 bookingSchema.index({ archived: 1, createdAt: -1 }); // For archiving
 bookingSchema.index({ archived: 1, status: 1 }); // For filtering
+// Per-driver / per-company lookups (driver lists, reports). Without these every driver
+// query read the whole bookings collection and could freeze the server for minutes.
+bookingSchema.index({ driver: 1, status: 1, pickupDate: 1 });
+bookingSchema.index({ driver: 1, updatedAt: -1 });
+bookingSchema.index({ driver: 1, createdAt: -1 });
+bookingSchema.index({ company: 1, createdAt: -1 });
+bookingSchema.index({ provider: 1, createdAt: -1 });
+bookingSchema.index({ showroom: 1, createdAt: -1 });
+bookingSchema.index({ receivedUserId: 1 });
+bookingSchema.index({ previousReceivedUserId: 1 });
 
 // When the status last changed — used by the Operations board for "stuck for X min" alerts.
 // Set automatically on every status change (save, findOneAndUpdate, updateOne, updateMany).
